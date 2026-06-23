@@ -1,21 +1,38 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView,
   Platform, ScrollView, Alert,
 } from 'react-native';
-import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
+import * as WebBrowser from 'expo-web-browser';
+import * as Google from 'expo-auth-session/providers/google';
+import { ResponseType } from 'expo-auth-session';
 import { useAuthStore } from '../../store/authStore';
 import { colors } from '../../utils/colors';
-import Constants from 'expo-constants';
 
-GoogleSignin.configure({
-  webClientId: Constants.expoConfig?.extra?.googleWebClientId ?? process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
-});
+WebBrowser.maybeCompleteAuthSession();
+
+const GOOGLE_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? '';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const { login, loginWithGoogle, isLoading, error, clearError } = useAuthStore();
+
+  const [request, response, promptAsync] = Google.useAuthRequest({
+    clientId: GOOGLE_CLIENT_ID,
+    responseType: ResponseType.IdToken,
+  });
+
+  useEffect(() => {
+    if (response?.type === 'success') {
+      const idToken = response.params?.id_token;
+      if (idToken) {
+        loginWithGoogle(idToken).catch(() => {});
+      } else {
+        Alert.alert('Lỗi', 'Không lấy được token Google');
+      }
+    }
+  }, [response]);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -28,32 +45,29 @@ export default function LoginScreen() {
   };
 
   const handleGoogle = async () => {
-    try {
-      await GoogleSignin.hasPlayServices();
-      const userInfo = await GoogleSignin.signIn();
-      const idToken = userInfo.data?.idToken;
-      if (!idToken) throw new Error('Không lấy được token Google');
-      await loginWithGoogle(idToken);
-    } catch (err: any) {
-      if (err.code !== statusCodes.SIGN_IN_CANCELLED) {
-        Alert.alert('Lỗi', 'Đăng nhập Google thất bại');
-      }
+    if (!GOOGLE_CLIENT_ID) {
+      Alert.alert('Chưa cấu hình', 'Google Client ID chưa được cài đặt');
+      return;
     }
+    await promptAsync();
   };
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.background }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView
+      style={{ flex: 1, backgroundColor: colors.background }}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
       <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 24 }}>
         <View style={{ alignItems: 'center', marginBottom: 48 }}>
           <Text style={{ fontSize: 36, fontWeight: '800', color: colors.primary }}>NoteDri</Text>
           <Text style={{ color: colors.textSecondary, marginTop: 8 }}>Quản lý xe thông minh</Text>
         </View>
 
-        {error && (
+        {error ? (
           <View style={{ backgroundColor: '#4A1010', borderRadius: 8, padding: 12, marginBottom: 16 }}>
             <Text style={{ color: colors.error }}>{error}</Text>
           </View>
-        )}
+        ) : null}
 
         <TextInput
           value={email}
@@ -76,8 +90,11 @@ export default function LoginScreen() {
         <TouchableOpacity
           onPress={handleLogin}
           disabled={isLoading}
-          style={{ backgroundColor: colors.primary, padding: 16, borderRadius: 10, alignItems: 'center', opacity: isLoading ? 0.7 : 1 }}>
-          <Text style={{ color: '#fff', fontWeight: '700', fontSize: 16 }}>{isLoading ? 'Đang đăng nhập...' : 'Đăng nhập'}</Text>
+          style={{ backgroundColor: colors.primary, padding: 16, borderRadius: 10, alignItems: 'center', opacity: isLoading ? 0.7 : 1 }}
+        >
+          <Text style={{ color: '#fff', fontWeight: '700', fontSize: 16 }}>
+            {isLoading ? 'Đang đăng nhập...' : 'Đăng nhập'}
+          </Text>
         </TouchableOpacity>
 
         <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 20 }}>
@@ -88,8 +105,9 @@ export default function LoginScreen() {
 
         <TouchableOpacity
           onPress={handleGoogle}
-          disabled={isLoading}
-          style={{ backgroundColor: colors.surface, padding: 16, borderRadius: 10, alignItems: 'center', flexDirection: 'row', justifyContent: 'center' }}>
+          disabled={isLoading || !request}
+          style={{ backgroundColor: colors.surface, padding: 16, borderRadius: 10, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', opacity: (!request || isLoading) ? 0.5 : 1 }}
+        >
           <Text style={{ fontSize: 20, marginRight: 8 }}>G</Text>
           <Text style={{ color: colors.text, fontWeight: '600', fontSize: 16 }}>Đăng nhập với Google</Text>
         </TouchableOpacity>
