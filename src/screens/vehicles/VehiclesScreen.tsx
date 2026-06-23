@@ -18,6 +18,7 @@ export default function VehiclesScreen() {
   if (isError) return <ErrorView message="Không tải được danh sách xe" onRetry={refetch} />;
 
   const vehicles: any[] = data?.data ?? data ?? [];
+  const scores: Record<number, { total: number; band: string }> = data?.scores ?? {};
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom']}>
@@ -29,6 +30,7 @@ export default function VehiclesScreen() {
             <VehicleCard
               vehicle={item}
               onPress={() => navigation.navigate('VehicleDetail', { vehicleId: item.id, vehicleName: item.ten ?? item.name })}
+              score={scores[item.id] ?? null}
             />
             <View style={{ position: 'absolute', top: 12, right: 12, flexDirection: 'row', gap: 6 }}>
               {!item.is_default && (

@@ -33,6 +33,20 @@ const LOAI_LABELS: Record<LoaiKey, string> = {
   khac: 'Khác',
 };
 
+function formatShortDate(s: string): string {
+  const d = new Date(s);
+  const dd = String(d.getDate()).padStart(2, '0');
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const yyyy = String(d.getFullYear());
+  return `${dd}/${mm}/${yyyy}`;
+}
+
+const CHE_DO_LABELS: Record<string, string> = {
+  chu_ky: 'Định kỳ',
+  ngay_co_dinh: 'Cố định',
+  mot_lan: 'Một lần',
+};
+
 const STATUS_COLORS: Record<StatusKey, string> = {
   ok: colors.success,
   warning: colors.warning,
@@ -126,6 +140,17 @@ function ReminderCard({
         <View style={[styles.loaiBadge, { borderColor: statusColor }]}>
           <Text style={[styles.loaiText, { color: statusColor }]}>{loaiLabel}</Text>
         </View>
+        {item.che_do && (
+          <View style={[styles.loaiBadge, {
+            borderColor: item.che_do === 'chu_ky' ? colors.primary : colors.textSecondary,
+          }]}>
+            <Text style={[styles.loaiText, {
+              color: item.che_do === 'chu_ky' ? colors.primary : colors.textSecondary,
+            }]}>
+              {CHE_DO_LABELS[item.che_do] ?? item.che_do}
+            </Text>
+          </View>
+        )}
         {!item.is_active && (
           <View style={styles.inactiveBadge}>
             <Text style={styles.inactiveText}>Tắt</Text>
@@ -133,14 +158,34 @@ function ReminderCard({
         )}
       </View>
 
-      {remaining && (
-        <Text style={[styles.remaining, { color: statusColor }]}>{remaining}</Text>
+      {/* Cycle / date detail section */}
+      {item.che_do === 'chu_ky' && (
+        <View style={styles.detailSection}>
+          {item.interval_km != null && (
+            <Text style={styles.detailText}>
+              {'Mỗi '}{item.interval_km.toLocaleString()}{'km'}{item.interval_thang != null ? ` / ${item.interval_thang} tháng` : ''}
+            </Text>
+          )}
+          {item.last_done_date != null && (
+            <Text style={styles.detailText}>
+              {'Lần cuối: '}{formatShortDate(item.last_done_date)}{item.last_done_odo != null ? ` · ODO ${item.last_done_odo.toLocaleString()}km` : ''}
+            </Text>
+          )}
+        </View>
+      )}
+      {item.che_do === 'ngay_co_dinh' && item.due_date != null && (
+        <View style={styles.detailSection}>
+          <Text style={styles.detailText}>{'Hạn: '}{formatShortDate(item.due_date)}</Text>
+        </View>
+      )}
+      {item.che_do === 'mot_lan' && item.due_date != null && (
+        <View style={styles.detailSection}>
+          <Text style={styles.detailText}>{'Ngày: '}{formatShortDate(item.due_date)}</Text>
+        </View>
       )}
 
-      {item.due_date && (
-        <Text style={styles.dueDate}>
-          Hạn: {new Date(item.due_date).toLocaleDateString('vi-VN')}
-        </Text>
+      {remaining && (
+        <Text style={[styles.remaining, { color: statusColor }]}>{remaining}</Text>
       )}
 
       {item.ghi_chu ? (
@@ -342,14 +387,17 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: 12,
   },
+  detailSection: {
+    marginBottom: 6,
+    gap: 2,
+  },
+  detailText: {
+    color: colors.textSecondary,
+    fontSize: 12,
+  },
   remaining: {
     fontSize: 14,
     fontWeight: '600',
-    marginBottom: 4,
-  },
-  dueDate: {
-    color: colors.textSecondary,
-    fontSize: 13,
     marginBottom: 4,
   },
   note: {
