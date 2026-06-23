@@ -43,10 +43,10 @@ export default function DashboardScreen() {
   const vehicle = d.vehicle;
   const thisMonth = d.this_month;
   const health = d.health_report;
-  const legal = (d.legal ?? []) as any[];
-  const forecast = (d.forecast ?? []) as any[];
-  const suggestions = (d.suggestions ?? []) as any[];
-  const recent = (d.recent ?? []) as any[];
+  const legal = Array.isArray(d.legal) ? d.legal : [];
+  const forecast = Array.isArray(d.forecast) ? d.forecast : [];
+  const suggestions = Array.isArray(d.suggestions) ? d.suggestions : [];
+  const recent = Array.isArray(d.recent) ? d.recent : [];
   const consumption = d.consumption;
 
   const healthScore = health?.score ?? health?.health_score ?? null;
