@@ -133,7 +133,7 @@ export default function DashboardScreen() {
     queryKey: ['notifications', 1],
     queryFn: () => client.get('/notifications', { params: { page: 1 } }).then(r => r.data),
   });
-  const unreadCount = notifData?.data?.filter?.((n: any) => !n.read_at)?.length ?? notifData?.unread_count ?? 0;
+  const unreadCount = notifData?.meta?.unread_count ?? notifData?.data?.filter?.((n: any) => !n.read)?.length ?? 0;
 
   if (isLoading) return <LoadingView />;
   if (isError) return <ErrorView message="Không tải được dữ liệu" onRetry={refetch} />;
@@ -154,11 +154,11 @@ export default function DashboardScreen() {
   const recent: any[] = Array.isArray(d.recent) ? d.recent : [];
   const fuelBoard: any[] = Array.isArray(d.fuel_board) ? d.fuel_board : [];
 
-  const healthScore: number | null = health?.score ?? health?.health_score ?? null;
-  const healthColor = healthScore == null ? colors.textSecondary
-    : healthScore >= 80 ? colors.success
-    : healthScore >= 50 ? colors.warning : colors.error;
-  const healthLabel = healthScore == null ? '' : healthScore >= 80 ? 'Tốt' : healthScore >= 50 ? 'Trung bình' : 'Cần chú ý';
+  const healthOverall: string | null = health?.overall ?? null;
+  const HEALTH_COLOR: Record<string, string> = { ok: colors.success, warn: colors.warning, urgent: colors.error };
+  const HEALTH_LABEL: Record<string, string> = { ok: 'Tốt', warn: 'Cần chú ý', urgent: 'Nguy hiểm', na: 'Chưa đủ dữ liệu' };
+  const healthColor = healthOverall ? (HEALTH_COLOR[healthOverall] ?? colors.textSecondary) : colors.textSecondary;
+  const healthLabel = healthOverall ? (HEALTH_LABEL[healthOverall] ?? '') : '';
 
   const monthCost = Number(thisMonth?.tong_tien ?? 0);
   const lastCost = Number(lastMonth?.tong_tien ?? 0);
@@ -182,7 +182,7 @@ export default function DashboardScreen() {
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
           <View>
             <Text style={{ color: colors.textSecondary, fontSize: 13 }}>{dayjs().format('dddd, DD/MM/YYYY')}</Text>
-            <Text style={{ color: colors.text, fontSize: 20, fontWeight: '800' }}>Xin chào 👋</Text>
+            <Text style={{ color: colors.text, fontSize: 20, fontWeight: '800' }}>Xin chào!</Text>
           </View>
           <View style={{ position: 'relative' }}>
             <TouchableOpacity
@@ -215,6 +215,31 @@ export default function DashboardScreen() {
             selectedId={effectiveVehicleId}
             onSelect={setSelectedVehicleId}
           />
+        )}
+
+        {/* Giấy tờ sắp hết hạn — chip strip */}
+        {legal.filter((l: any) => (l.remaining_days ?? 999) <= 30).length > 0 && (
+          <View style={{ marginBottom: 10 }}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 2 }}>
+              {legal.filter((l: any) => (l.remaining_days ?? 999) <= 30).map((l: any, i: number) => {
+                const days = l.remaining_days ?? 0;
+                const chipColor = days <= 0 ? '#F43F5E' : days <= 14 ? '#F59E0B' : '#0EA5E9';
+                return (
+                  <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 5,
+                    backgroundColor: chipColor + '22', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6,
+                    borderWidth: 1, borderColor: chipColor + '66' }}>
+                    <FontAwesome5 name="id-card" size={11} color={chipColor} solid />
+                    <Text style={{ color: chipColor, fontSize: 12, fontWeight: '700' }}>
+                      {l.label ?? l.loai}
+                    </Text>
+                    <Text style={{ color: chipColor, fontSize: 11 }}>
+                      {days <= 0 ? 'Quá hạn' : `còn ${days}ngày`}
+                    </Text>
+                  </View>
+                );
+              })}
+            </ScrollView>
+          </View>
         )}
 
         {/* Quick action: Đổ xăng — kiểu web: card cam lớn */}
@@ -270,32 +295,37 @@ export default function DashboardScreen() {
         </TouchableOpacity>
 
         {/* Sức khoẻ xe */}
-        {healthScore != null && (
+        {healthOverall != null && (
           <TouchableOpacity
             onPress={() => nav.navigate('Health')}
             style={{
               backgroundColor: colors.surface, borderRadius: 14, padding: 16, marginBottom: 10,
-              borderLeftWidth: 3, borderLeftColor: healthColor,
+              borderLeftWidth: 4, borderLeftColor: healthColor,
               flexDirection: 'row', alignItems: 'center',
             }}>
-            <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: healthColor, marginRight: 10 }} />
+            <View style={{ marginRight: 10 }}>
+              {healthOverall !== 'ok' && (
+                <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: healthColor }} />
+              )}
+              {healthOverall === 'ok' && (
+                <FontAwesome5 name="check-circle" size={14} color={healthColor} solid />
+              )}
+            </View>
             <View style={{ flex: 1 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <FontAwesome5 name="heartbeat" size={14} color={healthColor} solid />
-                  <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14 }}>Sức khoẻ xe</Text>
-                </View>
-                <View style={{ backgroundColor: healthColor + '33', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2, marginLeft: 8 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+                <FontAwesome5 name="heartbeat" size={14} color={healthColor} solid />
+                <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14 }}>Sức khoẻ xe</Text>
+                <View style={{ backgroundColor: healthColor + '33', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2 }}>
                   <Text style={{ color: healthColor, fontSize: 12, fontWeight: '700' }}>{healthLabel}</Text>
                 </View>
               </View>
-              {health?.issues_count > 0 && (
+              {health?.warn_count > 0 && (
                 <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 4 }}>
-                  Có {health.issues_count} mục cần để ý — bấm xem chẩn đoán đầy đủ.
+                  {health.warn_count} mục cần để ý — bấm xem chẩn đoán đầy đủ.
                 </Text>
               )}
             </View>
-            <Text style={{ color: colors.textSecondary, fontSize: 13, marginLeft: 8 }}>Chi tiết →</Text>
+            <FontAwesome5 name="chevron-right" size={12} color={colors.textSecondary} style={{ marginLeft: 8 }} />
           </TouchableOpacity>
         )}
 
@@ -319,6 +349,7 @@ export default function DashboardScreen() {
                 backgroundColor: colors.background, borderRadius: 10, padding: 12,
                 marginBottom: i < suggestions.length - 1 ? 8 : 0,
                 flexDirection: 'row', alignItems: 'flex-start',
+                borderLeftWidth: 3, borderLeftColor: severityColor(s.severity),
               }}>
                 <View style={{ width: 28, alignItems: 'center', marginRight: 10, marginTop: 2 }}>
                   <FontAwesome5 name={faToFA5(s.icon ?? 'fa-lightbulb')} size={16} color={severityColor(s.severity)} solid />
