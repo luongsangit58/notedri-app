@@ -22,6 +22,7 @@ import ReportsScreen from '../screens/reports/ReportsScreen';
 import RemindersScreen from '../screens/reminders/RemindersScreen';
 import AddReminderScreen from '../screens/reminders/AddReminderScreen';
 import EditRefuelScreen from '../screens/refuels/EditRefuelScreen';
+import NearbyStationsScreen from '../screens/refuels/NearbyStationsScreen';
 import EditServiceScreen from '../screens/services/EditServiceScreen';
 import EditReminderScreen from '../screens/reminders/EditReminderScreen';
 
@@ -124,6 +125,10 @@ export default function AppNavigator() {
         options={{ headerShown: false }} />
       <RootStack.Screen name="EditReminder" component={EditReminderScreen}
         options={{ headerShown: false }} />
+
+      {/* Nearby Stations */}
+      <RootStack.Screen name="NearbyStations" component={NearbyStationsScreen}
+        options={{ headerShown: true, ...headerOpts, title: '⛽ Gần đây' }} />
 
       {/* Edit */}
       <RootStack.Screen name="EditRefuel" component={EditRefuelScreen}

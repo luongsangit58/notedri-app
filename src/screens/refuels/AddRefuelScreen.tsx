@@ -172,6 +172,17 @@ export default function AddRefuelScreen() {
             <Text style={{ color: colors.primary, fontWeight: '600' }}>OCR từ hóa đơn xăng</Text>
           </TouchableOpacity>
 
+          {/* Nearby stations */}
+          <TouchableOpacity
+            onPress={() => (navigation as any).navigate('NearbyStations')}
+            style={{
+              backgroundColor: colors.surface, padding: 12, borderRadius: 10,
+              alignItems: 'center', marginBottom: 16, flexDirection: 'row', justifyContent: 'center', gap: 8,
+            }}>
+            <Text style={{ fontSize: 18 }}>📍</Text>
+            <Text style={{ color: colors.textSecondary, fontWeight: '600' }}>Tìm trạm xăng gần đây</Text>
+          </TouchableOpacity>
+
           {/* 3 ô tính tiền */}
           <View style={{ flexDirection: 'row', gap: 8, marginBottom: 4 }}>
             <View style={{ flex: 1 }}>
