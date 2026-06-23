@@ -6,6 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useCreateReminder } from '../../hooks/useReminders';
+import { useVehicles } from '../../hooks/useVehicles';
 import { colors } from '../../utils/colors';
 
 type Loai = 'bao_duong' | 'dang_kiem' | 'bao_hiem' | 'giay_to' | 'khac';
@@ -45,8 +46,21 @@ const inputStyle = {
 export default function AddReminderScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const { vehicleId } = route.params as { vehicleId: number };
+  const { vehicleId: paramVehicleId } = (route.params ?? {}) as { vehicleId?: number };
   const { mutate, isPending } = useCreateReminder();
+
+  // If no vehicleId param (e.g. from QuickAddFAB), pick the default vehicle
+  const { data: vehiclesData } = useVehicles();
+  const vehicles: any[] = Array.isArray(vehiclesData?.data)
+    ? vehiclesData.data
+    : Array.isArray(vehiclesData) ? vehiclesData : [];
+  const defaultVehicle = vehicles.find((v: any) => v.is_default) ?? vehicles[0];
+  const vehicleId: number | null = paramVehicleId ?? defaultVehicle?.id ?? null;
+  const [selectedVehicleId, setSelectedVehicleId] = React.useState<number | null>(null);
+  React.useEffect(() => {
+    if (!paramVehicleId && vehicleId && selectedVehicleId === null) setSelectedVehicleId(vehicleId);
+  }, [vehicleId]);
+  const effectiveVehicleId = paramVehicleId ?? selectedVehicleId ?? vehicleId;
 
   const [hang_muc, setHangMuc] = useState('');
   const [loai, setLoai] = useState<Loai>('bao_duong');
@@ -64,9 +78,13 @@ export default function AddReminderScreen() {
       return;
     }
 
+    if (!effectiveVehicleId) {
+      Alert.alert('Lỗi', 'Không xác định được xe. Vui lòng vào màn hình xe và thêm lời nhắc từ đó.');
+      return;
+    }
     mutate(
       {
-        vehicleId,
+        vehicleId: effectiveVehicleId,
         data: {
           hang_muc: hang_muc.trim(),
           loai,
@@ -110,6 +128,30 @@ export default function AddReminderScreen() {
         </View>
 
         <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+
+          {/* Vehicle picker — only when no vehicleId from params and multiple vehicles */}
+          {!paramVehicleId && vehicles.length > 1 && (
+            <View style={{ marginBottom: 16 }}>
+              <FieldLabel>Xe *</FieldLabel>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 4 }}>
+                {vehicles.map((v: any) => (
+                  <TouchableOpacity
+                    key={v.id}
+                    onPress={() => setSelectedVehicleId(v.id)}
+                    style={{
+                      marginRight: 8, paddingHorizontal: 14, paddingVertical: 9, borderRadius: 20,
+                      backgroundColor: (selectedVehicleId ?? vehicleId) === v.id ? colors.primary : colors.surface,
+                      borderWidth: 1,
+                      borderColor: (selectedVehicleId ?? vehicleId) === v.id ? colors.primary : colors.border,
+                    }}>
+                    <Text style={{ color: (selectedVehicleId ?? vehicleId) === v.id ? '#fff' : colors.text, fontSize: 14 }}>
+                      {v.ten}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
 
           {/* Hạng mục */}
           <FieldLabel>Hạng mục *</FieldLabel>
