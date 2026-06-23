@@ -32,6 +32,7 @@ import EditReminderScreen from '../screens/reminders/EditReminderScreen';
 import DossierScreen from '../screens/vehicles/DossierScreen';
 import HealthScreen from '../screens/health/HealthScreen';
 import GarageGuideScreen from '../screens/services/GarageGuideScreen';
+import YearReviewScreen from '../screens/reports/YearReviewScreen';
 
 const Tab = createBottomTabNavigator();
 const RootStack = createStackNavigator();
@@ -180,6 +181,16 @@ export default function AppNavigator() {
       {/* Garage Guide */}
       <RootStack.Screen name="GarageGuide" component={GarageGuideScreen}
         options={{ headerShown: true, ...headerOpts, title: 'Bỏ túi đi garage' }} />
+
+      {/* Year Review */}
+      <RootStack.Screen name="YearReview" component={YearReviewScreen}
+        options={({ route }: any) => ({
+          headerShown: true,
+          headerStyle: { backgroundColor: '#0b1220' },
+          headerTintColor: '#e8eef9',
+          headerTitleStyle: { fontWeight: '800', color: '#e8eef9' },
+          title: `Nhìn lại ${route.params?.year ?? ''}`,
+        })} />
     </RootStack.Navigator>
   );
 }

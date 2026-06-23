@@ -5,6 +5,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
+import { useNavigation } from '@react-navigation/native';
 import { useVehicles } from '../../hooks/useVehicles';
 import client from '../../api/client';
 import LoadingView from '../../components/LoadingView';
@@ -230,10 +231,12 @@ function ReportContent({
   vehicleId,
   selectedYear,
   onYearsLoaded,
+  onViewYearReview,
 }: {
   vehicleId: number;
   selectedYear: number;
   onYearsLoaded: (years: number[]) => void;
+  onViewYearReview?: (yr: any, year: number) => void;
 }) {
   const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ['report', vehicleId, selectedYear],
@@ -372,6 +375,12 @@ function ReportContent({
   /* ── has locked years ── */
   const hasLockedYears: boolean = data.has_locked_years ?? false;
 
+  /* ── benchmark ── */
+  const benchmark = data.benchmark ?? null;
+
+  /* ── consumption vs official ── */
+  const cvo = data.consumption_vs_official ?? null;
+
   return (
     <ScrollView
       refreshControl={
@@ -473,6 +482,91 @@ function ReportContent({
               value={`${Number(yrConsumption).toFixed(2)} L/100km`}
             />
           )}
+          <TouchableOpacity
+            onPress={() => onViewYearReview && onViewYearReview(yr, selectedYear)}
+            style={{
+              marginTop: 12, flexDirection: 'row', alignItems: 'center', gap: 6,
+              backgroundColor: '#F59E0B22', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8,
+              alignSelf: 'flex-start',
+            }}>
+            <FontAwesome5 name="magic" size={12} color="#F59E0B" solid />
+            <Text style={{ color: '#F59E0B', fontSize: 13, fontWeight: '700' }}>
+              Xem bản Nhìn lại {selectedYear}
+            </Text>
+          </TouchableOpacity>
+        </SectionCard>
+      )}
+
+      {/* ── benchmark / so sánh cộng đồng ── */}
+      {benchmark != null && (
+        <SectionCard title="So sánh cộng đồng">
+          <Text style={{ color: colors.textSecondary, fontSize: 12, marginBottom: 10 }}>
+            {benchmark.model} · {benchmark.sample} xe cùng dòng
+          </Text>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <View style={{ flex: 1, backgroundColor: colors.background, borderRadius: 10, padding: 12, alignItems: 'center' }}>
+              <Text style={{ color: colors.textSecondary, fontSize: 11, marginBottom: 4 }}>Xe bạn</Text>
+              <Text style={{ color: colors.text, fontWeight: '800', fontSize: 20 }}>
+                {Number(benchmark.mine).toFixed(1)}
+              </Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 11 }}>L/100km</Text>
+            </View>
+            <View style={{ flex: 1, backgroundColor: colors.background, borderRadius: 10, padding: 12, alignItems: 'center' }}>
+              <Text style={{ color: colors.textSecondary, fontSize: 11, marginBottom: 4 }}>Cộng đồng</Text>
+              <Text style={{ color: colors.text, fontWeight: '800', fontSize: 20 }}>
+                {Number(benchmark.avg).toFixed(1)}
+              </Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 11 }}>L/100km TB</Text>
+            </View>
+            <View style={{
+              flex: 1, borderRadius: 10, padding: 12, alignItems: 'center',
+              backgroundColor: (benchmark.diff_pct ?? 0) <= 0 ? '#10B98122' : '#F43F5E22',
+            }}>
+              <Text style={{ color: colors.textSecondary, fontSize: 11, marginBottom: 4 }}>So sánh</Text>
+              <Text style={{
+                fontWeight: '800', fontSize: 20,
+                color: (benchmark.diff_pct ?? 0) <= 0 ? '#10B981' : '#F43F5E',
+              }}>
+                {(benchmark.diff_pct ?? 0) > 0 ? '+' : ''}{benchmark.diff_pct}%
+              </Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 10, textAlign: 'center' }}>
+                {(benchmark.diff_pct ?? 0) <= 0 ? 'tiết kiệm hơn' : 'tiêu nhiều hơn'}
+              </Text>
+            </View>
+          </View>
+        </SectionCard>
+      )}
+
+      {/* ── tiêu hao vs nhà sản xuất ── */}
+      {cvo != null && (
+        <SectionCard title="Thực tế vs Nhà sản xuất">
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <View style={{ flex: 1, backgroundColor: colors.background, borderRadius: 10, padding: 12, alignItems: 'center' }}>
+              <Text style={{ color: colors.textSecondary, fontSize: 11, marginBottom: 4 }}>Thực tế</Text>
+              <Text style={{ color: colors.text, fontWeight: '800', fontSize: 20 }}>{Number(cvo.real).toFixed(1)}</Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 11 }}>L/100km</Text>
+            </View>
+            <View style={{ flex: 1, backgroundColor: colors.background, borderRadius: 10, padding: 12, alignItems: 'center' }}>
+              <Text style={{ color: colors.textSecondary, fontSize: 11, marginBottom: 4 }}>NSX công bố</Text>
+              <Text style={{ color: colors.text, fontWeight: '800', fontSize: 20 }}>{Number(cvo.official).toFixed(1)}</Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 11 }}>L/100km</Text>
+            </View>
+            <View style={{
+              flex: 1, borderRadius: 10, padding: 12, alignItems: 'center',
+              backgroundColor: (cvo.diff_pct ?? 0) <= 0 ? '#10B98122' : '#F43F5E22',
+            }}>
+              <Text style={{ color: colors.textSecondary, fontSize: 11, marginBottom: 4 }}>Chênh lệch</Text>
+              <Text style={{
+                fontWeight: '800', fontSize: 20,
+                color: (cvo.diff_pct ?? 0) <= 0 ? '#10B981' : '#F43F5E',
+              }}>
+                {(cvo.diff_pct ?? 0) > 0 ? '+' : ''}{cvo.diff_pct}%
+              </Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 10 }}>
+                {(cvo.diff_pct ?? 0) <= 0 ? 'tốt hơn' : 'kém hơn'}
+              </Text>
+            </View>
+          </View>
         </SectionCard>
       )}
 
@@ -616,6 +710,7 @@ function ReportContent({
 
 /* ─── screen ─── */
 export default function ReportsScreen() {
+  const navigation = useNavigation<any>();
   const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(null);
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
   const [availableYears, setAvailableYears] = useState<number[]>([]);
@@ -702,6 +797,7 @@ export default function ReportsScreen() {
               return sorted;
             });
           }}
+          onViewYearReview={(yr, year) => navigation.navigate('YearReview', { yr, year })}
         />
       ) : vehicles.length > 0 ? (
         <View
