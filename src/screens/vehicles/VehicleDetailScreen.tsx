@@ -274,6 +274,21 @@ export default function VehicleDetailScreen() {
                   </Text>
                 </View>
               )}
+              {/* Specs row */}
+              {(v?.make || v?.model || v?.nam) && (
+                <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 6 }}>
+                  {[v?.make, v?.model, v?.nam].filter(Boolean).join(' · ')}
+                </Text>
+              )}
+              {(v?.fuel_type || v?.tank_capacity_l || v?.consumption_official) && (
+                <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>
+                  {[
+                    v?.fuel_type,
+                    v?.tank_capacity_l ? `Bình ${v.tank_capacity_l}L` : null,
+                    v?.consumption_official ? `NSX ${v.consumption_official}L/100km` : null,
+                  ].filter(Boolean).join(' · ')}
+                </Text>
+              )}
             </View>
             {scoreTotal != null && (
               <View style={{ alignItems: 'center', marginLeft: 16 }}>
