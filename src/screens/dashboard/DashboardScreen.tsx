@@ -207,9 +207,12 @@ export default function DashboardScreen() {
               <Text style={{ color: colors.text, fontWeight: '700', fontSize: 16 }}>Cập nhật ODO</Text>
               {vehicle?.odo_hien_tai != null && (
                 <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>
-                  {Number(vehicle.odo_hien_tai).toLocaleString('vi-VN')} km · Lịch sử
+                  {Number(vehicle.odo_hien_tai).toLocaleString('vi-VN')} km
                 </Text>
               )}
+              <TouchableOpacity onPress={() => nav.navigate('OdometerList')}>
+                <Text style={{ color: colors.primary, fontSize: 12, marginTop: 2 }}>📋 Lịch sử ODO →</Text>
+              </TouchableOpacity>
             </View>
           </View>
           <View style={{ backgroundColor: colors.primary + '22', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 }}>
@@ -220,6 +223,7 @@ export default function DashboardScreen() {
         {/* Sức khoẻ xe */}
         {healthScore != null && (
           <TouchableOpacity
+            onPress={() => nav.navigate('Health')}
             style={{
               backgroundColor: colors.surface, borderRadius: 14, padding: 16, marginBottom: 10,
               borderLeftWidth: 3, borderLeftColor: healthColor,
@@ -405,9 +409,14 @@ export default function DashboardScreen() {
           <View style={{ backgroundColor: colors.surface, borderRadius: 14, padding: 16, marginBottom: 10 }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
               <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14 }}>⛽ Lần đổ gần đây</Text>
-              <TouchableOpacity onPress={() => nav.navigate('Timeline')}>
-                <Text style={{ color: colors.primary, fontSize: 13 }}>Dòng thời gian →</Text>
-              </TouchableOpacity>
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <TouchableOpacity onPress={() => nav.navigate('RefuelsList')}>
+                  <Text style={{ color: colors.primary, fontSize: 13 }}>⛽ Xem tất cả xăng →</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => nav.navigate('Timeline')}>
+                  <Text style={{ color: colors.textSecondary, fontSize: 13 }}>Dòng thời gian →</Text>
+                </TouchableOpacity>
+              </View>
             </View>
             {recent.slice(0, 5).map((r: any, i: number) => (
               <View key={r.id ?? i} style={{

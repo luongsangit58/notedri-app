@@ -23,8 +23,12 @@ import RemindersScreen from '../screens/reminders/RemindersScreen';
 import AddReminderScreen from '../screens/reminders/AddReminderScreen';
 import EditRefuelScreen from '../screens/refuels/EditRefuelScreen';
 import NearbyStationsScreen from '../screens/refuels/NearbyStationsScreen';
+import RefuelsListScreen from '../screens/refuels/RefuelsListScreen';
+import OdometerListScreen from '../screens/odometer/OdometerListScreen';
 import EditServiceScreen from '../screens/services/EditServiceScreen';
 import EditReminderScreen from '../screens/reminders/EditReminderScreen';
+import DossierScreen from '../screens/vehicles/DossierScreen';
+import HealthScreen from '../screens/health/HealthScreen';
 
 const Tab = createBottomTabNavigator();
 const RootStack = createStackNavigator();
@@ -130,6 +134,12 @@ export default function AppNavigator() {
       <RootStack.Screen name="NearbyStations" component={NearbyStationsScreen}
         options={{ headerShown: true, ...headerOpts, title: '⛽ Gần đây' }} />
 
+      {/* History lists */}
+      <RootStack.Screen name="RefuelsList" component={RefuelsListScreen}
+        options={{ headerShown: true, ...headerOpts, title: '⛽ Lịch sử đổ xăng' }} />
+      <RootStack.Screen name="OdometerList" component={OdometerListScreen}
+        options={{ headerShown: true, ...headerOpts, title: '📍 Lịch sử ODO' }} />
+
       {/* Edit */}
       <RootStack.Screen name="EditRefuel" component={EditRefuelScreen}
         options={{ headerShown: true, ...headerOpts, title: '✏️ Sửa lần đổ xăng' }} />
@@ -141,6 +151,12 @@ export default function AppNavigator() {
         options={{ headerShown: true, ...headerOpts, title: '🔔 Thông báo' }} />
       <RootStack.Screen name="Reports" component={ReportsScreen}
         options={{ headerShown: true, ...headerOpts, title: '📊 Báo cáo' }} />
+
+      {/* Dossier & Health */}
+      <RootStack.Screen name="Dossier" component={DossierScreen}
+        options={{ headerShown: false }} />
+      <RootStack.Screen name="Health" component={HealthScreen}
+        options={{ headerShown: true, ...headerOpts, title: '🩺 Kiểm tra xe' }} />
     </RootStack.Navigator>
   );
 }

@@ -43,6 +43,11 @@ export default function VehiclesScreen() {
                 </View>
               )}
               <TouchableOpacity
+                onPress={() => navigation.navigate('Dossier', { vehicleId: item.id })}
+                style={{ backgroundColor: colors.background, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}>
+                <Text style={{ color: colors.textSecondary, fontSize: 13 }}>📋 Sổ tay</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
                 onPress={() => navigation.navigate('EditVehicle', { vehicleId: item.id })}
                 style={{ backgroundColor: colors.background, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}>
                 <Text style={{ color: colors.textSecondary, fontSize: 13 }}>✏️ Sửa</Text>

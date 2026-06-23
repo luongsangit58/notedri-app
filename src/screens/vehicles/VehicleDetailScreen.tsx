@@ -311,7 +311,18 @@ export default function VehicleDetailScreen() {
 
         {/* Sức khoẻ xe — breakdown card */}
         {healthData != null && (
-          <HealthBreakdownCard health={healthData} />
+          <>
+            <HealthBreakdownCard health={healthData} />
+            <TouchableOpacity
+              onPress={() => navigation.navigate('Health')}
+              style={{
+                alignSelf: 'flex-end', marginTop: -6, marginBottom: 12,
+                paddingHorizontal: 14, paddingVertical: 7,
+                backgroundColor: colors.surface, borderRadius: 10,
+              }}>
+              <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 13 }}>Xem chi tiết →</Text>
+            </TouchableOpacity>
+          </>
         )}
 
         {/* Nhắc nhở */}
