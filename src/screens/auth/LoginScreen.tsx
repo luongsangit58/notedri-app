@@ -18,7 +18,7 @@ const GOOGLE_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? '';
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const REDIRECT_URI = (makeRedirectUri as any)({ useProxy: true });
 
-export default function LoginScreen() {
+export default function LoginScreen({ navigation }: { navigation: any }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const { login, loginWithGoogle, isLoading, error, clearError } = useAuthStore();
@@ -117,6 +117,26 @@ export default function LoginScreen() {
         >
           <Text style={{ fontSize: 20, marginRight: 8 }}>G</Text>
           <Text style={{ color: colors.text, fontWeight: '600', fontSize: 16 }}>Đăng nhập với Google</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => navigation.navigate('ForgotPassword')}
+          style={{ marginTop: 20, alignItems: 'center' }}
+        >
+          <Text style={{ color: colors.textSecondary, fontSize: 14 }}>
+            Quên mật khẩu?{' '}
+            <Text style={{ color: colors.primary, fontWeight: '600' }}>Đặt lại</Text>
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => navigation.navigate('Register')}
+          style={{ marginTop: 12, alignItems: 'center' }}
+        >
+          <Text style={{ color: colors.textSecondary, fontSize: 14 }}>
+            Chưa có tài khoản?{' '}
+            <Text style={{ color: colors.primary, fontWeight: '600' }}>Đăng ký</Text>
+          </Text>
         </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>

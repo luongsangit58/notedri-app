@@ -19,6 +19,19 @@ export const useCreateService = () => {
   });
 };
 
+export const useUpdateService = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: any }) =>
+      servicesApi.update(id, data).then(r => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['services'] });
+      qc.invalidateQueries({ queryKey: ['dashboard'] });
+      qc.invalidateQueries({ queryKey: ['timeline'] });
+    },
+  });
+};
+
 export const useDeleteService = () => {
   const qc = useQueryClient();
   return useMutation({

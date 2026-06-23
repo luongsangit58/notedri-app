@@ -19,6 +19,9 @@ import AddOdometerScreen from '../screens/odometer/AddOdometerScreen';
 import NotificationsScreen from '../screens/notifications/NotificationsScreen';
 import ReportsScreen from '../screens/reports/ReportsScreen';
 import RemindersScreen from '../screens/reminders/RemindersScreen';
+import AddReminderScreen from '../screens/reminders/AddReminderScreen';
+import EditRefuelScreen from '../screens/refuels/EditRefuelScreen';
+import EditServiceScreen from '../screens/services/EditServiceScreen';
 
 const Tab = createBottomTabNavigator();
 const RootStack = createStackNavigator();
@@ -111,6 +114,16 @@ export default function AppNavigator() {
       {/* Profile */}
       <RootStack.Screen name="EditProfile" component={EditProfileScreen}
         options={{ headerShown: true, ...headerOpts, title: 'Chỉnh sửa hồ sơ' }} />
+
+      {/* Reminders */}
+      <RootStack.Screen name="AddReminder" component={AddReminderScreen}
+        options={{ headerShown: false }} />
+
+      {/* Edit */}
+      <RootStack.Screen name="EditRefuel" component={EditRefuelScreen}
+        options={{ headerShown: true, ...headerOpts, title: '✏️ Sửa lần đổ xăng' }} />
+      <RootStack.Screen name="EditService" component={EditServiceScreen}
+        options={{ headerShown: true, ...headerOpts, title: '✏️ Sửa bảo dưỡng' }} />
 
       {/* Notifications & Reports */}
       <RootStack.Screen name="Notifications" component={NotificationsScreen}

@@ -9,4 +9,8 @@ export const authApi = {
   me: () => client.get('/auth/me'),
   pushToken: (token: string) =>
     client.post('/auth/push-token', { expo_push_token: token }),
+  register: (name: string, email: string, password: string, password_confirmation: string) =>
+    client.post('/auth/register', { name, email, password, password_confirmation }),
+  forgotPassword: (email: string) =>
+    client.post('/auth/forgot-password', { email }),
 };

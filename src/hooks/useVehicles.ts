@@ -36,3 +36,14 @@ export const useDeleteVehicle = () => {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['vehicles'] }),
   });
 };
+
+export const useSetDefaultVehicle = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => vehiclesApi.setDefault(id).then(r => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['vehicles'] });
+      qc.invalidateQueries({ queryKey: ['dashboard'] });
+    },
+  });
+};

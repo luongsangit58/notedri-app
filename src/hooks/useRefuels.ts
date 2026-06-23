@@ -19,6 +19,19 @@ export const useCreateRefuel = () => {
   });
 };
 
+export const useUpdateRefuel = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: any }) =>
+      refuelsApi.update(id, data).then(r => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['refuels'] });
+      qc.invalidateQueries({ queryKey: ['dashboard'] });
+      qc.invalidateQueries({ queryKey: ['timeline'] });
+    },
+  });
+};
+
 export const useDeleteRefuel = () => {
   const qc = useQueryClient();
   return useMutation({

@@ -2,7 +2,7 @@ import React from 'react';
 import { FlatList, View, Text, TouchableOpacity, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { useVehicles } from '../../hooks/useVehicles';
+import { useVehicles, useSetDefaultVehicle } from '../../hooks/useVehicles';
 import VehicleCard from '../../components/VehicleCard';
 import LoadingView from '../../components/LoadingView';
 import ErrorView from '../../components/ErrorView';
@@ -11,6 +11,7 @@ import { colors } from '../../utils/colors';
 export default function VehiclesScreen() {
   const { data, isLoading, isError, refetch, isFetching } = useVehicles();
   const navigation = useNavigation<any>();
+  const { mutate: setDefault } = useSetDefaultVehicle();
 
   if (isLoading) return <LoadingView />;
   if (isError) return <ErrorView message="Không tải được danh sách xe" onRetry={refetch} />;
@@ -28,15 +29,25 @@ export default function VehiclesScreen() {
               vehicle={item}
               onPress={() => navigation.navigate('VehicleDetail', { vehicleId: item.id, vehicleName: item.ten ?? item.name })}
             />
-            <TouchableOpacity
-              onPress={() => navigation.navigate('EditVehicle', { vehicleId: item.id })}
-              style={{
-                position: 'absolute', top: 12, right: 12,
-                backgroundColor: colors.background, borderRadius: 8,
-                paddingHorizontal: 10, paddingVertical: 4,
-              }}>
-              <Text style={{ color: colors.textSecondary, fontSize: 13 }}>✏️ Sửa</Text>
-            </TouchableOpacity>
+            <View style={{ position: 'absolute', top: 12, right: 12, flexDirection: 'row', gap: 6 }}>
+              {!item.is_default && (
+                <TouchableOpacity
+                  onPress={() => setDefault(item.id)}
+                  style={{ backgroundColor: colors.background, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 }}>
+                  <Text style={{ fontSize: 13 }}>⭐</Text>
+                </TouchableOpacity>
+              )}
+              {item.is_default && (
+                <View style={{ backgroundColor: colors.background, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 }}>
+                  <Text style={{ fontSize: 13 }}>🌟</Text>
+                </View>
+              )}
+              <TouchableOpacity
+                onPress={() => navigation.navigate('EditVehicle', { vehicleId: item.id })}
+                style={{ backgroundColor: colors.background, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}>
+                <Text style={{ color: colors.textSecondary, fontSize: 13 }}>✏️ Sửa</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         )}
         contentContainerStyle={{ padding: 16, paddingBottom: 80 }}
