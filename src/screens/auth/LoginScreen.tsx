@@ -5,13 +5,18 @@ import {
 } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
-import { ResponseType } from 'expo-auth-session';
+import { makeRedirectUri } from 'expo-auth-session';
 import { useAuthStore } from '../../store/authStore';
 import { colors } from '../../utils/colors';
 
 WebBrowser.maybeCompleteAuthSession();
 
 const GOOGLE_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? '';
+
+// Expo Go dùng auth proxy: https://auth.expo.io/@luongsangit58/notedri-app
+// Redirect URI này phải được thêm vào Google Cloud Console → OAuth 2.0 Client → Authorized redirect URIs
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const REDIRECT_URI = (makeRedirectUri as any)({ useProxy: true });
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -20,16 +25,18 @@ export default function LoginScreen() {
 
   const [request, response, promptAsync] = Google.useAuthRequest({
     clientId: GOOGLE_CLIENT_ID,
-    responseType: ResponseType.IdToken,
+    redirectUri: REDIRECT_URI,
+    scopes: ['openid', 'profile', 'email'],
   });
 
   useEffect(() => {
     if (response?.type === 'success') {
-      const idToken = response.params?.id_token;
+      // Khi dùng proxy: idToken trong authentication; khi dùng implicit: params.id_token
+      const idToken = (response as any).authentication?.idToken ?? response.params?.id_token;
       if (idToken) {
         loginWithGoogle(idToken).catch(() => {});
       } else {
-        Alert.alert('Lỗi', 'Không lấy được token Google');
+        Alert.alert('Lỗi', 'Không lấy được id_token từ Google. Kiểm tra redirect URI trong Google Console.');
       }
     }
   }, [response]);
