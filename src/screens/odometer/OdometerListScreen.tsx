@@ -98,6 +98,10 @@ function SingleVehicleList({
     }
   }, [data, page]);
 
+  const odoMeta = data?.meta ?? null;
+  const odoCurrentKm: number | null = odoMeta?.odo_current ?? null;
+  const totalKmTracked: number | null = odoMeta?.total_km_tracked ?? null;
+
   const hasMore = data?.next_page_url != null || pageItems.length >= PER_PAGE;
 
   const handleRefresh = async () => {
@@ -140,6 +144,28 @@ function SingleVehicleList({
       renderItem={({ item }) => (
         <OdoCard item={item} onPress={() => onNavigateEdit(item.id)} />
       )}
+      ListHeaderComponent={
+        (odoCurrentKm != null || totalKmTracked != null) ? (
+          <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4 }}>
+            {odoCurrentKm != null && (
+              <View style={{ flex: 1, backgroundColor: colors.surface, borderRadius: 10, padding: 10, alignItems: 'center' }}>
+                <Text style={{ color: colors.textSecondary, fontSize: 10 }}>ODO hiện tại</Text>
+                <Text style={{ color: colors.text, fontWeight: '700', fontSize: 15, marginTop: 2 }}>
+                  {Number(odoCurrentKm).toLocaleString('vi-VN')} km
+                </Text>
+              </View>
+            )}
+            {totalKmTracked != null && totalKmTracked > 0 && (
+              <View style={{ flex: 1, backgroundColor: colors.surface, borderRadius: 10, padding: 10, alignItems: 'center' }}>
+                <Text style={{ color: colors.textSecondary, fontSize: 10 }}>Km đã ghi nhận</Text>
+                <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 15, marginTop: 2 }}>
+                  +{Number(totalKmTracked).toLocaleString('vi-VN')} km
+                </Text>
+              </View>
+            )}
+          </View>
+        ) : null
+      }
       ListFooterComponent={ListFooter}
       ListEmptyComponent={ListEmpty}
       contentContainerStyle={allItems.length === 0 ? styles.emptyContainer : styles.listContent}
