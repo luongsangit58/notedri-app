@@ -36,6 +36,7 @@ import YearReviewScreen from '../screens/reports/YearReviewScreen';
 import FuelPricesScreen from '../screens/refuels/FuelPricesScreen';
 import FeedbackScreen from '../screens/profile/FeedbackScreen';
 import PremiumScreen from '../screens/profile/PremiumScreen';
+import AboutScreen from '../screens/profile/AboutScreen';
 
 const Tab = createBottomTabNavigator();
 const RootStack = createStackNavigator();
@@ -201,6 +202,10 @@ export default function AppNavigator() {
       {/* Feedback */}
       <RootStack.Screen name="Feedback" component={FeedbackScreen}
         options={{ headerShown: true, ...headerOpts, title: 'Góp ý' }} />
+
+      {/* About */}
+      <RootStack.Screen name="About" component={AboutScreen}
+        options={{ headerShown: true, ...headerOpts, title: 'Về NoteDri' }} />
 
       {/* Premium */}
       <RootStack.Screen name="Premium" component={PremiumScreen}

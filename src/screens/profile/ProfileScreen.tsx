@@ -144,6 +144,11 @@ export default function ProfileScreen() {
             label="Góp ý"
             onPress={() => navigation.navigate('Feedback')}
           />
+          <MenuItem
+            icon={<FontAwesome5 name="info-circle" size={16} color={colors.textSecondary} solid />}
+            label="Về NoteDri"
+            onPress={() => navigation.navigate('About')}
+          />
         </View>
 
         <View style={{ backgroundColor: colors.surface, borderRadius: 14, marginHorizontal: 16, overflow: 'hidden', marginBottom: 16 }}>
