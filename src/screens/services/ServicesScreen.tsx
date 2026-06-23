@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import { FontAwesome5 } from '@expo/vector-icons';
 import { useServices } from '../../hooks/useServices';
 import { colors } from '../../utils/colors';
 
@@ -52,7 +53,9 @@ function ServiceCard({ item, onPress }: { item: ServiceItem; onPress?: () => voi
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={onPress ? 0.7 : 1}>
       <View style={styles.cardHeader}>
-        <Text style={styles.icon}>🔧</Text>
+        <View style={styles.icon}>
+          <FontAwesome5 name="wrench" size={18} color={colors.primary} solid />
+        </View>
         <View style={styles.cardMain}>
           <Text style={styles.hangMuc} numberOfLines={1}>{item.hang_muc}</Text>
           <View style={styles.metaRow}>
@@ -69,7 +72,10 @@ function ServiceCard({ item, onPress }: { item: ServiceItem; onPress?: () => voi
         </View>
       </View>
       {!!item.noi_lam && (
-        <Text style={styles.noiLam} numberOfLines={1}>📍 {item.noi_lam}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 8 }}>
+          <FontAwesome5 name="map-marker-alt" size={11} color={colors.textSecondary} solid />
+          <Text style={[styles.noiLam, { marginTop: 0 }]} numberOfLines={1}>{item.noi_lam}</Text>
+        </View>
       )}
     </TouchableOpacity>
   );
@@ -175,7 +181,9 @@ export default function ServicesScreen() {
         }
         ListEmptyComponent={
           <View style={styles.emptyState}>
-            <Text style={styles.emptyIcon}>🔧</Text>
+            <View style={styles.emptyIcon}>
+              <FontAwesome5 name="wrench" size={48} color={colors.textSecondary} solid />
+            </View>
             <Text style={styles.emptyText}>
               {searchText || selectedLoai !== ALL_CHIP
                 ? 'Không có kết quả phù hợp'
@@ -200,7 +208,7 @@ export default function ServicesScreen() {
         onPress={() => navigation.navigate('AddService')}
         activeOpacity={0.85}
       >
-        <Text style={styles.fabText}>+</Text>
+        <FontAwesome5 name="plus" size={22} color="#fff" solid />
       </TouchableOpacity>
     </SafeAreaView>
   );
@@ -276,7 +284,9 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   icon: {
-    fontSize: 22,
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
+    width: 28,
   },
   cardMain: {
     flex: 1,
@@ -327,8 +337,8 @@ const styles = StyleSheet.create({
     paddingTop: 80,
   },
   emptyIcon: {
-    fontSize: 48,
     marginBottom: 12,
+    alignItems: 'center' as const,
   },
   emptyText: {
     color: colors.text,

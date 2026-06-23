@@ -1,8 +1,8 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
-import { Text } from 'react-native';
 import { colors } from '../utils/colors';
+import { FontAwesome5 } from '@expo/vector-icons';
 
 import DashboardScreen from '../screens/dashboard/DashboardScreen';
 import TimelineScreen from '../screens/timeline/TimelineScreen';
@@ -71,27 +71,27 @@ function TabNavigator() {
       <Tab.Screen
         name="Dashboard"
         component={DashboardScreen}
-        options={{ title: 'Tổng quan', tabBarIcon: ({ color }) => <Text style={{ fontSize: 20, color }}>🏠</Text> }}
+        options={{ title: 'Tổng quan', tabBarIcon: ({ color, size }) => <FontAwesome5 name="home" size={size - 2} color={color} solid /> }}
       />
       <Tab.Screen
         name="Timeline"
         component={TimelineScreen}
-        options={{ title: 'Nhật ký', tabBarIcon: ({ color }) => <Text style={{ fontSize: 20, color }}>📋</Text> }}
+        options={{ title: 'Nhật ký', tabBarIcon: ({ color, size }) => <FontAwesome5 name="history" size={size - 2} color={color} solid /> }}
       />
       <Tab.Screen
         name="Services"
         component={ServicesStack}
-        options={{ title: 'Bảo dưỡng', headerShown: false, tabBarIcon: ({ color }) => <Text style={{ fontSize: 20, color }}>🔧</Text> }}
+        options={{ title: 'Bảo dưỡng', headerShown: false, tabBarIcon: ({ color, size }) => <FontAwesome5 name="wrench" size={size - 2} color={color} solid /> }}
       />
       <Tab.Screen
         name="Vehicles"
         component={VehiclesStack}
-        options={{ title: 'Xe', headerShown: false, tabBarIcon: ({ color }) => <Text style={{ fontSize: 20, color }}>🚗</Text> }}
+        options={{ title: 'Xe', headerShown: false, tabBarIcon: ({ color, size }) => <FontAwesome5 name="car-side" size={size - 2} color={color} solid /> }}
       />
       <Tab.Screen
         name="Profile"
         component={ProfileScreen}
-        options={{ title: 'Hồ sơ', tabBarIcon: ({ color }) => <Text style={{ fontSize: 20, color }}>👤</Text> }}
+        options={{ title: 'Hồ sơ', tabBarIcon: ({ color, size }) => <FontAwesome5 name="user-circle" size={size - 2} color={color} solid /> }}
       />
     </Tab.Navigator>
   );

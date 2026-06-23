@@ -3,6 +3,7 @@ import {
   View, Text, ScrollView, TouchableOpacity, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { FontAwesome5 } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { useVehicles } from '../../hooks/useVehicles';
 import client from '../../api/client';
@@ -27,7 +28,7 @@ function fmtNum(n: number | string | null | undefined, unit = ''): string {
 function StatCard({
   icon, label, value, sub,
 }: {
-  icon: string;
+  icon: React.ReactNode;
   label: string;
   value: string;
   sub?: string;
@@ -40,7 +41,7 @@ function StatCard({
         padding: 16,
         flex: 1,
       }}>
-      <Text style={{ fontSize: 20, marginBottom: 6 }}>{icon}</Text>
+      <View style={{ marginBottom: 6 }}>{icon}</View>
       <Text style={{ color: colors.textSecondary, fontSize: 12, marginBottom: 4 }}>{label}</Text>
       <Text style={{ color: colors.text, fontWeight: '800', fontSize: 16 }}>{value}</Text>
       {sub ? (
@@ -408,7 +409,7 @@ function ReportContent({
       {/* row 1: fuel + service */}
       <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
         <StatCard
-          icon="⛽"
+          icon={<FontAwesome5 name="gas-pump" size={20} color={colors.primary} solid />}
           label="Chi phí xăng"
           value={fuelCost != null ? fmtVnd(fuelCost) : '—'}
           sub={
@@ -418,7 +419,7 @@ function ReportContent({
           }
         />
         <StatCard
-          icon="🔧"
+          icon={<FontAwesome5 name="wrench" size={20} color={colors.primary} solid />}
           label="Chi phí dịch vụ"
           value={serviceCost != null ? fmtVnd(serviceCost) : '—'}
           sub={
@@ -432,12 +433,12 @@ function ReportContent({
       {/* row 2: km + consumption */}
       <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
         <StatCard
-          icon="📍"
+          icon={<FontAwesome5 name="road" size={20} color={colors.primary} solid />}
           label="Tổng quãng đường"
           value={totalKm != null ? fmtNum(totalKm, 'km') : '—'}
         />
         <StatCard
-          icon="📊"
+          icon={<FontAwesome5 name="chart-bar" size={20} color={colors.primary} solid />}
           label="Tiêu hao TB"
           value={
             avgConsumption != null
@@ -449,7 +450,7 @@ function ReportContent({
 
       {/* ── year review card ── */}
       {yr != null && (
-        <SectionCard title={`🏆 Nhìn lại năm ${selectedYear}`}>
+        <SectionCard title={`Nhìn lại năm ${selectedYear}`}>
           {yrKm != null && (
             <CardRow index={0} label="Km đã đi" value={fmtNum(yrKm, 'km')} />
           )}
@@ -480,7 +481,7 @@ function ReportContent({
 
       {/* ── top 3 months by spend ── */}
       {top3Months.length > 0 && (
-        <SectionCard title="📅 Tháng chi nhiều nhất">
+        <SectionCard title="Tháng chi nhiều nhất">
           {top3Months.map((m, i) => {
             const month =
               m.thang ?? m.month ?? m.month_number ?? (i + 1);
@@ -501,7 +502,7 @@ function ReportContent({
 
       {/* ── top 3 stations ── */}
       {top3Stations.length > 0 && (
-        <SectionCard title="⛽ Trạm xăng hay dùng">
+        <SectionCard title="Trạm xăng hay dùng">
           {top3Stations.map((s, i) => {
             const name =
               s.ten ?? s.name ?? s.station_name ?? `Trạm ${i + 1}`;
@@ -529,7 +530,7 @@ function ReportContent({
 
       {/* ── TCO (chi phí toàn đời xe) ── */}
       {tco != null && (
-        <SectionCard title="💰 Chi phí toàn đời xe (TCO)">
+        <SectionCard title="Chi phí toàn đời xe (TCO)">
           {tcoTotal != null && (
             <CardRow
               index={0}

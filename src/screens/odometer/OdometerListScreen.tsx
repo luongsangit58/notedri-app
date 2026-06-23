@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import { FontAwesome5 } from '@expo/vector-icons';
 import { useQueries, useQueryClient } from '@tanstack/react-query';
 import { odometerApi } from '../../api/odometer';
 import { useOdometer } from '../../hooks/useOdometer';
@@ -127,8 +128,8 @@ function SingleVehicleList({
     </View>
   ) : (
     <View style={styles.emptyState}>
-      <Text style={styles.emptyIcon}>📍</Text>
-      <Text style={styles.emptyText}>Chưa có mốc ODO nào</Text>
+      <FontAwesome5 name="road" size={48} color={colors.textSecondary} solid />
+      <Text style={[styles.emptyText, { marginTop: 12 }]}>Chưa có mốc ODO nào</Text>
     </View>
   );
 
@@ -204,8 +205,8 @@ function AllVehiclesList({
     </View>
   ) : (
     <View style={styles.emptyState}>
-      <Text style={styles.emptyIcon}>📍</Text>
-      <Text style={styles.emptyText}>Chưa có mốc ODO nào</Text>
+      <FontAwesome5 name="road" size={48} color={colors.textSecondary} solid />
+      <Text style={[styles.emptyText, { marginTop: 12 }]}>Chưa có mốc ODO nào</Text>
     </View>
   );
 
@@ -300,7 +301,7 @@ export default function OdometerListScreen() {
         onPress={() => navigation.navigate('AddOdometer')}
         activeOpacity={0.85}
       >
-        <Text style={styles.fabText}>+</Text>
+        <FontAwesome5 name="plus" size={22} color="#fff" solid />
       </TouchableOpacity>
     </SafeAreaView>
   );

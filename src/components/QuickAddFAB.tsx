@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, Modal, Pressable } from 'react-native';
+import { FontAwesome5 } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { colors } from '../utils/colors';
 
@@ -48,19 +49,25 @@ export default function QuickAddFAB() {
             <TouchableOpacity
               onPress={handleRefuel}
               style={{ flexDirection: 'row', alignItems: 'center', padding: 16, backgroundColor: colors.card, borderRadius: 12, marginBottom: 10 }}>
-              <Text style={{ fontSize: 24, marginRight: 12 }}>⛽</Text>
+              <View style={{ width: 32, alignItems: 'center', marginRight: 12 }}>
+                <FontAwesome5 name="gas-pump" size={20} color={colors.primary} solid />
+              </View>
               <Text style={{ color: colors.text, fontSize: 16, fontWeight: '600' }}>Đổ xăng</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={handleOdometer}
               style={{ flexDirection: 'row', alignItems: 'center', padding: 16, backgroundColor: colors.card, borderRadius: 12, marginBottom: 10 }}>
-              <Text style={{ fontSize: 24, marginRight: 12 }}>📍</Text>
+              <View style={{ width: 32, alignItems: 'center', marginRight: 12 }}>
+                <FontAwesome5 name="road" size={20} color={colors.primary} solid />
+              </View>
               <Text style={{ color: colors.text, fontSize: 16, fontWeight: '600' }}>Cập nhật ODO</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => { setOpen(false); navigation.navigate('AddService' as never); }}
               style={{ flexDirection: 'row', alignItems: 'center', padding: 16, backgroundColor: colors.card, borderRadius: 12 }}>
-              <Text style={{ fontSize: 24, marginRight: 12 }}>🔧</Text>
+              <View style={{ width: 32, alignItems: 'center', marginRight: 12 }}>
+                <FontAwesome5 name="wrench" size={20} color={colors.primary} solid />
+              </View>
               <Text style={{ color: colors.text, fontSize: 16, fontWeight: '600' }}>Bảo dưỡng mới</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => setOpen(false)} style={{ marginTop: 16, alignItems: 'center' }}>

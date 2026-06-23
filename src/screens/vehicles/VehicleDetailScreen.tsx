@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
+import { FontAwesome5 } from '@expo/vector-icons';
 import { useVehicle, useVehicleHealth, useVehicleReminders } from '../../hooks/useVehicles';
 import LoadingView from '../../components/LoadingView';
 import ErrorView from '../../components/ErrorView';
@@ -62,13 +63,13 @@ function scoreColor(score: number): string {
   return colors.error;
 }
 
-function organStatusIcon(status: OrganStatus): string {
+function organStatusIconName(status: OrganStatus): { name: string; color: string } {
   switch (status) {
-    case 'urgent': return '🔴';
-    case 'warn':   return '⚠️';
-    case 'info':   return 'ℹ️';
-    case 'ok':     return '✅';
-    default:       return '—';
+    case 'urgent': return { name: 'exclamation-triangle', color: colors.error };
+    case 'warn':   return { name: 'exclamation-triangle', color: colors.warning };
+    case 'info':   return { name: 'info-circle', color: '#42A5F5' };
+    case 'ok':     return { name: 'check-circle', color: colors.success };
+    default:       return { name: 'info-circle', color: colors.textSecondary };
   }
 }
 
@@ -94,7 +95,7 @@ function PillarBar({ pillar }: { pillar: Pillar }) {
 
 function OrganRow({ organ }: { organ: Organ }) {
   const statusClr = organStatusColor(organ.status);
-  const icon = organStatusIcon(organ.status);
+  const iconInfo = organStatusIconName(organ.status);
   if (organ.status === 'na') return null;
   return (
     <View style={{
@@ -106,7 +107,7 @@ function OrganRow({ organ }: { organ: Organ }) {
       borderLeftColor: statusClr,
     }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
-        <Text style={{ fontSize: 14, marginRight: 6 }}>{icon}</Text>
+        <FontAwesome5 name={iconInfo.name as any} size={14} color={iconInfo.color} solid style={{ marginRight: 6 }} />
         <Text style={{ color: colors.text, fontWeight: '700', fontSize: 13, flex: 1 }}>{organ.label}</Text>
         <Text style={{ color: statusClr, fontSize: 12, fontWeight: '600' }}>{organ.verdict}</Text>
       </View>
@@ -145,7 +146,10 @@ function HealthBreakdownCard({ health }: { health: HealthData }) {
     <View style={{ backgroundColor: colors.surface, borderRadius: 14, padding: 16, marginBottom: 12 }}>
       {/* Header */}
       <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-        <Text style={{ color: colors.text, fontWeight: '700', fontSize: 15, flex: 1 }}>🩺 Sức khoẻ xe</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
+          <FontAwesome5 name="stethoscope" size={15} color={colors.text} solid />
+          <Text style={{ color: colors.text, fontWeight: '700', fontSize: 15 }}>Sức khoẻ xe</Text>
+        </View>
         {warnCount > 0 && (
           <View style={{
             backgroundColor: critical ? colors.error : colors.warning,
@@ -153,9 +157,10 @@ function HealthBreakdownCard({ health }: { health: HealthData }) {
             paddingVertical: 2,
             borderRadius: 10,
           }}>
-            <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>
-              {critical ? '🔴 ' : '⚠️ '}{warnCount} cần chú ý
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <FontAwesome5 name="exclamation-triangle" size={11} color="#fff" solid />
+              <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>{warnCount} cần chú ý</Text>
+            </View>
           </View>
         )}
       </View>
@@ -262,9 +267,12 @@ export default function VehicleDetailScreen() {
                 </Text>
               ) : null}
               {(v?.odo_hien_tai ?? v?.current_odometer) != null && (
-                <Text style={{ color: colors.primary, marginTop: 8, fontWeight: '700', fontSize: 16 }}>
-                  📍 {Number(v?.odo_hien_tai ?? v?.current_odometer).toLocaleString('vi-VN')} km
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
+                  <FontAwesome5 name="road" size={14} color={colors.primary} solid />
+                  <Text style={{ color: colors.primary, marginLeft: 6, fontWeight: '700', fontSize: 16 }}>
+                    {Number(v?.odo_hien_tai ?? v?.current_odometer).toLocaleString('vi-VN')} km
+                  </Text>
+                </View>
               )}
             </View>
             {scoreTotal != null && (
@@ -280,18 +288,21 @@ export default function VehicleDetailScreen() {
         <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
           <TouchableOpacity
             onPress={() => navigation.navigate('EditVehicle', { vehicleId })}
-            style={{ flex: 1, backgroundColor: colors.surface, padding: 12, borderRadius: 10, alignItems: 'center' }}>
-            <Text style={{ color: colors.text, fontWeight: '600', fontSize: 13 }}>✏️ Sửa xe</Text>
+            style={{ flex: 1, backgroundColor: colors.surface, padding: 12, borderRadius: 10, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6 }}>
+            <FontAwesome5 name="pen" size={13} color={colors.text} solid />
+            <Text style={{ color: colors.text, fontWeight: '600', fontSize: 13 }}>Sửa xe</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => navigation.navigate('Reminders', { vehicleId })}
-            style={{ flex: 1, backgroundColor: colors.surface, padding: 12, borderRadius: 10, alignItems: 'center' }}>
-            <Text style={{ color: colors.text, fontWeight: '600', fontSize: 13 }}>🔔 Lời nhắc</Text>
+            style={{ flex: 1, backgroundColor: colors.surface, padding: 12, borderRadius: 10, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6 }}>
+            <FontAwesome5 name="bell" size={13} color={colors.text} solid />
+            <Text style={{ color: colors.text, fontWeight: '600', fontSize: 13 }}>Lời nhắc</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => navigation.navigate('AddService')}
-            style={{ flex: 1, backgroundColor: colors.surface, padding: 12, borderRadius: 10, alignItems: 'center' }}>
-            <Text style={{ color: colors.text, fontWeight: '600', fontSize: 13 }}>🔧 Bảo dưỡng</Text>
+            style={{ flex: 1, backgroundColor: colors.surface, padding: 12, borderRadius: 10, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6 }}>
+            <FontAwesome5 name="wrench" size={13} color={colors.text} solid />
+            <Text style={{ color: colors.text, fontWeight: '600', fontSize: 13 }}>Bảo dưỡng</Text>
           </TouchableOpacity>
         </View>
 
@@ -299,13 +310,15 @@ export default function VehicleDetailScreen() {
         <View style={{ flexDirection: 'row', gap: 10, marginBottom: 12 }}>
           <TouchableOpacity
             onPress={() => navigation.navigate('AddRefuel')}
-            style={{ flex: 1, backgroundColor: colors.primary, padding: 14, borderRadius: 10, alignItems: 'center' }}>
-            <Text style={{ color: '#fff', fontWeight: '700' }}>⛽ Đổ xăng</Text>
+            style={{ flex: 1, backgroundColor: colors.primary, padding: 14, borderRadius: 10, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6 }}>
+            <FontAwesome5 name="gas-pump" size={14} color="#fff" solid />
+            <Text style={{ color: '#fff', fontWeight: '700' }}>Đổ xăng</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => navigation.navigate('AddOdometer')}
-            style={{ flex: 1, backgroundColor: colors.surface, padding: 14, borderRadius: 10, alignItems: 'center' }}>
-            <Text style={{ color: colors.text, fontWeight: '600' }}>📍 Cập nhật ODO</Text>
+            style={{ flex: 1, backgroundColor: colors.surface, padding: 14, borderRadius: 10, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6 }}>
+            <FontAwesome5 name="road" size={14} color={colors.text} solid />
+            <Text style={{ color: colors.text, fontWeight: '600' }}>Cập nhật ODO</Text>
           </TouchableOpacity>
         </View>
 

@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { FontAwesome5 } from '@expo/vector-icons';
 import { useReminders, useDeleteReminder, useDoneReminder } from '../../hooks/useReminders';
 import { useVehicles } from '../../hooks/useVehicles';
 import LoadingView from '../../components/LoadingView';
@@ -109,10 +110,10 @@ function ReminderCard({
           </Text>
         </View>
         <TouchableOpacity onPress={() => onEdit(item.id)} style={styles.deleteBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Text style={styles.deleteBtnText}>✏️</Text>
+          <FontAwesome5 name="pen" size={14} color={colors.textSecondary} solid />
         </TouchableOpacity>
         <TouchableOpacity onPress={handleDelete} style={styles.deleteBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Text style={styles.deleteBtnText}>🗑</Text>
+          <FontAwesome5 name="trash" size={14} color={colors.error} solid />
         </TouchableOpacity>
       </View>
 
@@ -148,7 +149,10 @@ function ReminderCard({
         onPress={() => onDone(item.id)}
         activeOpacity={0.7}
       >
-        <Text style={styles.doneBtnText}>✅ Đã làm</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <FontAwesome5 name="check" size={14} color={colors.success} solid />
+          <Text style={styles.doneBtnText}>Đã làm</Text>
+        </View>
       </TouchableOpacity>
     </View>
   );
@@ -213,7 +217,7 @@ export default function RemindersScreen() {
         onPress={() => navigation.navigate('AddReminder', { vehicleId })}
         activeOpacity={0.85}
       >
-        <Text style={styles.fabText}>+</Text>
+        <FontAwesome5 name="plus" size={22} color="#fff" solid />
       </TouchableOpacity>
     </SafeAreaView>
   );

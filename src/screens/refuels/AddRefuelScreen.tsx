@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import { FontAwesome5 } from '@expo/vector-icons';
 import dayjs from 'dayjs';
 import { useVehicles } from '../../hooks/useVehicles';
 import { useCreateRefuel } from '../../hooks/useRefuels';
@@ -184,7 +185,7 @@ export default function AddRefuelScreen() {
               backgroundColor: colors.surface, padding: 12, borderRadius: 10,
               alignItems: 'center', marginBottom: 16, flexDirection: 'row', justifyContent: 'center', gap: 8,
             }}>
-            <Text style={{ fontSize: 18 }}>📷</Text>
+            <FontAwesome5 name="camera" size={18} color={colors.primary} solid />
             <Text style={{ color: colors.primary, fontWeight: '600' }}>OCR từ hóa đơn xăng</Text>
           </TouchableOpacity>
 
@@ -195,7 +196,7 @@ export default function AddRefuelScreen() {
               backgroundColor: colors.surface, padding: 12, borderRadius: 10,
               alignItems: 'center', marginBottom: 16, flexDirection: 'row', justifyContent: 'center', gap: 8,
             }}>
-            <Text style={{ fontSize: 18 }}>📍</Text>
+            <FontAwesome5 name="location-arrow" size={16} color={colors.primary} solid />
             <Text style={{ color: colors.textSecondary, fontWeight: '600' }}>Tìm trạm xăng gần đây</Text>
           </TouchableOpacity>
 
@@ -262,7 +263,12 @@ export default function AddRefuelScreen() {
             style={{ backgroundColor: colors.primary, padding: 16, borderRadius: 12, alignItems: 'center', opacity: createRefuel.isPending ? 0.7 : 1 }}>
             {createRefuel.isPending
               ? <ActivityIndicator color="#fff" />
-              : <Text style={{ color: '#fff', fontWeight: '800', fontSize: 16 }}>⛽ Lưu lần đổ xăng</Text>}
+              : (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <FontAwesome5 name="gas-pump" size={16} color="#fff" solid />
+                  <Text style={{ color: '#fff', fontWeight: '800', fontSize: 16 }}>Lưu lần đổ xăng</Text>
+                </View>
+              )}
           </TouchableOpacity>
 
         </ScrollView>

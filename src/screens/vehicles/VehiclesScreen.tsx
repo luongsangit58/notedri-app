@@ -2,6 +2,7 @@ import React from 'react';
 import { FlatList, View, Text, TouchableOpacity, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import { FontAwesome5 } from '@expo/vector-icons';
 import { useVehicles, useSetDefaultVehicle } from '../../hooks/useVehicles';
 import VehicleCard from '../../components/VehicleCard';
 import LoadingView from '../../components/LoadingView';
@@ -34,23 +35,25 @@ export default function VehiclesScreen() {
                 <TouchableOpacity
                   onPress={() => setDefault(item.id)}
                   style={{ backgroundColor: colors.background, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 }}>
-                  <Text style={{ fontSize: 13 }}>⭐</Text>
+                  <FontAwesome5 name="star" size={14} color="#F59E0B" solid />
                 </TouchableOpacity>
               )}
               {item.is_default && (
                 <View style={{ backgroundColor: colors.background, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 }}>
-                  <Text style={{ fontSize: 13 }}>🌟</Text>
+                  <FontAwesome5 name="star" size={14} color="#F59E0B" solid />
                 </View>
               )}
               <TouchableOpacity
                 onPress={() => navigation.navigate('Dossier', { vehicleId: item.id })}
-                style={{ backgroundColor: colors.background, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}>
-                <Text style={{ color: colors.textSecondary, fontSize: 13 }}>📋 Sổ tay</Text>
+                style={{ backgroundColor: colors.background, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <FontAwesome5 name="book" size={13} color={colors.textSecondary} solid />
+                <Text style={{ color: colors.textSecondary, fontSize: 13 }}>Sổ tay</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => navigation.navigate('EditVehicle', { vehicleId: item.id })}
-                style={{ backgroundColor: colors.background, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}>
-                <Text style={{ color: colors.textSecondary, fontSize: 13 }}>✏️ Sửa</Text>
+                style={{ backgroundColor: colors.background, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <FontAwesome5 name="pen" size={13} color={colors.textSecondary} solid />
+                <Text style={{ color: colors.textSecondary, fontSize: 13 }}>Sửa</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -74,7 +77,7 @@ export default function VehiclesScreen() {
           justifyContent: 'center', alignItems: 'center', elevation: 6,
           shadowColor: colors.primary, shadowOpacity: 0.4, shadowRadius: 8, shadowOffset: { width: 0, height: 4 },
         }}>
-        <Text style={{ color: '#fff', fontSize: 28, lineHeight: 32 }}>+</Text>
+        <FontAwesome5 name="plus" size={22} color="#fff" solid />
       </TouchableOpacity>
     </SafeAreaView>
   );

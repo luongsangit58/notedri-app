@@ -4,6 +4,7 @@ import {
   ActivityIndicator, SafeAreaView,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
+import { FontAwesome5 } from '@expo/vector-icons';
 import { vehiclesApi } from '../../api/vehicles';
 import { servicesApi } from '../../api/services';
 import { colors } from '../../utils/colors';
@@ -217,7 +218,10 @@ export default function DossierScreen() {
         backgroundColor: colors.surface, paddingHorizontal: 16, paddingVertical: 14,
         borderBottomWidth: 1, borderBottomColor: colors.border,
       }}>
-        <Text style={{ color: colors.text, fontSize: 18, fontWeight: '800' }}>📋 Sổ tay xe</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <FontAwesome5 name="book-open" size={16} color={colors.text} solid />
+          <Text style={{ color: colors.text, fontSize: 18, fontWeight: '800' }}>Sổ tay xe</Text>
+        </View>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
           style={{ backgroundColor: colors.card, borderRadius: 20, width: 36, height: 36, justifyContent: 'center', alignItems: 'center' }}>
@@ -247,17 +251,26 @@ export default function DossierScreen() {
               ) : null}
               <View style={{ marginTop: 10, gap: 4 }}>
                 {(vehicle.make || vehicle.model) ? (
-                  <Text style={{ color: colors.textSecondary, fontSize: 13 }}>
-                    🚗 {[vehicle.make, vehicle.model].filter(Boolean).join(' ')}
-                    {(vehicle.nam ?? vehicle.year) ? ` · ${vehicle.nam ?? vehicle.year}` : ''}
-                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <FontAwesome5 name="car" size={12} color={colors.textSecondary} solid />
+                    <Text style={{ color: colors.textSecondary, fontSize: 13 }}>
+                      {[vehicle.make, vehicle.model].filter(Boolean).join(' ')}
+                      {(vehicle.nam ?? vehicle.year) ? ` · ${vehicle.nam ?? vehicle.year}` : ''}
+                    </Text>
+                  </View>
                 ) : null}
                 {vehicle.fuel_type ? (
-                  <Text style={{ color: colors.textSecondary, fontSize: 13 }}>⛽ {vehicle.fuel_type}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <FontAwesome5 name="gas-pump" size={12} color={colors.textSecondary} solid />
+                    <Text style={{ color: colors.textSecondary, fontSize: 13 }}>{vehicle.fuel_type}</Text>
+                  </View>
                 ) : null}
-                <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '700' }}>
-                  📍 {odo.toLocaleString('vi-VN')} km
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <FontAwesome5 name="road" size={12} color={colors.primary} solid />
+                  <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '700' }}>
+                    {odo.toLocaleString('vi-VN')} km
+                  </Text>
+                </View>
               </View>
             </View>
             {healthScore != null && (
@@ -294,9 +307,12 @@ export default function DossierScreen() {
 
         {/* Service history */}
         <View style={{ backgroundColor: colors.surface, borderRadius: 14, padding: 16, marginBottom: 14 }}>
-          <Text style={{ color: colors.text, fontWeight: '700', fontSize: 15, marginBottom: 12 }}>
-            🔧 Lịch sử bảo dưỡng
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+            <FontAwesome5 name="wrench" size={14} color={colors.text} solid />
+            <Text style={{ color: colors.text, fontWeight: '700', fontSize: 15 }}>
+              Lịch sử bảo dưỡng
+            </Text>
+          </View>
           {services.length === 0 ? (
             <Text style={{ color: colors.textSecondary, textAlign: 'center', paddingVertical: 16 }}>
               Chưa có lịch sử bảo dưỡng nào.
@@ -327,9 +343,12 @@ export default function DossierScreen() {
                     {serviceName(svc)}
                   </Text>
                   {odoVal != null && odoVal > 0 && (
-                    <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>
-                      📍 {odoVal.toLocaleString('vi-VN')} km
-                    </Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
+                      <FontAwesome5 name="road" size={11} color={colors.textSecondary} solid />
+                      <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
+                        {odoVal.toLocaleString('vi-VN')} km
+                      </Text>
+                    </View>
                   )}
                 </View>
               );
@@ -350,7 +369,8 @@ export default function DossierScreen() {
             backgroundColor: colors.primary, borderRadius: 12, padding: 14,
             flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
           }}>
-          <Text style={{ color: '#fff', fontWeight: '800', fontSize: 15 }}>📤 Chia sẻ sổ tay xe</Text>
+          <FontAwesome5 name="share-alt" size={16} color="#fff" solid />
+          <Text style={{ color: '#fff', fontWeight: '800', fontSize: 15 }}>Chia sẻ sổ tay xe</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>

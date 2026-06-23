@@ -3,6 +3,7 @@ import {
   View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { FontAwesome5 } from '@expo/vector-icons';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/vi';
@@ -24,20 +25,37 @@ interface Notification {
   data: NotificationData;
   read_at: string | null;
   created_at: string;
+  severity?: 'urgent' | 'warn' | 'info';
 }
 
 function getLabel(data: NotificationData): string {
   return data.message ?? data.title ?? data.body ?? '';
 }
 
+function getBellColors(severity?: Notification['severity']): { bg: string; icon: string } {
+  switch (severity) {
+    case 'urgent':
+      return { bg: '#FEE2E2', icon: '#DC2626' };
+    case 'warn':
+      return { bg: '#FEF3C7', icon: '#D97706' };
+    case 'info':
+      return { bg: '#E0F2FE', icon: '#0284C7' };
+    default:
+      return { bg: colors.surface, icon: colors.textSecondary };
+  }
+}
+
 function NotificationItem({ item, onMarkRead }: { item: Notification; onMarkRead: (id: number) => void }) {
   const unread = item.read_at === null;
   const label = getLabel(item.data);
   const timeAgo = dayjs(item.created_at).fromNow();
+  const bellColors = getBellColors(item.severity);
 
   return (
     <View style={[styles.item, unread ? styles.itemUnread : styles.itemRead]}>
-      <Text style={styles.bell}>🔔</Text>
+      <View style={[styles.bellContainer, { backgroundColor: bellColors.bg }]}>
+        <FontAwesome5 name="bell" size={16} color={bellColors.icon} solid />
+      </View>
       <View style={styles.itemContent}>
         <Text style={[styles.itemLabel, !unread && styles.itemLabelRead]} numberOfLines={2}>
           {label}
@@ -50,7 +68,7 @@ function NotificationItem({ item, onMarkRead }: { item: Notification; onMarkRead
           style={styles.markReadBtn}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <Text style={styles.markReadBtnText}>✓</Text>
+          <FontAwesome5 name="check" size={14} color={colors.primary} solid />
         </TouchableOpacity>
       )}
     </View>
@@ -60,7 +78,8 @@ function NotificationItem({ item, onMarkRead }: { item: Notification; onMarkRead
 function EmptyState() {
   return (
     <View style={styles.emptyContainer}>
-      <Text style={styles.emptyText}>Không có thông báo nào</Text>
+      <FontAwesome5 name="check-circle" size={48} color={colors.success} solid />
+      <Text style={[styles.emptyText, { marginTop: 12 }]}>Không có thông báo nào</Text>
     </View>
   );
 }
@@ -83,7 +102,12 @@ export default function NotificationsScreen() {
         >
           {isMarking
             ? <ActivityIndicator size="small" color={colors.primary} />
-            : <Text style={styles.markAllText}>Đọc tất cả</Text>
+            : (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <FontAwesome5 name="check" size={14} color={colors.primary} solid />
+                <Text style={styles.markAllText}>Đọc tất cả</Text>
+              </View>
+            )
           }
         </TouchableOpacity>
       </View>
@@ -150,7 +174,7 @@ const styles = StyleSheet.create({
   separator: {
     height: 1,
     backgroundColor: colors.border,
-    marginLeft: 52,
+    marginLeft: 64,
   },
   item: {
     flexDirection: 'row',
@@ -166,8 +190,12 @@ const styles = StyleSheet.create({
   itemRead: {
     opacity: 0.6,
   },
-  bell: {
-    fontSize: 20,
+  bellContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginRight: 12,
     marginTop: 1,
   },

@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import { FontAwesome5 } from '@expo/vector-icons';
 import dayjs from 'dayjs';
 import { useVehicles } from '../../hooks/useVehicles';
 import { useCreateService } from '../../hooks/useServices';
@@ -218,7 +219,12 @@ export default function AddServiceScreen() {
           >
             {createService.isPending
               ? <ActivityIndicator color="#fff" />
-              : <Text style={styles.submitText}>🔧 Lưu bảo dưỡng</Text>}
+              : (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <FontAwesome5 name="wrench" size={16} color="#fff" solid />
+                  <Text style={styles.submitText}>Lưu bảo dưỡng</Text>
+                </View>
+              )}
           </TouchableOpacity>
 
         </ScrollView>

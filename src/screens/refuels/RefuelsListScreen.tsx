@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import { FontAwesome5 } from '@expo/vector-icons';
 import { useRefuels } from '../../hooks/useRefuels';
 import { useVehicles } from '../../hooks/useVehicles';
 import { colors } from '../../utils/colors';
@@ -204,8 +205,8 @@ export default function RefuelsListScreen() {
     </View>
   ) : (
     <View style={styles.emptyState}>
-      <Text style={styles.emptyIcon}>⛽</Text>
-      <Text style={styles.emptyText}>Chưa có lần đổ xăng nào</Text>
+      <FontAwesome5 name="gas-pump" size={48} color={colors.textSecondary} solid />
+      <Text style={[styles.emptyText, { marginTop: 12 }]}>Chưa có lần đổ xăng nào</Text>
     </View>
   );
 
@@ -239,7 +240,7 @@ export default function RefuelsListScreen() {
         onPress={() => navigation.navigate('AddRefuel')}
         activeOpacity={0.85}
       >
-        <Text style={styles.fabText}>+</Text>
+        <FontAwesome5 name="plus" size={22} color="#fff" solid />
       </TouchableOpacity>
     </SafeAreaView>
   );

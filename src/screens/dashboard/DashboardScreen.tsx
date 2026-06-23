@@ -6,6 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
+import { FontAwesome5 } from '@expo/vector-icons';
 import { useDashboard } from '../../hooks/useDashboard';
 import { useVehicles } from '../../hooks/useVehicles';
 import LoadingView from '../../components/LoadingView';
@@ -145,7 +146,7 @@ export default function DashboardScreen() {
                 backgroundColor: colors.surface, borderRadius: 12,
                 width: 44, height: 44, justifyContent: 'center', alignItems: 'center',
               }}>
-              <Text style={{ fontSize: 22 }}>🔔</Text>
+              <FontAwesome5 name="bell" size={22} color={colors.text} solid />
             </TouchableOpacity>
             {unreadCount > 0 && (
               <View style={{
@@ -181,7 +182,7 @@ export default function DashboardScreen() {
           }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
             <View style={{ backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: 10, marginRight: 14 }}>
-              <Text style={{ fontSize: 20 }}>⛽</Text>
+              <FontAwesome5 name="gas-pump" size={20} color="#fff" solid />
             </View>
             <View>
               <Text style={{ color: '#fff', fontWeight: '800', fontSize: 16 }}>Đổ xăng</Text>
@@ -201,7 +202,7 @@ export default function DashboardScreen() {
           }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
             <View style={{ backgroundColor: colors.background, borderRadius: 10, padding: 10, marginRight: 14 }}>
-              <Text style={{ fontSize: 20 }}>📍</Text>
+              <FontAwesome5 name="road" size={20} color={colors.textSecondary} solid />
             </View>
             <View>
               <Text style={{ color: colors.text, fontWeight: '700', fontSize: 16 }}>Cập nhật ODO</Text>
@@ -211,7 +212,10 @@ export default function DashboardScreen() {
                 </Text>
               )}
               <TouchableOpacity onPress={() => nav.navigate('OdometerList')}>
-                <Text style={{ color: colors.primary, fontSize: 12, marginTop: 2 }}>📋 Lịch sử ODO →</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
+                  <FontAwesome5 name="history" size={11} color={colors.primary} solid />
+                  <Text style={{ color: colors.primary, fontSize: 12 }}>Lịch sử ODO →</Text>
+                </View>
               </TouchableOpacity>
             </View>
           </View>
@@ -232,7 +236,10 @@ export default function DashboardScreen() {
             <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: healthColor, marginRight: 10 }} />
             <View style={{ flex: 1 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14 }}>💪 Sức khoẻ xe</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <FontAwesome5 name="heartbeat" size={14} color={healthColor} solid />
+                  <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14 }}>Sức khoẻ xe</Text>
+                </View>
                 <View style={{ backgroundColor: healthColor + '33', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2, marginLeft: 8 }}>
                   <Text style={{ color: healthColor, fontSize: 12, fontWeight: '700' }}>{healthLabel}</Text>
                 </View>
@@ -251,10 +258,13 @@ export default function DashboardScreen() {
         {suggestions.length > 0 && (
           <View style={{ backgroundColor: colors.surface, borderRadius: 14, padding: 16, marginBottom: 10 }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14 }}>
-                💡 Việc cần làm hôm nay
-                <Text style={{ color: colors.textSecondary, fontWeight: '400', fontSize: 12 }}> ({dayjs().format('DD/MM/YYYY')})</Text>
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <FontAwesome5 name="lightbulb" size={16} color="#F59E0B" solid />
+                <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14, marginLeft: 6 }}>
+                  Việc cần làm hôm nay
+                  <Text style={{ color: colors.textSecondary, fontWeight: '400', fontSize: 12 }}> ({dayjs().format('DD/MM/YYYY')})</Text>
+                </Text>
+              </View>
               <TouchableOpacity onPress={() => setDismissedSuggestions(new Set(suggestions.map((s: any) => s.key)))}>
                 <Text style={{ color: colors.textSecondary, fontSize: 18 }}>×</Text>
               </TouchableOpacity>
@@ -293,7 +303,7 @@ export default function DashboardScreen() {
         {thisMonth && (
           <View style={{ flexDirection: 'row', gap: 8, marginBottom: 10 }}>
             <View style={{ flex: 1, backgroundColor: colors.surface, borderRadius: 14, padding: 14 }}>
-              <Text style={{ color: colors.primary, fontSize: 12, marginBottom: 4 }}>⛽</Text>
+              <FontAwesome5 name="gas-pump" size={12} color={colors.primary} solid />
               <Label>Chi xăng tháng này</Label>
               <Text style={{ color: colors.text, fontWeight: '800', fontSize: 16 }}>
                 {fmtFull(monthCost)}
@@ -312,14 +322,14 @@ export default function DashboardScreen() {
 
             <View style={{ gap: 8, flex: 1 }}>
               <View style={{ backgroundColor: colors.surface, borderRadius: 14, padding: 14, flex: 1 }}>
-                <Text style={{ color: '#38bdf8', fontSize: 12, marginBottom: 4 }}>📊</Text>
+                <FontAwesome5 name="chart-bar" size={12} color="#38bdf8" solid />
                 <Label>Tiêu thụ gần nhất</Label>
                 <Text style={{ color: colors.text, fontWeight: '800', fontSize: 16 }}>
                   {consumption != null ? `${Number(consumption).toFixed(1)} L/100km` : '—'}
                 </Text>
               </View>
               <View style={{ backgroundColor: colors.surface, borderRadius: 14, padding: 14, flex: 1 }}>
-                <Text style={{ color: '#34d399', fontSize: 12, marginBottom: 4 }}>💰</Text>
+                <FontAwesome5 name="coins" size={12} color="#34d399" solid />
                 <Label>Tổng chi xăng</Label>
                 <Text style={{ color: colors.text, fontWeight: '800', fontSize: 15 }}>
                   {fmtFull(Number(allTime?.tong_tien ?? 0))}
@@ -335,14 +345,17 @@ export default function DashboardScreen() {
         {/* Dự đoán lần đổ tiếp theo */}
         {prediction && (
           <View style={{ backgroundColor: colors.surface, borderRadius: 14, padding: 16, marginBottom: 10 }}>
-            <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14, marginBottom: 12 }}>
-              🔮 Dự đoán lần đổ tiếp theo
-              {prediction.samples > 0 && (
-                <Text style={{ color: colors.textSecondary, fontWeight: '400', fontSize: 12 }}>
-                  {' '}(trung bình {prediction.samples} lần gần nhất)
-                </Text>
-              )}
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+              <FontAwesome5 name="magic" size={14} color={colors.primary} solid />
+              <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14, marginLeft: 6 }}>
+                Dự đoán lần đổ tiếp theo
+                {prediction.samples > 0 && (
+                  <Text style={{ color: colors.textSecondary, fontWeight: '400', fontSize: 12 }}>
+                    {' '}(trung bình {prediction.samples} lần gần nhất)
+                  </Text>
+                )}
+              </Text>
+            </View>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
               {[
                 { label: 'Dự kiến vào', value: prediction.next_date ? dayjs(prediction.next_date).format('DD/MM/YYYY') : null, sub: prediction.days_left != null ? `còn ~${prediction.days_left} ngày` : null },
@@ -363,7 +376,10 @@ export default function DashboardScreen() {
         {/* Cảnh báo urgent */}
         {urgentItems.length > 0 && (
           <View style={{ backgroundColor: colors.surface, borderRadius: 14, padding: 16, marginBottom: 10, borderLeftWidth: 3, borderLeftColor: colors.error }}>
-            <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14, marginBottom: 10 }}>⚠️ Cần chú ý</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+              <FontAwesome5 name="exclamation-triangle" size={14} color={colors.warning} solid />
+              <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14, marginLeft: 6 }}>Cần chú ý</Text>
+            </View>
             {urgentItems.map((item: any, i: number) => {
               const days = item.remaining_days;
               const km = item.remaining_km;
@@ -384,7 +400,10 @@ export default function DashboardScreen() {
         {/* Dự kiến bảo dưỡng */}
         {forecastItems.length > 0 && (
           <View style={{ backgroundColor: colors.surface, borderRadius: 14, padding: 16, marginBottom: 10 }}>
-            <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14, marginBottom: 10 }}>🔧 Dự kiến bảo dưỡng sắp tới</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+              <FontAwesome5 name="wrench" size={14} color={colors.textSecondary} solid />
+              <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14, marginLeft: 6 }}>Dự kiến bảo dưỡng sắp tới</Text>
+            </View>
             {forecastItems.slice(0, 3).map((item: any, i: number) => {
               const urg = (item.remaining_days != null && item.remaining_days <= 30)
                 || (item.remaining_km != null && item.remaining_km <= 500) ? colors.warning : colors.textSecondary;
@@ -408,10 +427,16 @@ export default function DashboardScreen() {
         {recent.length > 0 && (
           <View style={{ backgroundColor: colors.surface, borderRadius: 14, padding: 16, marginBottom: 10 }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-              <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14 }}>⛽ Lần đổ gần đây</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <FontAwesome5 name="gas-pump" size={14} color={colors.text} solid />
+                <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14, marginLeft: 6 }}>Lần đổ gần đây</Text>
+              </View>
               <View style={{ flexDirection: 'row', gap: 10 }}>
                 <TouchableOpacity onPress={() => nav.navigate('RefuelsList')}>
-                  <Text style={{ color: colors.primary, fontSize: 13 }}>⛽ Xem tất cả xăng →</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <FontAwesome5 name="gas-pump" size={12} color={colors.primary} solid />
+                    <Text style={{ color: colors.primary, fontSize: 13 }}>Xem tất cả xăng →</Text>
+                  </View>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => nav.navigate('Timeline')}>
                   <Text style={{ color: colors.textSecondary, fontSize: 13 }}>Dòng thời gian →</Text>
@@ -442,9 +467,12 @@ export default function DashboardScreen() {
         {/* Giá xăng hôm nay */}
         {fuelBoard.length > 0 && (
           <View style={{ backgroundColor: colors.surface, borderRadius: 14, padding: 16, marginBottom: 10 }}>
-            <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14, marginBottom: 10 }}>
-              💰 Giá xăng hôm nay · {fuelBoard[0]?.ngay ? dayjs(fuelBoard[0].ngay).format('DD/MM') : ''} · Petrolimex Vùng 1
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+              <FontAwesome5 name="coins" size={14} color={colors.primary} solid />
+              <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14, marginLeft: 6 }}>
+                Giá xăng hôm nay · {fuelBoard[0]?.ngay ? dayjs(fuelBoard[0].ngay).format('DD/MM') : ''} · Petrolimex Vùng 1
+              </Text>
+            </View>
             {fuelBoard.map((f: any, i: number) => (
               <View key={i} style={{
                 flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
