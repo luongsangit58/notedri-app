@@ -13,6 +13,7 @@ import LoadingView from '../../components/LoadingView';
 import ErrorView from '../../components/ErrorView';
 import QuickAddFAB from '../../components/QuickAddFAB';
 import { colors } from '../../utils/colors';
+import { navigateFromUrl } from '../../utils/navigation';
 import client from '../../api/client';
 import dayjs from 'dayjs';
 
@@ -45,20 +46,7 @@ function severityColor(s: string): string {
 }
 
 function ctaNavigate(navigation: any, cta: { url?: string }) {
-  const url = cta?.url ?? '';
-  const vehicleMatch = url.match(/vehicles\/(\d+)/);
-  const vehicleId = vehicleMatch ? parseInt(vehicleMatch[1]) : undefined;
-  if (url.includes('/reminders')) {
-    if (vehicleId) navigation.navigate('Reminders', { vehicleId });
-  } else if (url.includes('/services/create')) {
-    navigation.navigate('AddService', vehicleId ? { vehicleId } : undefined);
-  } else if (url.includes('/health')) {
-    navigation.navigate('Health');
-  } else if (url.includes('/odometer')) {
-    if (vehicleId) navigation.navigate('OdometerList', { vehicleId });
-  } else if (url.includes('/refuels')) {
-    navigation.navigate('AddRefuel', vehicleId ? { vehicleId } : undefined);
-  }
+  navigateFromUrl(navigation, cta?.url ?? '');
 }
 
 /* ─── helpers ─── */

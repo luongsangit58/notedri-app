@@ -7,4 +7,6 @@ export const servicesApi = {
   create: (data: any) => client.post('/services', data),
   update: (id: number, data: any) => client.put(`/services/${id}`, data),
   delete: (id: number) => client.delete(`/services/${id}`),
+  guide: (vehicleId?: number) =>
+    client.get('/services/guide', { params: vehicleId ? { vehicle: vehicleId } : undefined }),
 };

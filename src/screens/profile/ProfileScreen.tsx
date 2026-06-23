@@ -90,6 +90,11 @@ export default function ProfileScreen() {
             onPress={() => navigation.navigate('EditProfile')}
           />
           <MenuItem
+            icon={<FontAwesome5 name="lock" size={16} color={colors.textSecondary} solid />}
+            label="Đổi mật khẩu"
+            onPress={() => navigation.navigate('ChangePassword')}
+          />
+          <MenuItem
             icon={<FontAwesome5 name="bell" size={16} color={colors.textSecondary} solid />}
             label="Thông báo"
             onPress={() => navigation.navigate('Notifications')}

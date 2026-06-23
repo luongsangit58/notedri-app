@@ -7,8 +7,10 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/vi';
+import { useNavigation } from '@react-navigation/native';
 import { useNotifications, useMarkAllRead, useMarkRead } from '../../hooks/useNotifications';
 import { colors } from '../../utils/colors';
+import { navigateFromUrl } from '../../utils/navigation';
 
 dayjs.extend(relativeTime);
 dayjs.locale('vi');
@@ -36,12 +38,28 @@ function getBellColors(severity?: NotificationItem['severity']): { bg: string; i
   }
 }
 
-function NotifRow({ item, onMarkRead }: { item: NotificationItem; onMarkRead: (key: string) => void }) {
+function NotifRow({
+  item, onMarkRead, onNavigate,
+}: {
+  item: NotificationItem;
+  onMarkRead: (key: string) => void;
+  onNavigate: (url?: string) => void;
+}) {
   const bellColors = getBellColors(item.severity);
   const timeStr = item.created_at ? dayjs(item.created_at).fromNow() : '';
+  const hasLink = !!item.url;
+
+  const handlePress = () => {
+    if (!item.read) onMarkRead(item.key);
+    if (hasLink) onNavigate(item.url);
+  };
 
   return (
-    <View style={[styles.item, item.read ? styles.itemRead : styles.itemUnread]}>
+    <TouchableOpacity
+      style={[styles.item, item.read ? styles.itemRead : styles.itemUnread]}
+      onPress={handlePress}
+      activeOpacity={hasLink ? 0.7 : 1}
+    >
       <View style={[styles.bellContainer, { backgroundColor: bellColors.bg }]}>
         <FontAwesome5 name="bell" size={16} color={bellColors.icon} solid />
       </View>
@@ -55,7 +73,12 @@ function NotifRow({ item, onMarkRead }: { item: NotificationItem; onMarkRead: (k
         {item.note ? (
           <Text style={styles.itemNote} numberOfLines={2}>{item.note}</Text>
         ) : null}
-        {timeStr ? <Text style={styles.itemTime}>{timeStr}</Text> : null}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          {timeStr ? <Text style={styles.itemTime}>{timeStr}</Text> : null}
+          {hasLink && (
+            <FontAwesome5 name="chevron-right" size={10} color={colors.textSecondary} />
+          )}
+        </View>
       </View>
       {!item.read && (
         <TouchableOpacity
@@ -66,7 +89,7 @@ function NotifRow({ item, onMarkRead }: { item: NotificationItem; onMarkRead: (k
           <FontAwesome5 name="check" size={14} color={colors.primary} solid />
         </TouchableOpacity>
       )}
-    </View>
+    </TouchableOpacity>
   );
 }
 
@@ -80,6 +103,7 @@ function EmptyState() {
 }
 
 export default function NotificationsScreen() {
+  const navigation = useNavigation<any>();
   const { data, isLoading, refetch, isRefetching } = useNotifications();
   const { mutate: markAllRead, isPending: isMarking } = useMarkAllRead();
   const { mutate: markRead } = useMarkRead();
@@ -115,7 +139,13 @@ export default function NotificationsScreen() {
         <FlatList<NotificationItem>
           data={notifications}
           keyExtractor={item => item.key}
-          renderItem={({ item }) => <NotifRow item={item} onMarkRead={markRead} />}
+          renderItem={({ item }) => (
+            <NotifRow
+              item={item}
+              onMarkRead={markRead}
+              onNavigate={(url) => navigateFromUrl(navigation, url ?? '')}
+            />
+          )}
           ListEmptyComponent={<EmptyState />}
           onRefresh={refetch}
           refreshing={isRefetching}

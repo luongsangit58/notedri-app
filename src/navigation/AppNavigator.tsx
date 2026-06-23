@@ -1,4 +1,5 @@
 import React from 'react';
+import { TouchableOpacity } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { colors } from '../utils/colors';
@@ -14,6 +15,7 @@ import AddVehicleScreen from '../screens/vehicles/AddVehicleScreen';
 import EditVehicleScreen from '../screens/vehicles/EditVehicleScreen';
 import ProfileScreen from '../screens/profile/ProfileScreen';
 import EditProfileScreen from '../screens/profile/EditProfileScreen';
+import ChangePasswordScreen from '../screens/profile/ChangePasswordScreen';
 import AddRefuelScreen from '../screens/refuels/AddRefuelScreen';
 import AddOdometerScreen from '../screens/odometer/AddOdometerScreen';
 import EditOdometerScreen from '../screens/odometer/EditOdometerScreen';
@@ -29,6 +31,7 @@ import EditServiceScreen from '../screens/services/EditServiceScreen';
 import EditReminderScreen from '../screens/reminders/EditReminderScreen';
 import DossierScreen from '../screens/vehicles/DossierScreen';
 import HealthScreen from '../screens/health/HealthScreen';
+import GarageGuideScreen from '../screens/services/GarageGuideScreen';
 
 const Tab = createBottomTabNavigator();
 const RootStack = createStackNavigator();
@@ -53,7 +56,21 @@ function ServicesStack() {
   const Stack = createStackNavigator();
   return (
     <Stack.Navigator screenOptions={headerOpts}>
-      <Stack.Screen name="ServicesList" component={ServicesScreen} options={{ title: 'Bảo dưỡng' }} />
+      <Stack.Screen
+        name="ServicesList"
+        component={ServicesScreen}
+        options={({ navigation }: any) => ({
+          title: 'Bảo dưỡng',
+          headerRight: () => (
+            <TouchableOpacity
+              onPress={() => navigation.navigate('GarageGuide')}
+              style={{ marginRight: 16 }}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <FontAwesome5 name="toolbox" size={18} color={colors.primary} solid />
+            </TouchableOpacity>
+          ),
+        })}
+      />
     </Stack.Navigator>
   );
 }
@@ -123,6 +140,8 @@ export default function AppNavigator() {
       {/* Profile */}
       <RootStack.Screen name="EditProfile" component={EditProfileScreen}
         options={{ headerShown: true, ...headerOpts, title: 'Chỉnh sửa hồ sơ' }} />
+      <RootStack.Screen name="ChangePassword" component={ChangePasswordScreen}
+        options={{ headerShown: true, ...headerOpts, title: 'Đổi mật khẩu' }} />
 
       {/* Reminders */}
       <RootStack.Screen name="AddReminder" component={AddReminderScreen}
@@ -157,6 +176,10 @@ export default function AppNavigator() {
         options={{ headerShown: false }} />
       <RootStack.Screen name="Health" component={HealthScreen}
         options={{ headerShown: true, ...headerOpts, title: 'Kiểm tra sức khoẻ xe' }} />
+
+      {/* Garage Guide */}
+      <RootStack.Screen name="GarageGuide" component={GarageGuideScreen}
+        options={{ headerShown: true, ...headerOpts, title: 'Bỏ túi đi garage' }} />
     </RootStack.Navigator>
   );
 }
