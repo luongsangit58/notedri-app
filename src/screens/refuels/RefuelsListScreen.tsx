@@ -155,6 +155,10 @@ export default function RefuelsListScreen() {
     }
   };
 
+  const meta = data?.meta ?? null;
+  const consumption = meta?.consumption ?? null;
+  const prediction = meta?.prediction ?? null;
+
   const ListHeader = (
     <View style={styles.filterHeader}>
       <ScrollView
@@ -182,6 +186,49 @@ export default function RefuelsListScreen() {
           </TouchableOpacity>
         ))}
       </ScrollView>
+
+      {/* Consumption stats */}
+      {consumption != null && (
+        <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingBottom: 12 }}>
+          {consumption.l100km != null && (
+            <View style={{ flex: 1, backgroundColor: colors.surface, borderRadius: 10, padding: 10, alignItems: 'center' }}>
+              <Text style={{ color: colors.textSecondary, fontSize: 10, marginBottom: 2 }}>Tiêu hao TB</Text>
+              <Text style={{ color: colors.text, fontWeight: '700', fontSize: 16 }}>
+                {Number(consumption.l100km).toFixed(1)}
+              </Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 10 }}>L/100km</Text>
+            </View>
+          )}
+          {consumption.tong_lit != null && (
+            <View style={{ flex: 1, backgroundColor: colors.surface, borderRadius: 10, padding: 10, alignItems: 'center' }}>
+              <Text style={{ color: colors.textSecondary, fontSize: 10, marginBottom: 2 }}>Tổng lít</Text>
+              <Text style={{ color: colors.text, fontWeight: '700', fontSize: 16 }}>
+                {Number(consumption.tong_lit).toFixed(0)}
+              </Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 10 }}>lít</Text>
+            </View>
+          )}
+          {consumption.tong_tien != null && (
+            <View style={{ flex: 1, backgroundColor: colors.surface, borderRadius: 10, padding: 10, alignItems: 'center' }}>
+              <Text style={{ color: colors.textSecondary, fontSize: 10, marginBottom: 2 }}>Tổng tiền</Text>
+              <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 14 }}>
+                {Number(consumption.tong_tien).toLocaleString('vi-VN')}đ
+              </Text>
+            </View>
+          )}
+        </View>
+      )}
+
+      {/* Prediction */}
+      {prediction?.days_left != null && (
+        <View style={{ marginHorizontal: 16, marginBottom: 12, backgroundColor: '#1C2D1C', borderRadius: 10, padding: 10, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <FontAwesome5 name="gas-pump" size={13} color="#10B981" solid />
+          <Text style={{ color: '#10B981', fontSize: 12, flex: 1 }}>
+            Dự đoán đổ xăng lần tới sau ~{prediction.days_left} ngày
+            {prediction.date_est ? ` (${prediction.date_est})` : ''}
+          </Text>
+        </View>
+      )}
     </View>
   );
 
