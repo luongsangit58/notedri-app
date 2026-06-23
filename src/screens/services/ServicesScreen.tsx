@@ -131,6 +131,10 @@ export default function ServicesScreen() {
     );
   }
 
+  const serviceMeta = data?.meta ?? null;
+  const totalCost: number = serviceMeta?.total_cost ?? 0;
+  const countWithCost: number = serviceMeta?.count_with_cost ?? 0;
+
   const chipKeys = [ALL_CHIP, ...Object.keys(LOAI_LABELS)];
 
   return (
@@ -148,6 +152,21 @@ export default function ServicesScreen() {
         }
         ListHeaderComponent={
           <View style={styles.filterHeader}>
+            {/* Stats row */}
+            {totalCost > 0 && (
+              <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingBottom: 12 }}>
+                <View style={{ flex: 1, backgroundColor: colors.surface, borderRadius: 10, padding: 10, alignItems: 'center' }}>
+                  <Text style={{ color: colors.textSecondary, fontSize: 10 }}>Tổng chi phí</Text>
+                  <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 14, marginTop: 2 }}>
+                    {totalCost.toLocaleString('vi-VN')}đ
+                  </Text>
+                </View>
+                <View style={{ flex: 1, backgroundColor: colors.surface, borderRadius: 10, padding: 10, alignItems: 'center' }}>
+                  <Text style={{ color: colors.textSecondary, fontSize: 10 }}>Lần có chi phí</Text>
+                  <Text style={{ color: colors.text, fontWeight: '700', fontSize: 16, marginTop: 2 }}>{countWithCost}</Text>
+                </View>
+              </View>
+            )}
             <TextInput
               style={styles.searchInput}
               placeholder="Tìm kiếm bảo dưỡng..."
