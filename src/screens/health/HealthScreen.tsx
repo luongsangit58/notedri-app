@@ -8,6 +8,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useQueries } from '@tanstack/react-query';
 import { useVehicles } from '../../hooks/useVehicles';
 import { vehiclesApi } from '../../api/vehicles';
+import client from '../../api/client';
 import { colors } from '../../utils/colors';
 
 /* ─── types ─── */
@@ -129,15 +130,65 @@ function OrganRow({ organ }: { organ: Organ }) {
   );
 }
 
+/* ─── ScoreTrendChart ─── */
+interface TrendPoint { total: number; band: string; date: string }
+
+function ScoreTrendChart({ points }: { points: TrendPoint[] }) {
+  if (points.length < 2) return null;
+  const BAR_W = 6;
+  const GAP = 3;
+  const CHART_H = 48;
+  const latest = points[0]; // most recent first
+
+  const reversed = [...points].reverse().slice(-20);
+
+  return (
+    <View style={{ marginTop: 12 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+        <FontAwesome5 name="chart-line" size={11} color={colors.textSecondary} />
+        <Text style={{ color: colors.textSecondary, fontSize: 11 }}>Xu hướng điểm sức khoẻ</Text>
+        <Text style={{ color: scoreColor(latest.total), fontWeight: '700', fontSize: 11, marginLeft: 'auto' }}>
+          {latest.total} hiện tại
+        </Text>
+      </View>
+      <View style={{ flexDirection: 'row', alignItems: 'flex-end', height: CHART_H + 12 }}>
+        {reversed.map((p, i) => {
+          const barH = Math.max(3, Math.round((p.total / 100) * CHART_H));
+          const clr = scoreColor(p.total);
+          return (
+            <View key={i} style={{ marginRight: GAP, alignItems: 'center' }}>
+              <View style={{
+                width: BAR_W, height: barH,
+                backgroundColor: clr + (i === reversed.length - 1 ? 'ff' : '99'),
+                borderRadius: 2,
+              }} />
+            </View>
+          );
+        })}
+        <View style={{ flex: 1 }} />
+      </View>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 2 }}>
+        <Text style={{ color: colors.textSecondary, fontSize: 9 }}>
+          {reversed[0]?.date?.slice(5)}
+        </Text>
+        <Text style={{ color: colors.textSecondary, fontSize: 9 }}>
+          {reversed[reversed.length - 1]?.date?.slice(5)}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
 /* ─── HealthCard ─── */
 interface HealthCardProps {
   vehicle: any;
   health: HealthData | null | undefined;
   loading: boolean;
   onAddReminder: () => void;
+  history?: TrendPoint[];
 }
 
-function HealthCard({ vehicle, health, loading, onAddReminder }: HealthCardProps) {
+function HealthCard({ vehicle, health, loading, onAddReminder, history }: HealthCardProps) {
   const name = vehicle.ten ?? vehicle.name ?? 'Xe';
   const plate = vehicle.bien_so ?? vehicle.license_plate ?? '';
 
@@ -230,6 +281,14 @@ function HealthCard({ vehicle, health, loading, onAddReminder }: HealthCardProps
           </Text>
         </TouchableOpacity>
       )}
+
+      {/* Trend chart */}
+      {history && history.length >= 2 && (
+        <>
+          <View style={{ height: 1, backgroundColor: colors.border, marginTop: 12 }} />
+          <ScoreTrendChart points={history} />
+        </>
+      )}
     </View>
   );
 }
@@ -252,13 +311,26 @@ export default function HealthScreen() {
     })),
   });
 
+  // Load score history for trend chart
+  const historyQueries = useQueries({
+    queries: vehicles.map(v => ({
+      queryKey: ['vehicles', v.id, 'health-history'],
+      queryFn: () =>
+        client.get(`/vehicles/${v.id}/health/history`, { params: { limit: 30 } })
+          .then(r => (r.data?.data ?? []) as TrendPoint[]),
+      enabled: !!v.id,
+      staleTime: 1000 * 60 * 60,
+    })),
+  });
+
   const isAnyLoading = healthQueries.some(q => q.isLoading);
   const isRefreshing = vehiclesLoading || isAnyLoading;
 
   const handleRefresh = useCallback(() => {
     refetchVehicles();
     healthQueries.forEach(q => q.refetch());
-  }, [refetchVehicles, healthQueries]);
+    historyQueries.forEach(q => q.refetch());
+  }, [refetchVehicles, healthQueries, historyQueries]);
 
   if (vehiclesLoading) {
     return (
@@ -306,9 +378,11 @@ export default function HealthScreen() {
         </Text>
         {vehicles.map((v, idx) => {
           const q = healthQueries[idx];
+          const hq = historyQueries[idx];
           const healthRaw = q?.data;
           // API returns { data: { vehicle, overall, warn_count, organs, score } }
           const healthData: HealthData | null = healthRaw?.data ?? healthRaw ?? null;
+          const historyData: TrendPoint[] = hq?.data ?? [];
           return (
             <HealthCard
               key={v.id}
@@ -316,6 +390,7 @@ export default function HealthScreen() {
               health={healthData}
               loading={q?.isLoading ?? false}
               onAddReminder={() => navigation.navigate('AddReminder', { vehicleId: v.id })}
+              history={historyData}
             />
           );
         })}
