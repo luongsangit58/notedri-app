@@ -23,10 +23,29 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      ["expo-notifications", {}],
-      ["expo-location", {"locationAlwaysAndWhenInUsePermission": false}],
-      ["expo-camera", {"cameraPermission": "NoteDri cần camera để đọc số ODO và hóa đơn xăng"}],
-      ["expo-image-picker", {"photosPermission": "NoteDri cần truy cập ảnh để đọc hóa đơn xăng"}]
+      [
+        "expo-notifications",
+        {}
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": false
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "NoteDri cần camera để đọc số ODO và hóa đơn xăng"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "NoteDri cần truy cập ảnh để đọc hóa đơn xăng"
+        }
+      ],
+      "expo-secure-store"
     ]
   }
 }
