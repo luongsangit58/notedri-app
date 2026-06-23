@@ -14,3 +14,11 @@ export const useMarkAllRead = () => {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['notifications'] }),
   });
 };
+
+export const useMarkRead = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => notificationsApi.markRead(id).then(r => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['notifications'] }),
+  });
+};

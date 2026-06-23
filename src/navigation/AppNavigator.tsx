@@ -23,6 +23,7 @@ import RemindersScreen from '../screens/reminders/RemindersScreen';
 import AddReminderScreen from '../screens/reminders/AddReminderScreen';
 import EditRefuelScreen from '../screens/refuels/EditRefuelScreen';
 import EditServiceScreen from '../screens/services/EditServiceScreen';
+import EditReminderScreen from '../screens/reminders/EditReminderScreen';
 
 const Tab = createBottomTabNavigator();
 const RootStack = createStackNavigator();
@@ -120,6 +121,8 @@ export default function AppNavigator() {
 
       {/* Reminders */}
       <RootStack.Screen name="AddReminder" component={AddReminderScreen}
+        options={{ headerShown: false }} />
+      <RootStack.Screen name="EditReminder" component={EditReminderScreen}
         options={{ headerShown: false }} />
 
       {/* Edit */}

@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/vi';
-import { useNotifications, useMarkAllRead } from '../../hooks/useNotifications';
+import { useNotifications, useMarkAllRead, useMarkRead } from '../../hooks/useNotifications';
 import { colors } from '../../utils/colors';
 
 dayjs.extend(relativeTime);
@@ -30,7 +30,7 @@ function getLabel(data: NotificationData): string {
   return data.message ?? data.title ?? data.body ?? '';
 }
 
-function NotificationItem({ item }: { item: Notification }) {
+function NotificationItem({ item, onMarkRead }: { item: Notification; onMarkRead: (id: number) => void }) {
   const unread = item.read_at === null;
   const label = getLabel(item.data);
   const timeAgo = dayjs(item.created_at).fromNow();
@@ -44,6 +44,15 @@ function NotificationItem({ item }: { item: Notification }) {
         </Text>
         <Text style={styles.itemTime}>{timeAgo}</Text>
       </View>
+      {unread && (
+        <TouchableOpacity
+          onPress={() => onMarkRead(item.id)}
+          style={styles.markReadBtn}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Text style={styles.markReadBtnText}>✓</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -59,6 +68,7 @@ function EmptyState() {
 export default function NotificationsScreen() {
   const { data, isLoading, refetch, isRefetching } = useNotifications();
   const { mutate: markAllRead, isPending: isMarking } = useMarkAllRead();
+  const { mutate: markRead } = useMarkRead();
 
   const notifications: Notification[] = data?.data ?? data ?? [];
 
@@ -86,7 +96,7 @@ export default function NotificationsScreen() {
         <FlatList<Notification>
           data={notifications}
           keyExtractor={item => String(item.id)}
-          renderItem={({ item }) => <NotificationItem item={item} />}
+          renderItem={({ item }) => <NotificationItem item={item} onMarkRead={markRead} />}
           ListEmptyComponent={<EmptyState />}
           onRefresh={refetch}
           refreshing={isRefetching}
@@ -186,5 +196,15 @@ const styles = StyleSheet.create({
   emptyText: {
     color: colors.textSecondary,
     fontSize: 15,
+  },
+  markReadBtn: {
+    padding: 4,
+    marginLeft: 8,
+    alignSelf: 'center',
+  },
+  markReadBtnText: {
+    color: '#E85D04',
+    fontSize: 18,
+    fontWeight: '700',
   },
 });

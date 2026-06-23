@@ -10,6 +10,7 @@ import { useVehicles } from '../../hooks/useVehicles';
 import { useCreateRefuel } from '../../hooks/useRefuels';
 import OcrCamera from '../../components/OcrCamera';
 import { colors } from '../../utils/colors';
+import { refuelsApi } from '../../api/refuels';
 
 const FUEL_TYPES = ['E5 RON 95-V', 'RON 95-III', 'E5 RON 92', 'Dầu DO 0,05S-V', 'Dầu DO 0,001S'];
 
@@ -47,10 +48,26 @@ export default function AddRefuelScreen() {
   const [ghiChu, setGhiChu] = useState('');
   const [isFullTank, setIsFullTank] = useState(true);
   const [ocrOpen, setOcrOpen] = useState(false);
+  const [marketPrice, setMarketPrice] = useState<number | null>(null);
 
   useEffect(() => {
     if (!vehicleId && defaultVehicle) setVehicleId(defaultVehicle.id);
   }, [vehicles]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setMarketPrice(null);
+    refuelsApi.fuelPrice(fuelType).then((res: any) => {
+      if (cancelled) return;
+      const d = res?.data?.data ?? res?.data ?? {};
+      const price = d.price ?? d.gia ?? null;
+      if (price != null) {
+        setMarketPrice(Number(price));
+        setGiaLit(prev => (prev === '' ? String(Math.round(Number(price))) : prev));
+      }
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [fuelType]);
 
   const handleOcrResult = (text: string) => {
     const num = text.replace(/[^0-9]/g, '');
@@ -178,6 +195,11 @@ export default function AddRefuelScreen() {
             <View style={{ flex: 1 }}>
               <FieldLabel>Giá/lít</FieldLabel>
               <TextInput value={giaLit} onChangeText={handleGiaLitChange} placeholder="0" placeholderTextColor={colors.textSecondary} keyboardType="numeric" style={input} />
+              {marketPrice != null && (
+                <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 4 }}>
+                  Giá thị trường: {Number(marketPrice).toLocaleString('vi-VN')}đ/lít
+                </Text>
+              )}
             </View>
           </View>
 

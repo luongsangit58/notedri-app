@@ -55,10 +55,12 @@ function ReminderCard({
   item,
   onDone,
   onDelete,
+  onEdit,
 }: {
   item: Reminder;
   onDone: (id: number) => void;
   onDelete: (id: number) => void;
+  onEdit: (id: number) => void;
 }) {
   const statusColor = STATUS_COLORS[item.status] ?? colors.textSecondary;
   const loaiLabel = LOAI_LABELS[item.loai] ?? item.loai;
@@ -106,6 +108,9 @@ function ReminderCard({
             {item.hang_muc}
           </Text>
         </View>
+        <TouchableOpacity onPress={() => onEdit(item.id)} style={styles.deleteBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <Text style={styles.deleteBtnText}>✏️</Text>
+        </TouchableOpacity>
         <TouchableOpacity onPress={handleDelete} style={styles.deleteBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <Text style={styles.deleteBtnText}>🗑</Text>
         </TouchableOpacity>
@@ -177,6 +182,10 @@ export default function RemindersScreen() {
     deleteReminder.mutate(id);
   };
 
+  const handleEdit = (reminderId: number) => {
+    navigation.navigate('EditReminder', { reminderId, vehicleId });
+  };
+
   if (isLoading) return <LoadingView />;
   if (isError) return <ErrorView message="Không tải được lời nhắc" onRetry={refetch} />;
 
@@ -186,7 +195,7 @@ export default function RemindersScreen() {
         data={reminders}
         keyExtractor={(item) => String(item.id)}
         renderItem={({ item }) => (
-          <ReminderCard item={item} onDone={handleDone} onDelete={handleDelete} />
+          <ReminderCard item={item} onDone={handleDone} onDelete={handleDelete} onEdit={handleEdit} />
         )}
         contentContainerStyle={styles.listContent}
         refreshControl={

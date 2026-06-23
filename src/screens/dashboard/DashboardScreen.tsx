@@ -5,12 +5,14 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import { useQuery } from '@tanstack/react-query';
 import { useDashboard } from '../../hooks/useDashboard';
 import { useVehicles } from '../../hooks/useVehicles';
 import LoadingView from '../../components/LoadingView';
 import ErrorView from '../../components/ErrorView';
 import QuickAddFAB from '../../components/QuickAddFAB';
 import { colors } from '../../utils/colors';
+import client from '../../api/client';
 import dayjs from 'dayjs';
 
 /* ─── helpers ─── */
@@ -81,6 +83,12 @@ export default function DashboardScreen() {
 
   const { data: raw, isLoading, isError, refetch, isFetching } = useDashboard(selectedVehicleId);
 
+  const { data: notifData } = useQuery({
+    queryKey: ['notifications', 1],
+    queryFn: () => client.get('/notifications', { params: { page: 1 } }).then(r => r.data),
+  });
+  const unreadCount = notifData?.data?.filter?.((n: any) => !n.read_at)?.length ?? notifData?.unread_count ?? 0;
+
   if (isLoading) return <LoadingView />;
   if (isError) return <ErrorView message="Không tải được dữ liệu" onRetry={refetch} />;
 
@@ -130,14 +138,28 @@ export default function DashboardScreen() {
             <Text style={{ color: colors.textSecondary, fontSize: 13 }}>{dayjs().format('dddd, DD/MM/YYYY')}</Text>
             <Text style={{ color: colors.text, fontSize: 20, fontWeight: '800' }}>Xin chào 👋</Text>
           </View>
-          <TouchableOpacity
-            onPress={() => nav.navigate('Notifications')}
-            style={{
-              backgroundColor: colors.surface, borderRadius: 12,
-              width: 44, height: 44, justifyContent: 'center', alignItems: 'center',
-            }}>
-            <Text style={{ fontSize: 22 }}>🔔</Text>
-          </TouchableOpacity>
+          <View style={{ position: 'relative' }}>
+            <TouchableOpacity
+              onPress={() => nav.navigate('Notifications')}
+              style={{
+                backgroundColor: colors.surface, borderRadius: 12,
+                width: 44, height: 44, justifyContent: 'center', alignItems: 'center',
+              }}>
+              <Text style={{ fontSize: 22 }}>🔔</Text>
+            </TouchableOpacity>
+            {unreadCount > 0 && (
+              <View style={{
+                position: 'absolute', top: -4, right: -6,
+                backgroundColor: '#F44336', borderRadius: 9,
+                minWidth: 18, height: 18, justifyContent: 'center', alignItems: 'center',
+                paddingHorizontal: 4,
+              }}>
+                <Text style={{ color: '#fff', fontSize: 10, fontWeight: '800' }}>
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </Text>
+              </View>
+            )}
+          </View>
         </View>
 
         {/* Vehicle selector */}
