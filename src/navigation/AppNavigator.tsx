@@ -38,6 +38,7 @@ import FeedbackScreen from '../screens/profile/FeedbackScreen';
 import PremiumScreen from '../screens/profile/PremiumScreen';
 import AboutScreen from '../screens/profile/AboutScreen';
 import NotificationSettingsScreen from '../screens/profile/NotificationSettingsScreen';
+import ExportDataScreen from '../screens/profile/ExportDataScreen';
 
 const Tab = createBottomTabNavigator();
 const RootStack = createStackNavigator();
@@ -211,6 +212,10 @@ export default function AppNavigator() {
       {/* Notification settings */}
       <RootStack.Screen name="NotificationSettings" component={NotificationSettingsScreen}
         options={{ headerShown: true, ...headerOpts, title: 'Cài đặt thông báo' }} />
+
+      {/* Export data */}
+      <RootStack.Screen name="ExportData" component={ExportDataScreen}
+        options={{ headerShown: true, ...headerOpts, title: 'Xuất dữ liệu' }} />
 
       {/* Premium */}
       <RootStack.Screen name="Premium" component={PremiumScreen}

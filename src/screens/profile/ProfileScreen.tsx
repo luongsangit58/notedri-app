@@ -150,6 +150,11 @@ export default function ProfileScreen() {
             onPress={() => navigation.navigate('Feedback')}
           />
           <MenuItem
+            icon={<FontAwesome5 name="download" size={16} color={colors.textSecondary} solid />}
+            label="Xuất dữ liệu"
+            onPress={() => navigation.navigate('ExportData')}
+          />
+          <MenuItem
             icon={<FontAwesome5 name="info-circle" size={16} color={colors.textSecondary} solid />}
             label="Về NoteDri"
             onPress={() => navigation.navigate('About')}
