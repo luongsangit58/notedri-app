@@ -150,7 +150,7 @@ export default function ServicesScreen() {
           <View style={styles.filterHeader}>
             <TextInput
               style={styles.searchInput}
-              placeholder="🔍 Tìm kiếm bảo dưỡng..."
+              placeholder="Tìm kiếm bảo dưỡng..."
               placeholderTextColor={colors.textSecondary}
               value={searchText}
               onChangeText={setSearchText}

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, Modal, TextInput } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
+import { FontAwesome5 } from '@expo/vector-icons';
 import { colors } from '../utils/colors';
 
 interface Props {
@@ -61,12 +62,18 @@ export default function OcrCamera({ visible, onClose, onResult, hint }: Props) {
               <TouchableOpacity
                 onPress={() => pickImage(true)}
                 style={{ backgroundColor: colors.primary, padding: 14, borderRadius: 10, alignItems: 'center' }}>
-                <Text style={{ color: '#fff', fontWeight: '600' }}>📷 Chụp ảnh</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <FontAwesome5 name="camera" size={14} color="#fff" solid />
+                  <Text style={{ color: '#fff', fontWeight: '600' }}>Chụp ảnh</Text>
+                </View>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => pickImage(false)}
                 style={{ backgroundColor: colors.card, padding: 14, borderRadius: 10, alignItems: 'center' }}>
-                <Text style={{ color: colors.text, fontWeight: '600' }}>🖼️ Chọn từ thư viện</Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <FontAwesome5 name="images" size={14} color={colors.text} solid />
+                  <Text style={{ color: colors.text, fontWeight: '600' }}>Chọn từ thư viện</Text>
+                </View>
               </TouchableOpacity>
             </View>
           ) : (
