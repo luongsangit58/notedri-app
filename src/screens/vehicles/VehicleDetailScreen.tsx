@@ -20,53 +20,53 @@ export default function VehicleDetailScreen() {
   if (isLoading) return <LoadingView />;
   if (isError) return <ErrorView message="Không tải được chi tiết xe" onRetry={refetch} />;
 
+  const v = vehicle?.data ?? vehicle;
   const score = health?.score ?? health?.health_score;
-  const scoreColor = score >= 80 ? colors.success : score >= 50 ? colors.warning : colors.error;
+  const scoreColor = score == null ? colors.textSecondary
+    : score >= 80 ? colors.success
+    : score >= 50 ? colors.warning
+    : colors.error;
   const reminders = remindersData?.data ?? remindersData ?? [];
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom']}>
       <ScrollView
-        contentContainerStyle={{ padding: 16 }}
+        contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
         refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={colors.primary} />}>
 
-        <View style={{ backgroundColor: colors.surface, borderRadius: 14, padding: 16, marginBottom: 16 }}>
-          <Text style={{ color: colors.text, fontSize: 20, fontWeight: '700' }}>{vehicle?.name}</Text>
-          <Text style={{ color: colors.textSecondary, marginTop: 4 }}>{vehicle?.license_plate}</Text>
-          {vehicle?.current_odometer != null && (
-            <Text style={{ color: colors.primary, marginTop: 8, fontWeight: '600' }}>
-              ODO: {vehicle.current_odometer.toLocaleString('vi-VN')} km
-            </Text>
-          )}
+        {/* Thông tin xe */}
+        <View style={{ backgroundColor: colors.surface, borderRadius: 14, padding: 16, marginBottom: 12 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: colors.text, fontSize: 20, fontWeight: '800' }}>{v?.ten ?? v?.name}</Text>
+              {(v?.bien_so ?? v?.license_plate) ? (
+                <Text style={{ color: colors.textSecondary, marginTop: 4, fontSize: 14 }}>
+                  {v?.bien_so ?? v?.license_plate}
+                </Text>
+              ) : null}
+              {(v?.odo_hien_tai ?? v?.current_odometer) != null && (
+                <Text style={{ color: colors.primary, marginTop: 8, fontWeight: '700', fontSize: 16 }}>
+                  📍 {Number(v?.odo_hien_tai ?? v?.current_odometer).toLocaleString('vi-VN')} km
+                </Text>
+              )}
+            </View>
+            {score != null && (
+              <View style={{ alignItems: 'center', marginLeft: 16 }}>
+                <Text style={{ color: scoreColor, fontSize: 36, fontWeight: '800' }}>{score}</Text>
+                <Text style={{ color: scoreColor, fontSize: 12 }}>
+                  {score >= 80 ? 'Tốt' : score >= 50 ? 'Trung bình' : 'Cần chú ý'}
+                </Text>
+              </View>
+            )}
+          </View>
         </View>
 
-        {score != null && (
-          <View style={{ backgroundColor: colors.surface, borderRadius: 14, padding: 16, marginBottom: 16, alignItems: 'center' }}>
-            <Text style={{ color: colors.textSecondary, marginBottom: 8 }}>Sức khoẻ xe</Text>
-            <Text style={{ color: scoreColor, fontSize: 48, fontWeight: '800' }}>{score}</Text>
-            <Text style={{ color: scoreColor, fontSize: 14 }}>{score >= 80 ? 'Tốt' : score >= 50 ? 'Trung bình' : 'Cần chú ý'}</Text>
-          </View>
-        )}
-
-        {reminders.length > 0 && (
-          <View style={{ backgroundColor: colors.surface, borderRadius: 14, padding: 16, marginBottom: 16 }}>
-            <Text style={{ color: colors.text, fontWeight: '600', marginBottom: 12 }}>Nhắc nhở sắp tới</Text>
-            {reminders.slice(0, 3).map((r: any) => (
-              <View key={r.id} style={{ marginBottom: 10 }}>
-                <Text style={{ color: colors.text }}>{r.title ?? r.service_type}</Text>
-                {r.due_date && (
-                  <Text style={{ color: colors.textSecondary, fontSize: 12 }}>{dayjs(r.due_date).format('DD/MM/YYYY')}</Text>
-                )}
-              </View>
-            ))}
-          </View>
-        )}
-
-        <View style={{ flexDirection: 'row', gap: 12 }}>
+        {/* Nhanh */}
+        <View style={{ flexDirection: 'row', gap: 10, marginBottom: 12 }}>
           <TouchableOpacity
             onPress={() => navigation.navigate('AddRefuel')}
             style={{ flex: 1, backgroundColor: colors.primary, padding: 14, borderRadius: 10, alignItems: 'center' }}>
-            <Text style={{ color: '#fff', fontWeight: '600' }}>⛽ Đổ xăng</Text>
+            <Text style={{ color: '#fff', fontWeight: '700' }}>⛽ Đổ xăng</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => navigation.navigate('AddOdometer')}
@@ -74,6 +74,29 @@ export default function VehicleDetailScreen() {
             <Text style={{ color: colors.text, fontWeight: '600' }}>📍 Cập nhật ODO</Text>
           </TouchableOpacity>
         </View>
+
+        {/* Nhắc nhở */}
+        {reminders.length > 0 && (
+          <View style={{ backgroundColor: colors.surface, borderRadius: 14, padding: 16, marginBottom: 12 }}>
+            <Text style={{ color: colors.text, fontWeight: '700', fontSize: 15, marginBottom: 10 }}>Nhắc nhở sắp tới</Text>
+            {reminders.slice(0, 5).map((r: any, i: number) => {
+              const days = r.remaining_days ?? r.days_remaining;
+              const urgentColor = days != null && days <= 30 ? colors.error : days != null && days <= 90 ? colors.warning : colors.textSecondary;
+              return (
+                <View key={r.id ?? i} style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8, alignItems: 'center' }}>
+                  <Text style={{ color: colors.text, flex: 1, fontSize: 13 }}>{r.hang_muc ?? r.service_type ?? r.title}</Text>
+                  {days != null ? (
+                    <Text style={{ color: urgentColor, fontSize: 12, fontWeight: '700' }}>
+                      {days <= 0 ? 'Quá hạn' : `${days} ngày`}
+                    </Text>
+                  ) : r.due_date ? (
+                    <Text style={{ color: colors.textSecondary, fontSize: 12 }}>{dayjs(r.due_date).format('DD/MM/YYYY')}</Text>
+                  ) : null}
+                </View>
+              );
+            })}
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
