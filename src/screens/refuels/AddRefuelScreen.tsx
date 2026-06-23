@@ -58,6 +58,24 @@ export default function AddRefuelScreen() {
     setOcrOpen(false);
   };
 
+  const handleTongTienChange = (v: string) => {
+    setTongTien(v);
+    const t = parseFloat(v), s = parseFloat(soLit);
+    if (t > 0 && s > 0) setGiaLit(Math.round(t / s).toString());
+  };
+
+  const handleSoLitChange = (v: string) => {
+    setSoLit(v);
+    const t = parseFloat(tongTien), s = parseFloat(v);
+    if (t > 0 && s > 0) setGiaLit(Math.round(t / s).toString());
+  };
+
+  const handleGiaLitChange = (v: string) => {
+    setGiaLit(v);
+    const g = parseFloat(v), s = parseFloat(soLit);
+    if (g > 0 && s > 0) setTongTien(Math.round(g * s).toString());
+  };
+
   const handleSubmit = async () => {
     if (!vehicleId) { Alert.alert('Lỗi', 'Vui lòng chọn xe'); return; }
     if (!tongTien && !soLit) { Alert.alert('Lỗi', 'Nhập ít nhất tổng tiền hoặc số lít'); return; }
@@ -143,7 +161,7 @@ export default function AddRefuelScreen() {
               <FieldLabel>Tổng tiền (đ) *</FieldLabel>
               <TextInput
                 value={tongTien}
-                onChangeText={setTongTien}
+                onChangeText={handleTongTienChange}
                 placeholder="0"
                 placeholderTextColor={colors.textSecondary}
                 keyboardType="numeric"
@@ -155,11 +173,11 @@ export default function AddRefuelScreen() {
           <View style={{ flexDirection: 'row', gap: 8, marginBottom: 4 }}>
             <View style={{ flex: 1 }}>
               <FieldLabel>Số lít</FieldLabel>
-              <TextInput value={soLit} onChangeText={setSoLit} placeholder="0.0" placeholderTextColor={colors.textSecondary} keyboardType="numeric" style={input} />
+              <TextInput value={soLit} onChangeText={handleSoLitChange} placeholder="0.0" placeholderTextColor={colors.textSecondary} keyboardType="numeric" style={input} />
             </View>
             <View style={{ flex: 1 }}>
               <FieldLabel>Giá/lít</FieldLabel>
-              <TextInput value={giaLit} onChangeText={setGiaLit} placeholder="0" placeholderTextColor={colors.textSecondary} keyboardType="numeric" style={input} />
+              <TextInput value={giaLit} onChangeText={handleGiaLitChange} placeholder="0" placeholderTextColor={colors.textSecondary} keyboardType="numeric" style={input} />
             </View>
           </View>
 

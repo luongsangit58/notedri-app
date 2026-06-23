@@ -20,3 +20,30 @@ export const useCreateOdometer = () => {
     },
   });
 };
+
+export const useUpdateOdometer = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: { ngay: string; odometer: number; ghi_chu?: string | null } }) =>
+      odometerApi.update(id, data).then(r => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['odometer'] });
+      qc.invalidateQueries({ queryKey: ['vehicles'] });
+      qc.invalidateQueries({ queryKey: ['dashboard'] });
+      qc.invalidateQueries({ queryKey: ['timeline'] });
+    },
+  });
+};
+
+export const useDeleteOdometer = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => odometerApi.delete(id).then(r => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['odometer'] });
+      qc.invalidateQueries({ queryKey: ['vehicles'] });
+      qc.invalidateQueries({ queryKey: ['dashboard'] });
+      qc.invalidateQueries({ queryKey: ['timeline'] });
+    },
+  });
+};

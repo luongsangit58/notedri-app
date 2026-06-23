@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { authApi } from '../api/auth';
 import { storage } from '../utils/storage';
+import { registerPushToken } from '../utils/pushNotifications';
 
 interface User {
   id: number;
@@ -52,6 +53,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await storage.setToken(token);
       await storage.setUser(JSON.stringify(user));
       set({ token, user, isLoading: false });
+      registerPushToken();
     } catch (error: any) {
       const message = error.response?.data?.message ?? 'Đăng nhập thất bại';
       set({ isLoading: false, error: message });
@@ -67,6 +69,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await storage.setToken(token);
       await storage.setUser(JSON.stringify(user));
       set({ token, user, isLoading: false });
+      registerPushToken();
     } catch (error: any) {
       const message = error.response?.data?.message ?? 'Đăng nhập Google thất bại';
       set({ isLoading: false, error: message });

@@ -1,6 +1,7 @@
 import React, { useCallback } from 'react';
 import { FlatList, RefreshControl, View, Text, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
 import { useTimeline } from '../../hooks/useTimeline';
 import TimelineItem from '../../components/TimelineItem';
 import LoadingView from '../../components/LoadingView';
@@ -8,6 +9,7 @@ import ErrorView from '../../components/ErrorView';
 import { colors } from '../../utils/colors';
 
 export default function TimelineScreen() {
+  const navigation = useNavigation<any>();
   const { data, isLoading, isError, refetch, isFetchingNextPage, fetchNextPage, hasNextPage, isFetching } = useTimeline();
 
   const allItems = data?.pages.flatMap((p: any) => p.data ?? p) ?? [];
@@ -24,7 +26,18 @@ export default function TimelineScreen() {
       <FlatList
         data={allItems}
         keyExtractor={(item: any) => `${item.type}-${item.id}`}
-        renderItem={({ item }) => <TimelineItem item={item} />}
+        renderItem={({ item }) => (
+          <TimelineItem
+            item={item}
+            onPress={item.type === 'refuel' && item.id
+              ? () => navigation.navigate('EditRefuel', { refuelId: item.id })
+              : item.type === 'service' && item.id
+              ? () => navigation.navigate('EditService', { serviceId: item.id })
+              : item.type === 'odometer' && item.id
+              ? () => navigation.navigate('EditOdometer', { odometerReadingId: item.id })
+              : undefined}
+          />
+        )}
         contentContainerStyle={{ padding: 16 }}
         refreshControl={<RefreshControl refreshing={isFetching && !isFetchingNextPage} onRefresh={refetch} tintColor={colors.primary} />}
         onEndReached={handleEndReached}

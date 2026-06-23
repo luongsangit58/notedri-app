@@ -5,8 +5,10 @@ export const odometerApi = {
     client.get(`/vehicles/${vehicleId}/odometer`, { params: { page } }),
   create: (vehicleId: number, data: any) =>
     client.post(`/vehicles/${vehicleId}/odometer`, data),
-  update: (vehicleId: number, id: number, data: any) =>
-    client.put(`/vehicles/${vehicleId}/odometer/${id}`, data),
-  delete: (vehicleId: number, id: number) =>
-    client.delete(`/vehicles/${vehicleId}/odometer/${id}`),
+  get: (id: number) =>
+    client.get(`/odometer/${id}`),
+  update: (id: number, data: { ngay: string; odometer: number; ghi_chu?: string | null }) =>
+    client.put(`/odometer/${id}`, data),
+  delete: (id: number) =>
+    client.delete(`/odometer/${id}`),
 };

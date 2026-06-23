@@ -16,6 +16,7 @@ import ProfileScreen from '../screens/profile/ProfileScreen';
 import EditProfileScreen from '../screens/profile/EditProfileScreen';
 import AddRefuelScreen from '../screens/refuels/AddRefuelScreen';
 import AddOdometerScreen from '../screens/odometer/AddOdometerScreen';
+import EditOdometerScreen from '../screens/odometer/EditOdometerScreen';
 import NotificationsScreen from '../screens/notifications/NotificationsScreen';
 import ReportsScreen from '../screens/reports/ReportsScreen';
 import RemindersScreen from '../screens/reminders/RemindersScreen';
@@ -100,6 +101,8 @@ export default function AppNavigator() {
         options={{ headerShown: true, ...headerOpts, title: '⛽ Đổ xăng' }} />
       <RootStack.Screen name="AddOdometer" component={AddOdometerScreen}
         options={{ headerShown: true, ...headerOpts, title: '📍 Cập nhật ODO' }} />
+      <RootStack.Screen name="EditOdometer" component={EditOdometerScreen}
+        options={{ headerShown: false }} />
 
       {/* Services */}
       <RootStack.Screen name="AddService" component={AddServiceScreen}

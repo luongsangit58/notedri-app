@@ -44,10 +44,10 @@ interface ServiceItem {
   ghi_chu: string;
 }
 
-function ServiceCard({ item }: { item: ServiceItem }) {
+function ServiceCard({ item, onPress }: { item: ServiceItem; onPress?: () => void }) {
   const loaiLabel = LOAI_LABELS[item.loai] ?? item.loai;
   return (
-    <View style={styles.card}>
+    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={onPress ? 0.7 : 1}>
       <View style={styles.cardHeader}>
         <Text style={styles.icon}>🔧</Text>
         <View style={styles.cardMain}>
@@ -68,7 +68,7 @@ function ServiceCard({ item }: { item: ServiceItem }) {
       {!!item.noi_lam && (
         <Text style={styles.noiLam} numberOfLines={1}>📍 {item.noi_lam}</Text>
       )}
-    </View>
+    </TouchableOpacity>
   );
 }
 
@@ -120,7 +120,7 @@ export default function ServicesScreen() {
             <Text style={styles.emptySubText}>Nhấn + để thêm lần bảo dưỡng đầu tiên</Text>
           </View>
         }
-        renderItem={({ item }) => <ServiceCard item={item} />}
+        renderItem={({ item }) => <ServiceCard item={item} onPress={() => navigation.navigate('EditService', { serviceId: item.id })} />}
       />
 
       {/* FAB */}
