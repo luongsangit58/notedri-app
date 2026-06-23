@@ -12,6 +12,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useVehicle, useUpdateVehicle, useDeleteVehicle } from '../../hooks/useVehicles';
+import { useFuelTypes } from '../../hooks/useFuelTypes';
 import LoadingView from '../../components/LoadingView';
 import ErrorView from '../../components/ErrorView';
 
@@ -23,8 +24,6 @@ const colors = {
   textSecondary: '#9E9E9E',
   error: '#F44336',
 };
-
-const FUEL_TYPES = ['E5 RON 95-V', 'RON 95-III', 'E5 RON 92', 'Dầu diesel', 'Điện'];
 
 const inputStyle = {
   backgroundColor: colors.surface,
@@ -53,6 +52,11 @@ export default function EditVehicleScreen() {
   const { data: vehicleData, isLoading, isError, refetch } = useVehicle(vehicleId);
   const updateVehicle = useUpdateVehicle();
   const deleteVehicle = useDeleteVehicle();
+  const { data: fuelTypesRaw, isLoading: fuelTypesLoading } = useFuelTypes();
+
+  const fuelTypes: any[] = Array.isArray(fuelTypesRaw)
+    ? fuelTypesRaw.filter((ft: any) => ft.kich_hoat)
+    : [];
 
   const [ten, setTen] = useState('');
   const [bien_so, setBienSo] = useState('');
@@ -214,36 +218,40 @@ export default function EditVehicleScreen() {
         />
 
         <Text style={labelStyle}>Loại nhiên liệu</Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={{ marginBottom: 12 }}
-          contentContainerStyle={{ gap: 8, paddingVertical: 4 }}>
-          {FUEL_TYPES.map((ft) => {
-            const selected = fuel_type === ft;
-            return (
-              <TouchableOpacity
-                key={ft}
-                onPress={() => setFuelType(ft)}
-                style={{
-                  paddingHorizontal: 14,
-                  paddingVertical: 8,
-                  borderRadius: 20,
-                  backgroundColor: selected ? colors.primary : colors.surface,
-                  borderWidth: 1,
-                  borderColor: selected ? colors.primary : '#2E2E2E',
-                }}>
-                <Text style={{
-                  color: selected ? '#fff' : colors.textSecondary,
-                  fontSize: 13,
-                  fontWeight: selected ? '700' : '400',
-                }}>
-                  {ft}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
+        {fuelTypesLoading ? (
+          <ActivityIndicator color={colors.primary} style={{ marginBottom: 12, alignSelf: 'flex-start' }} />
+        ) : (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={{ marginBottom: 12 }}
+            contentContainerStyle={{ gap: 8, paddingVertical: 4 }}>
+            {fuelTypes.map((ft: any) => {
+              const selected = fuel_type === ft.ten;
+              return (
+                <TouchableOpacity
+                  key={ft.id}
+                  onPress={() => setFuelType(ft.ten)}
+                  style={{
+                    paddingHorizontal: 14,
+                    paddingVertical: 8,
+                    borderRadius: 20,
+                    backgroundColor: selected ? colors.primary : colors.surface,
+                    borderWidth: 1,
+                    borderColor: selected ? colors.primary : '#2E2E2E',
+                  }}>
+                  <Text style={{
+                    color: selected ? '#fff' : colors.textSecondary,
+                    fontSize: 13,
+                    fontWeight: selected ? '700' : '400',
+                  }}>
+                    {ft.ten}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        )}
 
         <Text style={labelStyle}>ODO ban đầu</Text>
         <TextInput

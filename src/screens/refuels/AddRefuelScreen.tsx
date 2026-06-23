@@ -8,11 +8,9 @@ import { useNavigation } from '@react-navigation/native';
 import dayjs from 'dayjs';
 import { useVehicles } from '../../hooks/useVehicles';
 import { useCreateRefuel } from '../../hooks/useRefuels';
+import { useFuelTypes } from '../../hooks/useFuelTypes';
 import OcrCamera from '../../components/OcrCamera';
 import { colors } from '../../utils/colors';
-import { refuelsApi } from '../../api/refuels';
-
-const FUEL_TYPES = ['E5 RON 95-V', 'RON 95-III', 'E5 RON 92', 'Dầu DO 0,05S-V', 'Dầu DO 0,001S'];
 
 function FieldLabel({ children }: any) {
   return <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 6, marginTop: 4 }}>{children}</Text>;
@@ -31,14 +29,19 @@ export default function AddRefuelScreen() {
   const navigation = useNavigation();
   const { data: vehiclesData } = useVehicles();
   const createRefuel = useCreateRefuel();
+  const { data: fuelTypesRaw, isLoading: fuelTypesLoading } = useFuelTypes();
 
   const vehicles: any[] = Array.isArray(vehiclesData?.data) ? vehiclesData.data
     : Array.isArray(vehiclesData) ? vehiclesData : [];
 
+  const fuelTypes: any[] = Array.isArray(fuelTypesRaw)
+    ? fuelTypesRaw.filter((ft: any) => ft.kich_hoat)
+    : [];
+
   const defaultVehicle = vehicles.find((v: any) => v.is_default) ?? vehicles[0];
 
   const [vehicleId, setVehicleId] = useState<number | null>(defaultVehicle?.id ?? null);
-  const [fuelType, setFuelType] = useState(FUEL_TYPES[0]);
+  const [fuelTypeId, setFuelTypeId] = useState<number | null>(null);
   const [tongTien, setTongTien] = useState('');
   const [soLit, setSoLit] = useState('');
   const [giaLit, setGiaLit] = useState('');
@@ -48,26 +51,34 @@ export default function AddRefuelScreen() {
   const [ghiChu, setGhiChu] = useState('');
   const [isFullTank, setIsFullTank] = useState(true);
   const [ocrOpen, setOcrOpen] = useState(false);
-  const [marketPrice, setMarketPrice] = useState<number | null>(null);
 
+  // Set default vehicle when vehicles load
   useEffect(() => {
     if (!vehicleId && defaultVehicle) setVehicleId(defaultVehicle.id);
   }, [vehicles]);
 
+  // Set default fuel type when fuel types load
   useEffect(() => {
-    let cancelled = false;
-    setMarketPrice(null);
-    refuelsApi.fuelPrice(fuelType).then((res: any) => {
-      if (cancelled) return;
-      const d = res?.data?.data ?? res?.data ?? {};
-      const price = d.price ?? d.gia ?? null;
-      if (price != null) {
-        setMarketPrice(Number(price));
-        setGiaLit(prev => (prev === '' ? String(Math.round(Number(price))) : prev));
+    if (fuelTypes.length > 0 && fuelTypeId === null) {
+      const first = fuelTypes[0];
+      setFuelTypeId(first.id);
+      if (giaLit === '' && first.gia_hien_tai != null) {
+        setGiaLit(String(Math.round(Number(first.gia_hien_tai))));
       }
-    }).catch(() => {});
-    return () => { cancelled = true; };
-  }, [fuelType]);
+    }
+  }, [fuelTypes]);
+
+  // Auto-fill gia_lit from selected fuel type's gia_hien_tai
+  useEffect(() => {
+    if (fuelTypeId === null) return;
+    const selected = fuelTypes.find((ft: any) => ft.id === fuelTypeId);
+    if (selected?.gia_hien_tai != null) {
+      setGiaLit(prev => (prev === '' ? String(Math.round(Number(selected.gia_hien_tai))) : prev));
+    }
+  }, [fuelTypeId]);
+
+  const selectedFuelType = fuelTypes.find((ft: any) => ft.id === fuelTypeId) ?? null;
+  const marketPrice = selectedFuelType?.gia_hien_tai ?? null;
 
   const handleOcrResult = (text: string) => {
     const num = text.replace(/[^0-9]/g, '');
@@ -99,7 +110,8 @@ export default function AddRefuelScreen() {
     try {
       await createRefuel.mutateAsync({
         vehicle_id: vehicleId,
-        fuel_type: fuelType,
+        fuel_type_id: fuelTypeId,
+        fuel_type: selectedFuelType?.ten ?? null,
         tong_tien: tongTien ? parseFloat(tongTien) : null,
         so_lit: soLit ? parseFloat(soLit) : null,
         gia_lit: giaLit ? parseFloat(giaLit) : null,
@@ -147,19 +159,23 @@ export default function AddRefuelScreen() {
 
           {/* Loại xăng */}
           <FieldLabel>Loại nhiên liệu</FieldLabel>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 14 }}>
-            {FUEL_TYPES.map((ft) => (
-              <TouchableOpacity
-                key={ft}
-                onPress={() => setFuelType(ft)}
-                style={{
-                  paddingHorizontal: 12, paddingVertical: 7, borderRadius: 8, marginRight: 8,
-                  backgroundColor: fuelType === ft ? colors.primary : colors.surface,
-                }}>
-                <Text style={{ color: fuelType === ft ? '#fff' : colors.text, fontSize: 13 }}>{ft}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+          {fuelTypesLoading ? (
+            <ActivityIndicator color={colors.primary} style={{ marginBottom: 14, alignSelf: 'flex-start' }} />
+          ) : (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 14 }}>
+              {fuelTypes.map((ft: any) => (
+                <TouchableOpacity
+                  key={ft.id}
+                  onPress={() => setFuelTypeId(ft.id)}
+                  style={{
+                    paddingHorizontal: 12, paddingVertical: 7, borderRadius: 8, marginRight: 8,
+                    backgroundColor: fuelTypeId === ft.id ? colors.primary : colors.surface,
+                  }}>
+                  <Text style={{ color: fuelTypeId === ft.id ? '#fff' : colors.text, fontSize: 13 }}>{ft.ten}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          )}
 
           {/* OCR */}
           <TouchableOpacity
