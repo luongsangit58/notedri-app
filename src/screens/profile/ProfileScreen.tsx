@@ -134,6 +134,16 @@ export default function ProfileScreen() {
             label="Báo cáo"
             onPress={() => navigation.navigate('Reports')}
           />
+          <MenuItem
+            icon={<FontAwesome5 name="crown" size={16} color="#F59E0B" solid />}
+            label="Premium"
+            onPress={() => navigation.navigate('Premium')}
+          />
+          <MenuItem
+            icon={<FontAwesome5 name="comment-alt" size={16} color={colors.textSecondary} solid />}
+            label="Góp ý"
+            onPress={() => navigation.navigate('Feedback')}
+          />
         </View>
 
         <View style={{ backgroundColor: colors.surface, borderRadius: 14, marginHorizontal: 16, overflow: 'hidden', marginBottom: 16 }}>

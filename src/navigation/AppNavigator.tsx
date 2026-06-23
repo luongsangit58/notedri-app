@@ -34,6 +34,8 @@ import HealthScreen from '../screens/health/HealthScreen';
 import GarageGuideScreen from '../screens/services/GarageGuideScreen';
 import YearReviewScreen from '../screens/reports/YearReviewScreen';
 import FuelPricesScreen from '../screens/refuels/FuelPricesScreen';
+import FeedbackScreen from '../screens/profile/FeedbackScreen';
+import PremiumScreen from '../screens/profile/PremiumScreen';
 
 const Tab = createBottomTabNavigator();
 const RootStack = createStackNavigator();
@@ -195,6 +197,20 @@ export default function AppNavigator() {
       {/* Garage Guide */}
       <RootStack.Screen name="GarageGuide" component={GarageGuideScreen}
         options={{ headerShown: true, ...headerOpts, title: 'Bỏ túi đi garage' }} />
+
+      {/* Feedback */}
+      <RootStack.Screen name="Feedback" component={FeedbackScreen}
+        options={{ headerShown: true, ...headerOpts, title: 'Góp ý' }} />
+
+      {/* Premium */}
+      <RootStack.Screen name="Premium" component={PremiumScreen}
+        options={{
+          headerShown: true,
+          headerStyle: { backgroundColor: '#1C1207' },
+          headerTintColor: '#F59E0B',
+          headerTitleStyle: { fontWeight: '800', color: '#F59E0B' },
+          title: 'Premium',
+        }} />
 
       {/* Year Review */}
       <RootStack.Screen name="YearReview" component={YearReviewScreen}
