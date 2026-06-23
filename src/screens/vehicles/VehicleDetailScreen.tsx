@@ -94,20 +94,6 @@ export default function VehicleDetailScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Sửa xe & Lời nhắc */}
-        <View style={{ flexDirection: 'row', gap: 10, marginBottom: 12 }}>
-          <TouchableOpacity
-            onPress={() => navigation.navigate('EditVehicle', { vehicleId })}
-            style={{ flex: 1, backgroundColor: colors.surface, padding: 14, borderRadius: 10, alignItems: 'center', borderWidth: 1, borderColor: colors.border }}>
-            <Text style={{ color: colors.text, fontWeight: '600' }}>✏️ Sửa xe</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => navigation.navigate('Reminders', { vehicleId })}
-            style={{ flex: 1, backgroundColor: colors.surface, padding: 14, borderRadius: 10, alignItems: 'center', borderWidth: 1, borderColor: colors.border }}>
-            <Text style={{ color: colors.text, fontWeight: '600' }}>🔔 Lời nhắc</Text>
-          </TouchableOpacity>
-        </View>
-
         {/* Nhắc nhở */}
         {reminders.length > 0 && (
           <View style={{ backgroundColor: colors.surface, borderRadius: 14, padding: 16, marginBottom: 12 }}>
