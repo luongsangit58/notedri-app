@@ -352,28 +352,25 @@ function ReportContent({
     tco?.fuel ?? tco?.xang ?? tco?.fuel_cost ?? null;
   const tcoService =
     tco?.service ?? tco?.dich_vu ?? tco?.service_cost ?? null;
+  const tcoPerKm =
+    tco?.per_km ?? tco?.dong_per_km ?? null;
+  const tcoKm =
+    tco?.km ?? tco?.total_km ?? null;
 
-  /* ── extra raw fields ── */
-  const knownKeys = new Set([
-    'total_refuel_cost', 'tong_tien_xang', 'all_time', 'fuel',
-    'total_service_cost', 'tong_tien_dich_vu', 'service',
-    'total_cost', 'tong_tien',
-    'total_km', 'tong_km', 'km_driven',
-    'total_refuels', 'so_lan_do_xang', 'refuel_count',
-    'total_services', 'so_lan_bao_duong', 'service_count',
-    'total_liters', 'tong_lit',
-    'avg_consumption', 'tieu_hao_trung_binh', 'consumption',
-    'vehicle', 'vehicle_id',
-    'years', 'selected_year',
-    'year_review', 'monthly', 'stations', 'tco',
-  ]);
-  const extras = Object.entries(data).filter(
-    ([k, v]) =>
-      !knownKeys.has(k) &&
-      v !== null &&
-      v !== undefined &&
-      typeof v !== 'object',
-  );
+  /* ── spend forecast ── */
+  const sf = data.spend_forecast ?? null;
+  const sfTotal = sf?.total ?? sf?.tong_tien ?? null;
+  const sfFuel = sf?.fuel ?? sf?.xang ?? null;
+  const sfService = sf?.service ?? sf?.dich_vu ?? null;
+  const sfPct = sf?.pct_elapsed ?? null;
+
+  /* ── by category ── */
+  const byCategory: any[] = Array.isArray(data.by_category)
+    ? data.by_category.slice(0, 5)
+    : [];
+
+  /* ── has locked years ── */
+  const hasLockedYears: boolean = data.has_locked_years ?? false;
 
   return (
     <ScrollView
@@ -528,6 +525,24 @@ function ReportContent({
         </SectionCard>
       )}
 
+      {/* ── spend forecast ── */}
+      {sf != null && sfTotal != null && (
+        <SectionCard title={`Dự báo chi tiêu năm ${selectedYear}`}>
+          {sfPct != null && (
+            <Text style={{ color: colors.textSecondary, fontSize: 12, marginBottom: 10 }}>
+              Theo đà thực chi tới nay ({sfPct}% năm đã qua) — ước tính thô
+            </Text>
+          )}
+          <CardRow index={0} label="Dự báo tổng" value={fmtVnd(sfTotal)} valueColor={colors.primary} />
+          {sfFuel != null && (
+            <CardRow index={1} label="Dự báo xăng" value={fmtVnd(sfFuel)} />
+          )}
+          {sfService != null && (
+            <CardRow index={sfFuel != null ? 2 : 1} label="Dự báo dịch vụ" value={fmtVnd(sfService)} />
+          )}
+        </SectionCard>
+      )}
+
       {/* ── TCO (chi phí toàn đời xe) ── */}
       {tco != null && (
         <SectionCard title="Chi phí toàn đời xe (TCO)">
@@ -553,53 +568,48 @@ function ReportContent({
               value={fmtVnd(tcoService)}
             />
           )}
+          {tcoPerKm != null && (
+            <CardRow
+              index={[tcoTotal, tcoFuel, tcoService].filter(x => x != null).length}
+              label="Chi phí / km"
+              value={`${fmtNum(tcoPerKm)}đ/km${tcoKm != null ? ` · ${fmtNum(tcoKm)} km` : ''}`}
+            />
+          )}
         </SectionCard>
       )}
 
-      {/* extra raw fields */}
-      {extras.length > 0 && (
-        <View
-          style={{
-            backgroundColor: colors.surface,
-            borderRadius: 14,
-            padding: 16,
-            marginTop: 4,
-          }}>
-          <Text
-            style={{
-              color: colors.text,
-              fontWeight: '700',
-              fontSize: 14,
-              marginBottom: 10,
-            }}>
-            Chi tiết khác
+      {/* ── by category ── */}
+      {byCategory.length > 0 && (
+        <SectionCard title="Chi tiêu theo danh mục">
+          {byCategory.map((c: any, i: number) => {
+            const label = c.loai_label ?? c.label ?? c.loai ?? `Khác`;
+            const cost = c.tong_tien ?? c.total_cost ?? c.cost ?? 0;
+            return (
+              <CardRow
+                key={i}
+                index={i}
+                label={String(label)}
+                value={fmtVnd(cost)}
+              />
+            );
+          })}
+        </SectionCard>
+      )}
+
+      {/* ── premium lock nudge ── */}
+      {hasLockedYears && (
+        <View style={{
+          backgroundColor: '#2C1B00', borderRadius: 10, padding: 12,
+          borderWidth: 1, borderColor: '#F59E0B',
+          flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12,
+        }}>
+          <FontAwesome5 name="crown" size={14} color="#F59E0B" solid />
+          <Text style={{ color: '#F59E0B', fontSize: 13, flex: 1 }}>
+            Nâng cấp Premium để xem báo cáo các năm trước.
           </Text>
-          {extras.map(([k, v], i) => (
-            <View
-              key={k}
-              style={{
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                paddingVertical: 8,
-                borderTopWidth: i > 0 ? 1 : 0,
-                borderTopColor: colors.border,
-              }}>
-              <Text style={{ color: colors.textSecondary, fontSize: 13, flex: 1 }}>
-                {k.replace(/_/g, ' ')}
-              </Text>
-              <Text
-                style={{
-                  color: colors.text,
-                  fontWeight: '600',
-                  fontSize: 13,
-                  marginLeft: 8,
-                }}>
-                {String(v)}
-              </Text>
-            </View>
-          ))}
         </View>
       )}
+
     </ScrollView>
   );
 }

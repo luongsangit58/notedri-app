@@ -18,7 +18,9 @@ export default function VehiclesScreen() {
   if (isError) return <ErrorView message="Không tải được danh sách xe" onRetry={refetch} />;
 
   const vehicles: any[] = data?.data ?? data ?? [];
-  const scores: Record<number, { total: number; band: string }> = data?.scores ?? {};
+  const scores: Record<number, { total: number; band: string }> = data?.meta?.scores ?? {};
+  const canAddVehicle: boolean = data?.meta?.can_add_vehicle ?? true;
+  const vehicleLimit: number | null = data?.meta?.vehicle_limit ?? null;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom']}>
@@ -71,13 +73,30 @@ export default function VehiclesScreen() {
         }
       />
 
+      {!canAddVehicle && vehicleLimit != null && (
+        <View style={{
+          marginHorizontal: 16, marginBottom: 8,
+          backgroundColor: '#2C1B00', borderRadius: 10, padding: 12,
+          borderWidth: 1, borderColor: '#F59E0B',
+          flexDirection: 'row', alignItems: 'center', gap: 8,
+        }}>
+          <FontAwesome5 name="crown" size={14} color="#F59E0B" solid />
+          <Text style={{ color: '#F59E0B', fontSize: 13, flex: 1 }}>
+            Gói Free tối đa {vehicleLimit} xe. Nâng cấp Premium để thêm không giới hạn.
+          </Text>
+        </View>
+      )}
+
       <TouchableOpacity
-        onPress={() => navigation.navigate('AddVehicle')}
+        onPress={() => canAddVehicle
+          ? navigation.navigate('AddVehicle')
+          : null}
         style={{
           position: 'absolute', right: 20, bottom: 24,
-          backgroundColor: colors.primary, width: 56, height: 56, borderRadius: 28,
+          backgroundColor: canAddVehicle ? colors.primary : colors.textSecondary,
+          width: 56, height: 56, borderRadius: 28,
           justifyContent: 'center', alignItems: 'center', elevation: 6,
-          shadowColor: colors.primary, shadowOpacity: 0.4, shadowRadius: 8, shadowOffset: { width: 0, height: 4 },
+          shadowColor: colors.primary, shadowOpacity: canAddVehicle ? 0.4 : 0, shadowRadius: 8, shadowOffset: { width: 0, height: 4 },
         }}>
         <FontAwesome5 name="plus" size={22} color="#fff" solid />
       </TouchableOpacity>
