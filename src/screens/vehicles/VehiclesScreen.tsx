@@ -15,7 +15,7 @@ export default function VehiclesScreen() {
   if (isLoading) return <LoadingView />;
   if (isError) return <ErrorView message="Không tải được danh sách xe" onRetry={refetch} />;
 
-  const vehicles = data?.data ?? data ?? [];
+  const vehicles: any[] = data?.data ?? data ?? [];
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom']}>
@@ -23,19 +23,40 @@ export default function VehiclesScreen() {
         data={vehicles}
         keyExtractor={(item: any) => String(item.id)}
         renderItem={({ item }) => (
-          <VehicleCard vehicle={item} onPress={() => navigation.navigate('VehicleDetail', { vehicleId: item.id, vehicleName: item.name })} />
+          <View style={{ position: 'relative' }}>
+            <VehicleCard
+              vehicle={item}
+              onPress={() => navigation.navigate('VehicleDetail', { vehicleId: item.id, vehicleName: item.ten ?? item.name })}
+            />
+            <TouchableOpacity
+              onPress={() => navigation.navigate('EditVehicle', { vehicleId: item.id })}
+              style={{
+                position: 'absolute', top: 12, right: 12,
+                backgroundColor: colors.background, borderRadius: 8,
+                paddingHorizontal: 10, paddingVertical: 4,
+              }}>
+              <Text style={{ color: colors.textSecondary, fontSize: 13 }}>✏️ Sửa</Text>
+            </TouchableOpacity>
+          </View>
         )}
-        contentContainerStyle={{ padding: 16 }}
+        contentContainerStyle={{ padding: 16, paddingBottom: 80 }}
         refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={colors.primary} />}
-        ListEmptyComponent={<View style={{ alignItems: 'center', marginTop: 48 }}><Text style={{ color: colors.textSecondary }}>Chưa có xe nào</Text></View>}
+        ListEmptyComponent={
+          <View style={{ alignItems: 'center', marginTop: 64 }}>
+            <Text style={{ fontSize: 48, marginBottom: 12 }}>🚗</Text>
+            <Text style={{ color: colors.text, fontSize: 16, fontWeight: '700', marginBottom: 6 }}>Chưa có xe nào</Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 13 }}>Bấm + để thêm xe đầu tiên</Text>
+          </View>
+        }
       />
 
-      {/* TODO: Implement Add Vehicle form */}
       <TouchableOpacity
+        onPress={() => navigation.navigate('AddVehicle')}
         style={{
           position: 'absolute', right: 20, bottom: 24,
           backgroundColor: colors.primary, width: 56, height: 56, borderRadius: 28,
           justifyContent: 'center', alignItems: 'center', elevation: 6,
+          shadowColor: colors.primary, shadowOpacity: 0.4, shadowRadius: 8, shadowOffset: { width: 0, height: 4 },
         }}>
         <Text style={{ color: '#fff', fontSize: 28, lineHeight: 32 }}>+</Text>
       </TouchableOpacity>

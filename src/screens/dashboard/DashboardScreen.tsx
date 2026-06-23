@@ -124,6 +124,22 @@ export default function DashboardScreen() {
         contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
         refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={colors.primary} />}>
 
+        {/* Header row: greeting + bell */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+          <View>
+            <Text style={{ color: colors.textSecondary, fontSize: 13 }}>{dayjs().format('dddd, DD/MM/YYYY')}</Text>
+            <Text style={{ color: colors.text, fontSize: 20, fontWeight: '800' }}>Xin chào 👋</Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => nav.navigate('Notifications')}
+            style={{
+              backgroundColor: colors.surface, borderRadius: 12,
+              width: 44, height: 44, justifyContent: 'center', alignItems: 'center',
+            }}>
+            <Text style={{ fontSize: 22 }}>🔔</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Vehicle selector */}
         {vehicles.length > 0 && (
           <VehicleSelector

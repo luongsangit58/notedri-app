@@ -3,23 +3,47 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { Text } from 'react-native';
 import { colors } from '../utils/colors';
+
 import DashboardScreen from '../screens/dashboard/DashboardScreen';
 import TimelineScreen from '../screens/timeline/TimelineScreen';
+import ServicesScreen from '../screens/services/ServicesScreen';
+import AddServiceScreen from '../screens/services/AddServiceScreen';
 import VehiclesScreen from '../screens/vehicles/VehiclesScreen';
 import VehicleDetailScreen from '../screens/vehicles/VehicleDetailScreen';
+import AddVehicleScreen from '../screens/vehicles/AddVehicleScreen';
+import EditVehicleScreen from '../screens/vehicles/EditVehicleScreen';
 import ProfileScreen from '../screens/profile/ProfileScreen';
+import EditProfileScreen from '../screens/profile/EditProfileScreen';
 import AddRefuelScreen from '../screens/refuels/AddRefuelScreen';
 import AddOdometerScreen from '../screens/odometer/AddOdometerScreen';
+import NotificationsScreen from '../screens/notifications/NotificationsScreen';
+import ReportsScreen from '../screens/reports/ReportsScreen';
+import RemindersScreen from '../screens/reminders/RemindersScreen';
 
 const Tab = createBottomTabNavigator();
 const RootStack = createStackNavigator();
 
+const headerOpts = {
+  headerStyle: { backgroundColor: colors.surface },
+  headerTintColor: colors.text,
+};
+
 function VehiclesStack() {
   const Stack = createStackNavigator();
   return (
-    <Stack.Navigator screenOptions={{ headerStyle: { backgroundColor: colors.surface }, headerTintColor: colors.text }}>
+    <Stack.Navigator screenOptions={headerOpts}>
       <Stack.Screen name="VehiclesList" component={VehiclesScreen} options={{ title: 'Xe của tôi' }} />
-      <Stack.Screen name="VehicleDetail" component={VehicleDetailScreen} options={{ title: 'Chi tiết xe' }} />
+      <Stack.Screen name="VehicleDetail" component={VehicleDetailScreen} options={({ route }: any) => ({ title: route.params?.vehicleName ?? 'Chi tiết xe' })} />
+      <Stack.Screen name="Reminders" component={RemindersScreen} options={{ title: 'Lời nhắc' }} />
+    </Stack.Navigator>
+  );
+}
+
+function ServicesStack() {
+  const Stack = createStackNavigator();
+  return (
+    <Stack.Navigator screenOptions={headerOpts}>
+      <Stack.Screen name="ServicesList" component={ServicesScreen} options={{ title: 'Bảo dưỡng' }} />
     </Stack.Navigator>
   );
 }
@@ -45,6 +69,11 @@ function TabNavigator() {
         options={{ title: 'Nhật ký', tabBarIcon: ({ color }) => <Text style={{ fontSize: 20, color }}>📋</Text> }}
       />
       <Tab.Screen
+        name="Services"
+        component={ServicesStack}
+        options={{ title: 'Bảo dưỡng', headerShown: false, tabBarIcon: ({ color }) => <Text style={{ fontSize: 20, color }}>🔧</Text> }}
+      />
+      <Tab.Screen
         name="Vehicles"
         component={VehiclesStack}
         options={{ title: 'Xe', headerShown: false, tabBarIcon: ({ color }) => <Text style={{ fontSize: 20, color }}>🚗</Text> }}
@@ -62,16 +91,32 @@ export default function AppNavigator() {
   return (
     <RootStack.Navigator screenOptions={{ headerShown: false }}>
       <RootStack.Screen name="Tabs" component={TabNavigator} />
-      <RootStack.Screen
-        name="AddRefuel"
-        component={AddRefuelScreen}
-        options={{ headerShown: true, headerStyle: { backgroundColor: colors.surface }, headerTintColor: colors.text, title: 'Đổ xăng' }}
-      />
-      <RootStack.Screen
-        name="AddOdometer"
-        component={AddOdometerScreen}
-        options={{ headerShown: true, headerStyle: { backgroundColor: colors.surface }, headerTintColor: colors.text, title: 'Cập nhật ODO' }}
-      />
+
+      {/* Refuel & ODO */}
+      <RootStack.Screen name="AddRefuel" component={AddRefuelScreen}
+        options={{ headerShown: true, ...headerOpts, title: '⛽ Đổ xăng' }} />
+      <RootStack.Screen name="AddOdometer" component={AddOdometerScreen}
+        options={{ headerShown: true, ...headerOpts, title: '📍 Cập nhật ODO' }} />
+
+      {/* Services */}
+      <RootStack.Screen name="AddService" component={AddServiceScreen}
+        options={{ headerShown: true, ...headerOpts, title: '🔧 Bảo dưỡng mới' }} />
+
+      {/* Vehicles */}
+      <RootStack.Screen name="AddVehicle" component={AddVehicleScreen}
+        options={{ headerShown: true, ...headerOpts, title: '🚗 Thêm xe' }} />
+      <RootStack.Screen name="EditVehicle" component={EditVehicleScreen}
+        options={{ headerShown: true, ...headerOpts, title: 'Sửa xe' }} />
+
+      {/* Profile */}
+      <RootStack.Screen name="EditProfile" component={EditProfileScreen}
+        options={{ headerShown: true, ...headerOpts, title: 'Chỉnh sửa hồ sơ' }} />
+
+      {/* Notifications & Reports */}
+      <RootStack.Screen name="Notifications" component={NotificationsScreen}
+        options={{ headerShown: true, ...headerOpts, title: '🔔 Thông báo' }} />
+      <RootStack.Screen name="Reports" component={ReportsScreen}
+        options={{ headerShown: true, ...headerOpts, title: '📊 Báo cáo' }} />
     </RootStack.Navigator>
   );
 }

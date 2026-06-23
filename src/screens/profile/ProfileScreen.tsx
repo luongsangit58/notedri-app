@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Alert, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
 import { useAuthStore } from '../../store/authStore';
 import { colors } from '../../utils/colors';
 
@@ -21,6 +22,7 @@ function MenuItem({ icon, label, onPress, danger }: any) {
 
 export default function ProfileScreen() {
   const { user, logout } = useAuthStore();
+  const navigation = useNavigation<any>();
 
   const handleLogout = () => {
     Alert.alert('Đăng xuất', 'Bạn có chắc muốn đăng xuất?', [
@@ -49,9 +51,9 @@ export default function ProfileScreen() {
 
         {/* Menu items */}
         <View style={{ backgroundColor: colors.surface, borderRadius: 14, marginHorizontal: 16, overflow: 'hidden', marginBottom: 16 }}>
-          <MenuItem icon="🚗" label="Xe của tôi" />
-          <MenuItem icon="🔔" label="Cài đặt thông báo" />
-          <MenuItem icon="📊" label="Xuất báo cáo" />
+          <MenuItem icon="✏️" label="Chỉnh sửa hồ sơ" onPress={() => navigation.navigate('EditProfile')} />
+          <MenuItem icon="🔔" label="Thông báo" onPress={() => navigation.navigate('Notifications')} />
+          <MenuItem icon="📊" label="Báo cáo" onPress={() => navigation.navigate('Reports')} />
         </View>
 
         <View style={{ backgroundColor: colors.surface, borderRadius: 14, marginHorizontal: 16, overflow: 'hidden', marginBottom: 32 }}>

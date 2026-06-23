@@ -61,6 +61,25 @@ export default function VehicleDetailScreen() {
           </View>
         </View>
 
+        {/* Actions row */}
+        <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('EditVehicle', { vehicleId })}
+            style={{ flex: 1, backgroundColor: colors.surface, padding: 12, borderRadius: 10, alignItems: 'center' }}>
+            <Text style={{ color: colors.text, fontWeight: '600', fontSize: 13 }}>✏️ Sửa xe</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Reminders', { vehicleId })}
+            style={{ flex: 1, backgroundColor: colors.surface, padding: 12, borderRadius: 10, alignItems: 'center' }}>
+            <Text style={{ color: colors.text, fontWeight: '600', fontSize: 13 }}>🔔 Lời nhắc</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('AddService')}
+            style={{ flex: 1, backgroundColor: colors.surface, padding: 12, borderRadius: 10, alignItems: 'center' }}>
+            <Text style={{ color: colors.text, fontWeight: '600', fontSize: 13 }}>🔧 Bảo dưỡng</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Nhanh */}
         <View style={{ flexDirection: 'row', gap: 10, marginBottom: 12 }}>
           <TouchableOpacity
@@ -72,6 +91,20 @@ export default function VehicleDetailScreen() {
             onPress={() => navigation.navigate('AddOdometer')}
             style={{ flex: 1, backgroundColor: colors.surface, padding: 14, borderRadius: 10, alignItems: 'center' }}>
             <Text style={{ color: colors.text, fontWeight: '600' }}>📍 Cập nhật ODO</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Sửa xe & Lời nhắc */}
+        <View style={{ flexDirection: 'row', gap: 10, marginBottom: 12 }}>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('EditVehicle', { vehicleId })}
+            style={{ flex: 1, backgroundColor: colors.surface, padding: 14, borderRadius: 10, alignItems: 'center', borderWidth: 1, borderColor: colors.border }}>
+            <Text style={{ color: colors.text, fontWeight: '600' }}>✏️ Sửa xe</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Reminders', { vehicleId })}
+            style={{ flex: 1, backgroundColor: colors.surface, padding: 14, borderRadius: 10, alignItems: 'center', borderWidth: 1, borderColor: colors.border }}>
+            <Text style={{ color: colors.text, fontWeight: '600' }}>🔔 Lời nhắc</Text>
           </TouchableOpacity>
         </View>
 
