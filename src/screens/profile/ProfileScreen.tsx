@@ -59,15 +59,18 @@ export default function ProfileScreen() {
         }}>
           {user?.is_premium ? (
             <>
-              <Text style={{ fontSize: 15, fontWeight: '700', color: '#F59E0B', marginBottom: 4 }}>
-                ⭐ Premium
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+                <FontAwesome5 name="crown" size={10} color="#F59E0B" solid />
+                <Text style={{ fontSize: 15, fontWeight: '700', color: '#F59E0B', marginLeft: 6 }}>
+                  Premium
+                </Text>
+              </View>
               <Text style={{ fontSize: 13, color: colors.textSecondary }}>Không giới hạn lịch sử</Text>
             </>
           ) : (
             <>
               <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text, marginBottom: 4 }}>
-                🆓 Gói Miễn phí
+                Gói Miễn phí
               </Text>
               <Text style={{ fontSize: 13, color: colors.textSecondary }}>2 xe • Lịch sử 12 tháng</Text>
             </>

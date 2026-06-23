@@ -64,7 +64,7 @@ export default function VehiclesScreen() {
         refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={colors.primary} />}
         ListEmptyComponent={
           <View style={{ alignItems: 'center', marginTop: 64 }}>
-            <Text style={{ fontSize: 48, marginBottom: 12 }}>🚗</Text>
+            <FontAwesome5 name="car-side" size={48} color={colors.textSecondary} solid style={{ marginBottom: 12 }} />
             <Text style={{ color: colors.text, fontSize: 16, fontWeight: '700', marginBottom: 6 }}>Chưa có xe nào</Text>
             <Text style={{ color: colors.textSecondary, fontSize: 13 }}>Bấm + để thêm xe đầu tiên</Text>
           </View>

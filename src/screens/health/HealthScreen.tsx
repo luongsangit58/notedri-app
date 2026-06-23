@@ -2,6 +2,7 @@ import React, { useCallback } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, RefreshControl, ActivityIndicator, FlatList,
 } from 'react-native';
+import { FontAwesome5 } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useQueries } from '@tanstack/react-query';
@@ -70,13 +71,14 @@ function organStatusColor(status: OrganStatus): string {
   }
 }
 
-function organStatusIcon(status: OrganStatus): string {
+function OrganStatusIcon({ status }: { status: OrganStatus }) {
+  const clr = organStatusColor(status);
   switch (status) {
-    case 'urgent': return '🔴';
-    case 'warn':   return '⚠️';
-    case 'info':   return 'ℹ️';
-    case 'ok':     return '✅';
-    default:       return '—';
+    case 'urgent': return <FontAwesome5 name="exclamation-circle" size={13} color={clr} solid />;
+    case 'warn':   return <FontAwesome5 name="exclamation-triangle" size={13} color={clr} solid />;
+    case 'info':   return <FontAwesome5 name="info-circle" size={13} color={clr} solid />;
+    case 'ok':     return <FontAwesome5 name="check-circle" size={13} color={clr} solid />;
+    default:       return null;
   }
 }
 
@@ -105,19 +107,23 @@ function PillarBar({ pillar, keyLabel }: { pillar: Pillar; keyLabel: string }) {
 function OrganRow({ organ }: { organ: Organ }) {
   if (organ.status === 'na') return null;
   const clr = organStatusColor(organ.status);
-  const icon = organStatusIcon(organ.status);
   return (
     <View style={{
       backgroundColor: colors.background, borderRadius: 8,
       padding: 10, marginBottom: 6, borderLeftWidth: 3, borderLeftColor: clr,
     }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
-        <Text style={{ fontSize: 13, marginRight: 6 }}>{icon}</Text>
+        <View style={{ marginRight: 6 }}>
+          <OrganStatusIcon status={organ.status} />
+        </View>
         <Text style={{ color: colors.text, fontWeight: '600', fontSize: 12, flex: 1 }}>{organ.label}</Text>
         <Text style={{ color: clr, fontSize: 11, fontWeight: '600' }}>{organ.verdict}</Text>
       </View>
       {!!organ.detail && (
         <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 2 }}>{organ.detail}</Text>
+      )}
+      {!!organ.note && (
+        <Text style={{ color: colors.textSecondary, fontSize: 11, fontStyle: 'italic', marginTop: 2 }}>{organ.note}</Text>
       )}
     </View>
   );
@@ -279,7 +285,7 @@ export default function HealthScreen() {
   if (vehicles.length === 0) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
-        <Text style={{ fontSize: 48, marginBottom: 12 }}>🚗</Text>
+        <FontAwesome5 name="car-side" size={48} color={colors.textSecondary} solid style={{ marginBottom: 12 }} />
         <Text style={{ color: colors.text, fontSize: 16, fontWeight: '700', marginBottom: 6 }}>Chưa có xe nào</Text>
         <Text style={{ color: colors.textSecondary, fontSize: 13, textAlign: 'center' }}>
           Thêm xe vào NoteDri để xem sức khoẻ xe.

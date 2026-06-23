@@ -6,6 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import * as Location from 'expo-location';
+import { FontAwesome5 } from '@expo/vector-icons';
 import { refuelsApi } from '../../api/refuels';
 import { colors } from '../../utils/colors';
 
@@ -78,11 +79,16 @@ export default function NearbyStationsScreen() {
     return (
       <View style={styles.card}>
         <View style={styles.cardRow}>
-          <Text style={styles.stationIcon}>⛽</Text>
+          <View style={styles.stationIconWrap}>
+            <FontAwesome5 name="gas-pump" size={20} color={colors.primary} solid />
+          </View>
           <View style={styles.cardContent}>
             <Text style={styles.stationName} numberOfLines={2}>{name}</Text>
             {address ? (
-              <Text style={styles.stationAddress} numberOfLines={2}>📍 {address}</Text>
+              <View style={styles.addressRow}>
+                <FontAwesome5 name="map-marker-alt" size={12} color={colors.textSecondary} />
+                <Text style={styles.stationAddress} numberOfLines={2}> {address}</Text>
+              </View>
             ) : null}
             {fuelTypes.length > 0 && (
               <View style={styles.fuelRow}>
@@ -126,7 +132,9 @@ export default function NearbyStationsScreen() {
     if (screenState === 'permission_denied') {
       return (
         <View style={styles.center}>
-          <Text style={styles.bigEmoji}>📵</Text>
+          <View style={styles.bigIconWrap}>
+            <FontAwesome5 name="map-marker-slash" size={40} color={colors.warning} solid />
+          </View>
           <Text style={styles.errorTitle}>Cần quyền vị trí</Text>
           <Text style={styles.errorBody}>
             Vui lòng cho phép NoteDri truy cập vị trí để tìm trạm xăng gần bạn.
@@ -141,7 +149,9 @@ export default function NearbyStationsScreen() {
     if (screenState === 'error') {
       return (
         <View style={styles.center}>
-          <Text style={styles.bigEmoji}>⚠️</Text>
+          <View style={styles.bigIconWrap}>
+            <FontAwesome5 name="exclamation-triangle" size={40} color={colors.warning} solid />
+          </View>
           <Text style={styles.errorTitle}>Có lỗi xảy ra</Text>
           <Text style={styles.errorBody}>{errorMsg}</Text>
           <TouchableOpacity style={styles.retryButton} onPress={fetchNearby}>
@@ -154,7 +164,9 @@ export default function NearbyStationsScreen() {
     if (screenState === 'success' && stations.length === 0) {
       return (
         <View style={styles.center}>
-          <Text style={styles.bigEmoji}>🔍</Text>
+          <View style={styles.bigIconWrap}>
+            <FontAwesome5 name="search" size={40} color={colors.textSecondary} solid />
+          </View>
           <Text style={styles.errorTitle}>Không tìm thấy trạm nào</Text>
           <Text style={styles.errorBody}>Không có trạm xăng nào gần vị trí của bạn.</Text>
           <TouchableOpacity style={styles.retryButton} onPress={fetchNearby}>
@@ -204,8 +216,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     textAlign: 'center',
   },
-  bigEmoji: {
-    fontSize: 52,
+  bigIconWrap: {
     marginBottom: 16,
   },
   errorTitle: {
@@ -248,9 +259,16 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     gap: 10,
   },
-  stationIcon: {
-    fontSize: 26,
+  stationIconWrap: {
     marginTop: 2,
+    width: 26,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+  },
+  addressRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 6,
   },
   cardContent: {
     flex: 1,
@@ -266,7 +284,7 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: 13,
     lineHeight: 18,
-    marginBottom: 6,
+    flex: 1,
   },
   fuelRow: {
     flexDirection: 'row',

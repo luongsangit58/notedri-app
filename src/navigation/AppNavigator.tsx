@@ -104,19 +104,19 @@ export default function AppNavigator() {
 
       {/* Refuel & ODO */}
       <RootStack.Screen name="AddRefuel" component={AddRefuelScreen}
-        options={{ headerShown: true, ...headerOpts, title: '⛽ Đổ xăng' }} />
+        options={{ headerShown: true, ...headerOpts, title: 'Đổ xăng' }} />
       <RootStack.Screen name="AddOdometer" component={AddOdometerScreen}
-        options={{ headerShown: true, ...headerOpts, title: '📍 Cập nhật ODO' }} />
+        options={{ headerShown: true, ...headerOpts, title: 'Cập nhật ODO' }} />
       <RootStack.Screen name="EditOdometer" component={EditOdometerScreen}
         options={{ headerShown: false }} />
 
       {/* Services */}
       <RootStack.Screen name="AddService" component={AddServiceScreen}
-        options={{ headerShown: true, ...headerOpts, title: '🔧 Bảo dưỡng mới' }} />
+        options={{ headerShown: true, ...headerOpts, title: 'Bảo dưỡng mới' }} />
 
       {/* Vehicles */}
       <RootStack.Screen name="AddVehicle" component={AddVehicleScreen}
-        options={{ headerShown: true, ...headerOpts, title: '🚗 Thêm xe' }} />
+        options={{ headerShown: true, ...headerOpts, title: 'Thêm xe' }} />
       <RootStack.Screen name="EditVehicle" component={EditVehicleScreen}
         options={{ headerShown: true, ...headerOpts, title: 'Sửa xe' }} />
 
@@ -132,31 +132,31 @@ export default function AppNavigator() {
 
       {/* Nearby Stations */}
       <RootStack.Screen name="NearbyStations" component={NearbyStationsScreen}
-        options={{ headerShown: true, ...headerOpts, title: '⛽ Gần đây' }} />
+        options={{ headerShown: true, ...headerOpts, title: 'Trạm xăng gần đây' }} />
 
       {/* History lists */}
       <RootStack.Screen name="RefuelsList" component={RefuelsListScreen}
-        options={{ headerShown: true, ...headerOpts, title: '⛽ Lịch sử đổ xăng' }} />
+        options={{ headerShown: true, ...headerOpts, title: 'Lịch sử đổ xăng' }} />
       <RootStack.Screen name="OdometerList" component={OdometerListScreen}
-        options={{ headerShown: true, ...headerOpts, title: '📍 Lịch sử ODO' }} />
+        options={{ headerShown: true, ...headerOpts, title: 'Lịch sử ODO' }} />
 
       {/* Edit */}
       <RootStack.Screen name="EditRefuel" component={EditRefuelScreen}
-        options={{ headerShown: true, ...headerOpts, title: '✏️ Sửa lần đổ xăng' }} />
+        options={{ headerShown: true, ...headerOpts, title: 'Sửa lần đổ xăng' }} />
       <RootStack.Screen name="EditService" component={EditServiceScreen}
-        options={{ headerShown: true, ...headerOpts, title: '✏️ Sửa bảo dưỡng' }} />
+        options={{ headerShown: true, ...headerOpts, title: 'Sửa bảo dưỡng' }} />
 
       {/* Notifications & Reports */}
       <RootStack.Screen name="Notifications" component={NotificationsScreen}
-        options={{ headerShown: true, ...headerOpts, title: '🔔 Thông báo' }} />
+        options={{ headerShown: true, ...headerOpts, title: 'Thông báo' }} />
       <RootStack.Screen name="Reports" component={ReportsScreen}
-        options={{ headerShown: true, ...headerOpts, title: '📊 Báo cáo' }} />
+        options={{ headerShown: true, ...headerOpts, title: 'Báo cáo' }} />
 
       {/* Dossier & Health */}
       <RootStack.Screen name="Dossier" component={DossierScreen}
         options={{ headerShown: false }} />
       <RootStack.Screen name="Health" component={HealthScreen}
-        options={{ headerShown: true, ...headerOpts, title: '🩺 Kiểm tra xe' }} />
+        options={{ headerShown: true, ...headerOpts, title: 'Kiểm tra sức khoẻ xe' }} />
     </RootStack.Navigator>
   );
 }

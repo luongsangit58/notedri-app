@@ -13,17 +13,17 @@ type Loai = 'bao_duong' | 'dang_kiem' | 'bao_hiem' | 'giay_to' | 'khac';
 type CheDo = 'chu_ky' | 'ngay_co_dinh' | 'mot_lan';
 
 const LOAI_OPTIONS: { value: Loai; label: string }[] = [
-  { value: 'bao_duong', label: '🔧 Bảo dưỡng' },
-  { value: 'dang_kiem', label: '📋 Đăng kiểm' },
-  { value: 'bao_hiem', label: '🛡 Bảo hiểm' },
-  { value: 'giay_to', label: '📄 Giấy tờ' },
-  { value: 'khac', label: '📌 Khác' },
+  { value: 'bao_duong', label: 'Bảo dưỡng' },
+  { value: 'dang_kiem', label: 'Đăng kiểm' },
+  { value: 'bao_hiem', label: 'Bảo hiểm' },
+  { value: 'giay_to', label: 'Giấy tờ' },
+  { value: 'khac', label: 'Khác' },
 ];
 
 const CHE_DO_OPTIONS: { value: CheDo; label: string }[] = [
-  { value: 'chu_ky', label: '🔄 Định kỳ' },
-  { value: 'ngay_co_dinh', label: '📅 Ngày cố định' },
-  { value: 'mot_lan', label: '1️⃣ Một lần' },
+  { value: 'chu_ky', label: 'Định kỳ' },
+  { value: 'ngay_co_dinh', label: 'Ngày cố định' },
+  { value: 'mot_lan', label: 'Một lần' },
 ];
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
