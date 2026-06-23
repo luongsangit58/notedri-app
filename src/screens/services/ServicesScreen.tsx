@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity,
   RefreshControl, ActivityIndicator, StyleSheet,
+  TextInput, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -20,6 +21,8 @@ const LOAI_LABELS: Record<string, string> = {
   rua_xe: 'Rửa xe',
   khac: 'Khác',
 };
+
+const ALL_CHIP = 'tat_ca';
 
 function formatVND(amount: number): string {
   return amount.toLocaleString('vi-VN') + 'đ';
@@ -84,6 +87,8 @@ export default function ServicesScreen() {
     : [];
 
   const [refreshing, setRefreshing] = useState(false);
+  const [searchText, setSearchText] = useState('');
+  const [selectedLoai, setSelectedLoai] = useState<string>(ALL_CHIP);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -91,6 +96,26 @@ export default function ServicesScreen() {
     await refetch();
     setRefreshing(false);
   };
+
+  const filteredItems = useMemo(() => {
+    let result = items;
+
+    if (selectedLoai !== ALL_CHIP) {
+      result = result.filter((item) => item.loai === selectedLoai);
+    }
+
+    if (searchText.trim()) {
+      const query = searchText.trim().toLowerCase();
+      result = result.filter(
+        (item) =>
+          (item.hang_muc ?? '').toLowerCase().includes(query) ||
+          (item.noi_lam ?? '').toLowerCase().includes(query) ||
+          (item.ghi_chu ?? '').toLowerCase().includes(query),
+      );
+    }
+
+    return result;
+  }, [items, searchText, selectedLoai]);
 
   if (isLoading && items.length === 0) {
     return (
@@ -100,12 +125,14 @@ export default function ServicesScreen() {
     );
   }
 
+  const chipKeys = [ALL_CHIP, ...Object.keys(LOAI_LABELS)];
+
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <FlatList
-        data={items}
+        data={filteredItems}
         keyExtractor={(item) => String(item.id)}
-        contentContainerStyle={items.length === 0 ? styles.emptyContainer : styles.listContent}
+        contentContainerStyle={filteredItems.length === 0 ? styles.emptyContainer : styles.listContent}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -113,14 +140,58 @@ export default function ServicesScreen() {
             tintColor={colors.primary}
           />
         }
+        ListHeaderComponent={
+          <View style={styles.filterHeader}>
+            <TextInput
+              style={styles.searchInput}
+              placeholder="🔍 Tìm kiếm bảo dưỡng..."
+              placeholderTextColor={colors.textSecondary}
+              value={searchText}
+              onChangeText={setSearchText}
+              clearButtonMode="while-editing"
+            />
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.chipsContainer}
+            >
+              {chipKeys.map((key) => {
+                const active = key === selectedLoai;
+                const label = key === ALL_CHIP ? 'Tất cả' : LOAI_LABELS[key];
+                return (
+                  <TouchableOpacity
+                    key={key}
+                    onPress={() => setSelectedLoai(key)}
+                    style={[styles.chip, active && styles.chipActive]}
+                  >
+                    <Text style={[styles.chipText, active && styles.chipTextActive]}>
+                      {label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </View>
+        }
         ListEmptyComponent={
           <View style={styles.emptyState}>
             <Text style={styles.emptyIcon}>🔧</Text>
-            <Text style={styles.emptyText}>Chưa có lịch sử bảo dưỡng</Text>
-            <Text style={styles.emptySubText}>Nhấn + để thêm lần bảo dưỡng đầu tiên</Text>
+            <Text style={styles.emptyText}>
+              {searchText || selectedLoai !== ALL_CHIP
+                ? 'Không có kết quả phù hợp'
+                : 'Chưa có lịch sử bảo dưỡng'}
+            </Text>
+            {!searchText && selectedLoai === ALL_CHIP && (
+              <Text style={styles.emptySubText}>Nhấn + để thêm lần bảo dưỡng đầu tiên</Text>
+            )}
           </View>
         }
-        renderItem={({ item }) => <ServiceCard item={item} onPress={() => navigation.navigate('EditService', { serviceId: item.id })} />}
+        renderItem={({ item }) => (
+          <ServiceCard
+            item={item}
+            onPress={() => navigation.navigate('EditService', { serviceId: item.id })}
+          />
+        )}
       />
 
       {/* FAB */}
@@ -145,6 +216,42 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  filterHeader: {
+    paddingBottom: 8,
+  },
+  searchInput: {
+    backgroundColor: colors.surface,
+    color: colors.text,
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 8,
+    fontSize: 14,
+  },
+  chipsContainer: {
+    gap: 8,
+    paddingBottom: 4,
+  },
+  chip: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: 20,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  chipActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  chipText: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    fontWeight: '400',
+  },
+  chipTextActive: {
+    color: '#fff',
+    fontWeight: '700',
   },
   listContent: {
     padding: 16,
