@@ -130,6 +130,11 @@ export default function ProfileScreen() {
             onPress={() => navigation.navigate('Notifications')}
           />
           <MenuItem
+            icon={<FontAwesome5 name="cog" size={16} color={colors.textSecondary} solid />}
+            label="Cài đặt thông báo"
+            onPress={() => navigation.navigate('NotificationSettings')}
+          />
+          <MenuItem
             icon={<FontAwesome5 name="chart-bar" size={16} color={colors.textSecondary} solid />}
             label="Báo cáo"
             onPress={() => navigation.navigate('Reports')}

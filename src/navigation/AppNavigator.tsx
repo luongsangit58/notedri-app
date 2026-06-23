@@ -37,6 +37,7 @@ import FuelPricesScreen from '../screens/refuels/FuelPricesScreen';
 import FeedbackScreen from '../screens/profile/FeedbackScreen';
 import PremiumScreen from '../screens/profile/PremiumScreen';
 import AboutScreen from '../screens/profile/AboutScreen';
+import NotificationSettingsScreen from '../screens/profile/NotificationSettingsScreen';
 
 const Tab = createBottomTabNavigator();
 const RootStack = createStackNavigator();
@@ -206,6 +207,10 @@ export default function AppNavigator() {
       {/* About */}
       <RootStack.Screen name="About" component={AboutScreen}
         options={{ headerShown: true, ...headerOpts, title: 'Về NoteDri' }} />
+
+      {/* Notification settings */}
+      <RootStack.Screen name="NotificationSettings" component={NotificationSettingsScreen}
+        options={{ headerShown: true, ...headerOpts, title: 'Cài đặt thông báo' }} />
 
       {/* Premium */}
       <RootStack.Screen name="Premium" component={PremiumScreen}
