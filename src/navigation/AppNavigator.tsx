@@ -33,6 +33,7 @@ import DossierScreen from '../screens/vehicles/DossierScreen';
 import HealthScreen from '../screens/health/HealthScreen';
 import GarageGuideScreen from '../screens/services/GarageGuideScreen';
 import YearReviewScreen from '../screens/reports/YearReviewScreen';
+import FuelPricesScreen from '../screens/refuels/FuelPricesScreen';
 
 const Tab = createBottomTabNavigator();
 const RootStack = createStackNavigator();
@@ -153,10 +154,23 @@ export default function AppNavigator() {
       {/* Nearby Stations */}
       <RootStack.Screen name="NearbyStations" component={NearbyStationsScreen}
         options={{ headerShown: true, ...headerOpts, title: 'Trạm xăng gần đây' }} />
+      <RootStack.Screen name="FuelPrices" component={FuelPricesScreen}
+        options={{ headerShown: true, ...headerOpts, title: 'Giá xăng dầu' }} />
 
       {/* History lists */}
       <RootStack.Screen name="RefuelsList" component={RefuelsListScreen}
-        options={{ headerShown: true, ...headerOpts, title: 'Lịch sử đổ xăng' }} />
+        options={({ navigation }: any) => ({
+          headerShown: true,
+          ...headerOpts,
+          title: 'Lịch sử đổ xăng',
+          headerRight: () => (
+            <TouchableOpacity
+              onPress={() => navigation.navigate('FuelPrices')}
+              style={{ marginRight: 16 }}>
+              <FontAwesome5 name="tags" size={18} color={colors.primary} solid />
+            </TouchableOpacity>
+          ),
+        })} />
       <RootStack.Screen name="OdometerList" component={OdometerListScreen}
         options={{ headerShown: true, ...headerOpts, title: 'Lịch sử ODO' }} />
 
