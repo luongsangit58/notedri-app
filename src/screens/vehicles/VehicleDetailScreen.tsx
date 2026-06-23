@@ -8,6 +8,212 @@ import ErrorView from '../../components/ErrorView';
 import { colors } from '../../utils/colors';
 import dayjs from 'dayjs';
 
+// ─── Health helpers ──────────────────────────────────────────────────────────
+
+type OrganStatus = 'urgent' | 'warn' | 'info' | 'ok' | 'na';
+
+interface Organ {
+  key: string;
+  label: string;
+  icon?: string;
+  status: OrganStatus;
+  verdict: string;
+  detail?: string;
+  note?: string;
+  cta?: { label: string; url: string } | null;
+}
+
+interface Pillar {
+  score: number;
+  max: number;
+  label: string;
+}
+
+interface HealthScore {
+  total: number;
+  pillars?: { a: Pillar; b: Pillar; c: Pillar; d: Pillar };
+  band?: { key: string; label: string; color: string };
+  confidence?: string;
+  critical?: boolean;
+}
+
+interface HealthData {
+  overall?: OrganStatus;
+  warn_count?: number;
+  organs?: Organ[];
+  score?: HealthScore;
+  // legacy shape fallback
+  health_score?: number;
+}
+
+function organStatusColor(status: OrganStatus): string {
+  switch (status) {
+    case 'urgent': return colors.error;
+    case 'warn':   return colors.warning;
+    case 'info':   return '#42A5F5'; // blue-ish for info
+    case 'ok':     return colors.success;
+    default:       return colors.textSecondary;
+  }
+}
+
+function scoreColor(score: number): string {
+  if (score >= 80) return colors.success;
+  if (score >= 50) return colors.warning;
+  return colors.error;
+}
+
+function organStatusIcon(status: OrganStatus): string {
+  switch (status) {
+    case 'urgent': return '🔴';
+    case 'warn':   return '⚠️';
+    case 'info':   return 'ℹ️';
+    case 'ok':     return '✅';
+    default:       return '—';
+  }
+}
+
+// ─── Sub-components ──────────────────────────────────────────────────────────
+
+function PillarBar({ pillar }: { pillar: Pillar }) {
+  const pct = Math.min(100, Math.round((pillar.score / pillar.max) * 100));
+  const clr = scoreColor(Math.round((pillar.score / pillar.max) * 100));
+  return (
+    <View style={{ marginBottom: 10 }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+        <Text style={{ color: colors.text, fontSize: 12 }}>{pillar.label}</Text>
+        <Text style={{ color: clr, fontSize: 12, fontWeight: '700' }}>
+          {pillar.score}/{pillar.max}
+        </Text>
+      </View>
+      <View style={{ height: 6, backgroundColor: colors.border, borderRadius: 3, overflow: 'hidden' }}>
+        <View style={{ height: 6, width: `${pct}%` as any, backgroundColor: clr, borderRadius: 3 }} />
+      </View>
+    </View>
+  );
+}
+
+function OrganRow({ organ }: { organ: Organ }) {
+  const statusClr = organStatusColor(organ.status);
+  const icon = organStatusIcon(organ.status);
+  if (organ.status === 'na') return null;
+  return (
+    <View style={{
+      backgroundColor: colors.card,
+      borderRadius: 10,
+      padding: 12,
+      marginBottom: 8,
+      borderLeftWidth: 3,
+      borderLeftColor: statusClr,
+    }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
+        <Text style={{ fontSize: 14, marginRight: 6 }}>{icon}</Text>
+        <Text style={{ color: colors.text, fontWeight: '700', fontSize: 13, flex: 1 }}>{organ.label}</Text>
+        <Text style={{ color: statusClr, fontSize: 12, fontWeight: '600' }}>{organ.verdict}</Text>
+      </View>
+      {!!organ.detail && (
+        <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>{organ.detail}</Text>
+      )}
+      {!!organ.note && (
+        <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 4, fontStyle: 'italic' }}>{organ.note}</Text>
+      )}
+    </View>
+  );
+}
+
+function HealthBreakdownCard({ health }: { health: HealthData }) {
+  const scoreData = health.score;
+  const total = scoreData?.total;
+  const pillars = scoreData?.pillars;
+  const organs = health.organs ?? [];
+  const bandLabel = scoreData?.band?.label;
+  const confidence = scoreData?.confidence;
+  const warnCount = health.warn_count ?? 0;
+  const critical = scoreData?.critical ?? false;
+
+  const visibleOrgans = organs.filter(o => o.status !== 'na');
+
+  const confidenceLabel = (c?: string) => {
+    switch (c) {
+      case 'high':     return 'Độ tin cậy: Cao';
+      case 'medium':   return 'Độ tin cậy: Trung bình';
+      case 'low':      return 'Độ tin cậy: Thấp';
+      default:         return 'Độ tin cậy: Rất thấp — cần thêm dữ liệu';
+    }
+  };
+
+  return (
+    <View style={{ backgroundColor: colors.surface, borderRadius: 14, padding: 16, marginBottom: 12 }}>
+      {/* Header */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+        <Text style={{ color: colors.text, fontWeight: '700', fontSize: 15, flex: 1 }}>🩺 Sức khoẻ xe</Text>
+        {warnCount > 0 && (
+          <View style={{
+            backgroundColor: critical ? colors.error : colors.warning,
+            paddingHorizontal: 8,
+            paddingVertical: 2,
+            borderRadius: 10,
+          }}>
+            <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>
+              {critical ? '🔴 ' : '⚠️ '}{warnCount} cần chú ý
+            </Text>
+          </View>
+        )}
+      </View>
+
+      {/* Score + band row */}
+      {total != null && (
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+          <View style={{
+            width: 56, height: 56, borderRadius: 28,
+            backgroundColor: colors.card,
+            borderWidth: 3, borderColor: scoreColor(total),
+            alignItems: 'center', justifyContent: 'center',
+            marginRight: 14,
+          }}>
+            <Text style={{ color: scoreColor(total), fontSize: 20, fontWeight: '800' }}>{total}</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            {bandLabel && (
+              <Text style={{ color: scoreColor(total), fontWeight: '700', fontSize: 14 }}>{bandLabel}</Text>
+            )}
+            {confidence && (
+              <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 2 }}>
+                {confidenceLabel(confidence)}
+              </Text>
+            )}
+            {critical && (
+              <Text style={{ color: colors.error, fontSize: 11, marginTop: 2, fontWeight: '600' }}>
+                ⚡ Rủi ro gộp: bảo dưỡng + giấy tờ đều quá hạn
+              </Text>
+            )}
+          </View>
+        </View>
+      )}
+
+      {/* Pillar progress bars */}
+      {pillars && (
+        <View style={{ marginBottom: 8 }}>
+          {(['a', 'b', 'c', 'd'] as const).map(key => (
+            <PillarBar key={key} pillar={pillars[key]} />
+          ))}
+        </View>
+      )}
+
+      {/* Divider */}
+      {visibleOrgans.length > 0 && pillars && (
+        <View style={{ height: 1, backgroundColor: colors.border, marginBottom: 12 }} />
+      )}
+
+      {/* Organ rows */}
+      {visibleOrgans.map(organ => (
+        <OrganRow key={organ.key} organ={organ} />
+      ))}
+    </View>
+  );
+}
+
+// ─── Main screen ─────────────────────────────────────────────────────────────
+
 export default function VehicleDetailScreen() {
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
@@ -21,11 +227,22 @@ export default function VehicleDetailScreen() {
   if (isError) return <ErrorView message="Không tải được chi tiết xe" onRetry={refetch} />;
 
   const v = vehicle?.data ?? vehicle;
-  const score = health?.score ?? health?.health_score;
-  const scoreColor = score == null ? colors.textSecondary
-    : score >= 80 ? colors.success
-    : score >= 50 ? colors.warning
-    : colors.error;
+
+  // API returns { data: { vehicle, overall, warn_count, organs, score } }
+  // useVehicleHealth does .then(r => r.data), so health = the axios response body = { data: {...} }
+  // We need the inner data object:
+  const healthData: HealthData | undefined = health?.data ?? health;
+
+  // Score number for the badge — prefer score.total, fall back to legacy shape
+  const scoreTotal: number | undefined =
+    healthData?.score?.total ?? (health?.health_score as number | undefined);
+
+  const badgeColor = scoreTotal == null ? colors.textSecondary : scoreColor(scoreTotal);
+  const badgeLabel = scoreTotal == null ? null
+    : scoreTotal >= 80 ? 'Tốt'
+    : scoreTotal >= 50 ? 'Trung bình'
+    : 'Cần chú ý';
+
   const reminders = remindersData?.data ?? remindersData ?? [];
 
   return (
@@ -50,12 +267,10 @@ export default function VehicleDetailScreen() {
                 </Text>
               )}
             </View>
-            {score != null && (
+            {scoreTotal != null && (
               <View style={{ alignItems: 'center', marginLeft: 16 }}>
-                <Text style={{ color: scoreColor, fontSize: 36, fontWeight: '800' }}>{score}</Text>
-                <Text style={{ color: scoreColor, fontSize: 12 }}>
-                  {score >= 80 ? 'Tốt' : score >= 50 ? 'Trung bình' : 'Cần chú ý'}
-                </Text>
+                <Text style={{ color: badgeColor, fontSize: 36, fontWeight: '800' }}>{scoreTotal}</Text>
+                <Text style={{ color: badgeColor, fontSize: 12 }}>{badgeLabel}</Text>
               </View>
             )}
           </View>
@@ -93,6 +308,11 @@ export default function VehicleDetailScreen() {
             <Text style={{ color: colors.text, fontWeight: '600' }}>📍 Cập nhật ODO</Text>
           </TouchableOpacity>
         </View>
+
+        {/* Sức khoẻ xe — breakdown card */}
+        {healthData != null && (
+          <HealthBreakdownCard health={healthData} />
+        )}
 
         {/* Nhắc nhở */}
         {reminders.length > 0 && (

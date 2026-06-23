@@ -49,6 +49,33 @@ export default function ProfileScreen() {
           <Text style={{ color: colors.textSecondary, marginTop: 4, fontSize: 14 }}>{user?.email}</Text>
         </View>
 
+        {/* Plan badge */}
+        <View style={{
+          backgroundColor: colors.surface, borderRadius: 12, padding: 12,
+          marginHorizontal: 16, marginBottom: 12,
+        }}>
+          {user?.is_premium ? (
+            <>
+              <Text style={{ fontSize: 15, fontWeight: '700', color: '#F59E0B', marginBottom: 4 }}>
+                ⭐ Premium
+              </Text>
+              <Text style={{ fontSize: 13, color: colors.textSecondary }}>Không giới hạn lịch sử</Text>
+            </>
+          ) : (
+            <>
+              <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text, marginBottom: 4 }}>
+                🆓 Gói Miễn phí
+              </Text>
+              <Text style={{ fontSize: 13, color: colors.textSecondary }}>2 xe • Lịch sử 12 tháng</Text>
+            </>
+          )}
+          {user?.vehicle_limit != null && (
+            <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 6 }}>
+              Giới hạn xe: {user.vehicle_limit} xe
+            </Text>
+          )}
+        </View>
+
         {/* Menu items */}
         <View style={{ backgroundColor: colors.surface, borderRadius: 14, marginHorizontal: 16, overflow: 'hidden', marginBottom: 16 }}>
           <MenuItem icon="✏️" label="Chỉnh sửa hồ sơ" onPress={() => navigation.navigate('EditProfile')} />

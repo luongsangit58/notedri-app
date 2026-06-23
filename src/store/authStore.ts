@@ -8,6 +8,10 @@ interface User {
   name: string;
   email: string;
   avatar?: string;
+  plan?: string;
+  is_premium?: boolean;
+  vehicle_limit?: number;
+  can_add_vehicle?: boolean;
 }
 
 interface AuthState {
@@ -37,6 +41,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       if (token && userStr) {
         const user = JSON.parse(userStr);
         set({ token, user, isLoading: false });
+        // Background refresh so plan/limit changes on the server are picked up
+        authApi.me().then(res => {
+          const fresh = res.data?.data ?? res.data;
+          if (fresh) {
+            storage.setUser(JSON.stringify(fresh));
+            set({ user: fresh });
+          }
+        }).catch(() => {});
       } else {
         set({ isLoading: false });
       }
