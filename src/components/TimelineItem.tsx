@@ -36,7 +36,7 @@ export default function TimelineItem({ item, onPress }: { item: any; onPress?: (
       <View style={{ flex: 1 }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <Text style={{ color: colors.text, fontWeight: '600', flex: 1, marginRight: 8 }}>{item.title ?? item.type}</Text>
-          <Text style={{ color: colors.textSecondary, fontSize: 12 }}>{dayjs(item.date).format('DD/MM/YY')}</Text>
+          <Text style={{ color: colors.textSecondary, fontSize: 12 }}>{dayjs(item.date).format('DD/MM/YYYY')}</Text>
         </View>
         {item.detail ? (
           <Text style={{ color: colors.textSecondary, marginTop: 3, fontSize: 13 }}>{item.detail}</Text>

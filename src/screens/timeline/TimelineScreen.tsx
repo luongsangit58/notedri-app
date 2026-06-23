@@ -16,9 +16,9 @@ type TypeFilter = 'all' | 'refuel' | 'service' | 'odometer';
 
 const TYPE_CHIPS: { key: TypeFilter; label: string }[] = [
   { key: 'all', label: 'Tất cả' },
-  { key: 'refuel', label: '⛽ Xăng' },
-  { key: 'service', label: '🔧 Bảo dưỡng' },
-  { key: 'odometer', label: '📍 ODO' },
+  { key: 'refuel', label: 'Xăng' },
+  { key: 'service', label: 'Bảo dưỡng' },
+  { key: 'odometer', label: 'ODO' },
 ];
 
 export default function TimelineScreen() {

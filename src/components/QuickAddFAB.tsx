@@ -39,7 +39,7 @@ export default function QuickAddFAB() {
           shadowRadius: 4,
           zIndex: 100,
         }}>
-        <Text style={{ color: '#fff', fontSize: 28, lineHeight: 32 }}>+</Text>
+        <FontAwesome5 name="plus" size={22} color="#fff" solid />
       </TouchableOpacity>
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>

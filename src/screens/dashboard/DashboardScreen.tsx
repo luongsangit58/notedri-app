@@ -16,6 +16,51 @@ import { colors } from '../../utils/colors';
 import client from '../../api/client';
 import dayjs from 'dayjs';
 
+/* ─── FA6 class → FA5 icon name ─── */
+const FA_MAP: Record<string, string> = {
+  'fa-triangle-exclamation': 'exclamation-triangle',
+  'fa-id-card': 'id-card',
+  'fa-screwdriver-wrench': 'tools',
+  'fa-list-check': 'tasks',
+  'fa-road': 'road',
+  'fa-pen-to-square': 'edit',
+  'fa-calendar-plus': 'calendar-plus',
+  'fa-tags': 'tags',
+  'fa-arrow-trend-up': 'chart-line',
+  'fa-thumbs-up': 'thumbs-up',
+  'fa-lightbulb': 'lightbulb',
+  'fa-heart-pulse': 'heartbeat',
+  'fa-comment-dots': 'comment-dots',
+  'fa-rotate': 'sync',
+};
+function faToFA5(name: string): string {
+  return FA_MAP[name] ?? name.replace(/^fa-/, '');
+}
+
+function severityColor(s: string): string {
+  if (s === 'urgent') return '#DC2626';
+  if (s === 'warn') return '#D97706';
+  if (s === 'good') return '#16A34A';
+  return colors.primary;
+}
+
+function ctaNavigate(navigation: any, cta: { url?: string }) {
+  const url = cta?.url ?? '';
+  const vehicleMatch = url.match(/vehicles\/(\d+)/);
+  const vehicleId = vehicleMatch ? parseInt(vehicleMatch[1]) : undefined;
+  if (url.includes('/reminders')) {
+    if (vehicleId) navigation.navigate('Reminders', { vehicleId });
+  } else if (url.includes('/services/create')) {
+    navigation.navigate('AddService', vehicleId ? { vehicleId } : undefined);
+  } else if (url.includes('/health')) {
+    navigation.navigate('Health');
+  } else if (url.includes('/odometer')) {
+    if (vehicleId) navigation.navigate('OdometerList', { vehicleId });
+  } else if (url.includes('/refuels')) {
+    navigation.navigate('AddRefuel', vehicleId ? { vehicleId } : undefined);
+  }
+}
+
 /* ─── helpers ─── */
 function fmt(n: number) {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, '')} tr`;
@@ -275,16 +320,20 @@ export default function DashboardScreen() {
                 marginBottom: i < suggestions.length - 1 ? 8 : 0,
                 flexDirection: 'row', alignItems: 'flex-start',
               }}>
-                <Text style={{ fontSize: 18, marginRight: 10, marginTop: 2 }}>{s.icon ?? '💡'}</Text>
+                <View style={{ width: 28, alignItems: 'center', marginRight: 10, marginTop: 2 }}>
+                  <FontAwesome5 name={faToFA5(s.icon ?? 'fa-lightbulb')} size={16} color={severityColor(s.severity)} solid />
+                </View>
                 <View style={{ flex: 1 }}>
                   <Text style={{ color: colors.text, fontWeight: '600', fontSize: 13 }}>{s.title}</Text>
                   {s.why ? <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 3 }}>{s.why}</Text> : null}
                   {s.cta && (
-                    <TouchableOpacity style={{
-                      alignSelf: 'flex-end', marginTop: 8,
-                      backgroundColor: colors.primary + '22', borderRadius: 8,
-                      paddingHorizontal: 12, paddingVertical: 5,
-                    }}>
+                    <TouchableOpacity
+                      onPress={() => ctaNavigate(nav, s.cta)}
+                      style={{
+                        alignSelf: 'flex-end', marginTop: 8,
+                        backgroundColor: colors.primary + '22', borderRadius: 8,
+                        paddingHorizontal: 12, paddingVertical: 5,
+                      }}>
                       <Text style={{ color: colors.primary, fontSize: 12, fontWeight: '700' }}>{s.cta.label ?? 'Xem'} →</Text>
                     </TouchableOpacity>
                   )}

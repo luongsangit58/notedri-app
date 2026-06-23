@@ -1,10 +1,15 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Alert,
   FlatList,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
   RefreshControl,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -59,7 +64,7 @@ function ReminderCard({
   onEdit,
 }: {
   item: Reminder;
-  onDone: (id: number) => void;
+  onDone: (id: number, odo?: number) => void;
   onDelete: (id: number) => void;
   onEdit: (id: number) => void;
 }) {
@@ -170,16 +175,27 @@ export default function RemindersScreen() {
 
   const vehicles: any[] = vehiclesData?.data ?? vehiclesData ?? [];
   const vehicle = vehicles.find((v: any) => v.id === vehicleId);
-  const vehicleName = vehicle?.ten_xe ?? vehicle?.name ?? `Xe #${vehicleId}`;
+  const vehicleName = vehicle?.ten_xe ?? vehicle?.ten ?? vehicle?.name ?? `Xe #${vehicleId}`;
 
   const reminders: Reminder[] = remindersData?.data ?? remindersData ?? [];
+
+  const [doneModalId, setDoneModalId] = useState<number | null>(null);
+  const [doneOdo, setDoneOdo] = useState('');
 
   React.useLayoutEffect(() => {
     navigation.setOptions({ title: `Lời nhắc — ${vehicleName}` });
   }, [navigation, vehicleName]);
 
-  const handleDone = (id: number) => {
-    doneReminder.mutate({ id });
+  const openDoneModal = (id: number) => {
+    setDoneOdo('');
+    setDoneModalId(id);
+  };
+
+  const confirmDone = () => {
+    if (doneModalId == null) return;
+    const odo = doneOdo.trim() !== '' ? parseInt(doneOdo, 10) : undefined;
+    doneReminder.mutate({ id: doneModalId, odo });
+    setDoneModalId(null);
   };
 
   const handleDelete = (id: number) => {
@@ -199,7 +215,7 @@ export default function RemindersScreen() {
         data={reminders}
         keyExtractor={(item) => String(item.id)}
         renderItem={({ item }) => (
-          <ReminderCard item={item} onDone={handleDone} onDelete={handleDelete} onEdit={handleEdit} />
+          <ReminderCard item={item} onDone={openDoneModal} onDelete={handleDelete} onEdit={handleEdit} />
         )}
         contentContainerStyle={styles.listContent}
         refreshControl={
@@ -219,6 +235,36 @@ export default function RemindersScreen() {
       >
         <FontAwesome5 name="plus" size={22} color="#fff" solid />
       </TouchableOpacity>
+
+      {/* Done modal — capture ODO */}
+      <Modal visible={doneModalId !== null} transparent animationType="fade" onRequestClose={() => setDoneModalId(null)}>
+        <Pressable style={styles.modalOverlay} onPress={() => setDoneModalId(null)}>
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+            <Pressable style={styles.modalBox}>
+              <Text style={styles.modalTitle}>Xác nhận đã làm</Text>
+              <Text style={styles.modalSub}>Ngày ghi nhận: hôm nay (tự động)</Text>
+              <Text style={styles.modalLabel}>Số ODO hiện tại (km) — tuỳ chọn</Text>
+              <TextInput
+                style={styles.modalInput}
+                keyboardType="numeric"
+                placeholder="Bỏ qua nếu không biết"
+                placeholderTextColor={colors.textSecondary}
+                value={doneOdo}
+                onChangeText={setDoneOdo}
+                returnKeyType="done"
+              />
+              <View style={styles.modalActions}>
+                <TouchableOpacity onPress={() => setDoneModalId(null)} style={styles.modalCancel}>
+                  <Text style={{ color: colors.textSecondary, fontWeight: '600' }}>Huỷ</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={confirmDone} style={styles.modalConfirm}>
+                  <Text style={{ color: '#fff', fontWeight: '700' }}>Xác nhận</Text>
+                </TouchableOpacity>
+              </View>
+            </Pressable>
+          </KeyboardAvoidingView>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -354,5 +400,65 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 28,
     lineHeight: 32,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  modalBox: {
+    backgroundColor: colors.surface,
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+  },
+  modalTitle: {
+    color: colors.text,
+    fontSize: 17,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  modalSub: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    marginBottom: 16,
+  },
+  modalLabel: {
+    color: colors.textSecondary,
+    fontSize: 13,
+    marginBottom: 8,
+  },
+  modalInput: {
+    backgroundColor: colors.background,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: colors.border,
+    color: colors.text,
+    fontSize: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 20,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  modalCancel: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderRadius: 10,
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  modalConfirm: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderRadius: 10,
+    backgroundColor: colors.primary,
   },
 });
