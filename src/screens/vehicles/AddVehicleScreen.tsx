@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -11,8 +11,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import { useQuery } from '@tanstack/react-query';
 import { useCreateVehicle } from '../../hooks/useVehicles';
 import { useFuelTypes } from '../../hooks/useFuelTypes';
+import client from '../../api/client';
 
 const colors = {
   background: '#121212',
@@ -58,8 +60,31 @@ export default function AddVehicleScreen() {
   const [nam, setNam] = useState('');
   const [fuel_type, setFuelType] = useState('');
   const [odo_ban_dau, setOdoBanDau] = useState('');
+  const [tank_capacity_l, setTankCapacity] = useState('');
+  const [consumption_official, setConsumptionOfficial] = useState('');
   const [is_default, setIsDefault] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
+  const [specQuery, setSpecQuery] = useState('');
+  const [showSpecSuggestions, setShowSpecSuggestions] = useState(false);
+
+  const specSearch = useQuery({
+    queryKey: ['vehicle-specs-search', specQuery],
+    queryFn: () =>
+      client.get('/vehicle-specs/search', { params: { q: specQuery, limit: 8 } })
+        .then(r => r.data?.data ?? []),
+    enabled: specQuery.length >= 2,
+    staleTime: 1000 * 60 * 60,
+  });
+
+  const applySpec = useCallback((spec: any) => {
+    if (spec.make) setMake(spec.make);
+    if (spec.model) setModel(spec.model);
+    if (spec.tank_capacity_l) setTankCapacity(String(spec.tank_capacity_l));
+    if (spec.consumption_combined) setConsumptionOfficial(String(spec.consumption_combined));
+    if (spec.year_from) setNam(String(spec.year_from));
+    setShowSpecSuggestions(false);
+    setSpecQuery('');
+  }, []);
 
   // Set default fuel type when fuel types load
   useEffect(() => {
@@ -86,6 +111,8 @@ export default function AddVehicleScreen() {
     if (model.trim()) payload.model = model.trim();
     if (nam.trim()) payload.nam = parseInt(nam.trim(), 10);
     if (odo_ban_dau.trim()) payload.odo_ban_dau = parseInt(odo_ban_dau.trim(), 10);
+    if (tank_capacity_l.trim()) payload.tank_capacity_l = parseFloat(tank_capacity_l.trim());
+    if (consumption_official.trim()) payload.consumption_official = parseFloat(consumption_official.trim());
 
     try {
       await createVehicle.mutateAsync(payload);
@@ -138,6 +165,39 @@ export default function AddVehicleScreen() {
           autoCapitalize="characters"
           returnKeyType="next"
         />
+
+        {/* Spec autocomplete */}
+        <Text style={labelStyle}>Tìm xe theo tên (gợi ý tự động)</Text>
+        <TextInput
+          style={inputStyle}
+          placeholder="VD: Toyota Vios, Honda Wave..."
+          placeholderTextColor={colors.textSecondary}
+          value={specQuery}
+          onChangeText={v => { setSpecQuery(v); setShowSpecSuggestions(true); }}
+          returnKeyType="search"
+        />
+        {showSpecSuggestions && specQuery.length >= 2 && (
+          <View style={{ backgroundColor: colors.surface, borderRadius: 10, marginBottom: 8, overflow: 'hidden' }}>
+            {specSearch.isLoading && (
+              <View style={{ padding: 12 }}><ActivityIndicator color={colors.primary} size="small" /></View>
+            )}
+            {(specSearch.data ?? []).map((s: any) => (
+              <TouchableOpacity
+                key={s.id}
+                onPress={() => applySpec(s)}
+                style={{ padding: 12, borderBottomWidth: 1, borderBottomColor: '#333' }}>
+                <Text style={{ color: colors.text, fontSize: 14 }}>{s.label}</Text>
+                <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 2 }}>
+                  {s.tank_capacity_l ? `Bình ${s.tank_capacity_l}L` : ''}
+                  {s.consumption_combined ? ` · ${s.consumption_combined}L/100km` : ''}
+                </Text>
+              </TouchableOpacity>
+            ))}
+            {!specSearch.isLoading && (specSearch.data ?? []).length === 0 && specQuery.length >= 2 && (
+              <Text style={{ color: colors.textSecondary, padding: 12, fontSize: 13 }}>Không tìm thấy — nhập tay bên dưới.</Text>
+            )}
+          </View>
+        )}
 
         <Text style={labelStyle}>Hãng xe</Text>
         <TextInput
@@ -213,6 +273,28 @@ export default function AddVehicleScreen() {
           placeholderTextColor={colors.textSecondary}
           value={odo_ban_dau}
           onChangeText={setOdoBanDau}
+          keyboardType="numeric"
+          returnKeyType="done"
+        />
+
+        <Text style={labelStyle}>Dung tích bình xăng (L)</Text>
+        <TextInput
+          style={inputStyle}
+          placeholder="VD: 40"
+          placeholderTextColor={colors.textSecondary}
+          value={tank_capacity_l}
+          onChangeText={setTankCapacity}
+          keyboardType="numeric"
+          returnKeyType="done"
+        />
+
+        <Text style={labelStyle}>Mức tiêu hao NSX công bố (L/100km)</Text>
+        <TextInput
+          style={inputStyle}
+          placeholder="VD: 6.5"
+          placeholderTextColor={colors.textSecondary}
+          value={consumption_official}
+          onChangeText={setConsumptionOfficial}
           keyboardType="numeric"
           returnKeyType="done"
         />

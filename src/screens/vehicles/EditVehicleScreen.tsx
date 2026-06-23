@@ -65,6 +65,8 @@ export default function EditVehicleScreen() {
   const [nam, setNam] = useState('');
   const [fuel_type, setFuelType] = useState('E5 RON 95-V');
   const [odo_ban_dau, setOdoBanDau] = useState('');
+  const [tank_capacity_l, setTankCapacity] = useState('');
+  const [consumption_official, setConsumptionOfficial] = useState('');
   const [is_default, setIsDefault] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
   const [initialized, setInitialized] = useState(false);
@@ -79,6 +81,8 @@ export default function EditVehicleScreen() {
       setNam(v?.nam != null ? String(v.nam) : '');
       setFuelType(v?.fuel_type ?? 'E5 RON 95-V');
       setOdoBanDau(v?.odo_ban_dau != null ? String(v.odo_ban_dau) : '');
+      setTankCapacity(v?.tank_capacity_l != null ? String(v.tank_capacity_l) : '');
+      setConsumptionOfficial(v?.consumption_official != null ? String(v.consumption_official) : '');
       setIsDefault(v?.is_default ?? false);
       setInitialized(true);
     }
@@ -101,6 +105,8 @@ export default function EditVehicleScreen() {
       model: model.trim() || null,
       nam: nam.trim() ? parseInt(nam.trim(), 10) : null,
       odo_ban_dau: odo_ban_dau.trim() ? parseInt(odo_ban_dau.trim(), 10) : null,
+      tank_capacity_l: tank_capacity_l.trim() ? parseFloat(tank_capacity_l.trim()) : null,
+      consumption_official: consumption_official.trim() ? parseFloat(consumption_official.trim()) : null,
     };
 
     try {
@@ -260,6 +266,28 @@ export default function EditVehicleScreen() {
           placeholderTextColor={colors.textSecondary}
           value={odo_ban_dau}
           onChangeText={setOdoBanDau}
+          keyboardType="numeric"
+          returnKeyType="done"
+        />
+
+        <Text style={labelStyle}>Dung tích bình xăng (L)</Text>
+        <TextInput
+          style={inputStyle}
+          placeholder="VD: 40"
+          placeholderTextColor={colors.textSecondary}
+          value={tank_capacity_l}
+          onChangeText={setTankCapacity}
+          keyboardType="numeric"
+          returnKeyType="done"
+        />
+
+        <Text style={labelStyle}>Mức tiêu hao NSX công bố (L/100km)</Text>
+        <TextInput
+          style={inputStyle}
+          placeholder="VD: 6.5"
+          placeholderTextColor={colors.textSecondary}
+          value={consumption_official}
+          onChangeText={setConsumptionOfficial}
           keyboardType="numeric"
           returnKeyType="done"
         />
