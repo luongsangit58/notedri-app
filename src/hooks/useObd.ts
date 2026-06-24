@@ -4,6 +4,7 @@ import { obdApi } from '../api/obd';
 import { bleService, ConnectionState, ObdDevice } from '../services/obd/BleService';
 import { initializeElm327, readSnapshot, ObdSnapshot } from '../services/obd/ObdReader';
 import { TripSession, TripSummary } from '../services/obd/TripSession';
+import { enqueueTripSync, flushPendingTrips } from '../services/obd/TripSyncQueue';
 
 // ---- Data queries ----
 
@@ -132,14 +133,16 @@ export function useObdConnection(vehicleId: number) {
       setLastTripSummary(summary);
       setCurrentTrip(null);
 
-      // Sync to server
+      const deviceId = bleService.getDeviceId();
+
+      // Try immediate sync; if fails, enqueue for retry on next app open
       try {
-        await obdApi.saveTrip(summary, bleService.getDeviceId());
+        await obdApi.saveTrip(summary, deviceId);
         qc.invalidateQueries({ queryKey: ['obd', 'trips', vehicleId] });
         qc.invalidateQueries({ queryKey: ['obd', 'dtc', vehicleId] });
         qc.invalidateQueries({ queryKey: ['dashboard'] });
       } catch {
-        // Saved locally in summary, server sync failed - will retry on next open
+        await enqueueTripSync(summary, deviceId);
       }
     };
 
