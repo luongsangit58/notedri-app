@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, Share,
-  ActivityIndicator, SafeAreaView,
+  ActivityIndicator, SafeAreaView, Alert, Clipboard,
 } from 'react-native';
+import client from '../../api/client';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { vehiclesApi } from '../../api/vehicles';
@@ -110,6 +111,8 @@ export default function DossierScreen() {
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [services, setServices] = useState<ServiceLog[]>([]);
   const [health, setHealth] = useState<any>(null);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [shareLoading, setShareLoading] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -170,11 +173,52 @@ export default function DossierScreen() {
     const odoNum = Number(vehicle.odo_hien_tai ?? vehicle.current_odometer ?? 0);
     const count = services.length;
     const totalCost = services.reduce((s, r) => s + serviceCost(r), 0);
-    try {
+    if (shareUrl) {
+      await Share.share({
+        message: `Sổ tay xe: ${name}${plate ? ` (${plate})` : ''}\nODO: ${formatKm(odoNum)} | Bảo dưỡng: ${count} lần | Chi phí: ${formatVND(totalCost)}\nXem chi tiết: ${shareUrl}`,
+        url: shareUrl,
+      });
+    } else {
       await Share.share({
         message: `Xe: ${name}${plate ? ` (${plate})` : ''}\nODO: ${formatKm(odoNum)}\nBảo dưỡng: ${count} lần\nTổng chi bảo dưỡng: ${formatVND(totalCost)}\nNoteDri - Sổ tay xe điện tử`,
       });
-    } catch (_) {}
+    }
+  };
+
+  const handleGenerateLink = async () => {
+    setShareLoading(true);
+    try {
+      const res = await client.post(`/vehicles/${vehicleId}/share-token`, { enable: true });
+      const url = res.data?.data?.share_url ?? null;
+      setShareUrl(url);
+      if (url) {
+        Alert.alert(
+          'Link sổ tay đã sẵn sàng',
+          `${url}\n\nNgười nhận có thể xem mà không cần đăng nhập.`,
+          [
+            { text: 'Sao chép', onPress: () => Clipboard.setString(url) },
+            { text: 'Chia sẻ', onPress: () => Share.share({ message: url, url }) },
+            { text: 'Đóng' },
+          ],
+        );
+      }
+    } catch {
+      Alert.alert('Lỗi', 'Không tạo được link chia sẻ.');
+    } finally {
+      setShareLoading(false);
+    }
+  };
+
+  const handleRevokeLink = async () => {
+    Alert.alert('Tắt link chia sẻ?', 'Link cũ sẽ không còn hoạt động.', [
+      { text: 'Huỷ', style: 'cancel' },
+      {
+        text: 'Tắt link', style: 'destructive', onPress: async () => {
+          await client.post(`/vehicles/${vehicleId}/share-token`, { enable: false });
+          setShareUrl(null);
+        },
+      },
+    ]);
   };
 
   /* ─── loading / error ─── */
@@ -356,21 +400,67 @@ export default function DossierScreen() {
         </View>
       </ScrollView>
 
-      {/* Share button */}
+      {/* Share / public link buttons */}
       <View style={{
         position: 'absolute', bottom: 0, left: 0, right: 0,
         backgroundColor: colors.surface, borderTopWidth: 1, borderTopColor: colors.border,
-        padding: 16,
+        padding: 12, gap: 8,
       }}>
+        {/* Quick share (text summary) */}
         <TouchableOpacity
           onPress={handleShare}
           style={{
-            backgroundColor: colors.primary, borderRadius: 12, padding: 14,
+            backgroundColor: colors.primary, borderRadius: 12, paddingVertical: 12,
             flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
           }}>
-          <FontAwesome5 name="share-alt" size={16} color="#fff" solid />
-          <Text style={{ color: '#fff', fontWeight: '800', fontSize: 15 }}>Chia sẻ sổ tay xe</Text>
+          <FontAwesome5 name="share-alt" size={14} color="#fff" solid />
+          <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>
+            {shareUrl ? 'Chia sẻ kèm link' : 'Chia sẻ tóm tắt'}
+          </Text>
         </TouchableOpacity>
+
+        {/* Public link row */}
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          {shareUrl ? (
+            <>
+              <TouchableOpacity
+                onPress={() => Share.share({ message: shareUrl, url: shareUrl })}
+                style={{
+                  flex: 1, backgroundColor: colors.card, borderRadius: 10, paddingVertical: 10,
+                  flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+                  borderWidth: 1, borderColor: colors.border,
+                }}>
+                <FontAwesome5 name="link" size={12} color={colors.primary} solid />
+                <Text style={{ color: colors.primary, fontWeight: '600', fontSize: 13 }}>Sao chép link</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleRevokeLink}
+                style={{
+                  backgroundColor: colors.card, borderRadius: 10, paddingVertical: 10, paddingHorizontal: 14,
+                  borderWidth: 1, borderColor: colors.error + '66',
+                }}>
+                <FontAwesome5 name="unlink" size={14} color={colors.error} solid />
+              </TouchableOpacity>
+            </>
+          ) : (
+            <TouchableOpacity
+              onPress={handleGenerateLink}
+              disabled={shareLoading}
+              style={{
+                flex: 1, backgroundColor: colors.card, borderRadius: 10, paddingVertical: 10,
+                flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+                borderWidth: 1, borderColor: colors.border, opacity: shareLoading ? 0.6 : 1,
+              }}>
+              {shareLoading
+                ? <ActivityIndicator size="small" color={colors.primary} />
+                : <>
+                    <FontAwesome5 name="link" size={12} color={colors.textSecondary} solid />
+                    <Text style={{ color: colors.textSecondary, fontSize: 13 }}>Tạo link công khai cho người mua</Text>
+                  </>
+              }
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
     </SafeAreaView>
   );

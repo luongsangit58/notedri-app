@@ -54,6 +54,13 @@ export default function AddVehicleScreen() {
   const [tank_capacity_l, setTankCapacity] = useState('');
   const [consumption_official, setConsumptionOfficial] = useState('');
   const [is_default, setIsDefault] = useState(false);
+  // Extra fields
+  const [ngay_mua, setNgayMua] = useState('');
+  const [gia_mua, setGiaMua] = useState('');
+  const [vin, setVin] = useState('');
+  const [notes, setNotes] = useState('');
+  const [vehicle_spec_id, setVehicleSpecId] = useState<number | null>(null);
+  const [showExtra, setShowExtra] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
   const [specQuery, setSpecQuery] = useState('');
   const [showSpecSuggestions, setShowSpecSuggestions] = useState(false);
@@ -68,6 +75,7 @@ export default function AddVehicleScreen() {
   });
 
   const applySpec = useCallback((spec: any) => {
+    if (spec.id) setVehicleSpecId(spec.id);
     if (spec.make) setMake(spec.make);
     if (spec.model) setModel(spec.model);
     if (spec.tank_capacity_l) setTankCapacity(String(spec.tank_capacity_l));
@@ -104,6 +112,11 @@ export default function AddVehicleScreen() {
     if (odo_ban_dau.trim()) payload.odo_ban_dau = parseInt(odo_ban_dau.trim(), 10);
     if (tank_capacity_l.trim()) payload.tank_capacity_l = parseFloat(tank_capacity_l.trim());
     if (consumption_official.trim()) payload.consumption_official = parseFloat(consumption_official.trim());
+    if (vehicle_spec_id) payload.vehicle_spec_id = vehicle_spec_id;
+    if (ngay_mua.trim()) payload.ngay_mua = ngay_mua.trim();
+    if (gia_mua.trim()) payload.gia_mua = parseFloat(gia_mua.replace(/\./g, '').trim());
+    if (vin.trim()) payload.vin = vin.trim();
+    if (notes.trim()) payload.notes = notes.trim();
 
     try {
       await createVehicle.mutateAsync(payload);
@@ -289,6 +302,64 @@ export default function AddVehicleScreen() {
           keyboardType="numeric"
           returnKeyType="done"
         />
+
+        {/* Collapsible extra fields */}
+        <TouchableOpacity
+          onPress={() => setShowExtra(v => !v)}
+          style={{
+            flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+            backgroundColor: colors.surface, borderRadius: 10,
+            paddingHorizontal: 14, paddingVertical: 12, marginBottom: 12,
+            borderWidth: 1, borderColor: colors.border,
+          }}>
+          <Text style={{ color: colors.textSecondary, fontSize: 14 }}>
+            {showExtra ? 'Ẩn thông tin bổ sung' : 'Thêm thông tin xe (ngày mua, giá, VIN...)'}
+          </Text>
+          <Text style={{ color: colors.textSecondary }}>{showExtra ? '▲' : '▼'}</Text>
+        </TouchableOpacity>
+
+        {showExtra && (
+          <>
+            <Text style={labelStyle}>Ngày mua (YYYY-MM-DD)</Text>
+            <TextInput
+              style={inputStyle}
+              placeholder="VD: 2020-05-15"
+              placeholderTextColor={colors.textSecondary}
+              value={ngay_mua}
+              onChangeText={setNgayMua}
+            />
+
+            <Text style={labelStyle}>Giá mua (đ)</Text>
+            <TextInput
+              style={inputStyle}
+              placeholder="VD: 350000000"
+              placeholderTextColor={colors.textSecondary}
+              value={gia_mua}
+              onChangeText={setGiaMua}
+              keyboardType="numeric"
+            />
+
+            <Text style={labelStyle}>Số VIN / Số khung</Text>
+            <TextInput
+              style={inputStyle}
+              placeholder="Số VIN (17 ký tự)"
+              placeholderTextColor={colors.textSecondary}
+              value={vin}
+              onChangeText={setVin}
+              autoCapitalize="characters"
+            />
+
+            <Text style={labelStyle}>Ghi chú</Text>
+            <TextInput
+              style={[inputStyle, { minHeight: 72, textAlignVertical: 'top' }]}
+              placeholder="Ghi chú về xe..."
+              placeholderTextColor={colors.textSecondary}
+              value={notes}
+              onChangeText={setNotes}
+              multiline
+            />
+          </>
+        )}
 
         <View style={{
           flexDirection: 'row',
