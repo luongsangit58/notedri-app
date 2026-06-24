@@ -13,7 +13,7 @@ export type ObdDevice = { id: string; name: string };
 export type ConnectionState = 'disconnected' | 'scanning' | 'connecting' | 'connected' | 'error';
 
 class BleService {
-  private manager: BleManager;
+  private _manager: BleManager | null = null;
   private connectedDevice: Device | null = null;
   private notifyCharacteristic: Characteristic | null = null;
   private writeCharUuid: string = OBD_WRITE_UUID;
@@ -29,8 +29,14 @@ class BleService {
   // Callback fired when device unexpectedly disconnects
   onDisconnect: (() => void) | null = null;
 
-  constructor() {
-    this.manager = new BleManager();
+  // Lazy: BleManager is only instantiated the first time BLE is actually needed.
+  // Creating it at module load time triggers NativeEventEmitter before the
+  // native layer is ready, causing "EventEmitter" warnings on every app start.
+  private get manager(): BleManager {
+    if (!this._manager) {
+      this._manager = new BleManager();
+    }
+    return this._manager;
   }
 
   async requestPermissions(): Promise<boolean> {
@@ -238,7 +244,10 @@ class BleService {
   }
 
   destroy() {
-    this.manager.destroy();
+    if (this._manager) {
+      this._manager.destroy();
+      this._manager = null;
+    }
   }
 }
 
