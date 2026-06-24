@@ -108,7 +108,7 @@ function ThemedTabNavigator() {
       <Tab.Screen
         name="Dashboard"
         component={DashboardScreen}
-        options={{ title: t('nav.tab_dashboard'), tabBarIcon: ({ color, size }) => <FontAwesome5 name="home" size={size - 2} color={color} solid /> }}
+        options={{ headerShown: false, title: t('nav.tab_dashboard'), tabBarIcon: ({ color, size }) => <FontAwesome5 name="home" size={size - 2} color={color} solid /> }}
       />
       <Tab.Screen
         name="Timeline"

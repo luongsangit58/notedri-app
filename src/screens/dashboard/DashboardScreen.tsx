@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, ScrollView, RefreshControl, TouchableOpacity,
-  Modal, FlatList, Pressable,
+  Modal, FlatList, Pressable, Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -15,6 +15,7 @@ import QuickAddFAB from '../../components/QuickAddFAB';
 import { useColors } from '../../utils/theme';
 import { formatVND, formatKm } from '../../utils/format';
 import { navigateFromCta } from '../../utils/navigation';
+import { useAuthStore } from '../../store/authStore';
 import client from '../../api/client';
 import dayjs from 'dayjs';
 import { useT } from '../../i18n';
@@ -114,11 +115,37 @@ function VehicleSelector({ vehicles, selectedId, onSelect }: {
   );
 }
 
+/* ─── Avatar component ─── */
+function UserAvatar({ size = 38 }: { size?: number }) {
+  const user = useAuthStore(s => s.user);
+  const colors = useColors();
+  const initials = (user?.name ?? '?').split(' ').map((w: string) => w[0]).slice(0, 2).join('').toUpperCase();
+  if (user?.avatar) {
+    return (
+      <Image
+        source={{ uri: user.avatar }}
+        style={{ width: size, height: size, borderRadius: size / 2, borderWidth: 2, borderColor: 'rgba(255,255,255,0.5)' }}
+      />
+    );
+  }
+  return (
+    <View style={{
+      width: size, height: size, borderRadius: size / 2,
+      backgroundColor: 'rgba(255,255,255,0.25)',
+      borderWidth: 2, borderColor: 'rgba(255,255,255,0.5)',
+      alignItems: 'center', justifyContent: 'center',
+    }}>
+      <Text style={{ color: '#fff', fontWeight: '800', fontSize: size * 0.38 }}>{initials}</Text>
+    </View>
+  );
+}
+
 /* ─── screen ─── */
 export default function DashboardScreen() {
   const t = useT();
   const colors = useColors();
   const nav = useNavigation<any>();
+  const user = useAuthStore(s => s.user);
   const [selectedVehicleId, setSelectedVehicleId] = useState<number | undefined>(undefined);
   const [dismissedSuggestions, setDismissedSuggestions] = useState<Set<string>>(new Set());
 
@@ -172,41 +199,57 @@ export default function DashboardScreen() {
   const effectiveVehicleId = selectedVehicleId ?? vehicle?.id;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'bottom']}>
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
-        refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={colors.primary} />}>
+        contentContainerStyle={{ paddingBottom: 100 }}
+        refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor="#fff" />}>
 
-        {/* Header row: greeting + bell */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-          <View>
-            <Text style={{ color: colors.textSecondary, fontSize: 13 }}>{dayjs().format('dddd, DD/MM/YYYY')}</Text>
-            <Text style={{ color: colors.text, fontSize: 20, fontWeight: '800' }}>{t('dashboard.hello')}</Text>
-          </View>
-          <View style={{ position: 'relative' }}>
+        {/* ── Amber header banner ── */}
+        <View style={{ backgroundColor: colors.primary, paddingHorizontal: 16, paddingTop: 14, paddingBottom: 20 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            {/* Avatar + greeting */}
             <TouchableOpacity
-              onPress={() => nav.navigate('Notifications')}
-              style={{
-                backgroundColor: colors.surface, borderRadius: 12,
-                width: 44, height: 44, justifyContent: 'center', alignItems: 'center',
-              }}>
-              <FontAwesome5 name="bell" size={22} color={colors.text} solid />
-            </TouchableOpacity>
-            {unreadCount > 0 && (
-              <View style={{
-                position: 'absolute', top: -4, right: -6,
-                backgroundColor: '#F44336', borderRadius: 9,
-                minWidth: 18, height: 18, justifyContent: 'center', alignItems: 'center',
-                paddingHorizontal: 4,
-              }}>
-                <Text style={{ color: '#fff', fontSize: 10, fontWeight: '800' }}>
-                  {unreadCount > 99 ? '99+' : unreadCount}
+              onPress={() => nav.navigate('Profile')}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+              <UserAvatar size={40} />
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12 }}>
+                  {dayjs().format('dddd, DD/MM')}
+                </Text>
+                <Text style={{ color: '#fff', fontSize: 17, fontWeight: '800', lineHeight: 22 }} numberOfLines={1}>
+                  {t('dashboard.hello')} {user?.name?.split(' ').pop() ?? ''}
                 </Text>
               </View>
-            )}
+            </TouchableOpacity>
+            {/* Bell icon */}
+            <View style={{ position: 'relative' }}>
+              <TouchableOpacity
+                onPress={() => nav.navigate('Notifications')}
+                style={{
+                  backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 12,
+                  width: 42, height: 42, justifyContent: 'center', alignItems: 'center',
+                }}>
+                <FontAwesome5 name="bell" size={18} color="#fff" solid />
+              </TouchableOpacity>
+              {unreadCount > 0 && (
+                <View style={{
+                  position: 'absolute', top: -4, right: -4,
+                  backgroundColor: '#F44336', borderRadius: 9,
+                  minWidth: 18, height: 18, justifyContent: 'center', alignItems: 'center',
+                  paddingHorizontal: 4,
+                }}>
+                  <Text style={{ color: '#fff', fontSize: 10, fontWeight: '800' }}>
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </Text>
+                </View>
+              )}
+            </View>
           </View>
         </View>
+
+        {/* Content area */}
+        <View style={{ padding: 16 }}>
 
         {/* Vehicle selector */}
         {vehicles.length > 0 && (
@@ -612,6 +655,8 @@ export default function DashboardScreen() {
             <Text style={{ color: colors.textSecondary }}>{t('dashboard.no_vehicle')}</Text>
           </View>
         )}
+
+        </View>{/* end content area */}
       </ScrollView>
 
       <QuickAddFAB />
