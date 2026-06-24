@@ -280,7 +280,7 @@ const en = {
   "about.website": "Website",
   "about.privacy_policy": "Privacy policy",
   "about.terms": "Terms of use",
-  "about.developer": "NoteDri is developed by Miichisoft.",
+  "about.developer": "",
 
   // Export
   "export.title": "Export data",

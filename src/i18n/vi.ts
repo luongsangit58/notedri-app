@@ -280,7 +280,7 @@ const vi = {
   "about.website": "Website",
   "about.privacy_policy": "Chính sách bảo mật",
   "about.terms": "Điều khoản sử dụng",
-  "about.developer": "NoteDri được phát triển bởi Miichisoft.",
+  "about.developer": "",
 
   // Export
   "export.title": "Xuất dữ liệu",

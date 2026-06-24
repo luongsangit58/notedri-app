@@ -79,7 +79,6 @@ export default function AboutScreen() {
         </View>
 
         <Text style={{ color: colors.textSecondary, fontSize: 11, textAlign: 'center', marginHorizontal: 24 }}>
-          {t('about.developer')}{'\n'}
           {t('about.developer_data_note')}
         </Text>
       </ScrollView>
