@@ -347,7 +347,11 @@ export default function VehicleDetailScreen() {
 
         {/* OBD */}
         <TouchableOpacity
-          onPress={() => navigation.navigate('OBDSetup', { vehicleId })}
+          onPress={() => navigation.navigate('OBDSetup', {
+            vehicleId,
+            vehicleName: v?.ten ?? v?.name ?? '',
+            consumptionOfficial: v?.consumption_official ?? null,
+          })}
           style={{
             flexDirection: 'row', alignItems: 'center', gap: 12,
             backgroundColor: '#0F172A', borderRadius: 12, padding: 14, marginBottom: 12,

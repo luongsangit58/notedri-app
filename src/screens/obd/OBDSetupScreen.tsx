@@ -18,6 +18,8 @@ export default function OBDSetupScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const vehicleId: number = route.params?.vehicleId ?? 0;
+  const vehicleName: string = route.params?.vehicleName ?? '';
+  const consumptionOfficial: number | null = route.params?.consumptionOfficial ?? null;
 
   const colors = useColors();
   const {
@@ -37,7 +39,7 @@ export default function OBDSetupScreen() {
   async function handleConnect(deviceId: string, deviceName: string) {
     stopScan();
     await connect(deviceId);
-    navigation.replace('OBDDashboard', { vehicleId, deviceName });
+    navigation.replace('OBDDashboard', { vehicleId, vehicleName, deviceName, consumptionOfficial });
   }
 
   const isScanning = connectionState === 'scanning';

@@ -49,6 +49,8 @@ export default function OBDDashboardScreen() {
   const route = useRoute<any>();
   const vehicleId: number = route.params?.vehicleId ?? 0;
   const deviceName: string = route.params?.deviceName ?? 'OBD';
+  const vehicleName: string = route.params?.vehicleName ?? '';
+  const consumptionOfficial: number | null = route.params?.consumptionOfficial ?? null;
 
   const colors = useColors();
   const {
@@ -134,6 +136,15 @@ export default function OBDDashboardScreen() {
           </View>
         </View>
 
+        {/* Trip history link */}
+        <TouchableOpacity
+          style={[styles.historyBtn, { backgroundColor: colors.card }]}
+          onPress={() => navigation.navigate('OBDTrips', { vehicleId, vehicleName, consumptionOfficial })}>
+          <FontAwesome5 name="route" size={14} color={colors.primary} />
+          <Text style={[styles.historyBtnText, { color: colors.primary }]}>Xem lich su chuyen di</Text>
+          <FontAwesome5 name="chevron-right" size={12} color={colors.textSecondary} />
+        </TouchableOpacity>
+
         {/* Trip control */}
         <View style={[styles.tripCard, { backgroundColor: colors.card }]}>
           <Text style={[styles.tripTitle, { color: colors.text }]}>Chuyen di</Text>
@@ -213,4 +224,13 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   tripBtnText: { color: '#fff', fontWeight: '600', fontSize: 15 },
+  historyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  historyBtnText: { flex: 1, fontWeight: '600', fontSize: 14 },
 });
