@@ -419,6 +419,9 @@ export default function RemindersScreen() {
   const vehicleName = vehicle?.ten_xe ?? vehicle?.ten ?? vehicle?.name ?? `Xe #${vehicleId}`;
 
   const reminders: Reminder[] = remindersData?.data ?? remindersData ?? [];
+  const reminderMeta = remindersData?.meta ?? null;
+  const suggestions: any[] = reminderMeta?.suggestions ?? [];
+  const canAdd: boolean = reminderMeta?.can_add_reminder ?? true;
 
   const [doneModalId, setDoneModalId] = useState<number | null>(null);
   const [doneOdo, setDoneOdo] = useState('');
@@ -466,6 +469,39 @@ export default function RemindersScreen() {
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyText}>Chưa có lời nhắc nào</Text>
           </View>
+        }
+        ListFooterComponent={
+          suggestions.length > 0 ? (
+            <View style={{ padding: 16, paddingTop: 8 }}>
+              <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 }}>
+                Gợi ý thêm
+              </Text>
+              {suggestions.map((s: any, i: number) => (
+                <TouchableOpacity
+                  key={i}
+                  disabled={!canAdd}
+                  onPress={() => navigation.navigate('AddReminder', { vehicleId, hang_muc: s.hang_muc, loai: s.loai })}
+                  style={{
+                    flexDirection: 'row', alignItems: 'center', gap: 10,
+                    backgroundColor: colors.surface, borderRadius: 10, padding: 12, marginBottom: 8,
+                    borderWidth: 1, borderColor: colors.border, opacity: canAdd ? 1 : 0.5,
+                  }}>
+                  <FontAwesome5 name="plus-circle" size={16} color={colors.primary} solid />
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: colors.text, fontSize: 14, fontWeight: '600' }}>{s.hang_muc}</Text>
+                    {s.anchor && (
+                      <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 2 }}>{s.anchor}</Text>
+                    )}
+                  </View>
+                  {!canAdd && (
+                    <View style={{ backgroundColor: '#F59E0B22', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2 }}>
+                      <Text style={{ color: '#F59E0B', fontSize: 11 }}>Premium</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+          ) : null
         }
       />
 

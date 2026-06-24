@@ -107,7 +107,7 @@ function PillarBar({ pillar, keyLabel }: { pillar: Pillar; keyLabel: string }) {
 }
 
 /* ─── OrganRow ─── */
-function OrganRow({ organ }: { organ: Organ }) {
+function OrganRow({ organ, onCta }: { organ: Organ & { cta?: string }; onCta?: (screen: string) => void }) {
   const colors = useColors();
   if (organ.status === 'na') return null;
   const clr = organStatusColor(organ.status);
@@ -128,6 +128,22 @@ function OrganRow({ organ }: { organ: Organ }) {
       )}
       {!!organ.note && (
         <Text style={{ color: colors.textSecondary, fontSize: 11, fontStyle: 'italic', marginTop: 2 }}>{organ.note}</Text>
+      )}
+      {organ.cta && (organ.status === 'urgent' || organ.status === 'warn') && (
+        <TouchableOpacity
+          onPress={() => onCta && onCta(organ.cta!)}
+          style={{
+            marginTop: 6, alignSelf: 'flex-start',
+            backgroundColor: clr + '22', borderRadius: 6,
+            paddingHorizontal: 10, paddingVertical: 4,
+          }}>
+          <Text style={{ color: clr, fontSize: 11, fontWeight: '700' }}>
+            {organ.cta === 'AddService' ? '+ Ghi bảo dưỡng'
+              : organ.cta === 'AddReminder' ? '+ Thêm nhắc nhở'
+              : organ.cta === 'AddOdometer' ? '+ Cập nhật ODO'
+              : '→ Xử lý'}
+          </Text>
+        </TouchableOpacity>
       )}
     </View>
   );
@@ -189,10 +205,11 @@ interface HealthCardProps {
   health: HealthData | null | undefined;
   loading: boolean;
   onAddReminder: () => void;
+  onCta?: (screen: string) => void;
   history?: TrendPoint[];
 }
 
-function HealthCard({ vehicle, health, loading, onAddReminder, history }: HealthCardProps) {
+function HealthCard({ vehicle, health, loading, onAddReminder, onCta, history }: HealthCardProps) {
   const colors = useColors();
   const name = vehicle.ten ?? vehicle.name ?? 'Xe';
   const plate = vehicle.bien_so ?? vehicle.license_plate ?? '';
@@ -236,15 +253,29 @@ function HealthCard({ vehicle, health, loading, onAddReminder, history }: Health
         {loading && <ActivityIndicator color={colors.primary} style={{ marginLeft: 12 }} />}
       </View>
 
-      {/* Band label */}
+      {/* Band label + confidence */}
       {bandLabel && total != null && (
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
           <View style={{
             backgroundColor: scoreColor(total) + '33', borderRadius: 8,
             paddingHorizontal: 10, paddingVertical: 3,
           }}>
             <Text style={{ color: scoreColor(total), fontWeight: '700', fontSize: 13 }}>{bandLabel}</Text>
           </View>
+          {scoreData?.confidence && scoreData.confidence !== 'high' && (
+            <View style={{ backgroundColor: colors.border, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2 }}>
+              <Text style={{ color: colors.textSecondary, fontSize: 11 }}>
+                {scoreData.confidence === 'medium' ? 'Độ tin cậy TB'
+                  : scoreData.confidence === 'low' ? 'Độ tin cậy thấp'
+                  : 'Ít dữ liệu'}
+              </Text>
+            </View>
+          )}
+          {scoreData?.critical && (
+            <View style={{ backgroundColor: '#F4433622', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2 }}>
+              <Text style={{ color: '#F44336', fontSize: 11, fontWeight: '700' }}>Rủi ro cao</Text>
+            </View>
+          )}
         </View>
       )}
 
@@ -261,7 +292,9 @@ function HealthCard({ vehicle, health, loading, onAddReminder, history }: Health
       {organs.length > 0 && (
         <View style={{ marginTop: pillars ? 6 : 0, marginBottom: 4 }}>
           <View style={{ height: 1, backgroundColor: colors.border, marginBottom: 10 }} />
-          {organs.map(o => <OrganRow key={o.key} organ={o} />)}
+          {organs.map(o => (
+            <OrganRow key={o.key} organ={o as any} onCta={onCta} />
+          ))}
         </View>
       )}
 
@@ -396,6 +429,7 @@ export default function HealthScreen() {
               health={healthData}
               loading={q?.isLoading ?? false}
               onAddReminder={() => navigation.navigate('AddReminder', { vehicleId: v.id })}
+              onCta={(screen) => navigation.navigate(screen, { vehicleId: v.id })}
               history={historyData}
             />
           );
