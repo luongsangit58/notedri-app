@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
+import { useCallback } from 'react';
 import vi from './vi';
 import en from './en';
 
@@ -44,6 +45,25 @@ export const useI18nStore = create<I18nState>((set, get) => ({
   },
 }));
 
-/** Hook — returns `t` function for current language */
-export const useT = () => useI18nStore(s => s.t);
 export const useLang = () => useI18nStore(s => s.lang);
+
+/**
+ * Hook — returns a translation function that re-creates when `lang` changes.
+ * Using useLang() as a dependency ensures Zustand re-renders consumers on lang change.
+ */
+export const useT = () => {
+  const lang = useLang();
+  return useCallback(
+    (key: Key, params?: Record<string, string | number>): string => {
+      const dict = translations[lang] as Record<string, string>;
+      let str = dict[key] ?? (translations.vi as Record<string, string>)[key] ?? key;
+      if (params) {
+        Object.entries(params).forEach(([k, v]) => {
+          str = str.replace(new RegExp(`\\{\\{${k}\\}\\}`, 'g'), String(v));
+        });
+      }
+      return str;
+    },
+    [lang],
+  );
+};

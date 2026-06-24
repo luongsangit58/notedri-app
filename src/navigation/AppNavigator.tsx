@@ -4,6 +4,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { useColors, ColorPalette } from '../utils/theme';
 import { FontAwesome5 } from '@expo/vector-icons';
+import { useT } from '../i18n';
 
 import DashboardScreen from '../screens/dashboard/DashboardScreen';
 import TimelineScreen from '../screens/timeline/TimelineScreen';
@@ -41,27 +42,30 @@ import NotificationSettingsScreen from '../screens/profile/NotificationSettingsS
 import ExportDataScreen from '../screens/profile/ExportDataScreen';
 import OBDSetupScreen from '../screens/obd/OBDSetupScreen';
 import OBDDashboardScreen from '../screens/obd/OBDDashboardScreen';
+import OBDTripsScreen from '../screens/obd/OBDTripsScreen';
 
 const Tab = createBottomTabNavigator();
 const RootStack = createStackNavigator();
 
 function VehiclesStack({ colors }: { colors: ColorPalette }) {
   const Stack = createStackNavigator();
+  const t = useT();
   const headerOpts = {
     headerStyle: { backgroundColor: colors.surface },
     headerTintColor: colors.text,
   };
   return (
     <Stack.Navigator screenOptions={headerOpts}>
-      <Stack.Screen name="VehiclesList" component={VehiclesScreen} options={{ title: 'Xe của tôi' }} />
-      <Stack.Screen name="VehicleDetail" component={VehicleDetailScreen} options={({ route }: any) => ({ title: route.params?.vehicleName ?? 'Chi tiết xe' })} />
-      <Stack.Screen name="Reminders" component={RemindersScreen} options={{ title: 'Lời nhắc' }} />
+      <Stack.Screen name="VehiclesList" component={VehiclesScreen} options={{ title: t('vehicles.title') }} />
+      <Stack.Screen name="VehicleDetail" component={VehicleDetailScreen} options={({ route }: any) => ({ title: route.params?.vehicleName ?? t('common.vehicle') })} />
+      <Stack.Screen name="Reminders" component={RemindersScreen} options={{ title: t('reminders.title') }} />
     </Stack.Navigator>
   );
 }
 
 function ServicesStack({ colors }: { colors: ColorPalette }) {
   const Stack = createStackNavigator();
+  const t = useT();
   const headerOpts = {
     headerStyle: { backgroundColor: colors.surface },
     headerTintColor: colors.text,
@@ -72,7 +76,7 @@ function ServicesStack({ colors }: { colors: ColorPalette }) {
         name="ServicesList"
         component={ServicesScreen}
         options={({ navigation }: any) => ({
-          title: 'Bảo dưỡng',
+          title: t('nav.tab_services'),
           headerRight: () => (
             <TouchableOpacity
               onPress={() => navigation.navigate('GarageGuide')}
@@ -89,6 +93,7 @@ function ServicesStack({ colors }: { colors: ColorPalette }) {
 
 function ThemedTabNavigator() {
   const colors = useColors();
+  const t = useT();
   const VehiclesStackColored = () => <VehiclesStack colors={colors} />;
   const ServicesStackColored = () => <ServicesStack colors={colors} />;
   return (
@@ -103,27 +108,27 @@ function ThemedTabNavigator() {
       <Tab.Screen
         name="Dashboard"
         component={DashboardScreen}
-        options={{ title: 'Tổng quan', tabBarIcon: ({ color, size }) => <FontAwesome5 name="home" size={size - 2} color={color} solid /> }}
+        options={{ title: t('nav.tab_dashboard'), tabBarIcon: ({ color, size }) => <FontAwesome5 name="home" size={size - 2} color={color} solid /> }}
       />
       <Tab.Screen
         name="Timeline"
         component={TimelineScreen}
-        options={{ title: 'Nhật ký', tabBarIcon: ({ color, size }) => <FontAwesome5 name="history" size={size - 2} color={color} solid /> }}
+        options={{ title: t('nav.tab_timeline'), tabBarIcon: ({ color, size }) => <FontAwesome5 name="history" size={size - 2} color={color} solid /> }}
       />
       <Tab.Screen
         name="Services"
         component={ServicesStackColored}
-        options={{ title: 'Bảo dưỡng', headerShown: false, tabBarIcon: ({ color, size }) => <FontAwesome5 name="wrench" size={size - 2} color={color} solid /> }}
+        options={{ title: t('nav.tab_services'), headerShown: false, tabBarIcon: ({ color, size }) => <FontAwesome5 name="wrench" size={size - 2} color={color} solid /> }}
       />
       <Tab.Screen
         name="Vehicles"
         component={VehiclesStackColored}
-        options={{ title: 'Xe', headerShown: false, tabBarIcon: ({ color, size }) => <FontAwesome5 name="car-side" size={size - 2} color={color} solid /> }}
+        options={{ title: t('nav.tab_vehicles'), headerShown: false, tabBarIcon: ({ color, size }) => <FontAwesome5 name="car-side" size={size - 2} color={color} solid /> }}
       />
       <Tab.Screen
         name="Profile"
         component={ProfileScreen}
-        options={{ title: 'Hồ sơ', tabBarIcon: ({ color, size }) => <FontAwesome5 name="user-circle" size={size - 2} color={color} solid /> }}
+        options={{ title: t('nav.tab_profile'), tabBarIcon: ({ color, size }) => <FontAwesome5 name="user-circle" size={size - 2} color={color} solid /> }}
       />
     </Tab.Navigator>
   );
@@ -131,6 +136,7 @@ function ThemedTabNavigator() {
 
 export default function AppNavigator() {
   const colors = useColors();
+  const t = useT();
   const headerOpts = {
     headerStyle: { backgroundColor: colors.surface },
     headerTintColor: colors.text,
@@ -141,27 +147,27 @@ export default function AppNavigator() {
 
       {/* Refuel & ODO */}
       <RootStack.Screen name="AddRefuel" component={AddRefuelScreen}
-        options={{ headerShown: true, ...headerOpts, title: 'Đổ xăng' }} />
+        options={{ headerShown: true, ...headerOpts, title: t('refuels.add_title') }} />
       <RootStack.Screen name="AddOdometer" component={AddOdometerScreen}
-        options={{ headerShown: true, ...headerOpts, title: 'Cập nhật ODO' }} />
+        options={{ headerShown: true, ...headerOpts, title: t('odometer.add_title') }} />
       <RootStack.Screen name="EditOdometer" component={EditOdometerScreen}
         options={{ headerShown: false }} />
 
       {/* Services */}
       <RootStack.Screen name="AddService" component={AddServiceScreen}
-        options={{ headerShown: true, ...headerOpts, title: 'Bảo dưỡng mới' }} />
+        options={{ headerShown: true, ...headerOpts, title: t('services.add_title') }} />
 
       {/* Vehicles */}
       <RootStack.Screen name="AddVehicle" component={AddVehicleScreen}
-        options={{ headerShown: true, ...headerOpts, title: 'Thêm xe' }} />
+        options={{ headerShown: true, ...headerOpts, title: t('vehicles.add') }} />
       <RootStack.Screen name="EditVehicle" component={EditVehicleScreen}
-        options={{ headerShown: true, ...headerOpts, title: 'Sửa xe' }} />
+        options={{ headerShown: true, ...headerOpts, title: t('common.edit') }} />
 
       {/* Profile */}
       <RootStack.Screen name="EditProfile" component={EditProfileScreen}
-        options={{ headerShown: true, ...headerOpts, title: 'Chỉnh sửa hồ sơ' }} />
+        options={{ headerShown: true, ...headerOpts, title: t('profile.edit') }} />
       <RootStack.Screen name="ChangePassword" component={ChangePasswordScreen}
-        options={{ headerShown: true, ...headerOpts, title: 'Đổi mật khẩu' }} />
+        options={{ headerShown: true, ...headerOpts, title: t('change_password.title') }} />
 
       {/* Reminders */}
       <RootStack.Screen name="AddReminder" component={AddReminderScreen}
@@ -171,16 +177,16 @@ export default function AppNavigator() {
 
       {/* Nearby Stations */}
       <RootStack.Screen name="NearbyStations" component={NearbyStationsScreen}
-        options={{ headerShown: true, ...headerOpts, title: 'Trạm xăng gần đây' }} />
+        options={{ headerShown: true, ...headerOpts, title: t('nearby_stations.title') }} />
       <RootStack.Screen name="FuelPrices" component={FuelPricesScreen}
-        options={{ headerShown: true, ...headerOpts, title: 'Giá xăng dầu' }} />
+        options={{ headerShown: true, ...headerOpts, title: t('fuel_prices.title') }} />
 
       {/* History lists */}
       <RootStack.Screen name="RefuelsList" component={RefuelsListScreen}
         options={({ navigation }: any) => ({
           headerShown: true,
           ...headerOpts,
-          title: 'Lịch sử đổ xăng',
+          title: t('refuels.title'),
           headerRight: () => (
             <TouchableOpacity
               onPress={() => navigation.navigate('FuelPrices')}
@@ -190,45 +196,45 @@ export default function AppNavigator() {
           ),
         })} />
       <RootStack.Screen name="OdometerList" component={OdometerListScreen}
-        options={{ headerShown: true, ...headerOpts, title: 'Lịch sử ODO' }} />
+        options={{ headerShown: true, ...headerOpts, title: t('odometer.title') }} />
 
       {/* Edit */}
       <RootStack.Screen name="EditRefuel" component={EditRefuelScreen}
-        options={{ headerShown: true, ...headerOpts, title: 'Sửa lần đổ xăng' }} />
+        options={{ headerShown: true, ...headerOpts, title: t('refuels.edit_title') }} />
       <RootStack.Screen name="EditService" component={EditServiceScreen}
-        options={{ headerShown: true, ...headerOpts, title: 'Sửa bảo dưỡng' }} />
+        options={{ headerShown: true, ...headerOpts, title: t('services.edit_title') }} />
 
       {/* Notifications & Reports */}
       <RootStack.Screen name="Notifications" component={NotificationsScreen}
-        options={{ headerShown: true, ...headerOpts, title: 'Thông báo' }} />
+        options={{ headerShown: true, ...headerOpts, title: t('notifications.title') }} />
       <RootStack.Screen name="Reports" component={ReportsScreen}
-        options={{ headerShown: true, ...headerOpts, title: 'Báo cáo' }} />
+        options={{ headerShown: true, ...headerOpts, title: t('reports.title') }} />
 
       {/* Dossier & Health */}
       <RootStack.Screen name="Dossier" component={DossierScreen}
         options={{ headerShown: false }} />
       <RootStack.Screen name="Health" component={HealthScreen}
-        options={{ headerShown: true, ...headerOpts, title: 'Kiểm tra sức khoẻ xe' }} />
+        options={{ headerShown: true, ...headerOpts, title: t('health.title') }} />
 
       {/* Garage Guide */}
       <RootStack.Screen name="GarageGuide" component={GarageGuideScreen}
-        options={{ headerShown: true, ...headerOpts, title: 'Bỏ túi đi garage' }} />
+        options={{ headerShown: true, ...headerOpts, title: t('garage_guide.title') }} />
 
       {/* Feedback */}
       <RootStack.Screen name="Feedback" component={FeedbackScreen}
-        options={{ headerShown: true, ...headerOpts, title: 'Góp ý' }} />
+        options={{ headerShown: true, ...headerOpts, title: t('feedback.title') }} />
 
       {/* About */}
       <RootStack.Screen name="About" component={AboutScreen}
-        options={{ headerShown: true, ...headerOpts, title: 'Về NoteDri' }} />
+        options={{ headerShown: true, ...headerOpts, title: t('about.title') }} />
 
       {/* Notification settings */}
       <RootStack.Screen name="NotificationSettings" component={NotificationSettingsScreen}
-        options={{ headerShown: true, ...headerOpts, title: 'Cài đặt thông báo' }} />
+        options={{ headerShown: true, ...headerOpts, title: t('notification_settings.title') }} />
 
       {/* Export data */}
       <RootStack.Screen name="ExportData" component={ExportDataScreen}
-        options={{ headerShown: true, ...headerOpts, title: 'Xuất dữ liệu' }} />
+        options={{ headerShown: true, ...headerOpts, title: t('export.title') }} />
 
       {/* Premium */}
       <RootStack.Screen name="Premium" component={PremiumScreen}
@@ -237,13 +243,15 @@ export default function AppNavigator() {
           headerStyle: { backgroundColor: '#1C1207' },
           headerTintColor: '#F59E0B',
           headerTitleStyle: { fontWeight: '800', color: '#F59E0B' },
-          title: 'Premium',
+          title: t('premium.title'),
         }} />
 
       {/* OBD */}
       <RootStack.Screen name="OBDSetup" component={OBDSetupScreen}
         options={{ headerShown: false }} />
       <RootStack.Screen name="OBDDashboard" component={OBDDashboardScreen}
+        options={{ headerShown: false }} />
+      <RootStack.Screen name="OBDTrips" component={OBDTripsScreen}
         options={{ headerShown: false }} />
 
       {/* Year Review */}
@@ -253,7 +261,7 @@ export default function AppNavigator() {
           headerStyle: { backgroundColor: '#0b1220' },
           headerTintColor: '#e8eef9',
           headerTitleStyle: { fontWeight: '800', color: '#e8eef9' },
-          title: `Nhìn lại ${route.params?.year ?? ''}`,
+          title: t('year_review.title', { year: route.params?.year ?? '' }),
         })} />
     </RootStack.Navigator>
   );

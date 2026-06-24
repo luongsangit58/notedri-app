@@ -7,7 +7,7 @@ import { useMutation } from '@tanstack/react-query';
 import { useAuthStore } from '../../store/authStore';
 import { profileApi } from '../../api/profile';
 import { useColors, useThemeStore } from '../../utils/theme';
-import { useI18nStore, useLang } from '../../i18n';
+import { useI18nStore, useLang, useT } from '../../i18n';
 
 function MenuItem({ icon, label, onPress, danger, right }: { icon: React.ReactNode; label: string; onPress?: () => void; danger?: boolean; right?: React.ReactNode }) {
   const colors = useColors();
@@ -33,6 +33,7 @@ export default function ProfileScreen() {
   const colors = useColors();
   const { mode: themeMode, toggle: toggleTheme } = useThemeStore();
   const { lang, setLang } = useI18nStore();
+  const t = useT();
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
   const [deleteError, setDeleteError] = useState('');
@@ -52,18 +53,18 @@ export default function ProfileScreen() {
   });
 
   const handleLogout = () => {
-    Alert.alert('Đăng xuất', 'Bạn có chắc muốn đăng xuất?', [
-      { text: 'Huỷ', style: 'cancel' },
-      { text: 'Đăng xuất', style: 'destructive', onPress: logout },
+    Alert.alert(t('auth.logout'), t('profile.logout_confirm'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('auth.logout'), style: 'destructive', onPress: logout },
     ]);
   };
 
   const handleDeletePress = () => {
     Alert.alert(
-      'Xoá tài khoản',
+      t('auth.delete_account'),
       'Toàn bộ dữ liệu xe, lịch sử và lời nhắc sẽ bị xoá vĩnh viễn. Không thể khôi phục.',
       [
-        { text: 'Huỷ', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         { text: 'Tiếp tục', style: 'destructive', onPress: () => { setDeletePassword(''); setDeleteError(''); setDeleteModalVisible(true); } },
       ],
     );
@@ -97,17 +98,17 @@ export default function ProfileScreen() {
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
                 <FontAwesome5 name="crown" size={10} color="#F59E0B" solid />
                 <Text style={{ fontSize: 15, fontWeight: '700', color: '#F59E0B', marginLeft: 6 }}>
-                  Premium
+                  {t('profile.premium_plan')}
                 </Text>
               </View>
-              <Text style={{ fontSize: 13, color: colors.textSecondary }}>Không giới hạn lịch sử</Text>
+              <Text style={{ fontSize: 13, color: colors.textSecondary }}>{t('profile.premium_plan_desc')}</Text>
             </>
           ) : (
             <>
               <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text, marginBottom: 4 }}>
-                Gói Miễn phí
+                {t('profile.free_plan')}
               </Text>
-              <Text style={{ fontSize: 13, color: colors.textSecondary }}>2 xe • Lịch sử 12 tháng</Text>
+              <Text style={{ fontSize: 13, color: colors.textSecondary }}>{t('profile.free_plan_desc')}</Text>
             </>
           )}
           {user?.vehicle_limit != null && (
@@ -121,47 +122,47 @@ export default function ProfileScreen() {
         <View style={{ backgroundColor: colors.surface, borderRadius: 14, marginHorizontal: 16, overflow: 'hidden', marginBottom: 16 }}>
           <MenuItem
             icon={<FontAwesome5 name="pen" size={16} color={colors.textSecondary} solid />}
-            label="Chỉnh sửa hồ sơ"
+            label={t('profile.edit')}
             onPress={() => navigation.navigate('EditProfile')}
           />
           <MenuItem
             icon={<FontAwesome5 name="lock" size={16} color={colors.textSecondary} solid />}
-            label="Đổi mật khẩu"
+            label={t('profile.change_password')}
             onPress={() => navigation.navigate('ChangePassword')}
           />
           <MenuItem
             icon={<FontAwesome5 name="bell" size={16} color={colors.textSecondary} solid />}
-            label="Thông báo"
+            label={t('profile.notifications')}
             onPress={() => navigation.navigate('Notifications')}
           />
           <MenuItem
             icon={<FontAwesome5 name="cog" size={16} color={colors.textSecondary} solid />}
-            label="Cài đặt thông báo"
+            label={t('profile.notification_settings')}
             onPress={() => navigation.navigate('NotificationSettings')}
           />
           <MenuItem
             icon={<FontAwesome5 name="chart-bar" size={16} color={colors.textSecondary} solid />}
-            label="Báo cáo"
+            label={t('profile.reports')}
             onPress={() => navigation.navigate('Reports')}
           />
           <MenuItem
             icon={<FontAwesome5 name="crown" size={16} color="#F59E0B" solid />}
-            label="Premium"
+            label={t('profile.premium')}
             onPress={() => navigation.navigate('Premium')}
           />
           <MenuItem
             icon={<FontAwesome5 name="comment-alt" size={16} color={colors.textSecondary} solid />}
-            label="Góp ý"
+            label={t('profile.feedback')}
             onPress={() => navigation.navigate('Feedback')}
           />
           <MenuItem
             icon={<FontAwesome5 name="download" size={16} color={colors.textSecondary} solid />}
-            label="Xuất dữ liệu"
+            label={t('profile.export')}
             onPress={() => navigation.navigate('ExportData')}
           />
           <MenuItem
             icon={<FontAwesome5 name="info-circle" size={16} color={colors.textSecondary} solid />}
-            label="Về NoteDri"
+            label={t('profile.about')}
             onPress={() => navigation.navigate('About')}
           />
         </View>
@@ -170,7 +171,7 @@ export default function ProfileScreen() {
         <View style={{ backgroundColor: colors.surface, borderRadius: 14, marginHorizontal: 16, overflow: 'hidden', marginBottom: 16 }}>
           <MenuItem
             icon={<FontAwesome5 name={themeMode === 'dark' ? 'moon' : 'sun'} size={16} color={colors.textSecondary} solid />}
-            label={themeMode === 'dark' ? 'Chế độ tối' : 'Chế độ sáng'}
+            label={themeMode === 'dark' ? t('profile.dark_mode') : t('profile.light_mode')}
             onPress={() => toggleTheme()}
             right={
               <View style={{
@@ -178,7 +179,7 @@ export default function ProfileScreen() {
                 backgroundColor: themeMode === 'dark' ? '#333' : '#E5E7EB',
               }}>
                 <Text style={{ color: colors.text, fontSize: 12, fontWeight: '600' }}>
-                  {themeMode === 'dark' ? 'Tối' : 'Sáng'}
+                  {themeMode === 'dark' ? t('profile.dark_mode') : t('profile.light_mode')}
                 </Text>
               </View>
             }
@@ -203,7 +204,7 @@ export default function ProfileScreen() {
         <View style={{ backgroundColor: colors.surface, borderRadius: 14, marginHorizontal: 16, overflow: 'hidden', marginBottom: 16 }}>
           <MenuItem
             icon={<FontAwesome5 name="sign-out-alt" size={16} color={colors.error} solid />}
-            label="Đăng xuất"
+            label={t('auth.logout')}
             danger
             onPress={handleLogout}
           />
@@ -213,12 +214,12 @@ export default function ProfileScreen() {
           onPress={handleDeletePress}
           style={{ marginHorizontal: 16, marginBottom: 32, alignItems: 'center', paddingVertical: 10 }}>
           <Text style={{ color: colors.textSecondary, fontSize: 13, textDecorationLine: 'underline' }}>
-            Xoá tài khoản
+            {t('auth.delete_account')}
           </Text>
         </TouchableOpacity>
 
         <Text style={{ color: colors.textSecondary, fontSize: 12, textAlign: 'center', marginBottom: 16 }}>
-          NoteDri · Quản lý xe thông minh
+          {t('profile.footer')}
         </Text>
       </ScrollView>
 
@@ -227,7 +228,7 @@ export default function ProfileScreen() {
         <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.7)' }}>
           <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24 }}>
             <Text style={{ color: colors.error, fontSize: 17, fontWeight: '700', marginBottom: 8 }}>
-              Xác nhận xoá tài khoản
+              {t('auth.delete_account')}
             </Text>
             <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 20, lineHeight: 18 }}>
               Nhập mật khẩu để xác nhận. Hành động này không thể hoàn tác.
