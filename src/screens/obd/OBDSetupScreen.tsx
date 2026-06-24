@@ -13,6 +13,7 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useObdConnection } from '../../hooks/useObd';
 import { useColors } from '../../utils/theme';
+import { useAuthStore } from '../../stores/authStore';
 
 export default function OBDSetupScreen() {
   const navigation = useNavigation<any>();
@@ -22,6 +23,7 @@ export default function OBDSetupScreen() {
   const consumptionOfficial: number | null = route.params?.consumptionOfficial ?? null;
 
   const colors = useColors();
+  const isPremium = useAuthStore((s) => s.user?.is_premium ?? false);
   const {
     connectionState,
     foundDevices,
@@ -31,10 +33,18 @@ export default function OBDSetupScreen() {
     connect,
   } = useObdConnection(vehicleId);
 
+  // Guard: redirect to PremiumScreen if user is not premium
   useEffect(() => {
+    if (!isPremium) {
+      navigation.replace('Premium');
+    }
+  }, [isPremium]);
+
+  useEffect(() => {
+    if (!isPremium) return;
     startScan();
     return () => stopScan();
-  }, []);
+  }, [isPremium]);
 
   async function handleConnect(deviceId: string, deviceName: string) {
     stopScan();

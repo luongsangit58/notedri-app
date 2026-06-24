@@ -9,6 +9,7 @@ import LoadingView from '../../components/LoadingView';
 import ErrorView from '../../components/ErrorView';
 import { useColors } from '../../utils/theme';
 import { formatKm } from '../../utils/format';
+import { useAuthStore } from '../../stores/authStore';
 import dayjs from 'dayjs';
 
 // ─── Health helpers ──────────────────────────────────────────────────────────
@@ -229,6 +230,7 @@ export default function VehicleDetailScreen() {
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
   const { vehicleId } = route.params;
+  const isPremium = useAuthStore((s) => s.user?.is_premium ?? false);
 
   const { data: vehicle, isLoading, isError, refetch, isFetching } = useVehicle(vehicleId);
   const { data: health } = useVehicleHealth(vehicleId);
@@ -345,32 +347,51 @@ export default function VehicleDetailScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* OBD */}
+        {/* OBD - Premium feature */}
         <TouchableOpacity
-          onPress={() => navigation.navigate('OBDSetup', {
-            vehicleId,
-            vehicleName: v?.ten ?? v?.name ?? '',
-            consumptionOfficial: v?.consumption_official ?? null,
-          })}
+          onPress={() => {
+            if (!isPremium) {
+              navigation.navigate('Premium');
+              return;
+            }
+            navigation.navigate('OBDSetup', {
+              vehicleId,
+              vehicleName: v?.ten ?? v?.name ?? '',
+              consumptionOfficial: v?.consumption_official ?? null,
+            });
+          }}
           style={{
             flexDirection: 'row', alignItems: 'center', gap: 12,
             backgroundColor: '#0F172A', borderRadius: 12, padding: 14, marginBottom: 12,
+            opacity: isPremium ? 1 : 0.85,
           }}>
           <View style={{
             width: 40, height: 40, borderRadius: 20,
             backgroundColor: '#1E3A5F', alignItems: 'center', justifyContent: 'center',
           }}>
-            <FontAwesome5 name="plug" size={16} color="#60A5FA" solid />
+            <FontAwesome5 name={isPremium ? 'plug' : 'lock'} size={16} color="#60A5FA" solid />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={{ color: '#F1F5F9', fontWeight: '700', fontSize: 14 }}>Ket noi OBD</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Text style={{ color: '#F1F5F9', fontWeight: '700', fontSize: 14 }}>Ket noi OBD</Text>
+              {!isPremium && (
+                <View style={{
+                  backgroundColor: '#F59E0B', borderRadius: 4,
+                  paddingHorizontal: 5, paddingVertical: 1,
+                }}>
+                  <Text style={{ color: '#000', fontSize: 9, fontWeight: '800' }}>PREMIUM</Text>
+                </View>
+              )}
+            </View>
             <Text style={{ color: '#94A3B8', fontSize: 12, marginTop: 1 }}>
-              {activeDtc.length > 0
-                ? `${activeDtc.length} ma loi chua xu ly`
-                : 'Doc du lieu xe tu dong qua Bluetooth'}
+              {!isPremium
+                ? 'Nang cap de doc du lieu xe qua Bluetooth'
+                : activeDtc.length > 0
+                  ? `${activeDtc.length} ma loi chua xu ly`
+                  : 'Doc du lieu xe tu dong qua Bluetooth'}
             </Text>
           </View>
-          {activeDtc.length > 0 && (
+          {isPremium && activeDtc.length > 0 && (
             <View style={{
               backgroundColor: '#EF4444', borderRadius: 10,
               paddingHorizontal: 8, paddingVertical: 2,
@@ -380,7 +401,7 @@ export default function VehicleDetailScreen() {
               </Text>
             </View>
           )}
-          <FontAwesome5 name="chevron-right" size={13} color="#475569" />
+          <FontAwesome5 name={isPremium ? 'chevron-right' : 'arrow-right'} size={13} color="#475569" />
         </TouchableOpacity>
 
         {/* Sức khoẻ xe — breakdown card */}
