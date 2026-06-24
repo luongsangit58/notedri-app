@@ -9,7 +9,7 @@ import LoadingView from '../../components/LoadingView';
 import ErrorView from '../../components/ErrorView';
 import { useColors } from '../../utils/theme';
 import { formatKm } from '../../utils/format';
-import { useAuthStore } from '../../stores/authStore';
+import { useAuthStore } from '../../store/authStore';
 import dayjs from 'dayjs';
 
 // ─── Health helpers ──────────────────────────────────────────────────────────
