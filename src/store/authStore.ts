@@ -24,6 +24,7 @@ interface AuthState {
   logout: () => Promise<void>;
   initialize: () => Promise<void>;
   setUser: (user: User) => void;
+  setSession: (token: string, user: User) => Promise<void>;
   clearError: () => void;
 }
 
@@ -103,5 +104,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   setUser: (user: User) => set({ user }),
+  setSession: async (token: string, user: User) => {
+    await storage.setToken(token);
+    await storage.setUser(JSON.stringify(user));
+    set({ token, user, isLoading: false });
+    registerPushToken();
+  },
   clearError: () => set({ error: null }),
 }));
