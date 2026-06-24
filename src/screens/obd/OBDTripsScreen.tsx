@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ import { useObdTrips, useObdDtcEvents } from '../../hooks/useObd';
 import { refuelsApi } from '../../api/refuels';
 import { useColors } from '../../utils/theme';
 import { formatVND, formatVNDShort, formatKm } from '../../utils/format';
+import { useAuthStore } from '../../store/authStore';
 import dayjs from 'dayjs';
 
 function formatDuration(seconds: number): string {
@@ -56,6 +57,12 @@ export default function OBDTripsScreen() {
   const consumptionOfficial: number | null = route.params?.consumptionOfficial ?? null;
 
   const colors = useColors();
+  const isPremium = useAuthStore((s) => s.user?.is_premium ?? false);
+
+  // Redirect non-premium users away
+  useEffect(() => {
+    if (!isPremium) navigation.replace('Premium');
+  }, [isPremium]);
 
   const { data: tripsData, isLoading, refetch, isFetching } = useObdTrips(vehicleId);
   const { data: dtcData } = useObdDtcEvents(vehicleId);

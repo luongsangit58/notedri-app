@@ -57,7 +57,7 @@ export default function OBDDashboardScreen() {
     connectionState,
     liveSnapshot,
     isTripActive,
-    currentTrip,
+    currentTripRef,
     lastTripSummary,
     disconnect,
     startTrip,
@@ -148,9 +148,9 @@ export default function OBDDashboardScreen() {
         {/* Trip control */}
         <View style={[styles.tripCard, { backgroundColor: colors.card }]}>
           <Text style={[styles.tripTitle, { color: colors.text }]}>Chuyen di</Text>
-          {isTripActive && currentTrip && (
+          {isTripActive && currentTripRef.current && (
             <Text style={[styles.tripKm, { color: '#3B82F6' }]}>
-              {currentTrip.getCurrentDistanceKm()} km
+              {currentTripRef.current.getCurrentDistanceKm()} km
             </Text>
           )}
           {!isTripActive && lastTripSummary && (

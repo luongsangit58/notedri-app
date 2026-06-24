@@ -1,21 +1,15 @@
 import { BleManager, Device, State, Characteristic } from 'react-native-ble-plx';
 import { Platform, PermissionsAndroid } from 'react-native';
 
-// ELM327 BLE service/characteristic UUIDs (standard across most adapters)
 const OBD_SERVICE_UUID = '0000fff0-0000-1000-8000-00805f9b34fb';
 const OBD_WRITE_UUID = '0000fff2-0000-1000-8000-00805f9b34fb';
 const OBD_NOTIFY_UUID = '0000fff1-0000-1000-8000-00805f9b34fb';
 
-// Vgate iCar Pro BLE uses different UUIDs as fallback
 const VGATE_SERVICE_UUID = 'e7810a71-73ae-499d-8c15-faa9aef0c3f2';
 const VGATE_WRITE_UUID = 'be781a71-0000-1000-8000-00805f9b34fb';
 const VGATE_NOTIFY_UUID = 'be781a71-0001-1000-8000-00805f9b34fb';
 
-export type ObdDevice = {
-  id: string;
-  name: string;
-};
-
+export type ObdDevice = { id: string; name: string };
 export type ConnectionState = 'disconnected' | 'scanning' | 'connecting' | 'connected' | 'error';
 
 class BleService {
@@ -23,8 +17,17 @@ class BleService {
   private connectedDevice: Device | null = null;
   private notifyCharacteristic: Characteristic | null = null;
   private writeCharUuid: string = OBD_WRITE_UUID;
+  private activeServiceUuid: string = OBD_SERVICE_UUID;
   private responseBuffer: string = '';
   private responseResolver: ((value: string) => void) | null = null;
+  private responseRejecter: ((err: Error) => void) | null = null;
+
+  // Serial command queue: each sendCommand chains onto this promise so
+  // commands are guaranteed to execute one at a time.
+  private commandQueue: Promise<void> = Promise.resolve();
+
+  // Callback fired when device unexpectedly disconnects
+  onDisconnect: (() => void) | null = null;
 
   constructor() {
     this.manager = new BleManager();
@@ -63,24 +66,14 @@ class BleService {
     onError: (error: Error) => void
   ): () => void {
     const found = new Set<string>();
-
     this.manager.startDeviceScan(null, { allowDuplicates: false }, (error, device) => {
-      if (error) {
-        onError(error);
-        return;
-      }
+      if (error) { onError(error); return; }
       if (!device || !device.name) return;
-
       const name = device.name.toUpperCase();
-      // Filter likely OBD adapters
       if (
-        name.includes('OBD') ||
-        name.includes('ELM') ||
-        name.includes('VGATE') ||
-        name.includes('VEEPEAK') ||
-        name.includes('OBD2') ||
-        name.includes('OBDII') ||
-        name.includes('ICAR')
+        name.includes('OBD') || name.includes('ELM') ||
+        name.includes('VGATE') || name.includes('VEEPEAK') ||
+        name.includes('OBD2') || name.includes('OBDII') || name.includes('ICAR')
       ) {
         if (!found.has(device.id)) {
           found.add(device.id);
@@ -88,7 +81,6 @@ class BleService {
         }
       }
     });
-
     return () => this.manager.stopDeviceScan();
   }
 
@@ -107,7 +99,6 @@ class BleService {
     await device.discoverAllServicesAndCharacteristics();
     this.connectedDevice = device;
 
-    // Detect which UUID set this device uses
     const services = await device.services();
     const serviceUuids = services.map((s) => s.uuid.toLowerCase());
 
@@ -123,8 +114,8 @@ class BleService {
       notifyUuid = OBD_NOTIFY_UUID;
       this.writeCharUuid = OBD_WRITE_UUID;
     }
+    this.activeServiceUuid = serviceUuid;
 
-    // Subscribe to notifications
     this.notifyCharacteristic = await device.monitorCharacteristicForService(
       serviceUuid,
       notifyUuid,
@@ -139,48 +130,87 @@ class BleService {
           if (this.responseResolver) {
             this.responseResolver(response);
             this.responseResolver = null;
+            this.responseRejecter = null;
           }
         }
       }
     ) as unknown as Characteristic;
 
-    // Setup disconnect handler
+    // Propagate unexpected disconnect to callers (e.g. useObd hook)
     device.onDisconnected(() => {
       this.connectedDevice = null;
       this.notifyCharacteristic = null;
       this.responseBuffer = '';
+      this.commandQueue = Promise.resolve(); // Drain queue
+
+      // Reject any in-flight command
+      if (this.responseRejecter) {
+        this.responseRejecter(new Error('BLE disconnected'));
+        this.responseResolver = null;
+        this.responseRejecter = null;
+      }
+
+      this.onDisconnect?.();
     });
   }
 
+  // All callers go through this single entry point.
+  // Commands are serialized via the promise chain — safe to call concurrently.
   async sendCommand(command: string, timeoutMs = 2000): Promise<string> {
-    if (!this.connectedDevice) throw new Error('Chưa kết nối thiết bị OBD');
+    let resolve_: (v: string) => void;
+    let reject_: (e: Error) => void;
 
-    const services = await this.connectedDevice.services();
-    const serviceUuids = services.map((s) => s.uuid.toLowerCase());
+    const resultPromise = new Promise<string>((res, rej) => {
+      resolve_ = res;
+      reject_ = rej;
+    });
 
-    const serviceUuid = serviceUuids.includes(VGATE_SERVICE_UUID.toLowerCase())
-      ? VGATE_SERVICE_UUID
-      : OBD_SERVICE_UUID;
+    // Chain onto the queue. Each task must not throw (use .catch inside) so
+    // a failure doesn't stall the whole queue.
+    this.commandQueue = this.commandQueue.then(async () => {
+      try {
+        const result = await this._sendCommandInternal(command, timeoutMs);
+        resolve_!(result);
+      } catch (err: any) {
+        reject_!(err);
+      }
+    });
+
+    return resultPromise;
+  }
+
+  private _sendCommandInternal(command: string, timeoutMs: number): Promise<string> {
+    if (!this.connectedDevice) {
+      return Promise.reject(new Error('Chưa kết nối thiết bị OBD'));
+    }
+
+    const device = this.connectedDevice;
 
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         this.responseResolver = null;
-        reject(new Error(`Timeout: ${command}`));
+        this.responseRejecter = null;
+        reject(new Error(`OBD timeout: ${command}`));
       }, timeoutMs);
 
       this.responseResolver = (value) => {
         clearTimeout(timer);
         resolve(value);
       };
+      this.responseRejecter = (err) => {
+        clearTimeout(timer);
+        reject(err);
+      };
 
       const encoded = btoa(command + '\r');
-      this.connectedDevice!.writeCharacteristicWithResponseForService(
-        serviceUuid,
+      device.writeCharacteristicWithResponseForService(
+        this.activeServiceUuid,
         this.writeCharUuid,
         encoded
       ).catch((err) => {
         clearTimeout(timer);
         this.responseResolver = null;
+        this.responseRejecter = null;
         reject(err);
       });
     });
@@ -188,9 +218,15 @@ class BleService {
 
   async disconnect(): Promise<void> {
     if (this.connectedDevice) {
-      await this.connectedDevice.cancelConnection();
+      try {
+        await this.connectedDevice.cancelConnection();
+      } catch {
+        // Already disconnected — ignore
+      }
       this.connectedDevice = null;
     }
+    this.commandQueue = Promise.resolve();
+    this.onDisconnect = null;
   }
 
   isConnected(): boolean {
