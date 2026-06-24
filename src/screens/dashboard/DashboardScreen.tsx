@@ -14,9 +14,10 @@ import ErrorView from '../../components/ErrorView';
 import QuickAddFAB from '../../components/QuickAddFAB';
 import { useColors } from '../../utils/theme';
 import { formatVND, formatKm } from '../../utils/format';
-import { navigateFromUrl } from '../../utils/navigation';
+import { navigateFromCta } from '../../utils/navigation';
 import client from '../../api/client';
 import dayjs from 'dayjs';
+import { useT } from '../../i18n';
 
 /* ─── FA6 class → FA5 icon name ─── */
 const FA_MAP: Record<string, string> = {
@@ -46,8 +47,8 @@ function severityColor(s: string, primaryColor: string): string {
   return primaryColor;
 }
 
-function ctaNavigate(navigation: any, cta: { url?: string }) {
-  navigateFromUrl(navigation, cta?.url ?? '');
+function ctaNavigate(navigation: any, cta: { url?: string; action?: string }, vehicleId?: number) {
+  navigateFromCta(navigation, cta ?? {}, vehicleId);
 }
 
 /* ─── helpers ─── */
@@ -70,9 +71,10 @@ function VehicleSelector({ vehicles, selectedId, onSelect }: {
   vehicles: any[]; selectedId?: number; onSelect: (id: number) => void;
 }) {
   const colors = useColors();
+  const t = useT();
   const [open, setOpen] = useState(false);
   const current = vehicles.find(v => v.id === selectedId) ?? vehicles[0];
-  const label = current ? `${current.ten}${current.is_default ? ' ★' : ''}` : 'Chọn xe';
+  const label = current ? `${current.ten}${current.is_default ? ' ★' : ''}` : t('common.select_vehicle');
 
   return (
     <>
@@ -90,7 +92,7 @@ function VehicleSelector({ vehicles, selectedId, onSelect }: {
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
         <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 24 }} onPress={() => setOpen(false)}>
           <View style={{ backgroundColor: colors.surface, borderRadius: 14, overflow: 'hidden' }}>
-            <Text style={{ color: colors.textSecondary, fontSize: 12, padding: 14, paddingBottom: 6 }}>Chọn xe</Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 12, padding: 14, paddingBottom: 6 }}>{t('common.select_vehicle')}</Text>
             <FlatList
               data={vehicles}
               keyExtractor={v => String(v.id)}
@@ -114,6 +116,7 @@ function VehicleSelector({ vehicles, selectedId, onSelect }: {
 
 /* ─── screen ─── */
 export default function DashboardScreen() {
+  const t = useT();
   const colors = useColors();
   const nav = useNavigation<any>();
   const [selectedVehicleId, setSelectedVehicleId] = useState<number | undefined>(undefined);
@@ -132,7 +135,7 @@ export default function DashboardScreen() {
   const unreadCount = notifData?.meta?.unread_count ?? notifData?.data?.filter?.((n: any) => !n.read)?.length ?? 0;
 
   if (isLoading) return <LoadingView />;
-  if (isError) return <ErrorView message="Không tải được dữ liệu" onRetry={refetch} />;
+  if (isError) return <ErrorView message={t('common.error_load')} onRetry={refetch} />;
 
   const d = raw?.data ?? {};
   const vehicle = d.vehicle;
@@ -153,7 +156,7 @@ export default function DashboardScreen() {
 
   const healthOverall: string | null = health?.overall ?? null;
   const HEALTH_COLOR: Record<string, string> = { ok: colors.success, warn: colors.warning, urgent: colors.error };
-  const HEALTH_LABEL: Record<string, string> = { ok: 'Tốt', warn: 'Cần chú ý', urgent: 'Nguy hiểm', na: 'Chưa đủ dữ liệu' };
+  const HEALTH_LABEL: Record<string, string> = { ok: t('dashboard.health_band_good'), warn: t('dashboard.health_band_warn'), urgent: t('dashboard.health_band_danger'), na: t('dashboard.health_no_data') };
   const healthColor = healthOverall ? (HEALTH_COLOR[healthOverall] ?? colors.textSecondary) : colors.textSecondary;
   const healthLabel = healthOverall ? (HEALTH_LABEL[healthOverall] ?? '') : '';
 
@@ -179,7 +182,7 @@ export default function DashboardScreen() {
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
           <View>
             <Text style={{ color: colors.textSecondary, fontSize: 13 }}>{dayjs().format('dddd, DD/MM/YYYY')}</Text>
-            <Text style={{ color: colors.text, fontSize: 20, fontWeight: '800' }}>Xin chào!</Text>
+            <Text style={{ color: colors.text, fontSize: 20, fontWeight: '800' }}>{t('dashboard.hello')}</Text>
           </View>
           <View style={{ position: 'relative' }}>
             <TouchableOpacity
@@ -218,9 +221,9 @@ export default function DashboardScreen() {
         {legal.filter((l: any) => (l.remaining_days ?? 999) <= 30).length > 0 && (
           <View style={{ marginBottom: 10 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-              <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: '600' }}>Giấy tờ sắp hết hạn</Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: '600' }}>{t('dashboard.docs_expiring')}</Text>
               <TouchableOpacity onPress={() => effectiveVehicleId && nav.navigate('Reminders', { vehicleId: effectiveVehicleId })}>
-                <Text style={{ color: colors.primary, fontSize: 12 }}>Quản lý →</Text>
+                <Text style={{ color: colors.primary, fontSize: 12 }}>{t('dashboard.manage_arrow')}</Text>
               </TouchableOpacity>
             </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 2 }}>
@@ -236,7 +239,7 @@ export default function DashboardScreen() {
                       {l.hang_muc ?? l.label ?? l.loai}
                     </Text>
                     <Text style={{ color: chipColor, fontSize: 11 }}>
-                      {days <= 0 ? 'Quá hạn' : `còn ${days}ngày`}
+                      {days <= 0 ? t('dashboard.overdue') : t('dashboard.days_remaining', { days })}
                     </Text>
                   </View>
                 );
@@ -258,7 +261,7 @@ export default function DashboardScreen() {
               <FontAwesome5 name="gas-pump" size={20} color="#fff" solid />
             </View>
             <View>
-              <Text style={{ color: '#fff', fontWeight: '800', fontSize: 16 }}>Đổ xăng</Text>
+              <Text style={{ color: colors.primaryText, fontWeight: '800', fontSize: 16 }}>{t('dashboard.add_refuel')}</Text>
               <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, marginTop: 2 }}>Ghi nhanh, tự động tính toán</Text>
             </View>
           </View>
@@ -278,7 +281,7 @@ export default function DashboardScreen() {
               <FontAwesome5 name="road" size={20} color={colors.textSecondary} solid />
             </View>
             <View>
-              <Text style={{ color: colors.text, fontWeight: '700', fontSize: 16 }}>Cập nhật ODO</Text>
+              <Text style={{ color: colors.text, fontWeight: '700', fontSize: 16 }}>{t('dashboard.add_odo')}</Text>
               {vehicle?.odo_hien_tai != null && (
                 <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>
                   {formatKm(vehicle.odo_hien_tai)}
@@ -287,13 +290,13 @@ export default function DashboardScreen() {
               <TouchableOpacity onPress={() => nav.navigate('OdometerList')}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
                   <FontAwesome5 name="history" size={11} color={colors.primary} solid />
-                  <Text style={{ color: colors.primary, fontSize: 12 }}>Lịch sử ODO →</Text>
+                  <Text style={{ color: colors.primary, fontSize: 12 }}>{t('dashboard.odo_history_arrow')}</Text>
                 </View>
               </TouchableOpacity>
             </View>
           </View>
           <View style={{ backgroundColor: colors.primary + '22', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 }}>
-            <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 13 }}>+ Ghi ngay</Text>
+            <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 13 }}>{t('dashboard.log_now')}</Text>
           </View>
         </TouchableOpacity>
 
@@ -317,14 +320,14 @@ export default function DashboardScreen() {
             <View style={{ flex: 1 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
                 <FontAwesome5 name="heartbeat" size={14} color={healthColor} solid />
-                <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14 }}>Sức khoẻ xe</Text>
+                <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14 }}>{t('dashboard.health')}</Text>
                 <View style={{ backgroundColor: healthColor + '33', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2 }}>
                   <Text style={{ color: healthColor, fontSize: 12, fontWeight: '700' }}>{healthLabel}</Text>
                 </View>
               </View>
               {health?.warn_count > 0 && (
                 <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 4 }}>
-                  {health.warn_count} mục cần để ý — bấm xem chẩn đoán đầy đủ.
+                  {t('dashboard.items_need_attention', { count: health.warn_count })}
                 </Text>
               )}
             </View>
@@ -339,7 +342,7 @@ export default function DashboardScreen() {
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <FontAwesome5 name="lightbulb" size={16} color="#F59E0B" solid />
                 <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14, marginLeft: 6 }}>
-                  Việc cần làm hôm nay
+                  {t('dashboard.todo_today')}
                   <Text style={{ color: colors.textSecondary, fontWeight: '400', fontSize: 12 }}> ({dayjs().format('DD/MM/YYYY')})</Text>
                 </Text>
               </View>
@@ -362,7 +365,7 @@ export default function DashboardScreen() {
                   {s.why ? <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 3 }}>{s.why}</Text> : null}
                   {s.cta && (
                     <TouchableOpacity
-                      onPress={() => ctaNavigate(nav, s.cta)}
+                      onPress={() => ctaNavigate(nav, s.cta, effectiveVehicleId)}
                       style={{
                         alignSelf: 'flex-end', marginTop: 8,
                         backgroundColor: colors.primary + '22', borderRadius: 8,
@@ -394,7 +397,7 @@ export default function DashboardScreen() {
             <FontAwesome5 name="road" size={14} color={colors.warning} solid />
             <View style={{ flex: 1 }}>
               <Text style={{ color: colors.warning, fontWeight: '700', fontSize: 13 }}>
-                Chưa cập nhật ODO {odaStaleDays} ngày
+                {t('dashboard.odo_not_updated', { days: odaStaleDays })}
               </Text>
               <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 2 }}>
                 Nhấn để nhập số ODO mới - giúp tính chính xác hơn
@@ -409,7 +412,7 @@ export default function DashboardScreen() {
           <View style={{ flexDirection: 'row', gap: 8, marginBottom: 10 }}>
             <View style={{ flex: 1, backgroundColor: colors.surface, borderRadius: 14, padding: 14 }}>
               <FontAwesome5 name="gas-pump" size={12} color={colors.primary} solid />
-              <Label>Chi xăng tháng này</Label>
+              <Label>{t('dashboard.fuel_cost_month')}</Label>
               <Text style={{ color: colors.text, fontWeight: '800', fontSize: 16 }}>
                 {formatVND(monthCost)}
               </Text>
@@ -428,14 +431,14 @@ export default function DashboardScreen() {
             <View style={{ gap: 8, flex: 1 }}>
               <View style={{ backgroundColor: colors.surface, borderRadius: 14, padding: 14, flex: 1 }}>
                 <FontAwesome5 name="chart-bar" size={12} color="#38bdf8" solid />
-                <Label>Tiêu thụ gần nhất</Label>
+                <Label>{t('dashboard.consumption_latest')}</Label>
                 <Text style={{ color: colors.text, fontWeight: '800', fontSize: 16 }}>
                   {consumption != null ? `${Number(consumption).toFixed(1)} L/100km` : '—'}
                 </Text>
               </View>
               <View style={{ backgroundColor: colors.surface, borderRadius: 14, padding: 14, flex: 1 }}>
                 <FontAwesome5 name="coins" size={12} color="#34d399" solid />
-                <Label>Tổng chi xăng</Label>
+                <Label>{t('dashboard.total_fuel_spend')}</Label>
                 <Text style={{ color: colors.text, fontWeight: '800', fontSize: 15 }}>
                   {formatVND(Number(allTime?.tong_tien ?? 0))}
                 </Text>
@@ -453,7 +456,7 @@ export default function DashboardScreen() {
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
               <FontAwesome5 name="magic" size={14} color={colors.primary} solid />
               <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14, marginLeft: 6 }}>
-                Dự đoán lần đổ tiếp theo
+                {t('dashboard.prediction_title')}
                 {prediction.samples > 0 && (
                   <Text style={{ color: colors.textSecondary, fontWeight: '400', fontSize: 12 }}>
                     {' '}(trung bình {prediction.samples} lần gần nhất)
@@ -483,7 +486,7 @@ export default function DashboardScreen() {
           <View style={{ backgroundColor: colors.surface, borderRadius: 14, padding: 16, marginBottom: 10, borderLeftWidth: 3, borderLeftColor: colors.error }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
               <FontAwesome5 name="exclamation-triangle" size={14} color={colors.warning} solid />
-              <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14, marginLeft: 6 }}>Cần chú ý</Text>
+              <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14, marginLeft: 6 }}>{t('dashboard.urgent_title')}</Text>
             </View>
             {urgentItems.map((item: any, i: number) => {
               const days = item.remaining_days;
@@ -494,7 +497,7 @@ export default function DashboardScreen() {
                 <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                   <Text style={{ color: colors.text, flex: 1, fontSize: 13 }}>{item.hang_muc ?? item.label}</Text>
                   <Text style={{ color: urg, fontWeight: '700', fontSize: 12, marginLeft: 8 }}>
-                    {isOverdue ? 'Quá hạn' : days != null ? `${days} ngày` : km != null ? formatKm(km) : ''}
+                    {isOverdue ? t('dashboard.overdue') : days != null ? t('dashboard.days_remaining', { days }) : km != null ? formatKm(km) : ''}
                   </Text>
                 </View>
               );
@@ -507,13 +510,13 @@ export default function DashboardScreen() {
           <View style={{ backgroundColor: colors.surface, borderRadius: 14, padding: 16, marginBottom: 10 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
               <FontAwesome5 name="wrench" size={14} color={colors.textSecondary} solid />
-              <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14, marginLeft: 6 }}>Dự kiến bảo dưỡng sắp tới</Text>
+              <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14, marginLeft: 6 }}>{t('dashboard.maintenance_forecast')}</Text>
             </View>
             {forecastItems.slice(0, 3).map((item: any, i: number) => {
               const urg = (item.remaining_days != null && item.remaining_days <= 30)
                 || (item.remaining_km != null && item.remaining_km <= 500) ? colors.warning : colors.textSecondary;
               const remaining = item.remaining_days != null
-                ? `còn ${item.remaining_days} ngày`
+                ? t('dashboard.days_remaining', { days: item.remaining_days })
                 : item.remaining_km != null ? `còn ${formatKm(item.remaining_km)}` : '';
               return (
                 <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
@@ -534,17 +537,17 @@ export default function DashboardScreen() {
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <FontAwesome5 name="gas-pump" size={14} color={colors.text} solid />
-                <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14, marginLeft: 6 }}>Lần đổ gần đây</Text>
+                <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14, marginLeft: 6 }}>{t('dashboard.recent_refuels')}</Text>
               </View>
               <View style={{ flexDirection: 'row', gap: 10 }}>
                 <TouchableOpacity onPress={() => nav.navigate('RefuelsList')}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
                     <FontAwesome5 name="gas-pump" size={12} color={colors.primary} solid />
-                    <Text style={{ color: colors.primary, fontSize: 13 }}>Xem tất cả xăng →</Text>
+                    <Text style={{ color: colors.primary, fontSize: 13 }}>{t('dashboard.see_all_fuel')}</Text>
                   </View>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => nav.navigate('Timeline')}>
-                  <Text style={{ color: colors.textSecondary, fontSize: 13 }}>Dòng thời gian →</Text>
+                  <Text style={{ color: colors.textSecondary, fontSize: 13 }}>{t('dashboard.timeline_arrow')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -580,7 +583,7 @@ export default function DashboardScreen() {
                 </Text>
               </View>
               <TouchableOpacity onPress={() => nav.navigate('Reports')}>
-                <Text style={{ color: colors.primary, fontSize: 12 }}>Biểu đồ →</Text>
+                <Text style={{ color: colors.primary, fontSize: 12 }}>{t('dashboard.chart_arrow')}</Text>
               </TouchableOpacity>
             </View>
             {fuelBoard.map((f: any, i: number) => (
@@ -606,7 +609,7 @@ export default function DashboardScreen() {
 
         {!vehicle && (
           <View style={{ backgroundColor: colors.surface, borderRadius: 14, padding: 16, alignItems: 'center' }}>
-            <Text style={{ color: colors.textSecondary }}>Chưa có xe nào. Vào tab Xe để thêm.</Text>
+            <Text style={{ color: colors.textSecondary }}>{t('dashboard.no_vehicle')}</Text>
           </View>
         )}
       </ScrollView>

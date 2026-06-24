@@ -13,29 +13,56 @@
  *   /services/guide             → GarageGuide
  *   /refuels/create             → AddRefuel
  */
-export function navigateFromUrl(navigation: any, url: string): void {
+export function navigateFromUrl(navigation: any, url: string, vehicleId?: number): void {
   if (!url) return;
 
   const vehicleMatch = url.match(/vehicles\/(\d+)/);
-  const vehicleId = vehicleMatch ? parseInt(vehicleMatch[1], 10) : undefined;
+  const vid = vehicleMatch ? parseInt(vehicleMatch[1], 10) : vehicleId;
 
   if (url.includes('/services/guide') || url.includes('services.guide')) {
     navigation.navigate('GarageGuide');
   } else if (url.includes('/health')) {
     navigation.navigate('Health');
   } else if (url.includes('/reminders')) {
-    navigation.navigate('Reminders', vehicleId ? { vehicleId } : undefined);
+    navigation.navigate('Reminders', vid ? { vehicleId: vid } : undefined);
   } else if (url.includes('/odometer')) {
-    navigation.navigate('OdometerList', vehicleId ? { vehicleId } : undefined);
+    navigation.navigate('OdometerList', vid ? { vehicleId: vid } : undefined);
   } else if (url.includes('/services/create') || url.includes('services.create')) {
-    navigation.navigate('AddService', vehicleId ? { vehicleId } : undefined);
+    navigation.navigate('AddService', vid ? { vehicleId: vid } : undefined);
   } else if (url.includes('/services')) {
     navigation.navigate('Services');
   } else if (url.includes('/refuels/create') || url.includes('refuels.create')) {
-    navigation.navigate('AddRefuel', vehicleId ? { vehicleId } : undefined);
+    navigation.navigate('AddRefuel', vid ? { vehicleId: vid } : undefined);
   } else if (url.includes('/refuels')) {
-    navigation.navigate('RefuelsList', vehicleId ? { vehicleId } : undefined);
+    navigation.navigate('RefuelsList', vid ? { vehicleId: vid } : undefined);
   } else if (url.includes('/dossier') || url.includes('dossier')) {
-    navigation.navigate('Dossier', vehicleId ? { vehicleId } : undefined);
+    navigation.navigate('Dossier', vid ? { vehicleId: vid } : undefined);
+  }
+}
+
+/**
+ * Handles suggestion CTA objects from the API. CTAs may carry either a web
+ * `url` (routed via navigateFromUrl) or a native `action` key for screens
+ * that have no web equivalent.
+ *
+ * Native actions:
+ *   obd_dtc   → OBD DTC list for the given vehicle
+ */
+export function navigateFromCta(
+  navigation: any,
+  cta: { url?: string; action?: string },
+  vehicleId?: number,
+): void {
+  if (cta.action) {
+    switch (cta.action) {
+      case 'obd_dtc':
+        navigation.navigate('OBDTrips', vehicleId ? { vehicleId } : undefined);
+        return;
+      default:
+        break;
+    }
+  }
+  if (cta.url) {
+    navigateFromUrl(navigation, cta.url, vehicleId);
   }
 }
