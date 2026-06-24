@@ -226,7 +226,7 @@ export default function DashboardScreen() {
                     borderWidth: 1, borderColor: chipColor + '66' }}>
                     <FontAwesome5 name="id-card" size={11} color={chipColor} solid />
                     <Text style={{ color: chipColor, fontSize: 12, fontWeight: '700' }}>
-                      {l.label ?? l.loai}
+                      {l.hang_muc ?? l.label ?? l.loai}
                     </Text>
                     <Text style={{ color: chipColor, fontSize: 11 }}>
                       {days <= 0 ? 'Quá hạn' : `còn ${days}ngày`}

@@ -1,10 +1,15 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { servicesApi } from '../api/services';
 
-export const useServices = (vehicleId?: number, page = 1) =>
-  useQuery({
-    queryKey: ['services', vehicleId, page],
-    queryFn: () => servicesApi.list(vehicleId, page).then(r => r.data),
+export const useServices = (vehicleId?: number) =>
+  useInfiniteQuery({
+    queryKey: ['services', vehicleId],
+    queryFn: ({ pageParam = 1 }) => servicesApi.list(vehicleId, pageParam as number).then(r => r.data),
+    getNextPageParam: (lastPage: any) => {
+      const { current_page, last_page } = lastPage.meta ?? lastPage;
+      return current_page < last_page ? current_page + 1 : undefined;
+    },
+    initialPageParam: 1,
   });
 
 export const useCreateService = () => {

@@ -331,14 +331,14 @@ function ReportContent({
 
   /* ── year review ── */
   const yr = data.year_review ?? null;
-  const yrKm =
-    yr?.total_km ?? yr?.tong_km ?? null;
+  // API returns: yr.km, yr.fuel_cost, yr.fill_count, yr.service_cost, yr.service_count
+  const yrKm = yr?.km ?? null;
   const yrCost =
-    yr?.total_cost ?? yr?.tong_tien ?? null;
-  const yrRefuels =
-    yr?.total_refuels ?? yr?.so_lan_do ?? yr?.so_lan ?? null;
-  const yrConsumption =
-    yr?.avg_consumption ?? yr?.tieu_hao ?? null;
+    yr?.fuel_cost != null && yr?.service_cost != null
+      ? (yr.fuel_cost as number) + (yr.service_cost as number)
+      : yr?.fuel_cost ?? yr?.service_cost ?? null;
+  const yrRefuels = yr?.fill_count ?? null;
+  // API doesn't return avg_consumption; skip it (would need liters/km calculation)
 
   /* ── monthly top 3 ── */
   const monthly: any[] = Array.isArray(data.monthly) ? data.monthly : [];
@@ -374,10 +374,13 @@ function ReportContent({
   const sfService = sf?.service ?? sf?.dich_vu ?? null;
   const sfPct = sf?.pct_elapsed ?? null;
 
-  /* ── by category ── */
-  const byCategory: any[] = Array.isArray(data.by_category)
-    ? data.by_category.slice(0, 5)
-    : [];
+  /* ── by category ── API returns a dict {label: amount}, not array */
+  const byCategory: { label: string; amount: number }[] =
+    data.by_category && typeof data.by_category === 'object' && !Array.isArray(data.by_category)
+      ? Object.entries(data.by_category as Record<string, number>)
+          .map(([label, amount]) => ({ label, amount }))
+          .slice(0, 5)
+      : [];
 
   /* ── has locked years ── */
   const hasLockedYears: boolean = data.has_locked_years ?? false;
@@ -482,11 +485,11 @@ function ReportContent({
               value={fmtNum(yrRefuels, 'lần')}
             />
           )}
-          {yrConsumption != null && (
+          {yr?.service_cost != null && yr.service_cost > 0 && (
             <CardRow
-              index={[yrKm, yrCost, yrRefuels].filter(Boolean).length}
-              label="Tiêu hao TB"
-              value={`${Number(yrConsumption).toFixed(2)} L/100km`}
+              index={[yrKm, yrCost, yrRefuels].filter(x => x != null).length}
+              label="Chi phí dịch vụ"
+              value={fmtVnd(yr.service_cost)}
             />
           )}
           <TouchableOpacity
@@ -682,18 +685,14 @@ function ReportContent({
       {/* ── by category ── */}
       {byCategory.length > 0 && (
         <SectionCard title="Chi tiêu theo danh mục">
-          {byCategory.map((c: any, i: number) => {
-            const label = c.loai_label ?? c.label ?? c.loai ?? `Khác`;
-            const cost = c.tong_tien ?? c.total_cost ?? c.cost ?? 0;
-            return (
-              <CardRow
-                key={i}
-                index={i}
-                label={String(label)}
-                value={fmtVnd(cost)}
-              />
-            );
-          })}
+          {byCategory.map((c, i) => (
+            <CardRow
+              key={i}
+              index={i}
+              label={c.label}
+              value={fmtVnd(c.amount)}
+            />
+          ))}
         </SectionCard>
       )}
 

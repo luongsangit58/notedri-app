@@ -12,13 +12,12 @@ import LoadingView from '../../components/LoadingView';
 import ErrorView from '../../components/ErrorView';
 import { useColors } from '../../utils/theme';
 
-type TypeFilter = 'all' | 'refuel' | 'service' | 'odometer';
+type TypeFilter = 'all' | 'refuel' | 'service';
 
 const TYPE_CHIPS: { key: TypeFilter; label: string }[] = [
   { key: 'all', label: 'Tất cả' },
   { key: 'refuel', label: 'Xăng' },
   { key: 'service', label: 'Bảo dưỡng' },
-  { key: 'odometer', label: 'ODO' },
 ];
 
 export default function TimelineScreen() {
@@ -106,8 +105,6 @@ export default function TimelineScreen() {
                 ? () => navigation.navigate('EditRefuel', { refuelId: item.id })
                 : item.type === 'service' && item.id
                 ? () => navigation.navigate('EditService', { serviceId: item.id })
-                : item.type === 'odometer' && item.id
-                ? () => navigation.navigate('EditOdometer', { odometerReadingId: item.id })
                 : undefined
             }
           />

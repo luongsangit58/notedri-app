@@ -56,10 +56,11 @@ function scoreColor(score: number): string {
 }
 
 function scoreBand(score: number): string {
-  if (score >= 90) return 'Xuất sắc';
-  if (score >= 75) return 'Tốt';
+  if (score >= 85) return 'Xuất sắc';
+  if (score >= 70) return 'Tốt';
   if (score >= 55) return 'Khá';
-  return 'Cần chú ý';
+  if (score >= 40) return 'Cần chú ý';
+  return 'Nghiêm trọng';
 }
 
 function organStatusColor(status: OrganStatus): string {

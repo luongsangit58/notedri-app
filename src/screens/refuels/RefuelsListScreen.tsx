@@ -405,7 +405,7 @@ export default function RefuelsListScreen() {
           <FontAwesome5 name="gas-pump" size={13} color="#10B981" solid />
           <Text style={{ color: '#10B981', fontSize: 12, flex: 1 }}>
             Dự đoán đổ xăng lần tới sau ~{prediction.days_left} ngày
-            {prediction.date_est ? ` (${prediction.date_est})` : ''}
+            {prediction.next_date ? ` (${prediction.next_date})` : ''}
           </Text>
         </View>
       )}
