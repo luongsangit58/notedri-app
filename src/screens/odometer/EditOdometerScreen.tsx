@@ -7,13 +7,108 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { odometerApi } from '../../api/odometer';
 import { useUpdateOdometer, useDeleteOdometer } from '../../hooks/useOdometer';
-import { colors } from '../../utils/colors';
+import { useColors } from '../../utils/theme';
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
-  return <Text style={styles.label}>{children}</Text>;
+  const colors = useColors();
+  return <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 6, marginTop: 4 }}>{children}</Text>;
 }
 
 export default function EditOdometerScreen() {
+  const colors = useColors();
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    loadingContainer: {
+      flex: 1,
+      backgroundColor: colors.background,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    scrollContent: {
+      padding: 16,
+      paddingBottom: 40,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 20,
+    },
+    headerTitle: {
+      color: colors.text,
+      fontSize: 20,
+      fontWeight: '800',
+    },
+    closeBtn: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: colors.surface,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    closeBtnText: {
+      color: colors.textSecondary,
+      fontSize: 16,
+      fontWeight: '700',
+    },
+    input: {
+      backgroundColor: colors.surface,
+      color: colors.text,
+      borderRadius: 10,
+      paddingHorizontal: 14,
+      paddingVertical: 13,
+      fontSize: 16,
+      marginBottom: 4,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    inputLarge: {
+      fontSize: 28,
+      fontWeight: '800',
+      textAlign: 'center',
+      letterSpacing: 2,
+      marginBottom: 16,
+    },
+    inputMultiline: {
+      minHeight: 80,
+      textAlignVertical: 'top',
+      marginBottom: 4,
+    },
+    submitBtn: {
+      backgroundColor: colors.primary,
+      padding: 16,
+      borderRadius: 12,
+      alignItems: 'center',
+      marginTop: 20,
+    },
+    deleteBtn: {
+      backgroundColor: 'transparent',
+      padding: 16,
+      borderRadius: 12,
+      alignItems: 'center',
+      marginTop: 12,
+      borderWidth: 1,
+      borderColor: colors.error,
+    },
+    btnDisabled: {
+      opacity: 0.7,
+    },
+    submitText: {
+      color: colors.text,
+      fontWeight: '800',
+      fontSize: 16,
+    },
+    deleteText: {
+      color: colors.error,
+      fontWeight: '700',
+      fontSize: 15,
+    },
+  });
+
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const { odometerReadingId } = route.params as { odometerReadingId: number };
@@ -173,102 +268,3 @@ export default function EditOdometerScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  loadingContainer: {
-    flex: 1,
-    backgroundColor: colors.background,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  scrollContent: {
-    padding: 16,
-    paddingBottom: 40,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-  },
-  headerTitle: {
-    color: colors.text,
-    fontSize: 20,
-    fontWeight: '800',
-  },
-  closeBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  closeBtnText: {
-    color: colors.textSecondary,
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  label: {
-    color: colors.textSecondary,
-    fontSize: 13,
-    marginBottom: 6,
-    marginTop: 4,
-  },
-  input: {
-    backgroundColor: colors.surface,
-    color: colors.text,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 13,
-    fontSize: 16,
-    marginBottom: 4,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  inputLarge: {
-    fontSize: 28,
-    fontWeight: '800',
-    textAlign: 'center',
-    letterSpacing: 2,
-    marginBottom: 16,
-  },
-  inputMultiline: {
-    minHeight: 80,
-    textAlignVertical: 'top',
-    marginBottom: 4,
-  },
-  submitBtn: {
-    backgroundColor: colors.primary,
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  deleteBtn: {
-    backgroundColor: 'transparent',
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 12,
-    borderWidth: 1,
-    borderColor: colors.error,
-  },
-  btnDisabled: {
-    opacity: 0.7,
-  },
-  submitText: {
-    color: colors.text,
-    fontWeight: '800',
-    fontSize: 16,
-  },
-  deleteText: {
-    color: colors.error,
-    fontWeight: '700',
-    fontSize: 15,
-  },
-});

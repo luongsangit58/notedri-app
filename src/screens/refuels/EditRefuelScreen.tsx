@@ -8,11 +8,12 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { useDeleteRefuel } from '../../hooks/useRefuels';
 import { refuelsApi } from '../../api/refuels';
 import client from '../../api/client';
-import { colors } from '../../utils/colors';
+import { useColors } from '../../utils/theme';
 
 const FUEL_TYPES = ['E5 RON 95-V', 'RON 95-III', 'E5 RON 92', 'Dầu DO 0,05S-V', 'Dầu DO 0,001S'];
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
+  const colors = useColors();
   return (
     <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 6, marginTop: 4 }}>
       {children}
@@ -20,16 +21,16 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
-const inputStyle = {
-  backgroundColor: colors.surface,
-  color: colors.text,
-  borderRadius: 10,
-  paddingHorizontal: 14,
-  paddingVertical: 13,
-  fontSize: 16,
-};
-
 export default function EditRefuelScreen() {
+  const colors = useColors();
+  const inputStyle = {
+    backgroundColor: colors.surface,
+    color: colors.text,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+    fontSize: 16,
+  };
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const { refuelId } = route.params as { refuelId: number };

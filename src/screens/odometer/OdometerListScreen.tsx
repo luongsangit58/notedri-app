@@ -16,7 +16,8 @@ import { useQueries, useQueryClient } from '@tanstack/react-query';
 import { odometerApi } from '../../api/odometer';
 import { useOdometer } from '../../hooks/useOdometer';
 import { useVehicles } from '../../hooks/useVehicles';
-import { colors } from '../../utils/colors';
+import { useColors } from '../../utils/theme';
+import { formatKm } from '../../utils/format';
 
 const PER_PAGE = 15;
 
@@ -38,6 +39,61 @@ interface OdoItem {
 }
 
 function OdoCard({ item, onPress }: { item: OdoItem; onPress: () => void }) {
+  const colors = useColors();
+  const styles = StyleSheet.create({
+    card: {
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      padding: 14,
+      marginBottom: 10,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    cardRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    leftCol: {
+      width: 80,
+      marginRight: 10,
+    },
+    centerCol: {
+      flex: 1,
+    },
+    dateText: {
+      color: colors.textSecondary,
+      fontSize: 12,
+      fontWeight: '500',
+    },
+    odoValue: {
+      color: colors.primary,
+      fontWeight: '800',
+      fontSize: 18,
+      marginBottom: 2,
+    },
+    odoUnit: {
+      color: colors.textSecondary,
+      fontSize: 13,
+      fontWeight: '400',
+    },
+    deltaText: {
+      color: colors.textSecondary,
+      fontSize: 12,
+      marginBottom: 2,
+    },
+    noteText: {
+      color: colors.textSecondary,
+      fontSize: 12,
+      marginTop: 2,
+      fontStyle: 'italic',
+    },
+    arrowText: {
+      color: colors.textSecondary,
+      fontSize: 20,
+      marginLeft: 8,
+    },
+  });
+
   const kmChange = item.km_since_last ?? item.delta ?? null;
 
   return (
@@ -49,11 +105,11 @@ function OdoCard({ item, onPress }: { item: OdoItem; onPress: () => void }) {
 
         <View style={styles.centerCol}>
           <Text style={styles.odoValue}>
-            {Number(item.odometer).toLocaleString('vi-VN')}
+            {formatKm(item.odometer).replace(' km', '')}
             <Text style={styles.odoUnit}> km</Text>
           </Text>
           {kmChange != null && kmChange > 0 ? (
-            <Text style={styles.deltaText}>+{Number(kmChange).toLocaleString('vi-VN')} km</Text>
+            <Text style={styles.deltaText}>{'+' + formatKm(kmChange)}</Text>
           ) : null}
           {item.ghi_chu ? (
             <Text style={styles.noteText} numberOfLines={2}>{item.ghi_chu}</Text>
@@ -74,6 +130,45 @@ function SingleVehicleList({
   vehicleId: number;
   onNavigateEdit: (id: number) => void;
 }) {
+  const colors = useColors();
+  const styles = StyleSheet.create({
+    loadMoreBtn: {
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 10,
+      paddingVertical: 12,
+      alignItems: 'center',
+      marginTop: 8,
+      marginBottom: 16,
+    },
+    loadMoreText: {
+      color: colors.primary,
+      fontSize: 14,
+      fontWeight: '700',
+    },
+    emptyState: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingTop: 80,
+    },
+    emptyText: {
+      color: colors.textSecondary,
+      fontSize: 16,
+      fontWeight: '500',
+    },
+    listContent: {
+      padding: 16,
+      paddingBottom: 88,
+    },
+    emptyContainer: {
+      flexGrow: 1,
+      padding: 16,
+      paddingBottom: 88,
+    },
+  });
+
   const [page, setPage] = useState(1);
   const [allItems, setAllItems] = useState<OdoItem[]>([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -151,7 +246,7 @@ function SingleVehicleList({
               <View style={{ flex: 1, backgroundColor: colors.surface, borderRadius: 10, padding: 10, alignItems: 'center' }}>
                 <Text style={{ color: colors.textSecondary, fontSize: 10 }}>ODO hiện tại</Text>
                 <Text style={{ color: colors.text, fontWeight: '700', fontSize: 15, marginTop: 2 }}>
-                  {Number(odoCurrentKm).toLocaleString('vi-VN')} km
+                  {formatKm(odoCurrentKm)}
                 </Text>
               </View>
             )}
@@ -159,7 +254,7 @@ function SingleVehicleList({
               <View style={{ flex: 1, backgroundColor: colors.surface, borderRadius: 10, padding: 10, alignItems: 'center' }}>
                 <Text style={{ color: colors.textSecondary, fontSize: 10 }}>Km đã ghi nhận</Text>
                 <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 15, marginTop: 2 }}>
-                  +{Number(totalKmTracked).toLocaleString('vi-VN')} km
+                  {'+' + formatKm(totalKmTracked)}
                 </Text>
               </View>
             )}
@@ -190,6 +285,30 @@ function AllVehiclesList({
   onNavigateEdit: (id: number) => void;
   onRefresh: () => void;
 }) {
+  const colors = useColors();
+  const styles = StyleSheet.create({
+    emptyState: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingTop: 80,
+    },
+    emptyText: {
+      color: colors.textSecondary,
+      fontSize: 16,
+      fontWeight: '500',
+    },
+    listContent: {
+      padding: 16,
+      paddingBottom: 88,
+    },
+    emptyContainer: {
+      flexGrow: 1,
+      padding: 16,
+      paddingBottom: 88,
+    },
+  });
+
   const [refreshing, setRefreshing] = useState(false);
   const qc = useQueryClient();
 
@@ -257,6 +376,66 @@ function AllVehiclesList({
 }
 
 export default function OdometerListScreen() {
+  const colors = useColors();
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    filterHeader: {
+      paddingHorizontal: 16,
+      paddingTop: 8,
+      paddingBottom: 4,
+    },
+    chipsRow: {
+      gap: 8,
+      paddingVertical: 4,
+    },
+    chip: {
+      paddingHorizontal: 14,
+      paddingVertical: 7,
+      borderRadius: 20,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    chipActive: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    chipText: {
+      color: colors.textSecondary,
+      fontSize: 13,
+      fontWeight: '400',
+    },
+    chipTextActive: {
+      color: '#fff',
+      fontWeight: '700',
+    },
+    fab: {
+      position: 'absolute',
+      right: 20,
+      bottom: 28,
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      backgroundColor: colors.primary,
+      justifyContent: 'center',
+      alignItems: 'center',
+      elevation: 6,
+      shadowColor: colors.primary,
+      shadowOffset: { width: 0, height: 3 },
+      shadowOpacity: 0.4,
+      shadowRadius: 6,
+    },
+    fabText: {
+      color: '#fff',
+      fontSize: 28,
+      lineHeight: 32,
+      fontWeight: '400',
+    },
+  });
+
   const navigation = useNavigation<any>();
   const [selectedVehicleId, setSelectedVehicleId] = useState<number | undefined>(undefined);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -332,152 +511,3 @@ export default function OdometerListScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  filterHeader: {
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 4,
-  },
-  chipsRow: {
-    gap: 8,
-    paddingVertical: 4,
-  },
-  chip: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 20,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  chipActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  chipText: {
-    color: colors.textSecondary,
-    fontSize: 13,
-    fontWeight: '400',
-  },
-  chipTextActive: {
-    color: '#fff',
-    fontWeight: '700',
-  },
-  listContent: {
-    padding: 16,
-    paddingBottom: 88,
-  },
-  emptyContainer: {
-    flexGrow: 1,
-    padding: 16,
-    paddingBottom: 88,
-  },
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  cardRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  leftCol: {
-    width: 80,
-    marginRight: 10,
-  },
-  centerCol: {
-    flex: 1,
-  },
-  dateText: {
-    color: colors.textSecondary,
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  odoValue: {
-    color: colors.primary,
-    fontWeight: '800',
-    fontSize: 18,
-    marginBottom: 2,
-  },
-  odoUnit: {
-    color: colors.textSecondary,
-    fontSize: 13,
-    fontWeight: '400',
-  },
-  deltaText: {
-    color: colors.textSecondary,
-    fontSize: 12,
-    marginBottom: 2,
-  },
-  noteText: {
-    color: colors.textSecondary,
-    fontSize: 12,
-    marginTop: 2,
-    fontStyle: 'italic',
-  },
-  arrowText: {
-    color: colors.textSecondary,
-    fontSize: 20,
-    marginLeft: 8,
-  },
-  emptyState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingTop: 80,
-  },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: 12,
-  },
-  emptyText: {
-    color: colors.textSecondary,
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  loadMoreBtn: {
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 10,
-    paddingVertical: 12,
-    alignItems: 'center',
-    marginTop: 8,
-    marginBottom: 16,
-  },
-  loadMoreText: {
-    color: colors.primary,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  fab: {
-    position: 'absolute',
-    right: 20,
-    bottom: 28,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 6,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.4,
-    shadowRadius: 6,
-  },
-  fabText: {
-    color: '#fff',
-    fontSize: 28,
-    lineHeight: 32,
-    fontWeight: '400',
-  },
-});

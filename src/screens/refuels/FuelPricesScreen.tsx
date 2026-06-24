@@ -5,12 +5,13 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import client from '../../api/client';
 import LoadingView from '../../components/LoadingView';
-import { colors } from '../../utils/colors';
+import { useColors } from '../../utils/theme';
+import { formatVND } from '../../utils/format';
 
 function fmt(n: number | string | null | undefined): string {
   const v = Number(n ?? 0);
   if (isNaN(v) || v === 0) return '—';
-  return v.toLocaleString('vi-VN') + 'đ/L';
+  return formatVND(v) + '/L';
 }
 
 const GROUP_LABELS: Record<string, { label: string; color: string; icon: string }> = {
@@ -23,6 +24,7 @@ const SERIES_COLORS = ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#6366f1', '#
 
 /* ─── Mini line chart using Views ─── */
 function MiniLineChart({ series, labels }: { series: any[]; labels: string[] }) {
+  const colors = useColors();
   const CHART_H = 80;
   const CHART_W_PER_PT = 8;
   const visibleSeries = series.filter(s => s.data && s.data.some((v: any) => v != null));
@@ -90,7 +92,7 @@ function MiniLineChart({ series, labels }: { series: any[]; labels: string[] }) 
             <Text style={{ color: colors.textSecondary, fontSize: 10 }}>{s.label}</Text>
             {s.last != null && (
               <Text style={{ color: colors.text, fontSize: 10, fontWeight: '600' }}>
-                {Number(s.last).toLocaleString('vi-VN')}đ
+                {formatVND(s.last)}
               </Text>
             )}
           </View>
@@ -104,6 +106,7 @@ function MiniLineChart({ series, labels }: { series: any[]; labels: string[] }) 
 type TabKey = 'current' | 'history';
 
 export default function FuelPricesScreen() {
+  const colors = useColors();
   const [tab, setTab] = useState<TabKey>('current');
 
   const { data, isLoading, refetch: refetchTypes, isFetching: fetchingTypes } = useQuery({

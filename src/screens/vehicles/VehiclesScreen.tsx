@@ -7,9 +7,10 @@ import { useVehicles, useSetDefaultVehicle } from '../../hooks/useVehicles';
 import VehicleCard from '../../components/VehicleCard';
 import LoadingView from '../../components/LoadingView';
 import ErrorView from '../../components/ErrorView';
-import { colors } from '../../utils/colors';
+import { useColors } from '../../utils/theme';
 
 export default function VehiclesScreen() {
+  const colors = useColors();
   const { data, isLoading, isError, refetch, isFetching } = useVehicles();
   const navigation = useNavigation<any>();
   const { mutate: setDefault } = useSetDefaultVehicle();

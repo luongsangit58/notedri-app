@@ -10,7 +10,7 @@ import { useVehicles } from '../../hooks/useVehicles';
 import client from '../../api/client';
 import LoadingView from '../../components/LoadingView';
 import ErrorView from '../../components/ErrorView';
-import { colors } from '../../utils/colors';
+import { useColors } from '../../utils/theme';
 
 /* ─── helpers ─── */
 function fmtVnd(n: number | string | null | undefined): string {
@@ -34,6 +34,7 @@ function StatCard({
   value: string;
   sub?: string;
 }) {
+  const colors = useColors();
   return (
     <View
       style={{
@@ -62,6 +63,7 @@ function VehicleChips({
   selectedId: number | null;
   onSelect: (id: number) => void;
 }) {
+  const colors = useColors();
   return (
     <ScrollView
       horizontal
@@ -107,6 +109,7 @@ function YearChips({
   selectedYear: number;
   onSelect: (year: number) => void;
 }) {
+  const colors = useColors();
   if (!years || years.length === 0) return null;
   return (
     <ScrollView
@@ -145,6 +148,7 @@ function YearChips({
 
 /* ─── divider ─── */
 function Divider({ index }: { index: number }) {
+  const colors = useColors();
   if (index === 0) return null;
   return (
     <View
@@ -165,6 +169,7 @@ function SectionCard({
   title: string;
   children: React.ReactNode;
 }) {
+  const colors = useColors();
   return (
     <View
       style={{
@@ -199,6 +204,7 @@ function CardRow({
   index: number;
   valueColor?: string;
 }) {
+  const colors = useColors();
   return (
     <>
       <Divider index={index} />
@@ -238,6 +244,7 @@ function ReportContent({
   onYearsLoaded: (years: number[]) => void;
   onViewYearReview?: (yr: any, year: number) => void;
 }) {
+  const colors = useColors();
   const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ['report', vehicleId, selectedYear],
     queryFn: () =>
@@ -710,6 +717,7 @@ function ReportContent({
 
 /* ─── screen ─── */
 export default function ReportsScreen() {
+  const colors = useColors();
   const navigation = useNavigation<any>();
   const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(null);
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());

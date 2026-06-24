@@ -9,7 +9,7 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import dayjs from 'dayjs';
 import { useVehicles } from '../../hooks/useVehicles';
 import { useCreateService } from '../../hooks/useServices';
-import { colors } from '../../utils/colors';
+import { useColors } from '../../utils/theme';
 
 const LOAI_OPTIONS = [
   { value: 'bao_duong', label: 'Bảo dưỡng' },
@@ -25,12 +25,79 @@ const LOAI_OPTIONS = [
 ];
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
+  const colors = useColors();
   return (
-    <Text style={styles.label}>{children}</Text>
+    <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 6, marginTop: 4 }}>{children}</Text>
   );
 }
 
 export default function AddServiceScreen() {
+  const colors = useColors();
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    scrollContent: {
+      padding: 16,
+      paddingBottom: 32,
+    },
+    chipRow: {
+      marginBottom: 14,
+    },
+    chip: {
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: 8,
+      marginRight: 8,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    chipActive: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    chipText: {
+      color: colors.text,
+      fontWeight: '600',
+      fontSize: 13,
+    },
+    chipTextActive: {
+      color: '#fff',
+    },
+    input: {
+      backgroundColor: colors.surface,
+      color: colors.text,
+      borderRadius: 10,
+      paddingHorizontal: 14,
+      paddingVertical: 13,
+      fontSize: 16,
+      marginBottom: 4,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    inputMultiline: {
+      minHeight: 80,
+      textAlignVertical: 'top',
+    },
+    submitBtn: {
+      backgroundColor: colors.primary,
+      padding: 16,
+      borderRadius: 12,
+      alignItems: 'center',
+      marginTop: 20,
+    },
+    submitBtnDisabled: {
+      opacity: 0.7,
+    },
+    submitText: {
+      color: '#fff',
+      fontWeight: '800',
+      fontSize: 16,
+    },
+  });
+
   const navigation = useNavigation<any>();
   const { data: vehiclesData } = useVehicles();
   const createService = useCreateService();
@@ -232,74 +299,3 @@ export default function AddServiceScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  scrollContent: {
-    padding: 16,
-    paddingBottom: 32,
-  },
-  label: {
-    color: colors.textSecondary,
-    fontSize: 13,
-    marginBottom: 6,
-    marginTop: 4,
-  },
-  chipRow: {
-    marginBottom: 14,
-  },
-  chip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 8,
-    marginRight: 8,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  chipActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  chipText: {
-    color: colors.text,
-    fontWeight: '600',
-    fontSize: 13,
-  },
-  chipTextActive: {
-    color: '#fff',
-  },
-  input: {
-    backgroundColor: colors.surface,
-    color: colors.text,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 13,
-    fontSize: 16,
-    marginBottom: 4,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  inputMultiline: {
-    minHeight: 80,
-    textAlignVertical: 'top',
-  },
-  submitBtn: {
-    backgroundColor: colors.primary,
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  submitBtnDisabled: {
-    opacity: 0.7,
-  },
-  submitText: {
-    color: '#fff',
-    fontWeight: '800',
-    fontSize: 16,
-  },
-});

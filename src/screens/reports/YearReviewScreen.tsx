@@ -3,6 +3,7 @@ import { View, Text, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useRoute } from '@react-navigation/native';
+import { formatVND } from '../../utils/format';
 
 /* Dark navy card matching web design */
 const NAVY = '#0b1220';
@@ -95,14 +96,14 @@ export default function YearReviewScreen() {
           {fuelCost != null && (
             <Tile
               label="Tiền xăng"
-              value={fmt(fuelCost) + 'đ'}
+              value={formatVND(fuelCost)}
               sub={liters != null ? fmtLit(liters) + (fillCount != null ? ` · ${fillCount} lần` : '') : undefined}
             />
           )}
           {serviceCost != null && (
             <Tile
               label="Bảo dưỡng"
-              value={fmt(serviceCost) + 'đ'}
+              value={formatVND(serviceCost)}
               sub={serviceCount != null ? `${serviceCount} lần` : undefined}
             />
           )}
@@ -110,7 +111,7 @@ export default function YearReviewScreen() {
 
         {totalCost != null && (
           <View style={{ gap: 10, marginBottom: 10 }}>
-            <Tile label="Tổng chi phí cả năm" value={fmt(totalCost) + 'đ'} />
+            <Tile label="Tổng chi phí cả năm" value={formatVND(totalCost)} />
           </View>
         )}
 

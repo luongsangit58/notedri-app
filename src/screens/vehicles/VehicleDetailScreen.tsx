@@ -6,7 +6,8 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import { useVehicle, useVehicleHealth, useVehicleReminders } from '../../hooks/useVehicles';
 import LoadingView from '../../components/LoadingView';
 import ErrorView from '../../components/ErrorView';
-import { colors } from '../../utils/colors';
+import { useColors } from '../../utils/theme';
+import { formatKm } from '../../utils/format';
 import dayjs from 'dayjs';
 
 // ─── Health helpers ──────────────────────────────────────────────────────────
@@ -47,7 +48,7 @@ interface HealthData {
   health_score?: number;
 }
 
-function organStatusColor(status: OrganStatus): string {
+function organStatusColor(status: OrganStatus, colors: ReturnType<typeof useColors>): string {
   switch (status) {
     case 'urgent': return colors.error;
     case 'warn':   return colors.warning;
@@ -57,13 +58,13 @@ function organStatusColor(status: OrganStatus): string {
   }
 }
 
-function scoreColor(score: number): string {
+function scoreColor(score: number, colors: ReturnType<typeof useColors>): string {
   if (score >= 80) return colors.success;
   if (score >= 50) return colors.warning;
   return colors.error;
 }
 
-function organStatusIconName(status: OrganStatus): { name: string; color: string } {
+function organStatusIconName(status: OrganStatus, colors: ReturnType<typeof useColors>): { name: string; color: string } {
   switch (status) {
     case 'urgent': return { name: 'exclamation-triangle', color: colors.error };
     case 'warn':   return { name: 'exclamation-triangle', color: colors.warning };
@@ -76,8 +77,9 @@ function organStatusIconName(status: OrganStatus): { name: string; color: string
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
 function PillarBar({ pillar }: { pillar: Pillar }) {
+  const colors = useColors();
   const pct = Math.min(100, Math.round((pillar.score / pillar.max) * 100));
-  const clr = scoreColor(Math.round((pillar.score / pillar.max) * 100));
+  const clr = scoreColor(Math.round((pillar.score / pillar.max) * 100), colors);
   return (
     <View style={{ marginBottom: 10 }}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
@@ -94,8 +96,9 @@ function PillarBar({ pillar }: { pillar: Pillar }) {
 }
 
 function OrganRow({ organ }: { organ: Organ }) {
-  const statusClr = organStatusColor(organ.status);
-  const iconInfo = organStatusIconName(organ.status);
+  const colors = useColors();
+  const statusClr = organStatusColor(organ.status, colors);
+  const iconInfo = organStatusIconName(organ.status, colors);
   if (organ.status === 'na') return null;
   return (
     <View style={{
@@ -122,6 +125,7 @@ function OrganRow({ organ }: { organ: Organ }) {
 }
 
 function HealthBreakdownCard({ health }: { health: HealthData }) {
+  const colors = useColors();
   const scoreData = health.score;
   const total = scoreData?.total;
   const pillars = scoreData?.pillars;
@@ -171,15 +175,15 @@ function HealthBreakdownCard({ health }: { health: HealthData }) {
           <View style={{
             width: 56, height: 56, borderRadius: 28,
             backgroundColor: colors.card,
-            borderWidth: 3, borderColor: scoreColor(total),
+            borderWidth: 3, borderColor: scoreColor(total, colors),
             alignItems: 'center', justifyContent: 'center',
             marginRight: 14,
           }}>
-            <Text style={{ color: scoreColor(total), fontSize: 20, fontWeight: '800' }}>{total}</Text>
+            <Text style={{ color: scoreColor(total, colors), fontSize: 20, fontWeight: '800' }}>{total}</Text>
           </View>
           <View style={{ flex: 1 }}>
             {bandLabel && (
-              <Text style={{ color: scoreColor(total), fontWeight: '700', fontSize: 14 }}>{bandLabel}</Text>
+              <Text style={{ color: scoreColor(total, colors), fontWeight: '700', fontSize: 14 }}>{bandLabel}</Text>
             )}
             {confidence && (
               <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 2 }}>
@@ -220,6 +224,7 @@ function HealthBreakdownCard({ health }: { health: HealthData }) {
 // ─── Main screen ─────────────────────────────────────────────────────────────
 
 export default function VehicleDetailScreen() {
+  const colors = useColors();
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
   const { vehicleId } = route.params;
@@ -242,7 +247,7 @@ export default function VehicleDetailScreen() {
   const scoreTotal: number | undefined =
     healthData?.score?.total ?? (health?.health_score as number | undefined);
 
-  const badgeColor = scoreTotal == null ? colors.textSecondary : scoreColor(scoreTotal);
+  const badgeColor = scoreTotal == null ? colors.textSecondary : scoreColor(scoreTotal, colors);
   const badgeLabel = scoreTotal == null ? null
     : scoreTotal >= 80 ? 'Tốt'
     : scoreTotal >= 50 ? 'Trung bình'
@@ -270,7 +275,7 @@ export default function VehicleDetailScreen() {
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
                   <FontAwesome5 name="road" size={14} color={colors.primary} solid />
                   <Text style={{ color: colors.primary, marginLeft: 6, fontWeight: '700', fontSize: 16 }}>
-                    {Number(v?.odo_hien_tai ?? v?.current_odometer).toLocaleString('vi-VN')} km
+                    {formatKm(v?.odo_hien_tai ?? v?.current_odometer)}
                   </Text>
                 </View>
               )}

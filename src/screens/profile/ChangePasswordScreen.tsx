@@ -8,11 +8,12 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useMutation } from '@tanstack/react-query';
 import { profileApi } from '../../api/profile';
-import { colors } from '../../utils/colors';
+import { useColors } from '../../utils/theme';
 
 type FieldErrors = Record<string, string[]>;
 
 function FieldError({ errors, field }: { errors: FieldErrors; field: string }) {
+  const colors = useColors();
   const msgs = errors[field];
   if (!msgs?.length) return null;
   return <Text style={{ color: colors.error, fontSize: 12, marginTop: 2, marginBottom: 6 }}>{msgs[0]}</Text>;
@@ -24,6 +25,7 @@ function PasswordInput({
   label: string; value: string; onChange: (v: string) => void;
   errors: FieldErrors; field: string;
 }) {
+  const colors = useColors();
   const [show, setShow] = useState(false);
   const hasError = !!(errors[field]?.length);
   return (
@@ -56,6 +58,7 @@ function PasswordInput({
 }
 
 export default function ChangePasswordScreen() {
+  const colors = useColors();
   const navigation = useNavigation<any>();
   const [current, setCurrent] = useState('');
   const [next, setNext] = useState('');

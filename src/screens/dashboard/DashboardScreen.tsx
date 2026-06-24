@@ -12,7 +12,8 @@ import { useVehicles } from '../../hooks/useVehicles';
 import LoadingView from '../../components/LoadingView';
 import ErrorView from '../../components/ErrorView';
 import QuickAddFAB from '../../components/QuickAddFAB';
-import { colors } from '../../utils/colors';
+import { useColors } from '../../utils/theme';
+import { formatVND, formatKm } from '../../utils/format';
 import { navigateFromUrl } from '../../utils/navigation';
 import client from '../../api/client';
 import dayjs from 'dayjs';
@@ -38,11 +39,11 @@ function faToFA5(name: string): string {
   return FA_MAP[name] ?? name.replace(/^fa-/, '');
 }
 
-function severityColor(s: string): string {
+function severityColor(s: string, primaryColor: string): string {
   if (s === 'urgent') return '#DC2626';
   if (s === 'warn') return '#D97706';
   if (s === 'good') return '#16A34A';
-  return colors.primary;
+  return primaryColor;
 }
 
 function ctaNavigate(navigation: any, cta: { url?: string }) {
@@ -52,17 +53,23 @@ function ctaNavigate(navigation: any, cta: { url?: string }) {
 /* ─── helpers ─── */
 function fmt(n: number) {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, '')} tr`;
-  return n.toLocaleString('vi-VN');
+  return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 }
-function fmtFull(n: number) { return Number(n).toLocaleString('vi-VN') + 'đ'; }
 
-function Divider() { return <View style={{ height: 1, backgroundColor: colors.border, marginVertical: 10 }} />; }
-function Label({ children }: any) { return <Text style={{ color: colors.textSecondary, fontSize: 12, marginBottom: 4 }}>{children}</Text>; }
+function Divider() {
+  const colors = useColors();
+  return <View style={{ height: 1, backgroundColor: colors.border, marginVertical: 10 }} />;
+}
+function Label({ children }: any) {
+  const colors = useColors();
+  return <Text style={{ color: colors.textSecondary, fontSize: 12, marginBottom: 4 }}>{children}</Text>;
+}
 
 /* ─── vehicle selector modal ─── */
 function VehicleSelector({ vehicles, selectedId, onSelect }: {
   vehicles: any[]; selectedId?: number; onSelect: (id: number) => void;
 }) {
+  const colors = useColors();
   const [open, setOpen] = useState(false);
   const current = vehicles.find(v => v.id === selectedId) ?? vehicles[0];
   const label = current ? `${current.ten}${current.is_default ? ' ★' : ''}` : 'Chọn xe';
@@ -107,6 +114,7 @@ function VehicleSelector({ vehicles, selectedId, onSelect }: {
 
 /* ─── screen ─── */
 export default function DashboardScreen() {
+  const colors = useColors();
   const nav = useNavigation<any>();
   const [selectedVehicleId, setSelectedVehicleId] = useState<number | undefined>(undefined);
   const [dismissedSuggestions, setDismissedSuggestions] = useState<Set<string>>(new Set());
@@ -266,7 +274,7 @@ export default function DashboardScreen() {
               <Text style={{ color: colors.text, fontWeight: '700', fontSize: 16 }}>Cập nhật ODO</Text>
               {vehicle?.odo_hien_tai != null && (
                 <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>
-                  {Number(vehicle.odo_hien_tai).toLocaleString('vi-VN')} km
+                  {formatKm(vehicle.odo_hien_tai)}
                 </Text>
               )}
               <TouchableOpacity onPress={() => nav.navigate('OdometerList')}>
@@ -337,10 +345,10 @@ export default function DashboardScreen() {
                 backgroundColor: colors.background, borderRadius: 10, padding: 12,
                 marginBottom: i < suggestions.length - 1 ? 8 : 0,
                 flexDirection: 'row', alignItems: 'flex-start',
-                borderLeftWidth: 3, borderLeftColor: severityColor(s.severity),
+                borderLeftWidth: 3, borderLeftColor: severityColor(s.severity, colors.primary),
               }}>
                 <View style={{ width: 28, alignItems: 'center', marginRight: 10, marginTop: 2 }}>
-                  <FontAwesome5 name={faToFA5(s.icon ?? 'fa-lightbulb')} size={16} color={severityColor(s.severity)} solid />
+                  <FontAwesome5 name={faToFA5(s.icon ?? 'fa-lightbulb')} size={16} color={severityColor(s.severity, colors.primary)} solid />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={{ color: colors.text, fontWeight: '600', fontSize: 13 }}>{s.title}</Text>
@@ -374,7 +382,7 @@ export default function DashboardScreen() {
               <FontAwesome5 name="gas-pump" size={12} color={colors.primary} solid />
               <Label>Chi xăng tháng này</Label>
               <Text style={{ color: colors.text, fontWeight: '800', fontSize: 16 }}>
-                {fmtFull(monthCost)}
+                {formatVND(monthCost)}
               </Text>
               {monthDelta !== null && (
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 3 }}>
@@ -400,7 +408,7 @@ export default function DashboardScreen() {
                 <FontAwesome5 name="coins" size={12} color="#34d399" solid />
                 <Label>Tổng chi xăng</Label>
                 <Text style={{ color: colors.text, fontWeight: '800', fontSize: 15 }}>
-                  {fmtFull(Number(allTime?.tong_tien ?? 0))}
+                  {formatVND(Number(allTime?.tong_tien ?? 0))}
                 </Text>
                 <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 2 }}>
                   {allTime?.so_lan ?? 0} lần đổ
@@ -427,9 +435,9 @@ export default function DashboardScreen() {
             <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
               {[
                 { label: 'Dự kiến vào', value: prediction.next_date ? dayjs(prediction.next_date).format('DD/MM/YYYY') : null, sub: prediction.days_left != null ? `còn ~${prediction.days_left} ngày` : null },
-                { label: 'Quanh mốc ODO', value: prediction.next_odo ? `~${Number(prediction.next_odo).toLocaleString('vi-VN')} km` : null },
+                { label: 'Quanh mốc ODO', value: prediction.next_odo ? `~${formatKm(prediction.next_odo)}` : null },
                 { label: 'Lượng dự kiến', value: prediction.liters ? `~${prediction.liters} L` : null },
-                { label: 'Chi phí dự kiến', value: prediction.cost ? `~${fmtFull(prediction.cost)}` : null },
+                { label: 'Chi phí dự kiến', value: prediction.cost ? `~${formatVND(prediction.cost)}` : null },
               ].filter(x => x.value).map((x, i) => (
                 <View key={i} style={{ width: '50%', paddingRight: i % 2 === 0 ? 8 : 0, marginBottom: 10 }}>
                   <Label>{x.label}</Label>
@@ -457,7 +465,7 @@ export default function DashboardScreen() {
                 <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                   <Text style={{ color: colors.text, flex: 1, fontSize: 13 }}>{item.hang_muc ?? item.label}</Text>
                   <Text style={{ color: urg, fontWeight: '700', fontSize: 12, marginLeft: 8 }}>
-                    {isOverdue ? 'Quá hạn' : days != null ? `${days} ngày` : km != null ? `${Number(km).toLocaleString('vi-VN')} km` : ''}
+                    {isOverdue ? 'Quá hạn' : days != null ? `${days} ngày` : km != null ? formatKm(km) : ''}
                   </Text>
                 </View>
               );
@@ -477,7 +485,7 @@ export default function DashboardScreen() {
                 || (item.remaining_km != null && item.remaining_km <= 500) ? colors.warning : colors.textSecondary;
               const remaining = item.remaining_days != null
                 ? `còn ${item.remaining_days} ngày`
-                : item.remaining_km != null ? `còn ${Number(item.remaining_km).toLocaleString('vi-VN')} km` : '';
+                : item.remaining_km != null ? `còn ${formatKm(item.remaining_km)}` : '';
               return (
                 <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                   <View style={{ flex: 1 }}>
@@ -525,7 +533,7 @@ export default function DashboardScreen() {
                   {r.cay_xang ?? ''}
                 </Text>
                 <Text style={{ color: colors.text, fontWeight: '700', fontSize: 13, textAlign: 'right' }}>
-                  {Number(r.tong_tien).toLocaleString('vi-VN')}đ
+                  {formatVND(r.tong_tien)}
                 </Text>
               </View>
             ))}
@@ -549,7 +557,7 @@ export default function DashboardScreen() {
                 <Text style={{ color: colors.text, fontSize: 13, flex: 1 }}>{f.ten}</Text>
                 <View style={{ alignItems: 'flex-end' }}>
                   <Text style={{ color: colors.text, fontWeight: '700', fontSize: 13 }}>
-                    {Number(f.gia).toLocaleString('vi-VN')}đ
+                    {formatVND(f.gia)}
                   </Text>
                   {f.delta != null && f.delta !== 0 && (
                     <Text style={{ color: f.delta > 0 ? colors.error : colors.success, fontSize: 11 }}>

@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { useAuthStore } from '../../store/authStore';
 import { profileApi } from '../../api/profile';
-import { colors } from '../../utils/colors';
+import { useColors } from '../../utils/theme';
 
 type FieldErrors = Record<string, string[]>;
 
@@ -19,6 +19,7 @@ function extractErrors(error: any): FieldErrors {
 }
 
 function FieldError({ errors, field }: { errors: FieldErrors; field: string }) {
+  const colors = useColors();
   const messages = errors[field];
   if (!messages || messages.length === 0) return null;
   return (
@@ -28,38 +29,40 @@ function FieldError({ errors, field }: { errors: FieldErrors; field: string }) {
   );
 }
 
-const inputStyle = {
-  backgroundColor: colors.background,
-  color: colors.text,
-  borderRadius: 10,
-  padding: 14,
-  marginBottom: 4,
-  fontSize: 15,
-};
-
-const cardStyle = {
-  backgroundColor: colors.surface,
-  borderRadius: 14,
-  padding: 16,
-  marginBottom: 16,
-};
-
-const sectionTitleStyle = {
-  color: colors.text,
-  fontWeight: '700' as const,
-  fontSize: 16,
-  marginBottom: 12,
-};
-
-const saveButtonStyle = {
-  backgroundColor: colors.primary,
-  borderRadius: 10,
-  padding: 14,
-  alignItems: 'center' as const,
-  marginTop: 8,
-};
-
 export default function EditProfileScreen() {
+  const colors = useColors();
+
+  const inputStyle = {
+    backgroundColor: colors.background,
+    color: colors.text,
+    borderRadius: 10,
+    padding: 14,
+    marginBottom: 4,
+    fontSize: 15,
+  };
+
+  const cardStyle = {
+    backgroundColor: colors.surface,
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 16,
+  };
+
+  const sectionTitleStyle = {
+    color: colors.text,
+    fontWeight: '700' as const,
+    fontSize: 16,
+    marginBottom: 12,
+  };
+
+  const saveButtonStyle = {
+    backgroundColor: colors.primary,
+    borderRadius: 10,
+    padding: 14,
+    alignItems: 'center' as const,
+    marginTop: 8,
+  };
+
   const { user, setUser } = useAuthStore();
 
   // Section 1: Personal info

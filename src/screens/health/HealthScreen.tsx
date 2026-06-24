@@ -9,7 +9,7 @@ import { useQueries } from '@tanstack/react-query';
 import { useVehicles } from '../../hooks/useVehicles';
 import { vehiclesApi } from '../../api/vehicles';
 import client from '../../api/client';
-import { colors } from '../../utils/colors';
+import { useColors } from '../../utils/theme';
 
 /* ─── types ─── */
 type OrganStatus = 'urgent' | 'warn' | 'info' | 'ok' | 'na';
@@ -68,7 +68,7 @@ function organStatusColor(status: OrganStatus): string {
     case 'warn':   return '#FF9800'; // amber
     case 'info':   return '#0EA5E9'; // sky
     case 'ok':     return '#4CAF50'; // emerald
-    default:       return colors.textSecondary;
+    default:       return '#9E9E9E';
   }
 }
 
@@ -85,6 +85,7 @@ function OrganStatusIcon({ status }: { status: OrganStatus }) {
 
 /* ─── PillarBar ─── */
 function PillarBar({ pillar, keyLabel }: { pillar: Pillar; keyLabel: string }) {
+  const colors = useColors();
   const pct = Math.min(100, Math.round((pillar.score / pillar.max) * 100));
   const clr = scoreColor(pct);
   return (
@@ -106,6 +107,7 @@ function PillarBar({ pillar, keyLabel }: { pillar: Pillar; keyLabel: string }) {
 
 /* ─── OrganRow ─── */
 function OrganRow({ organ }: { organ: Organ }) {
+  const colors = useColors();
   if (organ.status === 'na') return null;
   const clr = organStatusColor(organ.status);
   return (
@@ -134,6 +136,7 @@ function OrganRow({ organ }: { organ: Organ }) {
 interface TrendPoint { total: number; band: string; date: string }
 
 function ScoreTrendChart({ points }: { points: TrendPoint[] }) {
+  const colors = useColors();
   if (points.length < 2) return null;
   const BAR_W = 6;
   const GAP = 3;
@@ -189,6 +192,7 @@ interface HealthCardProps {
 }
 
 function HealthCard({ vehicle, health, loading, onAddReminder, history }: HealthCardProps) {
+  const colors = useColors();
   const name = vehicle.ten ?? vehicle.name ?? 'Xe';
   const plate = vehicle.bien_so ?? vehicle.license_plate ?? '';
 
@@ -295,6 +299,7 @@ function HealthCard({ vehicle, health, loading, onAddReminder, history }: Health
 
 /* ─── Main screen ─── */
 export default function HealthScreen() {
+  const colors = useColors();
   const navigation = useNavigation<any>();
 
   const { data: vehiclesRaw, isLoading: vehiclesLoading, isError: vehiclesError, refetch: refetchVehicles } = useVehicles();

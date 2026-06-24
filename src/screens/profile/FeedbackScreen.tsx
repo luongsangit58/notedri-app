@@ -8,7 +8,7 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import { useMutation } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
 import client from '../../api/client';
-import { colors } from '../../utils/colors';
+import { useColors } from '../../utils/theme';
 
 const LOAI_OPTIONS = [
   { key: 'loi',     label: 'Lỗi / trục trặc', icon: 'bug' },
@@ -21,6 +21,7 @@ type LoaiKey = typeof LOAI_OPTIONS[number]['key'];
 const STARS = [1, 2, 3, 4, 5];
 
 export default function FeedbackScreen() {
+  const colors = useColors();
   const navigation = useNavigation<any>();
   const [loai, setLoai] = useState<LoaiKey>('loi');
   const [noi_dung, setNoiDung] = useState('');

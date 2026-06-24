@@ -2,12 +2,13 @@ import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
-import { colors } from '../../utils/colors';
+import { useColors } from '../../utils/theme';
 import Constants from 'expo-constants';
 
 const version = Constants.expoConfig?.version ?? '1.0.0';
 
 function LinkRow({ icon, label, url }: { icon: string; label: string; url: string }) {
+  const colors = useColors();
   return (
     <TouchableOpacity
       onPress={() => Linking.openURL(url)}
@@ -23,6 +24,7 @@ function LinkRow({ icon, label, url }: { icon: string; label: string; url: strin
 }
 
 export default function AboutScreen() {
+  const colors = useColors();
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom']}>
       <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>

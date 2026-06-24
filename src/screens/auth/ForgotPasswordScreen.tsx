@@ -5,13 +5,14 @@ import {
 } from 'react-native';
 import axios from 'axios';
 import { API_URL } from '../../utils/api';
-import { colors } from '../../utils/colors';
+import { useColors } from '../../utils/theme';
 
 interface Props {
   navigation: any;
 }
 
 export default function ForgotPasswordScreen({ navigation }: Props) {
+  const colors = useColors();
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

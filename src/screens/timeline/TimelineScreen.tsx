@@ -10,7 +10,7 @@ import { useVehicles } from '../../hooks/useVehicles';
 import TimelineItem from '../../components/TimelineItem';
 import LoadingView from '../../components/LoadingView';
 import ErrorView from '../../components/ErrorView';
-import { colors } from '../../utils/colors';
+import { useColors } from '../../utils/theme';
 
 type TypeFilter = 'all' | 'refuel' | 'service' | 'odometer';
 
@@ -22,6 +22,40 @@ const TYPE_CHIPS: { key: TypeFilter; label: string }[] = [
 ];
 
 export default function TimelineScreen() {
+  const colors = useColors();
+  const styles = StyleSheet.create({
+    filterHeader: {
+      marginBottom: 8,
+    },
+    chipRow: {
+      marginBottom: 8,
+    },
+    chipsContainer: {
+      gap: 8,
+      paddingBottom: 2,
+    },
+    chip: {
+      paddingHorizontal: 14,
+      paddingVertical: 7,
+      borderRadius: 20,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    chipActive: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    chipText: {
+      color: colors.textSecondary,
+      fontSize: 13,
+      fontWeight: '400',
+    },
+    chipTextActive: {
+      color: '#fff',
+      fontWeight: '700',
+    },
+  });
   const navigation = useNavigation<any>();
 
   const [selectedVehicleId, setSelectedVehicleId] = useState<number | undefined>(undefined);
@@ -169,37 +203,3 @@ export default function TimelineScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  filterHeader: {
-    marginBottom: 8,
-  },
-  chipRow: {
-    marginBottom: 8,
-  },
-  chipsContainer: {
-    gap: 8,
-    paddingBottom: 2,
-  },
-  chip: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 20,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  chipActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  chipText: {
-    color: colors.textSecondary,
-    fontSize: 13,
-    fontWeight: '400',
-  },
-  chipTextActive: {
-    color: '#fff',
-    fontWeight: '700',
-  },
-});

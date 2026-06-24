@@ -7,7 +7,8 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
 import { servicesApi } from '../../api/services';
-import { colors } from '../../utils/colors';
+import { useColors } from '../../utils/theme';
+import { formatVND } from '../../utils/format';
 
 /* ─── FA6 → FA5 icon name map ─── */
 const FA_MAP: Record<string, string> = {
@@ -19,10 +20,6 @@ const FA_MAP: Record<string, string> = {
 };
 function fa5(name: string): string {
   return FA_MAP[name] ?? name.replace(/^fa-/, '');
-}
-
-function formatVND(n: number): string {
-  return '~' + n.toLocaleString('vi-VN') + 'đ';
 }
 
 function formatMonthYear(dateStr: string): string {
@@ -40,6 +37,7 @@ interface Topic {
 }
 
 function TopicCard({ topic, last }: { topic: Topic; last?: LastEntry }) {
+  const colors = useColors();
   return (
     <View style={{
       backgroundColor: colors.surface,
@@ -64,7 +62,7 @@ function TopicCard({ topic, last }: { topic: Topic; last?: LastEntry }) {
         {last && (
           <View style={{ alignItems: 'flex-end' }}>
             <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 13 }}>
-              {formatVND(last.chi_phi)}
+              {'~' + formatVND(last.chi_phi)}
             </Text>
             <Text style={{ color: colors.textSecondary, fontSize: 11 }}>
               lần trước · {formatMonthYear(last.ngay)}
@@ -98,6 +96,7 @@ function TopicCard({ topic, last }: { topic: Topic; last?: LastEntry }) {
 }
 
 export default function GarageGuideScreen() {
+  const colors = useColors();
   const navigation = useNavigation<any>();
 
   const { data, isLoading, isError, refetch } = useQuery({

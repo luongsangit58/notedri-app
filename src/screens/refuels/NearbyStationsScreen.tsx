@@ -8,7 +8,7 @@ import { useNavigation } from '@react-navigation/native';
 import * as Location from 'expo-location';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { refuelsApi } from '../../api/refuels';
-import { colors } from '../../utils/colors';
+import { useColors } from '../../utils/theme';
 
 type Station = {
   name?: string;
@@ -24,10 +24,130 @@ type Station = {
 type ScreenState = 'idle' | 'requesting' | 'loading' | 'success' | 'permission_denied' | 'error';
 
 export default function NearbyStationsScreen() {
+  const colors = useColors();
   const navigation = useNavigation();
   const [screenState, setScreenState] = useState<ScreenState>('idle');
   const [stations, setStations] = useState<Station[]>([]);
   const [errorMsg, setErrorMsg] = useState('');
+
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    center: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 32,
+    },
+    statusText: {
+      color: colors.textSecondary,
+      marginTop: 16,
+      fontSize: 15,
+      textAlign: 'center',
+    },
+    bigIconWrap: {
+      marginBottom: 16,
+    },
+    errorTitle: {
+      color: colors.text,
+      fontSize: 18,
+      fontWeight: '700',
+      textAlign: 'center',
+      marginBottom: 8,
+    },
+    errorBody: {
+      color: colors.textSecondary,
+      fontSize: 14,
+      textAlign: 'center',
+      lineHeight: 20,
+      marginBottom: 24,
+    },
+    retryButton: {
+      backgroundColor: colors.primary,
+      paddingHorizontal: 28,
+      paddingVertical: 12,
+      borderRadius: 10,
+    },
+    retryText: {
+      color: '#fff',
+      fontWeight: '700',
+      fontSize: 15,
+    },
+    listHeader: {
+      color: colors.textSecondary,
+      fontSize: 13,
+      marginBottom: 12,
+    },
+    card: {
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      padding: 14,
+    },
+    cardRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 10,
+    },
+    stationIconWrap: {
+      marginTop: 2,
+      width: 26,
+      alignItems: 'center',
+      justifyContent: 'flex-start',
+    },
+    addressRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      marginBottom: 6,
+    },
+    cardContent: {
+      flex: 1,
+    },
+    stationName: {
+      color: colors.text,
+      fontSize: 15,
+      fontWeight: '700',
+      marginBottom: 4,
+      lineHeight: 20,
+    },
+    stationAddress: {
+      color: colors.textSecondary,
+      fontSize: 13,
+      lineHeight: 18,
+      flex: 1,
+    },
+    fuelRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 6,
+      marginTop: 2,
+    },
+    fuelChip: {
+      backgroundColor: colors.card,
+      borderRadius: 6,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+    },
+    fuelChipText: {
+      color: colors.textSecondary,
+      fontSize: 11,
+    },
+    distanceBadge: {
+      backgroundColor: colors.primary,
+      borderRadius: 8,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      alignSelf: 'flex-start',
+      minWidth: 50,
+      alignItems: 'center',
+    },
+    distanceText: {
+      color: '#fff',
+      fontWeight: '700',
+      fontSize: 12,
+    },
+  });
 
   const fetchNearby = useCallback(async () => {
     setScreenState('requesting');
@@ -198,122 +318,3 @@ export default function NearbyStationsScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  center: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 32,
-  },
-  statusText: {
-    color: colors.textSecondary,
-    marginTop: 16,
-    fontSize: 15,
-    textAlign: 'center',
-  },
-  bigIconWrap: {
-    marginBottom: 16,
-  },
-  errorTitle: {
-    color: colors.text,
-    fontSize: 18,
-    fontWeight: '700',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  errorBody: {
-    color: colors.textSecondary,
-    fontSize: 14,
-    textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: 24,
-  },
-  retryButton: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: 28,
-    paddingVertical: 12,
-    borderRadius: 10,
-  },
-  retryText: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 15,
-  },
-  listHeader: {
-    color: colors.textSecondary,
-    fontSize: 13,
-    marginBottom: 12,
-  },
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    padding: 14,
-  },
-  cardRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-  },
-  stationIconWrap: {
-    marginTop: 2,
-    width: 26,
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-  },
-  addressRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 6,
-  },
-  cardContent: {
-    flex: 1,
-  },
-  stationName: {
-    color: colors.text,
-    fontSize: 15,
-    fontWeight: '700',
-    marginBottom: 4,
-    lineHeight: 20,
-  },
-  stationAddress: {
-    color: colors.textSecondary,
-    fontSize: 13,
-    lineHeight: 18,
-    flex: 1,
-  },
-  fuelRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-    marginTop: 2,
-  },
-  fuelChip: {
-    backgroundColor: colors.card,
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  fuelChipText: {
-    color: colors.textSecondary,
-    fontSize: 11,
-  },
-  distanceBadge: {
-    backgroundColor: colors.primary,
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    alignSelf: 'flex-start',
-    minWidth: 50,
-    alignItems: 'center',
-  },
-  distanceText: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 12,
-  },
-});

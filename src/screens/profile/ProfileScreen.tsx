@@ -6,9 +6,11 @@ import { useNavigation } from '@react-navigation/native';
 import { useMutation } from '@tanstack/react-query';
 import { useAuthStore } from '../../store/authStore';
 import { profileApi } from '../../api/profile';
-import { colors } from '../../utils/colors';
+import { useColors, useThemeStore } from '../../utils/theme';
+import { useI18nStore, useLang } from '../../i18n';
 
-function MenuItem({ icon, label, onPress, danger }: { icon: React.ReactNode; label: string; onPress?: () => void; danger?: boolean }) {
+function MenuItem({ icon, label, onPress, danger, right }: { icon: React.ReactNode; label: string; onPress?: () => void; danger?: boolean; right?: React.ReactNode }) {
+  const colors = useColors();
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -20,7 +22,7 @@ function MenuItem({ icon, label, onPress, danger }: { icon: React.ReactNode; lab
         {icon}
       </View>
       <Text style={{ flex: 1, color: danger ? colors.error : colors.text, fontSize: 15 }}>{label}</Text>
-      {!danger && <Text style={{ color: colors.textSecondary, fontSize: 18 }}>›</Text>}
+      {right ?? (!danger && <Text style={{ color: colors.textSecondary, fontSize: 18 }}>›</Text>)}
     </TouchableOpacity>
   );
 }
@@ -28,6 +30,9 @@ function MenuItem({ icon, label, onPress, danger }: { icon: React.ReactNode; lab
 export default function ProfileScreen() {
   const { user, logout } = useAuthStore();
   const navigation = useNavigation<any>();
+  const colors = useColors();
+  const { mode: themeMode, toggle: toggleTheme } = useThemeStore();
+  const { lang, setLang } = useI18nStore();
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
   const [deleteError, setDeleteError] = useState('');
@@ -158,6 +163,40 @@ export default function ProfileScreen() {
             icon={<FontAwesome5 name="info-circle" size={16} color={colors.textSecondary} solid />}
             label="Về NoteDri"
             onPress={() => navigation.navigate('About')}
+          />
+        </View>
+
+        {/* Appearance & Language */}
+        <View style={{ backgroundColor: colors.surface, borderRadius: 14, marginHorizontal: 16, overflow: 'hidden', marginBottom: 16 }}>
+          <MenuItem
+            icon={<FontAwesome5 name={themeMode === 'dark' ? 'moon' : 'sun'} size={16} color={colors.textSecondary} solid />}
+            label={themeMode === 'dark' ? 'Chế độ tối' : 'Chế độ sáng'}
+            onPress={() => toggleTheme()}
+            right={
+              <View style={{
+                paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12,
+                backgroundColor: themeMode === 'dark' ? '#333' : '#E5E7EB',
+              }}>
+                <Text style={{ color: colors.text, fontSize: 12, fontWeight: '600' }}>
+                  {themeMode === 'dark' ? 'Tối' : 'Sáng'}
+                </Text>
+              </View>
+            }
+          />
+          <MenuItem
+            icon={<FontAwesome5 name="language" size={16} color={colors.textSecondary} solid />}
+            label="Ngôn ngữ / Language"
+            onPress={() => setLang(lang === 'vi' ? 'en' : 'vi')}
+            right={
+              <View style={{
+                paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12,
+                backgroundColor: colors.primary + '22',
+              }}>
+                <Text style={{ color: colors.primary, fontSize: 12, fontWeight: '700' }}>
+                  {lang === 'vi' ? '🇻🇳 VI' : '🇬🇧 EN'}
+                </Text>
+              </View>
+            }
           />
         </View>
 

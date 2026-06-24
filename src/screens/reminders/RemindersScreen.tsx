@@ -20,7 +20,7 @@ import { useReminders, useDeleteReminder, useDoneReminder } from '../../hooks/us
 import { useVehicles } from '../../hooks/useVehicles';
 import LoadingView from '../../components/LoadingView';
 import ErrorView from '../../components/ErrorView';
-import { colors } from '../../utils/colors';
+import { useColors } from '../../utils/theme';
 
 type LoaiKey = 'bao_duong' | 'dang_kiem' | 'bao_hiem' | 'giay_to' | 'khac';
 type StatusKey = 'ok' | 'warning' | 'danger' | 'overdue';
@@ -45,13 +45,6 @@ const CHE_DO_LABELS: Record<string, string> = {
   chu_ky: 'Định kỳ',
   ngay_co_dinh: 'Cố định',
   mot_lan: 'Một lần',
-};
-
-const STATUS_COLORS: Record<StatusKey, string> = {
-  ok: colors.success,
-  warning: colors.warning,
-  danger: colors.error,
-  overdue: colors.error,
 };
 
 interface Reminder {
@@ -82,6 +75,109 @@ function ReminderCard({
   onDelete: (id: number) => void;
   onEdit: (id: number) => void;
 }) {
+  const colors = useColors();
+  const STATUS_COLORS: Record<StatusKey, string> = {
+    ok: colors.success,
+    warning: colors.warning,
+    danger: colors.error,
+    overdue: colors.error,
+  };
+  const styles = StyleSheet.create({
+    card: {
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      padding: 16,
+      marginBottom: 12,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    cardHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 8,
+    },
+    cardTitleRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      flex: 1,
+      marginRight: 8,
+    },
+    statusDot: {
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+      marginRight: 8,
+    },
+    cardTitle: {
+      color: colors.text,
+      fontSize: 16,
+      fontWeight: '600',
+      flex: 1,
+    },
+    deleteBtn: {
+      padding: 4,
+    },
+    cardMeta: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      marginBottom: 8,
+    },
+    loaiBadge: {
+      borderWidth: 1,
+      borderRadius: 6,
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+    },
+    loaiText: {
+      fontSize: 12,
+      fontWeight: '500',
+    },
+    inactiveBadge: {
+      backgroundColor: colors.border,
+      borderRadius: 6,
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+    },
+    inactiveText: {
+      color: colors.textSecondary,
+      fontSize: 12,
+    },
+    detailSection: {
+      marginBottom: 6,
+      gap: 2,
+    },
+    detailText: {
+      color: colors.textSecondary,
+      fontSize: 12,
+    },
+    remaining: {
+      fontSize: 14,
+      fontWeight: '600',
+      marginBottom: 4,
+    },
+    note: {
+      color: colors.textSecondary,
+      fontSize: 13,
+      marginBottom: 8,
+      fontStyle: 'italic',
+    },
+    doneBtn: {
+      marginTop: 8,
+      backgroundColor: colors.background,
+      borderWidth: 1,
+      borderColor: colors.success,
+      borderRadius: 8,
+      paddingVertical: 8,
+      alignItems: 'center',
+    },
+    doneBtnText: {
+      color: colors.success,
+      fontSize: 14,
+      fontWeight: '600',
+    },
+  });
   const statusColor = STATUS_COLORS[item.status] ?? colors.textSecondary;
   const loaiLabel = LOAI_LABELS[item.loai] ?? item.loai;
 
@@ -209,6 +305,106 @@ function ReminderCard({
 }
 
 export default function RemindersScreen() {
+  const colors = useColors();
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    listContent: {
+      padding: 16,
+      paddingBottom: 96,
+    },
+    emptyContainer: {
+      alignItems: 'center',
+      marginTop: 64,
+    },
+    emptyText: {
+      color: colors.textSecondary,
+      fontSize: 16,
+    },
+    fab: {
+      position: 'absolute',
+      right: 20,
+      bottom: 28,
+      backgroundColor: colors.primary,
+      width: 56,
+      height: 56,
+      borderRadius: 28,
+      justifyContent: 'center',
+      alignItems: 'center',
+      elevation: 6,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 3 },
+      shadowOpacity: 0.3,
+      shadowRadius: 4,
+    },
+    fabText: {
+      color: '#fff',
+      fontSize: 28,
+      lineHeight: 32,
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.55)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 24,
+    },
+    modalBox: {
+      backgroundColor: colors.surface,
+      borderRadius: 16,
+      padding: 24,
+      width: '100%',
+    },
+    modalTitle: {
+      color: colors.text,
+      fontSize: 17,
+      fontWeight: '700',
+      marginBottom: 4,
+    },
+    modalSub: {
+      color: colors.textSecondary,
+      fontSize: 13,
+      marginBottom: 16,
+    },
+    modalLabel: {
+      color: colors.textSecondary,
+      fontSize: 13,
+      marginBottom: 8,
+    },
+    modalInput: {
+      backgroundColor: colors.background,
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: colors.border,
+      color: colors.text,
+      fontSize: 16,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      marginBottom: 20,
+    },
+    modalActions: {
+      flexDirection: 'row',
+      gap: 10,
+    },
+    modalCancel: {
+      flex: 1,
+      alignItems: 'center',
+      paddingVertical: 12,
+      borderRadius: 10,
+      backgroundColor: colors.background,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    modalConfirm: {
+      flex: 1,
+      alignItems: 'center',
+      paddingVertical: 12,
+      borderRadius: 10,
+      backgroundColor: colors.primary,
+    },
+  });
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
   const { vehicleId } = route.params as { vehicleId: number };
@@ -314,199 +510,3 @@ export default function RemindersScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  listContent: {
-    padding: 16,
-    paddingBottom: 96,
-  },
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  cardTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    marginRight: 8,
-  },
-  statusDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginRight: 8,
-  },
-  cardTitle: {
-    color: colors.text,
-    fontSize: 16,
-    fontWeight: '600',
-    flex: 1,
-  },
-  deleteBtn: {
-    padding: 4,
-  },
-  deleteBtnText: {
-    fontSize: 18,
-  },
-  cardMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 8,
-  },
-  loaiBadge: {
-    borderWidth: 1,
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-  },
-  loaiText: {
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  inactiveBadge: {
-    backgroundColor: colors.border,
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-  },
-  inactiveText: {
-    color: colors.textSecondary,
-    fontSize: 12,
-  },
-  detailSection: {
-    marginBottom: 6,
-    gap: 2,
-  },
-  detailText: {
-    color: colors.textSecondary,
-    fontSize: 12,
-  },
-  remaining: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  note: {
-    color: colors.textSecondary,
-    fontSize: 13,
-    marginBottom: 8,
-    fontStyle: 'italic',
-  },
-  doneBtn: {
-    marginTop: 8,
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.success,
-    borderRadius: 8,
-    paddingVertical: 8,
-    alignItems: 'center',
-  },
-  doneBtnText: {
-    color: colors.success,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    marginTop: 64,
-  },
-  emptyText: {
-    color: colors.textSecondary,
-    fontSize: 16,
-  },
-  fab: {
-    position: 'absolute',
-    right: 20,
-    bottom: 28,
-    backgroundColor: colors.primary,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-  },
-  fabText: {
-    color: '#fff',
-    fontSize: 28,
-    lineHeight: 32,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.55)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  modalBox: {
-    backgroundColor: colors.surface,
-    borderRadius: 16,
-    padding: 24,
-    width: '100%',
-  },
-  modalTitle: {
-    color: colors.text,
-    fontSize: 17,
-    fontWeight: '700',
-    marginBottom: 4,
-  },
-  modalSub: {
-    color: colors.textSecondary,
-    fontSize: 13,
-    marginBottom: 16,
-  },
-  modalLabel: {
-    color: colors.textSecondary,
-    fontSize: 13,
-    marginBottom: 8,
-  },
-  modalInput: {
-    backgroundColor: colors.background,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: colors.border,
-    color: colors.text,
-    fontSize: 16,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    marginBottom: 20,
-  },
-  modalActions: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  modalCancel: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderRadius: 10,
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  modalConfirm: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderRadius: 10,
-    backgroundColor: colors.primary,
-  },
-});

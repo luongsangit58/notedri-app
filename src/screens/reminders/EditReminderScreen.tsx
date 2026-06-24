@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { remindersApi } from '../../api/reminders';
 import { useQueryClient } from '@tanstack/react-query';
-import { colors } from '../../utils/colors';
+import { useColors } from '../../utils/theme';
 
 type Loai = 'bao_duong' | 'dang_kiem' | 'bao_hiem' | 'giay_to' | 'khac';
 type CheDo = 'chu_ky' | 'ngay_co_dinh' | 'mot_lan';
@@ -27,6 +27,7 @@ const CHE_DO_OPTIONS: { value: CheDo; label: string }[] = [
 ];
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
+  const colors = useColors();
   return (
     <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 6, marginTop: 12 }}>
       {children}
@@ -34,16 +35,16 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
-const inputStyle = {
-  backgroundColor: colors.surface,
-  color: colors.text,
-  borderRadius: 10,
-  paddingHorizontal: 14,
-  paddingVertical: 13,
-  fontSize: 16,
-};
-
 export default function EditReminderScreen() {
+  const colors = useColors();
+  const inputStyle = {
+    backgroundColor: colors.surface,
+    color: colors.text,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+    fontSize: 16,
+  };
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const { reminderId, vehicleId } = route.params as { reminderId: number; vehicleId: number };

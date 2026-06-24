@@ -5,9 +5,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
 import client from '../../api/client';
-import { colors } from '../../utils/colors';
+import { useColors } from '../../utils/theme';
 
 function InfoRow({ icon, label, value }: { icon: string; label: string; value: string | number }) {
+  const colors = useColors();
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border }}>
       <FontAwesome5 name={icon as any} size={14} color={colors.textSecondary} solid style={{ width: 22 }} />
@@ -18,6 +19,7 @@ function InfoRow({ icon, label, value }: { icon: string; label: string; value: s
 }
 
 export default function ExportDataScreen() {
+  const colors = useColors();
   const [loading, setLoading] = useState(false);
   const [preview, setPreview] = useState<any>(null);
 

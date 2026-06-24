@@ -10,18 +10,20 @@ import dayjs from 'dayjs';
 import { useVehicles } from '../../hooks/useVehicles';
 import { useCreateOdometer } from '../../hooks/useOdometer';
 import OcrCamera from '../../components/OcrCamera';
-import { colors } from '../../utils/colors';
-
-const input = {
-  backgroundColor: colors.surface,
-  color: colors.text,
-  borderRadius: 10,
-  paddingHorizontal: 14,
-  paddingVertical: 13,
-  fontSize: 16,
-};
+import { useColors } from '../../utils/theme';
+import { formatKm } from '../../utils/format';
 
 export default function AddOdometerScreen() {
+  const colors = useColors();
+  const input = {
+    backgroundColor: colors.surface,
+    color: colors.text,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+    fontSize: 16,
+  };
+
   const navigation = useNavigation();
   const { data: vehiclesData } = useVehicles();
   const createOdometer = useCreateOdometer();
@@ -91,7 +93,7 @@ export default function AddOdometerScreen() {
             <View style={{ backgroundColor: colors.surface, borderRadius: 10, padding: 14, marginBottom: 14, flexDirection: 'row', justifyContent: 'space-between' }}>
               <Text style={{ color: colors.textSecondary, fontSize: 13 }}>ODO hiện tại</Text>
               <Text style={{ color: colors.primary, fontWeight: '700' }}>
-                {Number(currentVehicle.odo_hien_tai).toLocaleString('vi-VN')} km
+                {formatKm(currentVehicle.odo_hien_tai)}
               </Text>
             </View>
           )}

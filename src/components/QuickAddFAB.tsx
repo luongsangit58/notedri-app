@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, Modal, Pressable } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { colors } from '../utils/colors';
+import { useColors } from '../utils/theme';
 
 export default function QuickAddFAB() {
+  const colors = useColors();
   const [open, setOpen] = useState(false);
   const navigation = useNavigation<any>();
 

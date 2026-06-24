@@ -6,13 +6,14 @@ import {
 import axios from 'axios';
 import { API_URL } from '../../utils/api';
 import { useAuthStore } from '../../store/authStore';
-import { colors } from '../../utils/colors';
+import { useColors } from '../../utils/theme';
 
 interface Props {
   navigation: any;
 }
 
 export default function RegisterScreen({ navigation }: Props) {
+  const colors = useColors();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

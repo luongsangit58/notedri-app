@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import client from '../../api/client';
-import { colors } from '../../utils/colors';
+import { useColors } from '../../utils/theme';
 
 type ReminderLevel = 'all' | 'urgent' | 'off';
 
@@ -17,6 +17,7 @@ const LEVEL_OPTIONS: { key: ReminderLevel; label: string; desc: string }[] = [
 ];
 
 export default function NotificationSettingsScreen() {
+  const colors = useColors();
   const qc = useQueryClient();
 
   const { data, isLoading } = useQuery({

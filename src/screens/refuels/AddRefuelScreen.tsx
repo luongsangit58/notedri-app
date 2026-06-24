@@ -11,22 +11,24 @@ import { useVehicles } from '../../hooks/useVehicles';
 import { useCreateRefuel } from '../../hooks/useRefuels';
 import { useFuelTypes } from '../../hooks/useFuelTypes';
 import OcrCamera from '../../components/OcrCamera';
-import { colors } from '../../utils/colors';
+import { useColors } from '../../utils/theme';
+import { formatVND } from '../../utils/format';
 
 function FieldLabel({ children }: any) {
+  const colors = useColors();
   return <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 6, marginTop: 4 }}>{children}</Text>;
 }
 
-const input = {
-  backgroundColor: colors.surface,
-  color: colors.text,
-  borderRadius: 10,
-  paddingHorizontal: 14,
-  paddingVertical: 13,
-  fontSize: 16,
-};
-
 export default function AddRefuelScreen() {
+  const colors = useColors();
+  const input = {
+    backgroundColor: colors.surface,
+    color: colors.text,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+    fontSize: 16,
+  };
   const navigation = useNavigation();
   const { data: vehiclesData } = useVehicles();
   const createRefuel = useCreateRefuel();
@@ -225,7 +227,7 @@ export default function AddRefuelScreen() {
               <TextInput value={giaLit} onChangeText={handleGiaLitChange} placeholder="0" placeholderTextColor={colors.textSecondary} keyboardType="numeric" style={input} />
               {marketPrice != null && (
                 <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 4 }}>
-                  Giá thị trường: {Number(marketPrice).toLocaleString('vi-VN')}đ/lít
+                  Giá thị trường: {formatVND(marketPrice)}/lít
                 </Text>
               )}
             </View>

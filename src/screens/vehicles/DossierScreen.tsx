@@ -7,7 +7,8 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { vehiclesApi } from '../../api/vehicles';
 import { servicesApi } from '../../api/services';
-import { colors } from '../../utils/colors';
+import { useColors } from '../../utils/theme';
+import { formatVND, formatKm } from '../../utils/format';
 import dayjs from 'dayjs';
 
 /* ─── types ─── */
@@ -40,11 +41,6 @@ interface ServiceLog {
 }
 
 /* ─── helpers ─── */
-function fmtCost(n: number) {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, '')} tr`;
-  return n.toLocaleString('vi-VN');
-}
-
 function fmtDate(d?: string): string {
   if (!d) return '—';
   return dayjs(d).format('DD/MM/YYYY');
@@ -73,6 +69,7 @@ function serviceOdo(s: ServiceLog): number | null {
 
 /* ─── stat card ─── */
 function StatCard({ label, value, accent }: { label: string; value: string; accent?: string }) {
+  const colors = useColors();
   return (
     <View style={{
       flex: 1, backgroundColor: colors.card, borderRadius: 12, padding: 12, alignItems: 'center',
@@ -87,6 +84,7 @@ function StatCard({ label, value, accent }: { label: string; value: string; acce
 
 /* ─── type badge ─── */
 function TypeBadge({ label }: { label: string }) {
+  const colors = useColors();
   const bg = label === 'emergency' || label === 'khẩn cấp' ? colors.error + '33'
     : label === 'scheduled' || label === 'định kỳ' ? colors.primary + '33'
     : colors.surface;
@@ -102,6 +100,7 @@ function TypeBadge({ label }: { label: string }) {
 
 /* ─── screen ─── */
 export default function DossierScreen() {
+  const colors = useColors();
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
   const { vehicleId } = route.params as { vehicleId: number };
@@ -168,12 +167,12 @@ export default function DossierScreen() {
     if (!vehicle) return;
     const name = vehicle.ten ?? vehicle.name ?? 'Xe';
     const plate = vehicle.bien_so ?? vehicle.license_plate ?? '';
-    const odo = Number(vehicle.odo_hien_tai ?? vehicle.current_odometer ?? 0).toLocaleString('vi-VN');
+    const odoNum = Number(vehicle.odo_hien_tai ?? vehicle.current_odometer ?? 0);
     const count = services.length;
     const totalCost = services.reduce((s, r) => s + serviceCost(r), 0);
     try {
       await Share.share({
-        message: `Xe: ${name}${plate ? ` (${plate})` : ''}\nODO: ${odo} km\nBảo dưỡng: ${count} lần\nTổng chi bảo dưỡng: ${totalCost.toLocaleString('vi-VN')}đ\nNoteDri - Sổ tay xe điện tử`,
+        message: `Xe: ${name}${plate ? ` (${plate})` : ''}\nODO: ${formatKm(odoNum)}\nBảo dưỡng: ${count} lần\nTổng chi bảo dưỡng: ${formatVND(totalCost)}\nNoteDri - Sổ tay xe điện tử`,
       });
     } catch (_) {}
   };
@@ -268,7 +267,7 @@ export default function DossierScreen() {
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                   <FontAwesome5 name="road" size={12} color={colors.primary} solid />
                   <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '700' }}>
-                    {odo.toLocaleString('vi-VN')} km
+                    {formatKm(odo)}
                   </Text>
                 </View>
               </View>
@@ -290,7 +289,7 @@ export default function DossierScreen() {
         <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14 }}>
           <StatCard
             label="Tổng chi bảo dưỡng"
-            value={fmtCost(totalCost) + 'đ'}
+            value={formatVND(totalCost)}
             accent={colors.warning}
           />
           <StatCard
@@ -336,7 +335,7 @@ export default function DossierScreen() {
                     </Text>
                     {type ? <TypeBadge label={type} /> : null}
                     <Text style={{ color: cost > 0 ? colors.text : colors.textSecondary, fontWeight: '700', fontSize: 13 }}>
-                      {cost > 0 ? `${fmtCost(cost)}đ` : '—'}
+                      {cost > 0 ? formatVND(cost) : '—'}
                     </Text>
                   </View>
                   <Text style={{ color: colors.text, fontSize: 14, fontWeight: '600' }}>
@@ -346,7 +345,7 @@ export default function DossierScreen() {
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
                       <FontAwesome5 name="road" size={11} color={colors.textSecondary} solid />
                       <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
-                        {odoVal.toLocaleString('vi-VN')} km
+                        {formatKm(odoVal)}
                       </Text>
                     </View>
                   )}

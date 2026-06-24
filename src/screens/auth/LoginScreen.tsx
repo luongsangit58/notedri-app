@@ -7,7 +7,7 @@ import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
 import { makeRedirectUri } from 'expo-auth-session';
 import { useAuthStore } from '../../store/authStore';
-import { colors } from '../../utils/colors';
+import { useColors } from '../../utils/theme';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -19,6 +19,7 @@ const GOOGLE_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? '';
 const REDIRECT_URI = (makeRedirectUri as any)({ useProxy: true });
 
 export default function LoginScreen({ navigation }: { navigation: any }) {
+  const colors = useColors();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const { login, loginWithGoogle, isLoading, error, clearError } = useAuthStore();

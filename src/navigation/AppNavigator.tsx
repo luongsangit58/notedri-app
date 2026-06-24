@@ -2,7 +2,7 @@ import React from 'react';
 import { TouchableOpacity } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
-import { colors } from '../utils/colors';
+import { useColors, ColorPalette } from '../utils/theme';
 import { FontAwesome5 } from '@expo/vector-icons';
 
 import DashboardScreen from '../screens/dashboard/DashboardScreen';
@@ -43,13 +43,12 @@ import ExportDataScreen from '../screens/profile/ExportDataScreen';
 const Tab = createBottomTabNavigator();
 const RootStack = createStackNavigator();
 
-const headerOpts = {
-  headerStyle: { backgroundColor: colors.surface },
-  headerTintColor: colors.text,
-};
-
-function VehiclesStack() {
+function VehiclesStack({ colors }: { colors: ColorPalette }) {
   const Stack = createStackNavigator();
+  const headerOpts = {
+    headerStyle: { backgroundColor: colors.surface },
+    headerTintColor: colors.text,
+  };
   return (
     <Stack.Navigator screenOptions={headerOpts}>
       <Stack.Screen name="VehiclesList" component={VehiclesScreen} options={{ title: 'Xe của tôi' }} />
@@ -59,8 +58,12 @@ function VehiclesStack() {
   );
 }
 
-function ServicesStack() {
+function ServicesStack({ colors }: { colors: ColorPalette }) {
   const Stack = createStackNavigator();
+  const headerOpts = {
+    headerStyle: { backgroundColor: colors.surface },
+    headerTintColor: colors.text,
+  };
   return (
     <Stack.Navigator screenOptions={headerOpts}>
       <Stack.Screen
@@ -82,7 +85,10 @@ function ServicesStack() {
   );
 }
 
-function TabNavigator() {
+function ThemedTabNavigator() {
+  const colors = useColors();
+  const VehiclesStackColored = () => <VehiclesStack colors={colors} />;
+  const ServicesStackColored = () => <ServicesStack colors={colors} />;
   return (
     <Tab.Navigator
       screenOptions={{
@@ -104,12 +110,12 @@ function TabNavigator() {
       />
       <Tab.Screen
         name="Services"
-        component={ServicesStack}
+        component={ServicesStackColored}
         options={{ title: 'Bảo dưỡng', headerShown: false, tabBarIcon: ({ color, size }) => <FontAwesome5 name="wrench" size={size - 2} color={color} solid /> }}
       />
       <Tab.Screen
         name="Vehicles"
-        component={VehiclesStack}
+        component={VehiclesStackColored}
         options={{ title: 'Xe', headerShown: false, tabBarIcon: ({ color, size }) => <FontAwesome5 name="car-side" size={size - 2} color={color} solid /> }}
       />
       <Tab.Screen
@@ -122,9 +128,14 @@ function TabNavigator() {
 }
 
 export default function AppNavigator() {
+  const colors = useColors();
+  const headerOpts = {
+    headerStyle: { backgroundColor: colors.surface },
+    headerTintColor: colors.text,
+  };
   return (
     <RootStack.Navigator screenOptions={{ headerShown: false }}>
-      <RootStack.Screen name="Tabs" component={TabNavigator} />
+      <RootStack.Screen name="Tabs" component={ThemedTabNavigator} />
 
       {/* Refuel & ODO */}
       <RootStack.Screen name="AddRefuel" component={AddRefuelScreen}

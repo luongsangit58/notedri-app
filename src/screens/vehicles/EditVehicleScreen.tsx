@@ -15,36 +15,27 @@ import { useVehicle, useUpdateVehicle, useDeleteVehicle } from '../../hooks/useV
 import { useFuelTypes } from '../../hooks/useFuelTypes';
 import LoadingView from '../../components/LoadingView';
 import ErrorView from '../../components/ErrorView';
-
-const colors = {
-  background: '#121212',
-  surface: '#1E1E1E',
-  primary: '#E85D04',
-  text: '#fff',
-  textSecondary: '#9E9E9E',
-  error: '#F44336',
-};
-
-const inputStyle = {
-  backgroundColor: colors.surface,
-  color: colors.text,
-  borderRadius: 10,
-  paddingHorizontal: 14,
-  paddingVertical: 12,
-  fontSize: 15,
-  marginBottom: 12,
-  borderWidth: 1,
-  borderColor: '#2E2E2E',
-};
-
-const labelStyle = {
-  color: colors.textSecondary,
-  fontSize: 12,
-  marginBottom: 4,
-  marginTop: 4,
-};
+import { useColors } from '../../utils/theme';
 
 export default function EditVehicleScreen() {
+  const colors = useColors();
+  const inputStyle = {
+    backgroundColor: colors.surface,
+    color: colors.text,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+  };
+  const labelStyle = {
+    color: colors.textSecondary,
+    fontSize: 12,
+    marginBottom: 4,
+    marginTop: 4,
+  };
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const { vehicleId } = route.params;

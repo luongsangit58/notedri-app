@@ -9,7 +9,7 @@ import dayjs from 'dayjs';
 import { useVehicles } from '../../hooks/useVehicles';
 import { useUpdateService, useDeleteService } from '../../hooks/useServices';
 import { servicesApi } from '../../api/services';
-import { colors } from '../../utils/colors';
+import { useColors } from '../../utils/theme';
 
 const LOAI_OPTIONS = [
   { value: 'bao_duong', label: 'Bảo dưỡng' },
@@ -25,10 +25,96 @@ const LOAI_OPTIONS = [
 ];
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
-  return <Text style={styles.label}>{children}</Text>;
+  const colors = useColors();
+  return <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 6, marginTop: 4 }}>{children}</Text>;
 }
 
 export default function EditServiceScreen() {
+  const colors = useColors();
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    scrollContent: {
+      padding: 16,
+      paddingBottom: 32,
+    },
+    chipRow: {
+      marginBottom: 14,
+    },
+    chip: {
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: 8,
+      marginRight: 8,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    chipActive: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    chipText: {
+      color: '#fff',
+      fontWeight: '600',
+      fontSize: 13,
+    },
+    chipTextActive: {
+      color: '#fff',
+    },
+    input: {
+      backgroundColor: colors.surface,
+      color: colors.text,
+      borderRadius: 10,
+      paddingHorizontal: 14,
+      paddingVertical: 13,
+      fontSize: 16,
+      marginBottom: 4,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    inputMultiline: {
+      minHeight: 80,
+      textAlignVertical: 'top',
+    },
+    submitBtn: {
+      backgroundColor: colors.primary,
+      padding: 16,
+      borderRadius: 12,
+      alignItems: 'center',
+      marginTop: 20,
+    },
+    deleteBtn: {
+      backgroundColor: 'transparent',
+      padding: 16,
+      borderRadius: 12,
+      alignItems: 'center',
+      marginTop: 12,
+      borderWidth: 1,
+      borderColor: colors.error,
+    },
+    btnDisabled: {
+      opacity: 0.7,
+    },
+    submitText: {
+      color: '#fff',
+      fontWeight: '800',
+      fontSize: 16,
+    },
+    deleteText: {
+      color: colors.error,
+      fontWeight: '700',
+      fontSize: 15,
+    },
+  });
+
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const { serviceId } = route.params as { serviceId: number };
@@ -278,93 +364,3 @@ export default function EditServiceScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#121212',
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  scrollContent: {
-    padding: 16,
-    paddingBottom: 32,
-  },
-  label: {
-    color: '#9E9E9E',
-    fontSize: 13,
-    marginBottom: 6,
-    marginTop: 4,
-  },
-  chipRow: {
-    marginBottom: 14,
-  },
-  chip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 8,
-    marginRight: 8,
-    backgroundColor: '#1E1E1E',
-    borderWidth: 1,
-    borderColor: '#2E2E2E',
-  },
-  chipActive: {
-    backgroundColor: '#E85D04',
-    borderColor: '#E85D04',
-  },
-  chipText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 13,
-  },
-  chipTextActive: {
-    color: '#fff',
-  },
-  input: {
-    backgroundColor: '#1E1E1E',
-    color: '#fff',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 13,
-    fontSize: 16,
-    marginBottom: 4,
-    borderWidth: 1,
-    borderColor: '#2E2E2E',
-  },
-  inputMultiline: {
-    minHeight: 80,
-    textAlignVertical: 'top',
-  },
-  submitBtn: {
-    backgroundColor: '#E85D04',
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  deleteBtn: {
-    backgroundColor: 'transparent',
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 12,
-    borderWidth: 1,
-    borderColor: '#F44336',
-  },
-  btnDisabled: {
-    opacity: 0.7,
-  },
-  submitText: {
-    color: '#fff',
-    fontWeight: '800',
-    fontSize: 16,
-  },
-  deleteText: {
-    color: '#F44336',
-    fontWeight: '700',
-    fontSize: 15,
-  },
-});

@@ -9,7 +9,7 @@ import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/vi';
 import { useNavigation } from '@react-navigation/native';
 import { useNotifications, useMarkAllRead, useMarkRead } from '../../hooks/useNotifications';
-import { colors } from '../../utils/colors';
+import { useColors } from '../../utils/theme';
 import { navigateFromUrl } from '../../utils/navigation';
 
 dayjs.extend(relativeTime);
@@ -29,7 +29,7 @@ interface NotificationItem {
   created_at?: string;
 }
 
-function getBellColors(severity?: NotificationItem['severity']): { bg: string; icon: string } {
+function getBellColors(severity: NotificationItem['severity'] | undefined, colors: any): { bg: string; icon: string } {
   switch (severity) {
     case 'urgent': return { bg: '#FEE2E2', icon: '#DC2626' };
     case 'warn':   return { bg: '#FEF3C7', icon: '#D97706' };
@@ -39,13 +39,15 @@ function getBellColors(severity?: NotificationItem['severity']): { bg: string; i
 }
 
 function NotifRow({
-  item, onMarkRead, onNavigate,
+  item, onMarkRead, onNavigate, styles,
 }: {
   item: NotificationItem;
   onMarkRead: (key: string) => void;
   onNavigate: (url?: string) => void;
+  styles: ReturnType<typeof StyleSheet.create>;
 }) {
-  const bellColors = getBellColors(item.severity);
+  const colors = useColors();
+  const bellColors = getBellColors(item.severity, colors);
   const timeStr = item.created_at ? dayjs(item.created_at).fromNow() : '';
   const hasLink = !!item.url;
 
@@ -93,7 +95,8 @@ function NotifRow({
   );
 }
 
-function EmptyState() {
+function EmptyState({ styles }: { styles: ReturnType<typeof StyleSheet.create> }) {
+  const colors = useColors();
   return (
     <View style={styles.emptyContainer}>
       <FontAwesome5 name="check-circle" size={48} color={colors.success} solid />
@@ -103,6 +106,39 @@ function EmptyState() {
 }
 
 export default function NotificationsScreen() {
+  const colors = useColors();
+  const styles = StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background },
+    header: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+      paddingHorizontal: 16, paddingVertical: 14,
+      borderBottomWidth: 1, borderBottomColor: colors.border,
+    },
+    headerTitle: { color: colors.text, fontSize: 18, fontWeight: '700' },
+    markAllBtn: { paddingHorizontal: 10, paddingVertical: 6 },
+    markAllText: { color: colors.primary, fontSize: 14, fontWeight: '600' },
+    loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+    list: { paddingVertical: 8 },
+    emptyList: { flex: 1 },
+    separator: { height: 1, backgroundColor: colors.border, marginLeft: 64 },
+    item: { flexDirection: 'row', alignItems: 'flex-start', paddingHorizontal: 16, paddingVertical: 14 },
+    itemUnread: { backgroundColor: colors.surface, borderLeftWidth: 3, borderLeftColor: colors.primary },
+    itemRead: { opacity: 0.6 },
+    bellContainer: {
+      width: 36, height: 36, borderRadius: 18,
+      alignItems: 'center', justifyContent: 'center',
+      marginRight: 12, marginTop: 1,
+    },
+    itemContent: { flex: 1 },
+    itemTitle: { color: colors.text, fontSize: 14, fontWeight: '600', lineHeight: 20, marginBottom: 2 },
+    itemReadText: { color: colors.textSecondary, fontWeight: '400' },
+    itemDetail: { color: colors.textSecondary, fontSize: 13, marginBottom: 2 },
+    itemNote: { color: colors.textSecondary, fontSize: 12, fontStyle: 'italic', marginBottom: 4 },
+    itemTime: { color: colors.textSecondary, fontSize: 12 },
+    markReadBtn: { padding: 4, marginLeft: 8, alignSelf: 'center' },
+    emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 60 },
+    emptyText: { color: colors.textSecondary, fontSize: 15 },
+  });
   const navigation = useNavigation<any>();
   const { data, isLoading, refetch, isRefetching } = useNotifications();
   const { mutate: markAllRead, isPending: isMarking } = useMarkAllRead();
@@ -144,9 +180,10 @@ export default function NotificationsScreen() {
               item={item}
               onMarkRead={markRead}
               onNavigate={(url) => navigateFromUrl(navigation, url ?? '')}
+              styles={styles}
             />
           )}
-          ListEmptyComponent={<EmptyState />}
+          ListEmptyComponent={<EmptyState styles={styles} />}
           onRefresh={refetch}
           refreshing={isRefetching}
           contentContainerStyle={notifications.length === 0 ? styles.emptyList : styles.list}
@@ -157,35 +194,3 @@ export default function NotificationsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingVertical: 14,
-    borderBottomWidth: 1, borderBottomColor: colors.border,
-  },
-  headerTitle: { color: colors.text, fontSize: 18, fontWeight: '700' },
-  markAllBtn: { paddingHorizontal: 10, paddingVertical: 6 },
-  markAllText: { color: colors.primary, fontSize: 14, fontWeight: '600' },
-  loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  list: { paddingVertical: 8 },
-  emptyList: { flex: 1 },
-  separator: { height: 1, backgroundColor: colors.border, marginLeft: 64 },
-  item: { flexDirection: 'row', alignItems: 'flex-start', paddingHorizontal: 16, paddingVertical: 14 },
-  itemUnread: { backgroundColor: colors.surface, borderLeftWidth: 3, borderLeftColor: colors.primary },
-  itemRead: { opacity: 0.6 },
-  bellContainer: {
-    width: 36, height: 36, borderRadius: 18,
-    alignItems: 'center', justifyContent: 'center',
-    marginRight: 12, marginTop: 1,
-  },
-  itemContent: { flex: 1 },
-  itemTitle: { color: colors.text, fontSize: 14, fontWeight: '600', lineHeight: 20, marginBottom: 2 },
-  itemReadText: { color: colors.textSecondary, fontWeight: '400' },
-  itemDetail: { color: colors.textSecondary, fontSize: 13, marginBottom: 2 },
-  itemNote: { color: colors.textSecondary, fontSize: 12, fontStyle: 'italic', marginBottom: 4 },
-  itemTime: { color: colors.textSecondary, fontSize: 12 },
-  markReadBtn: { padding: 4, marginLeft: 8, alignSelf: 'center' },
-  emptyContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 60 },
-  emptyText: { color: colors.textSecondary, fontSize: 15 },
-});
