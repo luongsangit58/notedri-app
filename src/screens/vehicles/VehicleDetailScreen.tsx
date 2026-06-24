@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useVehicle, useVehicleHealth, useVehicleReminders } from '../../hooks/useVehicles';
+import { useObdDtcEvents } from '../../hooks/useObd';
 import LoadingView from '../../components/LoadingView';
 import ErrorView from '../../components/ErrorView';
 import { useColors } from '../../utils/theme';
@@ -232,6 +233,7 @@ export default function VehicleDetailScreen() {
   const { data: vehicle, isLoading, isError, refetch, isFetching } = useVehicle(vehicleId);
   const { data: health } = useVehicleHealth(vehicleId);
   const { data: remindersData } = useVehicleReminders(vehicleId);
+  const { data: dtcData } = useObdDtcEvents(vehicleId);
 
   if (isLoading) return <LoadingView />;
   if (isError) return <ErrorView message="Không tải được chi tiết xe" onRetry={refetch} />;
@@ -254,6 +256,7 @@ export default function VehicleDetailScreen() {
     : 'Cần chú ý';
 
   const reminders = remindersData?.data ?? remindersData ?? [];
+  const activeDtc: any[] = dtcData?.data ?? [];
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom']}>
@@ -341,6 +344,40 @@ export default function VehicleDetailScreen() {
             <Text style={{ color: colors.text, fontWeight: '600' }}>Cập nhật ODO</Text>
           </TouchableOpacity>
         </View>
+
+        {/* OBD */}
+        <TouchableOpacity
+          onPress={() => navigation.navigate('OBDSetup', { vehicleId })}
+          style={{
+            flexDirection: 'row', alignItems: 'center', gap: 12,
+            backgroundColor: '#0F172A', borderRadius: 12, padding: 14, marginBottom: 12,
+          }}>
+          <View style={{
+            width: 40, height: 40, borderRadius: 20,
+            backgroundColor: '#1E3A5F', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <FontAwesome5 name="plug" size={16} color="#60A5FA" solid />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: '#F1F5F9', fontWeight: '700', fontSize: 14 }}>Ket noi OBD</Text>
+            <Text style={{ color: '#94A3B8', fontSize: 12, marginTop: 1 }}>
+              {activeDtc.length > 0
+                ? `${activeDtc.length} ma loi chua xu ly`
+                : 'Doc du lieu xe tu dong qua Bluetooth'}
+            </Text>
+          </View>
+          {activeDtc.length > 0 && (
+            <View style={{
+              backgroundColor: '#EF4444', borderRadius: 10,
+              paddingHorizontal: 8, paddingVertical: 2,
+            }}>
+              <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>
+                {activeDtc.length}
+              </Text>
+            </View>
+          )}
+          <FontAwesome5 name="chevron-right" size={13} color="#475569" />
+        </TouchableOpacity>
 
         {/* Sức khoẻ xe — breakdown card */}
         {healthData != null && (
