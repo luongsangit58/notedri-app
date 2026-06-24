@@ -104,7 +104,7 @@ export default function OBDDashboardScreen() {
         <View
           style={[
             styles.statusBadge,
-            { backgroundColor: isConnected ? '#DCFCE7' : '#FEE2E2' },
+            { backgroundColor: isConnected ? '#22C55E22' : '#EF444422' },
           ]}
         >
           <View
@@ -116,7 +116,7 @@ export default function OBDDashboardScreen() {
           <Text
             style={[
               styles.statusText,
-              { color: isConnected ? '#15803D' : '#B91C1C' },
+              { color: isConnected ? '#22C55E' : '#EF4444' },
             ]}
           >
             {isConnected ? t('obd.connected') : t('obd.disconnected')}

@@ -32,9 +32,9 @@ interface NotificationItem {
 
 function getBellColors(severity: NotificationItem['severity'] | undefined, colors: any): { bg: string; icon: string } {
   switch (severity) {
-    case 'urgent': return { bg: '#FEE2E2', icon: '#DC2626' };
-    case 'warn':   return { bg: '#FEF3C7', icon: '#D97706' };
-    case 'info':   return { bg: '#E0F2FE', icon: '#0284C7' };
+    case 'urgent': return { bg: '#EF444422', icon: '#EF4444' };
+    case 'warn':   return { bg: '#F59E0B22', icon: '#F59E0B' };
+    case 'info':   return { bg: '#0EA5E922', icon: '#0EA5E9' };
     default:       return { bg: colors.surface, icon: colors.textSecondary };
   }
 }

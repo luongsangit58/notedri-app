@@ -272,10 +272,14 @@ function ReportContent({
 
   if (!data) return null;
 
+  /* year_review is the authoritative source for per-year aggregates */
+  const yr = data.year_review ?? null;
+
   /* ── resolve fuel cost ── */
   const fuelCost =
     data.total_refuel_cost ??
     data.tong_tien_xang ??
+    yr?.fuel_cost ??
     data.all_time?.tong_tien ??
     data.fuel?.total_cost ??
     null;
@@ -284,6 +288,7 @@ function ReportContent({
   const serviceCost =
     data.total_service_cost ??
     data.tong_tien_dich_vu ??
+    yr?.service_cost ??
     data.service?.total_cost ??
     null;
 
@@ -300,6 +305,7 @@ function ReportContent({
     data.total_km ??
     data.tong_km ??
     data.km_driven ??
+    yr?.km ??
     data.all_time?.tong_km ??
     null;
 
@@ -308,6 +314,7 @@ function ReportContent({
     data.total_refuels ??
     data.so_lan_do_xang ??
     data.refuel_count ??
+    yr?.fill_count ??
     data.all_time?.so_lan ??
     null;
 
@@ -316,6 +323,7 @@ function ReportContent({
     data.total_services ??
     data.so_lan_bao_duong ??
     data.service_count ??
+    yr?.service_count ??
     data.service?.count ??
     null;
 
@@ -323,6 +331,7 @@ function ReportContent({
   const totalLiters =
     data.total_liters ??
     data.tong_lit ??
+    yr?.liters ??
     data.all_time?.tong_lit ??
     null;
 
@@ -330,27 +339,25 @@ function ReportContent({
   const avgConsumption =
     data.avg_consumption ??
     data.tieu_hao_trung_binh ??
+    data.overall_consumption?.l100 ??
     data.consumption ??
     null;
 
-  /* ── year review ── */
-  const yr = data.year_review ?? null;
-  // API returns: yr.km, yr.fuel_cost, yr.fill_count, yr.service_cost, yr.service_count
+  /* ── year review derived totals ── */
   const yrKm = yr?.km ?? null;
   const yrCost =
     yr?.fuel_cost != null && yr?.service_cost != null
       ? (yr.fuel_cost as number) + (yr.service_cost as number)
       : yr?.fuel_cost ?? yr?.service_cost ?? null;
   const yrRefuels = yr?.fill_count ?? null;
-  // API doesn't return avg_consumption; skip it (would need liters/km calculation)
 
   /* ── monthly top 3 ── */
   const monthly: any[] = Array.isArray(data.monthly) ? data.monthly : [];
   const top3Months = [...monthly]
     .sort(
       (a, b) =>
-        Number(b.chi_phi ?? b.cost ?? b.total_cost ?? 0) -
-        Number(a.chi_phi ?? a.cost ?? a.total_cost ?? 0),
+        Number(b.tong_tien ?? b.chi_phi ?? b.cost ?? b.total_cost ?? 0) -
+        Number(a.tong_tien ?? a.chi_phi ?? a.cost ?? a.total_cost ?? 0),
     )
     .slice(0, 3);
 
@@ -610,7 +617,7 @@ function ReportContent({
         <SectionCard title={t('year_review.top_station')}>
           {top3Stations.map((s, i) => {
             const name =
-              s.ten ?? s.name ?? s.station_name ?? `Trạm ${i + 1}`;
+              s.cay_xang ?? s.ten ?? s.name ?? s.station_name ?? `Trạm ${i + 1}`;
             const count =
               s.so_lan ?? s.count ?? s.visits ?? null;
             const amount =
