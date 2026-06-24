@@ -36,6 +36,7 @@ export default function AddOdometerScreen() {
   const [vehicleId, setVehicleId] = useState<number | null>(defaultVehicle?.id ?? null);
   const [odo, setOdo] = useState('');
   const [ngay, setNgay] = useState(dayjs().format('YYYY-MM-DD'));
+  const [ghiChu, setGhiChu] = useState('');
   const [ocrOpen, setOcrOpen] = useState(false);
 
   useEffect(() => {
@@ -52,8 +53,16 @@ export default function AddOdometerScreen() {
     if (!vehicleId) { Alert.alert('Lỗi', 'Vui lòng chọn xe'); return; }
     if (!odo) { Alert.alert('Lỗi', 'Vui lòng nhập số ODO'); return; }
     try {
-      await createOdometer.mutateAsync({ vehicleId, data: { odometer: parseInt(odo), ngay } });
-      navigation.goBack();
+      const res = await createOdometer.mutateAsync({
+        vehicleId,
+        data: { odometer: parseInt(odo), ngay, ghi_chu: ghiChu.trim() || undefined },
+      });
+      const warning = (res as any)?.meta?.warning;
+      if (warning) {
+        Alert.alert('Lưu ý', warning, [{ text: 'OK', onPress: () => navigation.goBack() }]);
+      } else {
+        navigation.goBack();
+      }
     } catch (err: any) {
       const errs = err.response?.data?.errors;
       const detail = errs ? Object.values(errs).flat().join('\n') : null;
@@ -124,6 +133,15 @@ export default function AddOdometerScreen() {
             value={ngay}
             onChangeText={setNgay}
             placeholder="YYYY-MM-DD"
+            placeholderTextColor={colors.textSecondary}
+            style={[input, { marginBottom: 16 }]}
+          />
+
+          <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 6 }}>Ghi chú</Text>
+          <TextInput
+            value={ghiChu}
+            onChangeText={setGhiChu}
+            placeholder="VD: Sau chuyến đi Đà Lạt..."
             placeholderTextColor={colors.textSecondary}
             style={[input, { marginBottom: 24 }]}
           />

@@ -149,6 +149,7 @@ export default function DashboardScreen() {
     .filter((s: any) => !dismissedSuggestions.has(s.key));
   const recent: any[] = Array.isArray(d.recent) ? d.recent : [];
   const fuelBoard: any[] = Array.isArray(d.fuel_board) ? d.fuel_board : [];
+  const odaStaleDays: number | null = d.odo_stale_days ?? null;
 
   const healthOverall: string | null = health?.overall ?? null;
   const HEALTH_COLOR: Record<string, string> = { ok: colors.success, warn: colors.warning, urgent: colors.error };
@@ -373,6 +374,28 @@ export default function DashboardScreen() {
               </View>
             ))}
           </View>
+        )}
+
+        {/* ODO stale warning */}
+        {odaStaleDays != null && odaStaleDays >= 14 && (
+          <TouchableOpacity
+            onPress={() => nav.navigate('AddOdometer')}
+            style={{
+              flexDirection: 'row', alignItems: 'center', gap: 10,
+              backgroundColor: colors.warning + '18', borderRadius: 12, padding: 12, marginBottom: 10,
+              borderWidth: 1, borderColor: colors.warning + '44',
+            }}>
+            <FontAwesome5 name="road" size={14} color={colors.warning} solid />
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: colors.warning, fontWeight: '700', fontSize: 13 }}>
+                Chưa cập nhật ODO {odaStaleDays} ngày
+              </Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 2 }}>
+                Nhấn để nhập số ODO mới - giúp tính chính xác hơn
+              </Text>
+            </View>
+            <FontAwesome5 name="chevron-right" size={12} color={colors.warning} />
+          </TouchableOpacity>
         )}
 
         {/* Thống kê 3 ô */}
