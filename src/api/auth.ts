@@ -6,7 +6,10 @@ export const authApi = {
   googleMobile: (idToken: string) =>
     client.post('/auth/google', { id_token: idToken }),
   logout: () => client.post('/auth/logout'),
-  me: () => client.get('/auth/me'),
+  me: (bearerToken?: string) =>
+    bearerToken
+      ? client.get('/auth/me', { headers: { Authorization: `Bearer ${bearerToken}` } })
+      : client.get('/auth/me'),
   pushToken: (token: string) =>
     client.post('/auth/push-token', { expo_push_token: token }),
   register: (name: string, email: string, password: string, password_confirmation: string) =>

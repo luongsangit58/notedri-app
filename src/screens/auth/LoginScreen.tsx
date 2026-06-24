@@ -1,25 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView,
   Platform, ScrollView, Alert,
 } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
-import * as Google from 'expo-auth-session/providers/google';
-import { makeRedirectUri } from 'expo-auth-session';
 import { useAuthStore } from '../../store/authStore';
 import { useColors } from '../../utils/theme';
 import { useT } from '../../i18n';
 import PasswordInput from '../../components/PasswordInput';
+import { BASE_URL } from '../../utils/api';
 
-WebBrowser.maybeCompleteAuthSession();
-
-const GOOGLE_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? '';
-
-// Dùng scheme của app — không qua Expo proxy.
-// Expo proxy không có client_secret nên không đổi được code → không có idToken.
-// responseType='id_token': Google trả idToken thẳng vào URL, không cần server exchange.
-// URI cần đăng ký trong Google Console: notedri://
-const REDIRECT_URI = makeRedirectUri({ scheme: 'notedri' });
+// Mobile Google auth flow:
+// App mở browser → notedri.com/auth/google/mobile → Google xác thực
+// → web tạo Sanctum token → redirect notedri://auth?token=xxx → app bắt URL
+const GOOGLE_MOBILE_URL = `${BASE_URL}/auth/google/mobile`;
 
 export default function LoginScreen({ navigation }: { navigation: any }) {
   const t = useT();
@@ -27,32 +21,6 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const { login, loginWithGoogle, isLoading, error, clearError } = useAuthStore();
-
-  const [request, response, promptAsync] = Google.useAuthRequest({
-    clientId: GOOGLE_CLIENT_ID,
-    redirectUri: REDIRECT_URI,
-    scopes: ['openid', 'profile', 'email'],
-    responseType: 'id_token',
-    usePKCE: false,
-  });
-
-  useEffect(() => {
-    if (!response) return;
-    if (response.type === 'success') {
-      // responseType='id_token': Google trả trực tiếp trong params
-      const idToken = (response.params as any)?.id_token
-        ?? (response as any).authentication?.idToken;
-      if (idToken) {
-        loginWithGoogle(idToken).catch(() => {});
-      } else {
-        Alert.alert(t('common.error'), t('auth.google_no_id_token'));
-      }
-    } else if (response.type === 'error') {
-      const errCode = (response.params as any)?.error ?? 'error';
-      const errDesc = (response.params as any)?.error_description ?? 'Đăng nhập Google thất bại';
-      Alert.alert('Google: ' + errCode, errDesc);
-    }
-  }, [response]);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -65,11 +33,32 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
   };
 
   const handleGoogle = async () => {
-    if (!GOOGLE_CLIENT_ID) {
-      Alert.alert(t('auth.google_not_configured'), t('auth.google_client_id_missing'));
-      return;
+    try {
+      const result = await WebBrowser.openAuthSessionAsync(
+        GOOGLE_MOBILE_URL,
+        'notedri://auth',
+      );
+      if (result.type !== 'success') return;
+      const url = result.url;
+      const params = new URLSearchParams(url.split('?')[1] ?? '');
+      const token = params.get('token');
+      const googleError = params.get('error');
+      if (googleError) {
+        Alert.alert(t('common.error'), decodeURIComponent(googleError));
+        return;
+      }
+      if (!token) {
+        Alert.alert(t('common.error'), t('auth.google_no_id_token'));
+        return;
+      }
+      // Fetch full user info với token vừa nhận
+      const { authApi } = await import('../../api/auth');
+      const me = await authApi.me(token);
+      const userData = me.data?.data ?? me.data;
+      await useAuthStore.getState().setSession(token, userData);
+    } catch (e: any) {
+      Alert.alert(t('common.error'), e?.message ?? 'Đăng nhập Google thất bại');
     }
-    await promptAsync();
   };
 
   const inputStyle = {
@@ -175,7 +164,7 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
 
           <TouchableOpacity
             onPress={handleGoogle}
-            disabled={isLoading || !request}
+            disabled={isLoading}
             style={{
               backgroundColor: colors.background,
               paddingVertical: 12,
@@ -186,7 +175,7 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
               gap: 10,
               borderWidth: 1,
               borderColor: colors.border,
-              opacity: (!request || isLoading) ? 0.5 : 1,
+              opacity: isLoading ? 0.5 : 1,
             }}
           >
             <Text style={{ fontSize: 18, lineHeight: 20 }}>🇬</Text>
