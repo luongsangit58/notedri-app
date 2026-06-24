@@ -596,20 +596,25 @@ export default function DashboardScreen() {
             </View>
             {recent.slice(0, 5).map((r: any, i: number) => (
               <View key={r.id ?? i} style={{
-                flexDirection: 'row', alignItems: 'center', paddingVertical: 8,
+                paddingVertical: 8,
                 borderTopWidth: i > 0 ? 1 : 0, borderTopColor: colors.border,
               }}>
-                <Text style={{ color: colors.textSecondary, fontSize: 12, width: 38 }}>{dayjs(r.ngay).format('DD/MM')}</Text>
-                <Text style={{ color: colors.textSecondary, fontSize: 13, flex: 1 }}>
-                  {r.so_lit ? `${Number(r.so_lit).toFixed(1)} L` : ''}
-                  {r.fuel_type ? ` · ${r.fuel_type}` : ''}
-                </Text>
-                <Text style={{ color: colors.textSecondary, fontSize: 12, flex: 1 }} numberOfLines={1}>
-                  {r.cay_xang ?? ''}
-                </Text>
-                <Text style={{ color: colors.text, fontWeight: '700', fontSize: 13, textAlign: 'right' }}>
-                  {formatVND(r.tong_tien)}
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <Text style={{ color: colors.textSecondary, fontSize: 12, width: 38 }}>{dayjs(r.ngay).format('DD/MM')}</Text>
+                  <Text style={{ color: colors.text, fontWeight: '600', fontSize: 13, flex: 1 }} numberOfLines={1}>
+                    {r.cay_xang ?? '—'}
+                  </Text>
+                  <Text style={{ color: colors.text, fontWeight: '700', fontSize: 13, textAlign: 'right' }}>
+                    {formatVND(r.tong_tien)}
+                  </Text>
+                </View>
+                {(r.so_lit || r.fuel_type) ? (
+                  <View style={{ paddingLeft: 38, marginTop: 2 }}>
+                    <Text style={{ color: colors.textSecondary, fontSize: 11 }} numberOfLines={1}>
+                      {[r.so_lit ? `${Number(r.so_lit).toFixed(1)} L` : null, r.fuel_type].filter(Boolean).join(' · ')}
+                    </Text>
+                  </View>
+                ) : null}
               </View>
             ))}
           </View>
@@ -641,7 +646,7 @@ export default function DashboardScreen() {
                   </Text>
                   {f.delta != null && f.delta !== 0 && (
                     <Text style={{ color: f.delta > 0 ? colors.error : colors.success, fontSize: 11 }}>
-                      {f.delta > 0 ? `▲${f.delta}` : `▼${Math.abs(f.delta)}`}
+                      {(f.delta > 0 ? '▲' : '▼') + formatVND(Math.abs(f.delta))}
                     </Text>
                   )}
                 </View>

@@ -8,7 +8,7 @@ export const refuelsApi = {
   update: (id: number, data: any) => client.put(`/refuels/${id}`, data),
   delete: (id: number) => client.delete(`/refuels/${id}`),
   nearbyStations: (lat: number, lng: number) =>
-    client.get('/refuels/nearby-stations', { params: { lat, lng } }),
+    client.get('/refuels/nearby-stations', { params: { lat, lon: lng } }),
   fuelPrice: (type: string) =>
     client.get('/refuels/fuel-price', { params: { type } }),
 };
