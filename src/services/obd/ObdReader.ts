@@ -55,7 +55,11 @@ async function readPid(pid: string): Promise<number[] | null> {
   }
 }
 
-export async function initializeElm327(): Promise<boolean> {
+export type InitResult =
+  | { ok: true; dataAvailable: boolean }
+  | { ok: false; dataAvailable: false };
+
+export async function initializeElm327(): Promise<InitResult> {
   try {
     await bleService.sendCommand('ATZ', 3000);
     await bleService.sendCommand('ATE0');
@@ -63,9 +67,16 @@ export async function initializeElm327(): Promise<boolean> {
     await bleService.sendCommand('ATH0');
     await bleService.sendCommand('ATS0');
     await bleService.sendCommand('ATSP0');
-    return true;
+
+    // Health-check: try reading RPM and Speed to confirm the vehicle ECU is
+    // responding. Both null means the adapter connected but the car is off,
+    // uses an unsupported protocol, or the vehicle predates OBD-II.
+    const [rpm, speed] = await Promise.all([readRpm(), readSpeed()]);
+    const dataAvailable = rpm !== null || speed !== null;
+
+    return { ok: true, dataAvailable };
   } catch {
-    return false;
+    return { ok: false, dataAvailable: false };
   }
 }
 

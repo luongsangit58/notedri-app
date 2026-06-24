@@ -59,6 +59,7 @@ export default function OBDDashboardScreen() {
     isTripActive,
     currentTripRef,
     lastTripSummary,
+    warning,
     disconnect,
     startTrip,
     stopTrip,
@@ -119,6 +120,16 @@ export default function OBDDashboardScreen() {
             {isConnected ? 'Da ket noi' : 'Mat ket noi'}
           </Text>
         </View>
+
+        {/* No-data warning: adapter connected but ECU not responding */}
+        {warning === 'no_data' && (
+          <View style={styles.warningBanner}>
+            <FontAwesome5 name="exclamation-triangle" size={13} color="#FEF3C7" solid />
+            <Text style={styles.warningText}>
+              Ket noi duoc nhung khong doc duoc du lieu xe. Thu no may va ket noi lai, hoac kiem tra xe co ho tro OBD-II (2005+).
+            </Text>
+          </View>
+        )}
 
         {/* Live stats grid */}
         <View style={styles.statsGrid}>
@@ -223,6 +234,15 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 10,
   },
+  warningBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    backgroundColor: '#78350F',
+    borderRadius: 10,
+    padding: 12,
+  },
+  warningText: { color: '#FEF3C7', fontSize: 13, flex: 1, lineHeight: 18 },
   tripBtnText: { color: '#fff', fontWeight: '600', fontSize: 15 },
   historyBtn: {
     flexDirection: 'row',

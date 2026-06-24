@@ -7,6 +7,8 @@ import { TripSession, TripSummary } from '../services/obd/TripSession';
 import { enqueueTripSync } from '../services/obd/TripSyncQueue';
 import { useAuthStore } from '../store/authStore';
 
+export type ObdWarning = 'no_data' | null;
+
 // ---- Data queries ----
 
 export const useObdTrips = (vehicleId: number) => {
@@ -45,6 +47,7 @@ export function useObdConnection(vehicleId: number) {
   const [liveSnapshot, setLiveSnapshot] = useState<ObdSnapshot | null>(null);
   const [lastTripSummary, setLastTripSummary] = useState<TripSummary | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [warning, setWarning] = useState<ObdWarning>(null);
 
   // Keep trip session in a ref (not state) so cleanup effects always see the
   // latest instance without stale closure problems.
@@ -137,10 +140,11 @@ export function useObdConnection(vehicleId: number) {
 
     try {
       await bleService.connect(deviceId);
-      const ok = await initializeElm327();
-      if (!ok) throw new Error('Khong the khoi tao ELM327');
+      const result = await initializeElm327();
+      if (!result.ok) throw new Error('Khong the khoi tao ELM327');
 
       setConnectionState('connected');
+      setWarning(result.dataAvailable ? null : 'no_data');
 
       const snap = await readSnapshot();
       setLiveSnapshot(snap);
@@ -220,6 +224,7 @@ export function useObdConnection(vehicleId: number) {
     currentTripRef,
     lastTripSummary,
     errorMessage,
+    warning,
     isConnected: connectionState === 'connected',
     isTripActive,
     startScan,
