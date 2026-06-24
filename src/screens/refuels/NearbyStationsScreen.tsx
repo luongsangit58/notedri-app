@@ -9,6 +9,7 @@ import * as Location from 'expo-location';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { refuelsApi } from '../../api/refuels';
 import { useColors } from '../../utils/theme';
+import { useT } from '../../i18n';
 
 type Station = {
   name?: string;
@@ -25,6 +26,7 @@ type ScreenState = 'idle' | 'requesting' | 'loading' | 'success' | 'permission_d
 
 export default function NearbyStationsScreen() {
   const colors = useColors();
+  const t = useT();
   const navigation = useNavigation();
   const [screenState, setScreenState] = useState<ScreenState>('idle');
   const [stations, setStations] = useState<Station[]>([]);
@@ -71,7 +73,7 @@ export default function NearbyStationsScreen() {
       borderRadius: 10,
     },
     retryText: {
-      color: '#fff',
+      color: colors.primaryText,
       fontWeight: '700',
       fontSize: 15,
     },
@@ -143,7 +145,7 @@ export default function NearbyStationsScreen() {
       alignItems: 'center',
     },
     distanceText: {
-      color: '#fff',
+      color: colors.primaryText,
       fontWeight: '700',
       fontSize: 12,
     },
@@ -180,7 +182,7 @@ export default function NearbyStationsScreen() {
     fetchNearby();
   }, [fetchNearby]);
 
-  const getStationName = (s: Station) => s.name ?? s.ten ?? 'Trạm xăng';
+  const getStationName = (s: Station) => s.name ?? s.ten ?? t('nearby_stations.default_name');
   const getStationAddress = (s: Station) => s.address ?? s.dia_chi ?? '';
   const formatDistance = (d?: number | string) => {
     if (d == null) return null;
@@ -235,7 +237,7 @@ export default function NearbyStationsScreen() {
       return (
         <View style={styles.center}>
           <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.statusText}>Đang lấy vị trí của bạn...</Text>
+          <Text style={styles.statusText}>{t('nearby_stations.getting_location')}</Text>
         </View>
       );
     }
@@ -244,7 +246,7 @@ export default function NearbyStationsScreen() {
       return (
         <View style={styles.center}>
           <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.statusText}>Đang tìm trạm xăng gần đây...</Text>
+          <Text style={styles.statusText}>{t('nearby_stations.searching')}</Text>
         </View>
       );
     }
@@ -255,12 +257,12 @@ export default function NearbyStationsScreen() {
           <View style={styles.bigIconWrap}>
             <FontAwesome5 name="map-marker-slash" size={40} color={colors.warning} solid />
           </View>
-          <Text style={styles.errorTitle}>Cần quyền vị trí</Text>
+          <Text style={styles.errorTitle}>{t('nearby_stations.permission_title')}</Text>
           <Text style={styles.errorBody}>
-            Vui lòng cho phép NoteDri truy cập vị trí để tìm trạm xăng gần bạn.
+            {t('nearby_stations.permission_desc')}
           </Text>
           <TouchableOpacity style={styles.retryButton} onPress={fetchNearby}>
-            <Text style={styles.retryText}>Thử lại</Text>
+            <Text style={styles.retryText}>{t('common.retry')}</Text>
           </TouchableOpacity>
         </View>
       );
@@ -272,10 +274,10 @@ export default function NearbyStationsScreen() {
           <View style={styles.bigIconWrap}>
             <FontAwesome5 name="exclamation-triangle" size={40} color={colors.warning} solid />
           </View>
-          <Text style={styles.errorTitle}>Có lỗi xảy ra</Text>
+          <Text style={styles.errorTitle}>{t('nearby_stations.error_title')}</Text>
           <Text style={styles.errorBody}>{errorMsg}</Text>
           <TouchableOpacity style={styles.retryButton} onPress={fetchNearby}>
-            <Text style={styles.retryText}>Thử lại</Text>
+            <Text style={styles.retryText}>{t('common.retry')}</Text>
           </TouchableOpacity>
         </View>
       );
@@ -287,10 +289,10 @@ export default function NearbyStationsScreen() {
           <View style={styles.bigIconWrap}>
             <FontAwesome5 name="search" size={40} color={colors.textSecondary} solid />
           </View>
-          <Text style={styles.errorTitle}>Không tìm thấy trạm nào</Text>
-          <Text style={styles.errorBody}>Không có trạm xăng nào gần vị trí của bạn.</Text>
+          <Text style={styles.errorTitle}>{t('nearby_stations.empty_title')}</Text>
+          <Text style={styles.errorBody}>{t('nearby_stations.empty_subtitle')}</Text>
           <TouchableOpacity style={styles.retryButton} onPress={fetchNearby}>
-            <Text style={styles.retryText}>Tải lại</Text>
+            <Text style={styles.retryText}>{t('nearby_stations.reload')}</Text>
           </TouchableOpacity>
         </View>
       );
@@ -304,7 +306,7 @@ export default function NearbyStationsScreen() {
         contentContainerStyle={{ padding: 16 }}
         ListHeaderComponent={
           <Text style={styles.listHeader}>
-            {stations.length} trạm xăng gần bạn
+            {t('nearby_stations.count_title', { count: stations.length })}
           </Text>
         }
         ItemSeparatorComponent={() => <View style={{ height: 10 }} />}

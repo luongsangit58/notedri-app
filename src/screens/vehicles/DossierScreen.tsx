@@ -11,6 +11,7 @@ import { servicesApi } from '../../api/services';
 import { useColors } from '../../utils/theme';
 import { formatVND, formatKm } from '../../utils/format';
 import dayjs from 'dayjs';
+import { useT } from '../../i18n';
 
 /* ─── types ─── */
 interface Vehicle {
@@ -105,6 +106,7 @@ function TypeBadge({ label }: { label: string }) {
 /* ─── screen ─── */
 export default function DossierScreen() {
   const colors = useColors();
+  const t = useT();
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
   const { vehicleId } = route.params as { vehicleId: number };
@@ -160,7 +162,7 @@ export default function DossierScreen() {
           setServices(allServices);
         }
       } catch (e: any) {
-        if (!cancelled) setError(e?.message ?? 'Lỗi tải dữ liệu');
+        if (!cancelled) setError(e?.message ?? t('common.error_generic'));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -171,19 +173,19 @@ export default function DossierScreen() {
 
   const handleShare = async () => {
     if (!vehicle) return;
-    const name = vehicle.ten ?? vehicle.name ?? 'Xe';
+    const name = vehicle.ten ?? vehicle.name ?? t('dossier.my_vehicle');
     const plate = vehicle.bien_so ?? vehicle.license_plate ?? '';
     const odoNum = Number(vehicle.odo_hien_tai ?? vehicle.current_odometer ?? 0);
     const count = services.length;
     const totalCost = services.reduce((s, r) => s + serviceCost(r), 0);
     if (shareUrl) {
       await Share.share({
-        message: `Sổ tay xe: ${name}${plate ? ` (${plate})` : ''}\nODO: ${formatKm(odoNum)} | Bảo dưỡng: ${count} lần | Chi phí: ${formatVND(totalCost)}\nXem chi tiết: ${shareUrl}`,
+        message: t('dossier.share_summary', { name, plate: plate ? ` (${plate})` : '', odo: formatKm(odoNum), count, cost: formatVND(totalCost), url: shareUrl }),
         url: shareUrl,
       });
     } else {
       await Share.share({
-        message: `Xe: ${name}${plate ? ` (${plate})` : ''}\nODO: ${formatKm(odoNum)}\nBảo dưỡng: ${count} lần\nTổng chi bảo dưỡng: ${formatVND(totalCost)}\nNoteDri - Sổ tay xe điện tử`,
+        message: `${t('common.vehicle')}: ${name}${plate ? ` (${plate})` : ''}\nODO: ${formatKm(odoNum)}\n${formatVND(totalCost)}\nNoteDri`,
       });
     }
   };
@@ -196,27 +198,27 @@ export default function DossierScreen() {
       setShareUrl(url);
       if (url) {
         Alert.alert(
-          'Link sổ tay đã sẵn sàng',
-          `${url}\n\nNgười nhận có thể xem mà không cần đăng nhập.`,
+          t('dossier.link_ready_title'),
+          t('dossier.link_ready_msg', { url }),
           [
-            { text: 'Sao chép', onPress: () => Clipboard.setString(url) },
-            { text: 'Chia sẻ', onPress: () => Share.share({ message: url, url }) },
-            { text: 'Đóng' },
+            { text: t('dossier.link_copy'), onPress: () => Clipboard.setString(url) },
+            { text: t('dossier.link_share'), onPress: () => Share.share({ message: url, url }) },
+            { text: t('dossier.link_close') },
           ],
         );
       }
     } catch {
-      Alert.alert('Lỗi', 'Không tạo được link chia sẻ.');
+      Alert.alert(t('common.error'), t('dossier.link_error'));
     } finally {
       setShareLoading(false);
     }
   };
 
   const handleRevokeLink = async () => {
-    Alert.alert('Tắt link chia sẻ?', 'Link cũ sẽ không còn hoạt động.', [
-      { text: 'Huỷ', style: 'cancel' },
+    Alert.alert(t('dossier.revoke_link_title'), t('dossier.revoke_link_msg'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Tắt link', style: 'destructive', onPress: async () => {
+        text: t('dossier.revoke_link_btn'), style: 'destructive', onPress: async () => {
           await client.post(`/vehicles/${vehicleId}/share-token`, { enable: false });
           setShareUrl(null);
         },
@@ -229,7 +231,7 @@ export default function DossierScreen() {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}>
         <ActivityIndicator color={colors.primary} size="large" />
-        <Text style={{ color: colors.textSecondary, marginTop: 12 }}>Đang tải sổ tay xe...</Text>
+        <Text style={{ color: colors.textSecondary, marginTop: 12 }}>{t('dossier.loading')}</Text>
       </SafeAreaView>
     );
   }
@@ -237,12 +239,12 @@ export default function DossierScreen() {
   if (error || !vehicle) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
-        <Text style={{ color: colors.error, fontSize: 16, fontWeight: '700', marginBottom: 8 }}>Không tải được dữ liệu</Text>
+        <Text style={{ color: colors.error, fontSize: 16, fontWeight: '700', marginBottom: 8 }}>{t('dossier.error_title')}</Text>
         <Text style={{ color: colors.textSecondary, textAlign: 'center' }}>{error}</Text>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
           style={{ marginTop: 20, backgroundColor: colors.surface, borderRadius: 10, paddingHorizontal: 24, paddingVertical: 10 }}>
-          <Text style={{ color: colors.text }}>Quay lại</Text>
+          <Text style={{ color: colors.text }}>{t('common.back')}</Text>
         </TouchableOpacity>
       </SafeAreaView>
     );
@@ -267,7 +269,7 @@ export default function DossierScreen() {
       }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <FontAwesome5 name="book-open" size={16} color={colors.text} solid />
-          <Text style={{ color: colors.text, fontSize: 18, fontWeight: '800' }}>Sổ tay xe</Text>
+          <Text style={{ color: colors.text, fontSize: 18, fontWeight: '800' }}>{t('dossier.title')}</Text>
         </View>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
@@ -283,7 +285,7 @@ export default function DossierScreen() {
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <View style={{ flex: 1 }}>
               <Text style={{ color: colors.text, fontSize: 20, fontWeight: '800' }}>
-                {vehicle.ten ?? vehicle.name ?? 'Xe của tôi'}
+                {vehicle.ten ?? vehicle.name ?? t('dossier.my_vehicle')}
               </Text>
               {(vehicle.bien_so ?? vehicle.license_plate) ? (
                 <View style={{
@@ -311,7 +313,7 @@ export default function DossierScreen() {
                     <FontAwesome5 name="gas-pump" size={12} color={colors.textSecondary} solid />
                     <Text style={{ color: colors.textSecondary, fontSize: 13 }}>
                       {vehicle.fuel_type}
-                      {vehicle.tank_capacity_l ? ` · Bình ${vehicle.tank_capacity_l}L` : ''}
+                      {vehicle.tank_capacity_l ? ` · ${t('dossier.tank_label')} ${vehicle.tank_capacity_l}L` : ''}
                     </Text>
                   </View>
                 ) : null}
@@ -319,7 +321,7 @@ export default function DossierScreen() {
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                     <FontAwesome5 name="chart-bar" size={12} color={colors.textSecondary} solid />
                     <Text style={{ color: colors.textSecondary, fontSize: 13 }}>
-                      Tiêu hao NSX: {vehicle.consumption_official} L/100km
+                      {t('dossier.consumption_official_label')}: {vehicle.consumption_official} L/100km
                     </Text>
                   </View>
                 ) : null}
@@ -327,7 +329,7 @@ export default function DossierScreen() {
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                     <FontAwesome5 name="calendar-alt" size={12} color={colors.textSecondary} solid />
                     <Text style={{ color: colors.textSecondary, fontSize: 13 }}>
-                      Mua: {dayjs(vehicle.ngay_mua).format('DD/MM/YYYY')}
+                      {t('dossier.purchase_date_label')}: {dayjs(vehicle.ngay_mua).format('DD/MM/YYYY')}
                     </Text>
                   </View>
                 ) : null}
@@ -356,31 +358,31 @@ export default function DossierScreen() {
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
           <View style={{ flexDirection: 'row', gap: 8, flex: 1 }}>
             <StatCard
-              label="Tổng chi BD"
+              label={t('dossier.total_service_cost')}
               value={formatVND(totalCost)}
               accent={colors.warning}
             />
             <StatCard
-              label="Số lần BD"
+              label={t('dossier.service_count')}
               value={String(services.length)}
               accent={colors.success}
             />
           </View>
           <View style={{ flexDirection: 'row', gap: 8, flex: 1 }}>
             <StatCard
-              label="ODO hiện tại"
+              label="ODO"
               value={odo >= 1000 ? `${(odo / 1000).toFixed(0)}k km` : `${odo} km`}
               accent={colors.primary}
             />
             {healthScore != null ? (
               <StatCard
-                label="Điểm sức khoẻ"
+                label={t('dossier.health_score')}
                 value={`${healthScore}/100`}
                 accent={healthColor}
               />
             ) : (
               <StatCard
-                label="Loại nhiên liệu"
+                label={t('vehicles.fuel_type_label')}
                 value={vehicle.fuel_type ?? '—'}
                 accent={colors.textSecondary}
               />
@@ -393,12 +395,12 @@ export default function DossierScreen() {
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
             <FontAwesome5 name="wrench" size={14} color={colors.text} solid />
             <Text style={{ color: colors.text, fontWeight: '700', fontSize: 15 }}>
-              Lịch sử bảo dưỡng
+              {t('dossier.service_history_title')}
             </Text>
           </View>
           {services.length === 0 ? (
             <Text style={{ color: colors.textSecondary, textAlign: 'center', paddingVertical: 16 }}>
-              Chưa có lịch sử bảo dưỡng nào.
+              {t('dossier.service_history_empty')}
             </Text>
           ) : (
             services.map((svc, idx) => {
@@ -453,9 +455,9 @@ export default function DossierScreen() {
             backgroundColor: colors.primary, borderRadius: 12, paddingVertical: 12,
             flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
           }}>
-          <FontAwesome5 name="share-alt" size={14} color="#fff" solid />
-          <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>
-            {shareUrl ? 'Chia sẻ kèm link' : 'Chia sẻ tóm tắt'}
+          <FontAwesome5 name="share-alt" size={14} color={colors.primaryText} solid />
+          <Text style={{ color: colors.primaryText, fontWeight: '700', fontSize: 14 }}>
+            {shareUrl ? t('dossier.share_with_link') : t('dossier.share_summary')}
           </Text>
         </TouchableOpacity>
 
@@ -471,7 +473,7 @@ export default function DossierScreen() {
                   borderWidth: 1, borderColor: colors.border,
                 }}>
                 <FontAwesome5 name="link" size={12} color={colors.primary} solid />
-                <Text style={{ color: colors.primary, fontWeight: '600', fontSize: 13 }}>Sao chép link</Text>
+                <Text style={{ color: colors.primary, fontWeight: '600', fontSize: 13 }}>{t('dossier.copy_link')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={handleRevokeLink}
@@ -495,7 +497,7 @@ export default function DossierScreen() {
                 ? <ActivityIndicator size="small" color={colors.primary} />
                 : <>
                     <FontAwesome5 name="link" size={12} color={colors.textSecondary} solid />
-                    <Text style={{ color: colors.textSecondary, fontSize: 13 }}>Tạo link công khai cho người mua</Text>
+                    <Text style={{ color: colors.textSecondary, fontSize: 13 }}>{t('dossier.create_public_link')}</Text>
                   </>
               }
             </TouchableOpacity>

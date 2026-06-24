@@ -3,6 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, Linking } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useColors } from '../../utils/theme';
+import { useT } from '../../i18n';
 import Constants from 'expo-constants';
 
 const version = Constants.expoConfig?.version ?? '1.0.0';
@@ -25,6 +26,7 @@ function LinkRow({ icon, label, url }: { icon: string; label: string; url: strin
 
 export default function AboutScreen() {
   const colors = useColors();
+  const t = useT();
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom']}>
       <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
@@ -36,38 +38,38 @@ export default function AboutScreen() {
             backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center',
             marginBottom: 14,
           }}>
-            <FontAwesome5 name="car-side" size={36} color="#fff" solid />
+            <FontAwesome5 name="car-side" size={36} color={colors.primaryText} solid />
           </View>
           <Text style={{ color: colors.text, fontWeight: '800', fontSize: 26, letterSpacing: -0.5 }}>
             Note<Text style={{ color: colors.primary }}>Dri</Text>
           </Text>
           <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 4 }}>
-            Phiên bản {version}
+            {t('about.version')} {version}
           </Text>
           <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>
-            Quản lý xe thông minh, dành cho người Việt
+            {t('about.tagline')}
           </Text>
         </View>
 
         {/* Links */}
         <View style={{ backgroundColor: colors.surface, borderRadius: 14, marginHorizontal: 16, overflow: 'hidden', marginBottom: 16 }}>
-          <LinkRow icon="globe" label="Website" url="https://notedri.com" />
-          <LinkRow icon="shield-alt" label="Chính sách bảo mật" url="https://notedri.com/privacy" />
-          <LinkRow icon="file-contract" label="Điều khoản sử dụng" url="https://notedri.com/terms" />
+          <LinkRow icon="globe" label={t('about.website')} url="https://notedri.com" />
+          <LinkRow icon="shield-alt" label={t('about.privacy_policy')} url="https://notedri.com/privacy" />
+          <LinkRow icon="file-contract" label={t('about.terms')} url="https://notedri.com/terms" />
         </View>
 
         {/* Features summary */}
         <View style={{ backgroundColor: colors.surface, borderRadius: 14, marginHorizontal: 16, padding: 16, marginBottom: 16 }}>
           <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14, marginBottom: 12 }}>
-            Tính năng chính
+            {t('about.features_title')}
           </Text>
           {[
-            { icon: 'gas-pump',   text: 'Theo dõi đổ xăng & tiêu hao nhiên liệu' },
-            { icon: 'tools',      text: 'Nhật ký bảo dưỡng & lịch nhắc nhở' },
-            { icon: 'heartbeat',  text: 'Chẩn đoán sức khoẻ xe tự động' },
-            { icon: 'chart-bar',  text: 'Báo cáo chi phí theo năm' },
-            { icon: 'road',       text: 'Theo dõi ODO & lịch sử hành trình' },
-            { icon: 'folder-open', text: 'Hồ sơ xe kỹ thuật số' },
+            { icon: 'gas-pump',    text: t('about.feature_refuel') },
+            { icon: 'tools',       text: t('about.feature_service') },
+            { icon: 'heartbeat',   text: t('about.feature_health') },
+            { icon: 'chart-bar',   text: t('about.feature_reports') },
+            { icon: 'road',        text: t('about.feature_odo') },
+            { icon: 'folder-open', text: t('about.feature_dossier') },
           ].map((f, i) => (
             <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 }}>
               <FontAwesome5 name={f.icon} size={13} color={colors.primary} solid style={{ width: 18 }} />
@@ -77,8 +79,8 @@ export default function AboutScreen() {
         </View>
 
         <Text style={{ color: colors.textSecondary, fontSize: 11, textAlign: 'center', marginHorizontal: 24 }}>
-          NoteDri được phát triển bởi Miichisoft.{'\n'}
-          Mọi dữ liệu xe được lưu trữ bảo mật trên máy chủ của bạn.
+          {t('about.developer')}{'\n'}
+          {t('about.developer_data_note')}
         </Text>
       </ScrollView>
     </SafeAreaView>

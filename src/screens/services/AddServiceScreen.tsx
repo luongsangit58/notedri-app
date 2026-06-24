@@ -10,6 +10,7 @@ import dayjs from 'dayjs';
 import { useVehicles } from '../../hooks/useVehicles';
 import { useCreateService } from '../../hooks/useServices';
 import { useColors } from '../../utils/theme';
+import { useT } from '../../i18n';
 
 const LOAI_OPTIONS = [
   { value: 'bao_duong', label: 'Bảo dưỡng' },
@@ -33,6 +34,7 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
 
 export default function AddServiceScreen() {
   const colors = useColors();
+  const t = useT();
   const styles = StyleSheet.create({
     container: {
       flex: 1,
@@ -64,7 +66,7 @@ export default function AddServiceScreen() {
       fontSize: 13,
     },
     chipTextActive: {
-      color: '#fff',
+      color: colors.primaryText,
     },
     input: {
       backgroundColor: colors.surface,
@@ -127,11 +129,11 @@ export default function AddServiceScreen() {
 
   const handleSubmit = async () => {
     if (!vehicleId) {
-      Alert.alert('Lỗi', 'Vui lòng chọn xe');
+      Alert.alert(t('common.error'), 'Vui lòng chọn xe');
       return;
     }
     if (!hangMuc.trim()) {
-      Alert.alert('Lỗi', 'Vui lòng nhập tên hạng mục');
+      Alert.alert(t('common.error'), 'Vui lòng nhập tên hạng mục');
       return;
     }
     try {
@@ -150,7 +152,7 @@ export default function AddServiceScreen() {
       const msg = err.response?.data?.message ?? 'Không lưu được';
       const errs = err.response?.data?.errors;
       const detail = errs ? Object.values(errs).flat().join('\n') : null;
-      Alert.alert('Lỗi', detail ?? msg);
+      Alert.alert(t('common.error'), detail ?? msg);
     }
   };
 
@@ -162,7 +164,7 @@ export default function AddServiceScreen() {
           {/* Vehicle selector */}
           {vehicles.length > 0 && (
             <>
-              <FieldLabel>Chọn xe</FieldLabel>
+              <FieldLabel>{t('common.select_vehicle')}</FieldLabel>
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
@@ -190,7 +192,7 @@ export default function AddServiceScreen() {
           )}
 
           {/* Loai selector */}
-          <FieldLabel>Loại</FieldLabel>
+          <FieldLabel>{t('services.type_label')}</FieldLabel>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -216,7 +218,7 @@ export default function AddServiceScreen() {
           </ScrollView>
 
           {/* Hang muc */}
-          <FieldLabel>Hạng mục *</FieldLabel>
+          <FieldLabel>{t('services.item_label')}</FieldLabel>
           <TextInput
             value={hangMuc}
             onChangeText={setHangMuc}
@@ -226,29 +228,29 @@ export default function AddServiceScreen() {
           />
 
           {/* Chi phi */}
-          <FieldLabel>Chi phí (đ)</FieldLabel>
+          <FieldLabel>{t('services.cost_label')}</FieldLabel>
           <TextInput
             value={chiPhi}
             onChangeText={setChiPhi}
-            placeholder="Chi phí (đ)"
+            placeholder={t('services.cost_label')}
             placeholderTextColor={colors.textSecondary}
             keyboardType="numeric"
             style={styles.input}
           />
 
           {/* Odometer */}
-          <FieldLabel>ODO (km)</FieldLabel>
+          <FieldLabel>{t('refuels.odo_label')}</FieldLabel>
           <TextInput
             value={odometer}
             onChangeText={setOdometer}
-            placeholder="ODO (km)"
+            placeholder={t('refuels.odo_label')}
             placeholderTextColor={colors.textSecondary}
             keyboardType="numeric"
             style={styles.input}
           />
 
           {/* Ngay */}
-          <FieldLabel>Ngày</FieldLabel>
+          <FieldLabel>{t('common.date')}</FieldLabel>
           <TextInput
             value={ngay}
             onChangeText={setNgay}
@@ -258,7 +260,7 @@ export default function AddServiceScreen() {
           />
 
           {/* Noi lam */}
-          <FieldLabel>Nơi làm</FieldLabel>
+          <FieldLabel>{t('services.location_label')}</FieldLabel>
           <TextInput
             value={noiLam}
             onChangeText={setNoiLam}
@@ -268,7 +270,7 @@ export default function AddServiceScreen() {
           />
 
           {/* Ghi chu */}
-          <FieldLabel>Ghi chú</FieldLabel>
+          <FieldLabel>{t('common.note')}</FieldLabel>
           <TextInput
             value={ghiChu}
             onChangeText={setGhiChu}
@@ -289,7 +291,7 @@ export default function AddServiceScreen() {
               : (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                   <FontAwesome5 name="wrench" size={16} color="#fff" solid />
-                  <Text style={styles.submitText}>Lưu bảo dưỡng</Text>
+                  <Text style={styles.submitText}>{t('services.save_button')}</Text>
                 </View>
               )}
           </TouchableOpacity>

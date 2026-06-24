@@ -17,6 +17,7 @@ import { refuelsApi } from '../../api/refuels';
 import { useColors } from '../../utils/theme';
 import { formatVND, formatVNDShort, formatKm } from '../../utils/format';
 import { useAuthStore } from '../../store/authStore';
+import { useT } from '../../i18n';
 import dayjs from 'dayjs';
 
 function formatDuration(seconds: number): string {
@@ -56,6 +57,7 @@ export default function OBDTripsScreen() {
   const vehicleName: string = route.params?.vehicleName ?? 'Xe';
   const consumptionOfficial: number | null = route.params?.consumptionOfficial ?? null;
 
+  const t = useT();
   const colors = useColors();
   const isPremium = useAuthStore((s) => s.user?.is_premium ?? false);
 
@@ -135,7 +137,7 @@ export default function OBDTripsScreen() {
           {idlePct > 0 && (
             <StatChip
               icon="parking"
-              label={`${idlePct}% cho`}
+              label={t('obd.idle_pct', { pct: idlePct })}
               color={idlePct > 30 ? '#F59E0B' : '#64748B'}
             />
           )}
@@ -152,7 +154,7 @@ export default function OBDTripsScreen() {
           <View style={[styles.fuelBar, { backgroundColor: colors.border }]}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
               <Text style={{ color: colors.textSecondary, fontSize: 11 }}>
-                Xang: {trip.fuel_level_start_pct}% → {trip.fuel_level_end_pct}%
+                {t('obd.fuel_bar', { start: trip.fuel_level_start_pct, end: trip.fuel_level_end_pct })}
               </Text>
               <Text style={{ color: '#10B981', fontSize: 11 }}>
                 -{trip.fuel_level_start_pct - trip.fuel_level_end_pct}%
@@ -179,7 +181,7 @@ export default function OBDTripsScreen() {
           <FontAwesome5 name="arrow-left" size={18} color={colors.text} />
         </TouchableOpacity>
         <View>
-          <Text style={[styles.title, { color: colors.text }]}>Lich su chuyen di</Text>
+          <Text style={[styles.title, { color: colors.text }]}>{t('obd.trips_title')}</Text>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{vehicleName}</Text>
         </View>
         <View style={{ width: 32 }} />
@@ -190,7 +192,7 @@ export default function OBDTripsScreen() {
         <View style={styles.dtcBanner}>
           <FontAwesome5 name="exclamation-triangle" size={13} color="#FEF3C7" solid />
           <Text style={styles.dtcBannerText}>
-            {activeDtc.length} ma loi dong co chua xu ly: {activeDtc.slice(0, 3).map((d: any) => d.code).join(', ')}
+            {t('obd.dtc_alert', { n: activeDtc.length, codes: activeDtc.slice(0, 3).map((d: any) => d.code).join(', ') })}
           </Text>
         </View>
       )}
@@ -202,21 +204,21 @@ export default function OBDTripsScreen() {
             <Text style={[styles.summaryValue, { color: colors.text }]}>
               {totalStats.totalTrips}
             </Text>
-            <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>chuyen</Text>
+            <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>{t('obd.summary_trips')}</Text>
           </View>
           <View style={[styles.summaryDivider, { backgroundColor: colors.border }]} />
           <View style={styles.summaryItem}>
             <Text style={[styles.summaryValue, { color: colors.text }]}>
               {formatKm(totalStats.totalKm)}
             </Text>
-            <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>tong km</Text>
+            <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>{t('obd.summary_total_km')}</Text>
           </View>
           <View style={[styles.summaryDivider, { backgroundColor: colors.border }]} />
           <View style={styles.summaryItem}>
             <Text style={[styles.summaryValue, { color: '#3B82F6' }]}>
               {formatVNDShort(totalStats.estimatedCost)}
             </Text>
-            <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>uoc tinh xang</Text>
+            <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>{t('obd.summary_fuel_estimate')}</Text>
           </View>
           <View style={[styles.summaryDivider, { backgroundColor: colors.border }]} />
           <View style={styles.summaryItem}>
@@ -226,7 +228,7 @@ export default function OBDTripsScreen() {
             ]}>
               {formatDuration(totalStats.totalIdleSec)}
             </Text>
-            <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>thoi gian cho</Text>
+            <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>{t('obd.summary_idle_time')}</Text>
           </View>
         </View>
       )}
@@ -237,7 +239,7 @@ export default function OBDTripsScreen() {
         <View style={styles.empty}>
           <FontAwesome5 name="route" size={40} color={colors.textSecondary} />
           <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-            Chua co chuyen di nao duoc ghi lai.{'\n'}Ket noi OBD va bat dau lai xe.
+            {t('obd.trips_empty')}
           </Text>
         </View>
       ) : (

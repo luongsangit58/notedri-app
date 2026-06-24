@@ -9,6 +9,7 @@ import { useDeleteRefuel } from '../../hooks/useRefuels';
 import { refuelsApi } from '../../api/refuels';
 import client from '../../api/client';
 import { useColors } from '../../utils/theme';
+import { useT } from '../../i18n';
 
 const FUEL_TYPES = ['E5 RON 95-V', 'RON 95-III', 'E5 RON 92', 'Dầu DO 0,05S-V', 'Dầu DO 0,001S'];
 
@@ -22,6 +23,7 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
 }
 
 export default function EditRefuelScreen() {
+  const t = useT();
   const colors = useColors();
   const inputStyle = {
     backgroundColor: colors.surface,
@@ -74,7 +76,7 @@ export default function EditRefuelScreen() {
 
   const handleUpdate = async () => {
     if (!tongTien && !soLit) {
-      Alert.alert('Lỗi', 'Nhập ít nhất tổng tiền hoặc số lít');
+      Alert.alert(t('common.error'), 'Nhập ít nhất tổng tiền hoặc số lít');
       return;
     }
     setUpdating(true);
@@ -95,7 +97,7 @@ export default function EditRefuelScreen() {
       const msg = err?.response?.data?.message ?? 'Không cập nhật được';
       const errs = err?.response?.data?.errors;
       const detail = errs ? Object.values(errs).flat().join('\n') : null;
-      Alert.alert('Lỗi', detail ?? msg);
+      Alert.alert(t('common.error'), detail ?? msg);
     } finally {
       setUpdating(false);
     }
@@ -103,18 +105,18 @@ export default function EditRefuelScreen() {
 
   const handleDelete = () => {
     Alert.alert(
-      'Xoá lần đổ xăng',
-      'Bạn có chắc muốn xoá lần đổ xăng này? Hành động này không thể hoàn tác.',
+      t('refuels.delete_confirm_title'),
+      t('refuels.delete_confirm_message'),
       [
-        { text: 'Huỷ', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Xoá',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: () => {
             deleteRefuel.mutate(refuelId, {
               onSuccess: () => navigation.goBack(),
               onError: (e: any) =>
-                Alert.alert('Lỗi', e?.response?.data?.message ?? 'Không xoá được'),
+                Alert.alert(t('common.error'), e?.response?.data?.message ?? 'Không xoá được'),
             });
           },
         },
@@ -160,7 +162,7 @@ export default function EditRefuelScreen() {
 
           {/* Tổng tiền */}
           <View style={{ marginBottom: 4 }}>
-            <FieldLabel>Tổng tiền (đ) *</FieldLabel>
+            <FieldLabel>{t('refuels.total_amount_label')}</FieldLabel>
             <TextInput
               value={tongTien}
               onChangeText={setTongTien}
@@ -174,7 +176,7 @@ export default function EditRefuelScreen() {
           {/* Số lít + Giá/lít */}
           <View style={{ flexDirection: 'row', gap: 8, marginBottom: 4 }}>
             <View style={{ flex: 1 }}>
-              <FieldLabel>Số lít</FieldLabel>
+              <FieldLabel>{t('refuels.liters_label')}</FieldLabel>
               <TextInput
                 value={soLit}
                 onChangeText={setSoLit}
@@ -185,7 +187,7 @@ export default function EditRefuelScreen() {
               />
             </View>
             <View style={{ flex: 1 }}>
-              <FieldLabel>Giá/lít</FieldLabel>
+              <FieldLabel>{t('refuels.price_per_liter_label')}</FieldLabel>
               <TextInput
                 value={giaLit}
                 onChangeText={setGiaLit}
@@ -197,7 +199,7 @@ export default function EditRefuelScreen() {
             </View>
           </View>
 
-          <FieldLabel>ODO (km)</FieldLabel>
+          <FieldLabel>{t('refuels.odo_label')}</FieldLabel>
           <TextInput
             value={odometer}
             onChangeText={setOdometer}
@@ -207,7 +209,7 @@ export default function EditRefuelScreen() {
             style={[inputStyle, { marginBottom: 4 }]}
           />
 
-          <FieldLabel>Ngày</FieldLabel>
+          <FieldLabel>{t('refuels.date_label')}</FieldLabel>
           <TextInput
             value={ngay}
             onChangeText={setNgay}
@@ -216,7 +218,7 @@ export default function EditRefuelScreen() {
             style={[inputStyle, { marginBottom: 4 }]}
           />
 
-          <FieldLabel>Cây xăng</FieldLabel>
+          <FieldLabel>{t('refuels.station_label')}</FieldLabel>
           <TextInput
             value={cayXang}
             onChangeText={setCayXang}
@@ -225,7 +227,7 @@ export default function EditRefuelScreen() {
             style={[inputStyle, { marginBottom: 4 }]}
           />
 
-          <FieldLabel>Ghi chú</FieldLabel>
+          <FieldLabel>{t('refuels.note_label')}</FieldLabel>
           <TextInput
             value={ghiChu}
             onChangeText={setGhiChu}
@@ -246,7 +248,7 @@ export default function EditRefuelScreen() {
             marginBottom: 20,
           }}>
             <View>
-              <Text style={{ color: colors.text, fontWeight: '600' }}>Đổ đầy bình</Text>
+              <Text style={{ color: colors.text, fontWeight: '600' }}>{t('refuels.full_tank_label')}</Text>
               <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>
                 Tính L/100km chính xác hơn
               </Text>
@@ -273,7 +275,7 @@ export default function EditRefuelScreen() {
             }}>
             {updating
               ? <ActivityIndicator color="#fff" />
-              : <Text style={{ color: '#fff', fontWeight: '800', fontSize: 16 }}>Cập nhật</Text>}
+              : <Text style={{ color: colors.primaryText, fontWeight: '800', fontSize: 16 }}>{t('common.update')}</Text>}
           </TouchableOpacity>
 
           {/* Xoá button */}
@@ -291,7 +293,7 @@ export default function EditRefuelScreen() {
             }}>
             {deleteRefuel.isPending
               ? <ActivityIndicator color={colors.error} />
-              : <Text style={{ color: colors.error, fontSize: 16, fontWeight: '700' }}>Xoá lần đổ xăng</Text>}
+              : <Text style={{ color: colors.error, fontSize: 16, fontWeight: '700' }}>{t('refuels.delete_confirm_title')}</Text>}
           </TouchableOpacity>
 
         </ScrollView>

@@ -8,23 +8,10 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { remindersApi } from '../../api/reminders';
 import { useQueryClient } from '@tanstack/react-query';
 import { useColors } from '../../utils/theme';
+import { useT } from '../../i18n';
 
 type Loai = 'bao_duong' | 'dang_kiem' | 'bao_hiem' | 'giay_to' | 'khac';
 type CheDo = 'chu_ky' | 'ngay_co_dinh' | 'mot_lan';
-
-const LOAI_OPTIONS: { value: Loai; label: string }[] = [
-  { value: 'bao_duong', label: 'Bảo dưỡng' },
-  { value: 'dang_kiem', label: 'Đăng kiểm' },
-  { value: 'bao_hiem', label: 'Bảo hiểm' },
-  { value: 'giay_to', label: 'Giấy tờ' },
-  { value: 'khac', label: 'Khác' },
-];
-
-const CHE_DO_OPTIONS: { value: CheDo; label: string }[] = [
-  { value: 'chu_ky', label: 'Định kỳ' },
-  { value: 'ngay_co_dinh', label: 'Ngày cố định' },
-  { value: 'mot_lan', label: 'Một lần' },
-];
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
   const colors = useColors();
@@ -36,6 +23,7 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
 }
 
 export default function EditReminderScreen() {
+  const t = useT();
   const colors = useColors();
   const inputStyle = {
     backgroundColor: colors.surface,
@@ -49,6 +37,20 @@ export default function EditReminderScreen() {
   const route = useRoute<any>();
   const { reminderId, vehicleId } = route.params as { reminderId: number; vehicleId: number };
   const qc = useQueryClient();
+
+  const LOAI_OPTIONS: { value: Loai; label: string }[] = [
+    { value: 'bao_duong', label: t('reminders.type_bao_duong') },
+    { value: 'dang_kiem', label: t('reminders.type_dang_kiem') },
+    { value: 'bao_hiem', label: t('reminders.type_bao_hiem') },
+    { value: 'giay_to', label: t('reminders.type_giay_to') },
+    { value: 'khac', label: t('reminders.type_khac') },
+  ];
+
+  const CHE_DO_OPTIONS: { value: CheDo; label: string }[] = [
+    { value: 'chu_ky', label: t('reminders.mode_chu_ky') },
+    { value: 'ngay_co_dinh', label: t('reminders.mode_ngay_co_dinh') },
+    { value: 'mot_lan', label: t('reminders.mode_mot_lan') },
+  ];
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -70,7 +72,7 @@ export default function EditReminderScreen() {
         const list: any[] = r.data?.data ?? r.data ?? [];
         const found = list.find((item: any) => item.id === reminderId);
         if (!found) {
-          Alert.alert('Lỗi', 'Không tìm thấy lời nhắc');
+          Alert.alert(t('common.error'), t('reminders.error_not_found'));
           navigation.goBack();
           return;
         }
@@ -85,7 +87,7 @@ export default function EditReminderScreen() {
         setGhiChu(found.ghi_chu ?? '');
       })
       .catch((e: any) => {
-        Alert.alert('Lỗi', e?.response?.data?.message ?? 'Không tải được dữ liệu');
+        Alert.alert(t('common.error'), e?.response?.data?.message ?? t('reminders.error_load_failed'));
         navigation.goBack();
       })
       .finally(() => setLoading(false));
@@ -93,7 +95,7 @@ export default function EditReminderScreen() {
 
   const handleUpdate = () => {
     if (!hang_muc.trim()) {
-      Alert.alert('Thiếu thông tin', 'Vui lòng nhập hạng mục');
+      Alert.alert(t('common.error'), t('reminders.error_missing_item'));
       return;
     }
 
@@ -115,19 +117,19 @@ export default function EditReminderScreen() {
         navigation.goBack();
       })
       .catch((e: any) => {
-        Alert.alert('Lỗi', e?.response?.data?.message ?? 'Có lỗi xảy ra');
+        Alert.alert(t('common.error'), e?.response?.data?.message ?? t('common.error_generic'));
       })
       .finally(() => setSaving(false));
   };
 
   const handleDelete = () => {
     Alert.alert(
-      'Xoá lời nhắc',
-      'Bạn có chắc muốn xoá lời nhắc này không?',
+      t('reminders.delete_confirm_title'),
+      t('reminders.delete_confirm_message', { name: hang_muc }),
       [
-        { text: 'Huỷ', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Xoá',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: () => {
             setDeleting(true);
@@ -138,7 +140,7 @@ export default function EditReminderScreen() {
                 navigation.goBack();
               })
               .catch((e: any) => {
-                Alert.alert('Lỗi', e?.response?.data?.message ?? 'Có lỗi xảy ra');
+                Alert.alert(t('common.error'), e?.response?.data?.message ?? t('common.error_generic'));
               })
               .finally(() => setDeleting(false));
           },
@@ -170,7 +172,7 @@ export default function EditReminderScreen() {
           borderBottomColor: colors.border,
         }}>
           <Text style={{ color: colors.text, fontSize: 18, fontWeight: '700' }}>
-            Sửa lời nhắc
+            {t('reminders.edit_title')}
           </Text>
           <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <Text style={{ color: colors.textSecondary, fontSize: 22, lineHeight: 26 }}>✕</Text>
@@ -180,11 +182,11 @@ export default function EditReminderScreen() {
         <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
 
           {/* Hạng mục */}
-          <FieldLabel>Hạng mục *</FieldLabel>
+          <FieldLabel>{t('reminders.item_label')}</FieldLabel>
           <TextInput
             value={hang_muc}
             onChangeText={setHangMuc}
-            placeholder="VD: Thay nhớt, Đăng kiểm..."
+            placeholder={t('reminders.item_placeholder')}
             placeholderTextColor={colors.textSecondary}
             style={inputStyle}
           />
@@ -242,7 +244,7 @@ export default function EditReminderScreen() {
           {/* Chu kỳ fields */}
           {che_do === 'chu_ky' && (
             <>
-              <FieldLabel>Chu kỳ km</FieldLabel>
+              <FieldLabel>{t('reminders.km_cycle_label')}</FieldLabel>
               <TextInput
                 value={interval_km}
                 onChangeText={setIntervalKm}
@@ -252,7 +254,7 @@ export default function EditReminderScreen() {
                 style={inputStyle}
               />
 
-              <FieldLabel>Chu kỳ tháng</FieldLabel>
+              <FieldLabel>{t('reminders.month_cycle_label')}</FieldLabel>
               <TextInput
                 value={interval_thang}
                 onChangeText={setIntervalThang}
@@ -286,7 +288,7 @@ export default function EditReminderScreen() {
           {/* Ngày đến hạn */}
           {(che_do === 'ngay_co_dinh' || che_do === 'mot_lan') && (
             <>
-              <FieldLabel>Ngày đến hạn (YYYY-MM-DD)</FieldLabel>
+              <FieldLabel>{t('reminders.due_date_label')}</FieldLabel>
               <TextInput
                 value={due_date}
                 onChangeText={setDueDate}
@@ -322,7 +324,7 @@ export default function EditReminderScreen() {
             }}>
             {saving
               ? <ActivityIndicator color="#fff" />
-              : <Text style={{ color: '#fff', fontWeight: '800', fontSize: 16 }}>Cập nhật</Text>}
+              : <Text style={{ color: colors.primaryText, fontWeight: '800', fontSize: 16 }}>{t('common.update')}</Text>}
           </TouchableOpacity>
 
           {/* Xoá button */}
@@ -341,7 +343,7 @@ export default function EditReminderScreen() {
             }}>
             {deleting
               ? <ActivityIndicator color={colors.error} />
-              : <Text style={{ color: colors.error, fontWeight: '700', fontSize: 16 }}>Xoá lời nhắc</Text>}
+              : <Text style={{ color: colors.error, fontWeight: '700', fontSize: 16 }}>{t('reminders.delete_confirm_title')}</Text>}
           </TouchableOpacity>
 
         </ScrollView>

@@ -7,12 +7,15 @@ import axios from 'axios';
 import { API_URL } from '../../utils/api';
 import { useAuthStore } from '../../store/authStore';
 import { useColors } from '../../utils/theme';
+import { useT } from '../../i18n';
+import PasswordInput from '../../components/PasswordInput';
 
 interface Props {
   navigation: any;
 }
 
 export default function RegisterScreen({ navigation }: Props) {
+  const t = useT();
   const colors = useColors();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -31,19 +34,19 @@ export default function RegisterScreen({ navigation }: Props) {
     setError(null);
 
     if (!name.trim()) {
-      setError('Vui lòng nhập họ và tên');
+      setError(t('auth.name_required'));
       return;
     }
     if (!email.trim()) {
-      setError('Vui lòng nhập email');
+      setError(t('auth.email_required_field'));
       return;
     }
     if (!password) {
-      setError('Vui lòng nhập mật khẩu');
+      setError(t('auth.password_required'));
       return;
     }
     if (password !== passwordConfirmation) {
-      setError('Mật khẩu xác nhận không khớp');
+      setError(t('auth.password_mismatch'));
       return;
     }
 
@@ -95,7 +98,7 @@ export default function RegisterScreen({ navigation }: Props) {
         <View style={{ alignItems: 'center', marginBottom: 40 }}>
           <Text style={{ fontSize: 36, fontWeight: '800', color: colors.primary }}>NoteDri</Text>
           <Text style={{ color: colors.textSecondary, marginTop: 8, fontSize: 16 }}>
-            Tạo tài khoản
+            {t('auth.register_title')}
           </Text>
         </View>
 
@@ -117,7 +120,7 @@ export default function RegisterScreen({ navigation }: Props) {
         <TextInput
           value={name}
           onChangeText={(v) => { setError(null); setName(v); }}
-          placeholder="Họ và tên"
+          placeholder={t('auth.name')}
           placeholderTextColor={colors.textSecondary}
           autoCapitalize="words"
           returnKeyType="next"
@@ -130,7 +133,7 @@ export default function RegisterScreen({ navigation }: Props) {
           ref={emailRef}
           value={email}
           onChangeText={(v) => { setError(null); setEmail(v); }}
-          placeholder="Email"
+          placeholder={t('auth.email')}
           placeholderTextColor={colors.textSecondary}
           keyboardType="email-address"
           autoCapitalize="none"
@@ -140,29 +143,25 @@ export default function RegisterScreen({ navigation }: Props) {
         />
 
         {/* Password */}
-        <TextInput
-          ref={passwordRef}
+        <PasswordInput
+          inputRef={passwordRef}
           value={password}
           onChangeText={(v) => { setError(null); setPassword(v); }}
-          placeholder="Mật khẩu"
-          placeholderTextColor={colors.textSecondary}
-          secureTextEntry
+          placeholder={t('auth.password')}
           returnKeyType="next"
           onSubmitEditing={() => confirmRef.current?.focus()}
-          style={inputStyle}
+          style={{ marginBottom: 12 }}
         />
 
         {/* Password confirmation */}
-        <TextInput
-          ref={confirmRef}
+        <PasswordInput
+          inputRef={confirmRef}
           value={passwordConfirmation}
           onChangeText={(v) => { setError(null); setPasswordConfirmation(v); }}
-          placeholder="Xác nhận mật khẩu"
-          placeholderTextColor={colors.textSecondary}
-          secureTextEntry
+          placeholder={t('auth.password_confirm')}
           returnKeyType="done"
           onSubmitEditing={handleRegister}
-          style={{ ...inputStyle, marginBottom: 20 }}
+          style={{ marginBottom: 20 }}
         />
 
         {/* Submit button */}
@@ -177,8 +176,8 @@ export default function RegisterScreen({ navigation }: Props) {
             opacity: isLoading ? 0.7 : 1,
           }}
         >
-          <Text style={{ color: '#fff', fontWeight: '700', fontSize: 16 }}>
-            {isLoading ? 'Đang đăng ký...' : 'Đăng ký'}
+          <Text style={{ color: colors.primaryText, fontWeight: '700', fontSize: 16 }}>
+            {isLoading ? t('auth.registering') : t('auth.register')}
           </Text>
         </TouchableOpacity>
 
@@ -188,8 +187,8 @@ export default function RegisterScreen({ navigation }: Props) {
           style={{ marginTop: 24, alignItems: 'center' }}
         >
           <Text style={{ color: colors.textSecondary, fontSize: 14 }}>
-            Đã có tài khoản?{' '}
-            <Text style={{ color: colors.primary, fontWeight: '600' }}>Đăng nhập</Text>
+            {t('auth.already_account')}{' '}
+            <Text style={{ color: colors.primary, fontWeight: '600' }}>{t('auth.login')}</Text>
           </Text>
         </TouchableOpacity>
       </ScrollView>

@@ -11,6 +11,7 @@ import TimelineItem from '../../components/TimelineItem';
 import LoadingView from '../../components/LoadingView';
 import ErrorView from '../../components/ErrorView';
 import { useColors } from '../../utils/theme';
+import { useT } from '../../i18n';
 
 type TypeFilter = 'all' | 'refuel' | 'service';
 
@@ -22,6 +23,7 @@ const TYPE_CHIPS: { key: TypeFilter; label: string }[] = [
 
 export default function TimelineScreen() {
   const colors = useColors();
+  const t = useT();
   const styles = StyleSheet.create({
     filterHeader: {
       marginBottom: 8,
@@ -51,7 +53,7 @@ export default function TimelineScreen() {
       fontWeight: '400',
     },
     chipTextActive: {
-      color: '#fff',
+      color: colors.primaryText,
       fontWeight: '700',
     },
   });

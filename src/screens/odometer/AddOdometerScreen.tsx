@@ -12,8 +12,10 @@ import { useCreateOdometer } from '../../hooks/useOdometer';
 import OcrCamera from '../../components/OcrCamera';
 import { useColors } from '../../utils/theme';
 import { formatKm } from '../../utils/format';
+import { useT } from '../../i18n';
 
 export default function AddOdometerScreen() {
+  const t = useT();
   const colors = useColors();
   const input = {
     backgroundColor: colors.surface,
@@ -50,8 +52,8 @@ export default function AddOdometerScreen() {
   };
 
   const handleSubmit = async () => {
-    if (!vehicleId) { Alert.alert('Lỗi', 'Vui lòng chọn xe'); return; }
-    if (!odo) { Alert.alert('Lỗi', 'Vui lòng nhập số ODO'); return; }
+    if (!vehicleId) { Alert.alert(t('common.error'), 'Vui lòng chọn xe'); return; }
+    if (!odo) { Alert.alert(t('common.error'), 'Vui lòng nhập số ODO'); return; }
     try {
       const res = await createOdometer.mutateAsync({
         vehicleId,
@@ -66,7 +68,7 @@ export default function AddOdometerScreen() {
     } catch (err: any) {
       const errs = err.response?.data?.errors;
       const detail = errs ? Object.values(errs).flat().join('\n') : null;
-      Alert.alert('Lỗi', detail ?? err.response?.data?.message ?? 'Không lưu được');
+      Alert.alert(t('common.error'), detail ?? err.response?.data?.message ?? 'Không lưu được');
     }
   };
 
@@ -80,7 +82,7 @@ export default function AddOdometerScreen() {
           {/* Vehicle chips */}
           {vehicles.length > 1 && (
             <>
-              <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 6 }}>Chọn xe</Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 6 }}>{t('common.select_vehicle')}</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 14 }}>
                 {vehicles.map((v: any) => (
                   <TouchableOpacity
@@ -100,7 +102,7 @@ export default function AddOdometerScreen() {
           {/* Current ODO hint */}
           {currentVehicle?.odo_hien_tai != null && (
             <View style={{ backgroundColor: colors.surface, borderRadius: 10, padding: 14, marginBottom: 14, flexDirection: 'row', justifyContent: 'space-between' }}>
-              <Text style={{ color: colors.textSecondary, fontSize: 13 }}>ODO hiện tại</Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 13 }}>{t('odometer.current')}</Text>
               <Text style={{ color: colors.primary, fontWeight: '700' }}>
                 {formatKm(currentVehicle.odo_hien_tai)}
               </Text>
@@ -115,10 +117,10 @@ export default function AddOdometerScreen() {
               alignItems: 'center', marginBottom: 16, flexDirection: 'row', justifyContent: 'center', gap: 8,
             }}>
             <FontAwesome5 name="camera" size={18} color={colors.primary} solid />
-            <Text style={{ color: colors.primary, fontWeight: '600' }}>OCR từ đồng hồ xe</Text>
+            <Text style={{ color: colors.primary, fontWeight: '600' }}>{t('odometer.ocr_label')}</Text>
           </TouchableOpacity>
 
-          <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 6 }}>Số ODO (km) *</Text>
+          <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 6 }}>{t('odometer.value_label')}</Text>
           <TextInput
             value={odo}
             onChangeText={setOdo}
@@ -128,7 +130,7 @@ export default function AddOdometerScreen() {
             style={[input, { fontSize: 28, fontWeight: '800', textAlign: 'center', marginBottom: 16, letterSpacing: 2 }]}
           />
 
-          <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 6 }}>Ngày</Text>
+          <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 6 }}>{t('common.date')}</Text>
           <TextInput
             value={ngay}
             onChangeText={setNgay}
@@ -137,7 +139,7 @@ export default function AddOdometerScreen() {
             style={[input, { marginBottom: 16 }]}
           />
 
-          <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 6 }}>Ghi chú</Text>
+          <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 6 }}>{t('common.note')}</Text>
           <TextInput
             value={ghiChu}
             onChangeText={setGhiChu}
@@ -155,7 +157,7 @@ export default function AddOdometerScreen() {
               : (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                   <FontAwesome5 name="tachometer-alt" size={16} color="#fff" solid />
-                  <Text style={{ color: '#fff', fontWeight: '800', fontSize: 16 }}>Lưu ODO</Text>
+                  <Text style={{ color: colors.primaryText, fontWeight: '800', fontSize: 16 }}>{t('odometer.save_button')}</Text>
                 </View>
               )}
           </TouchableOpacity>

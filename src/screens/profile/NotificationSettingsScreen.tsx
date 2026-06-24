@@ -7,18 +7,20 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import client from '../../api/client';
 import { useColors } from '../../utils/theme';
+import { useT } from '../../i18n';
 
 type ReminderLevel = 'all' | 'urgent' | 'off';
 
-const LEVEL_OPTIONS: { key: ReminderLevel; label: string; desc: string }[] = [
-  { key: 'all',    label: 'Tất cả',    desc: 'Nhận mọi nhắc nhở theo lịch' },
-  { key: 'urgent', label: 'Khẩn cấp', desc: 'Chỉ nhắc khi sắp hết hạn (≤3 ngày)' },
-  { key: 'off',    label: 'Tắt hết',   desc: 'Không nhận thông báo nhắc nhở' },
-];
-
 export default function NotificationSettingsScreen() {
   const colors = useColors();
+  const t = useT();
   const qc = useQueryClient();
+
+  const LEVEL_OPTIONS: { key: ReminderLevel; label: string; desc: string }[] = [
+    { key: 'all',    label: t('notification_settings.level_all'),    desc: t('notification_settings.level_all_desc') },
+    { key: 'urgent', label: t('notification_settings.level_urgent'), desc: t('notification_settings.level_urgent_desc') },
+    { key: 'off',    label: t('notification_settings.level_off'),    desc: t('notification_settings.level_off_desc') },
+  ];
 
   const { data, isLoading } = useQuery({
     queryKey: ['notification-settings'],
@@ -47,9 +49,9 @@ export default function NotificationSettingsScreen() {
     onSuccess: () => {
       setDirty(false);
       qc.invalidateQueries({ queryKey: ['notification-settings'] });
-      Alert.alert('Đã lưu', 'Cài đặt thông báo đã được cập nhật.');
+      Alert.alert(t('notification_settings.saved_title'), t('notification_settings.save_success'));
     },
-    onError: () => Alert.alert('Lỗi', 'Không thể lưu cài đặt.'),
+    onError: () => Alert.alert(t('common.error'), t('notification_settings.error_save')),
   });
 
   if (isLoading) {
@@ -74,10 +76,10 @@ export default function NotificationSettingsScreen() {
           </View>
           <View style={{ flex: 1 }}>
             <Text style={{ color: colors.text, fontWeight: '700', fontSize: 15 }}>
-              Nhắc nhở bảo dưỡng
+              {t('notification_settings.reminders_toggle_label')}
             </Text>
             <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>
-              Thông báo khi đến hạn bảo dưỡng hoặc pháp lý
+              {t('notification_settings.reminders_toggle_desc')}
             </Text>
           </View>
           <Switch
@@ -92,7 +94,7 @@ export default function NotificationSettingsScreen() {
         {notifyReminders && (
           <View style={{ marginBottom: 24 }}>
             <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 }}>
-              Mức độ nhắc nhở
+              {t('notification_settings.level_title')}
             </Text>
             <View style={{ backgroundColor: colors.surface, borderRadius: 14, overflow: 'hidden' }}>
               {LEVEL_OPTIONS.map((opt, i) => (
@@ -133,8 +135,8 @@ export default function NotificationSettingsScreen() {
             opacity: !dirty || isPending ? 0.4 : 1,
           }}>
           {isPending
-            ? <ActivityIndicator color="#fff" />
-            : <Text style={{ color: '#fff', fontWeight: '700', fontSize: 16 }}>Lưu cài đặt</Text>
+            ? <ActivityIndicator color={colors.primaryText} />
+            : <Text style={{ color: colors.primaryText, fontWeight: '700', fontSize: 16 }}>{t('notification_settings.save_button')}</Text>
           }
         </TouchableOpacity>
       </ScrollView>

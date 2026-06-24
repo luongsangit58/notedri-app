@@ -8,23 +8,10 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { useCreateReminder } from '../../hooks/useReminders';
 import { useVehicles } from '../../hooks/useVehicles';
 import { useColors } from '../../utils/theme';
+import { useT } from '../../i18n';
 
 type Loai = 'bao_duong' | 'dang_kiem' | 'bao_hiem' | 'giay_to' | 'khac';
 type CheDo = 'chu_ky' | 'ngay_co_dinh' | 'mot_lan';
-
-const LOAI_OPTIONS: { value: Loai; label: string }[] = [
-  { value: 'bao_duong', label: 'Bảo dưỡng' },
-  { value: 'dang_kiem', label: 'Đăng kiểm' },
-  { value: 'bao_hiem', label: 'Bảo hiểm' },
-  { value: 'giay_to', label: 'Giấy tờ' },
-  { value: 'khac', label: 'Khác' },
-];
-
-const CHE_DO_OPTIONS: { value: CheDo; label: string; desc: string }[] = [
-  { value: 'chu_ky', label: 'Định kỳ', desc: 'Theo số km hoặc tháng - phù hợp bảo dưỡng định kỳ' },
-  { value: 'ngay_co_dinh', label: 'Ngày cố định', desc: 'Hẹn một ngày cụ thể và gia hạn khi hoàn tất' },
-  { value: 'mot_lan', label: 'Một lần', desc: 'Việc làm một lần, tự động tắt sau khi hoàn tất' },
-];
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
   const colors = useColors();
@@ -36,6 +23,7 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
 }
 
 export default function AddReminderScreen() {
+  const t = useT();
   const colors = useColors();
   const inputStyle = {
     backgroundColor: colors.surface,
@@ -74,14 +62,28 @@ export default function AddReminderScreen() {
   const [ghi_chu, setGhiChu] = useState('');
   const [notify_email, setNotifyEmail] = useState(true);
 
+  const LOAI_OPTIONS: { value: Loai; label: string }[] = [
+    { value: 'bao_duong', label: t('reminders.type_bao_duong') },
+    { value: 'dang_kiem', label: t('reminders.type_dang_kiem') },
+    { value: 'bao_hiem', label: t('reminders.type_bao_hiem') },
+    { value: 'giay_to', label: t('reminders.type_giay_to') },
+    { value: 'khac', label: t('reminders.type_khac') },
+  ];
+
+  const CHE_DO_OPTIONS: { value: CheDo; label: string; desc: string }[] = [
+    { value: 'chu_ky', label: t('reminders.mode_chu_ky'), desc: 'Theo số km hoặc tháng - phù hợp bảo dưỡng định kỳ' },
+    { value: 'ngay_co_dinh', label: t('reminders.mode_ngay_co_dinh'), desc: 'Hẹn một ngày cụ thể và gia hạn khi hoàn tất' },
+    { value: 'mot_lan', label: t('reminders.mode_mot_lan'), desc: 'Việc làm một lần, tự động tắt sau khi hoàn tất' },
+  ];
+
   const handleSubmit = () => {
     if (!hang_muc.trim()) {
-      Alert.alert('Thiếu thông tin', 'Vui lòng nhập hạng mục');
+      Alert.alert(t('common.error'), t('reminders.error_missing_item'));
       return;
     }
 
     if (!effectiveVehicleId) {
-      Alert.alert('Lỗi', 'Không xác định được xe. Vui lòng vào màn hình xe và thêm lời nhắc từ đó.');
+      Alert.alert(t('common.error'), t('reminders.error_no_vehicle'));
       return;
     }
     mutate(
@@ -103,7 +105,7 @@ export default function AddReminderScreen() {
       {
         onSuccess: () => navigation.goBack(),
         onError: (e: any) =>
-          Alert.alert('Lỗi', e?.response?.data?.message ?? 'Không thêm được'),
+          Alert.alert(t('common.error'), e?.response?.data?.message ?? t('reminders.error_save_failed')),
       },
     );
   };
@@ -123,7 +125,7 @@ export default function AddReminderScreen() {
           borderBottomColor: colors.border,
         }}>
           <Text style={{ color: colors.text, fontSize: 18, fontWeight: '700' }}>
-            Thêm lời nhắc
+            {t('reminders.add_title')}
           </Text>
           <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <Text style={{ color: colors.textSecondary, fontSize: 22, lineHeight: 26 }}>✕</Text>
@@ -135,7 +137,7 @@ export default function AddReminderScreen() {
           {/* Vehicle picker — only when no vehicleId from params and multiple vehicles */}
           {!paramVehicleId && vehicles.length > 1 && (
             <View style={{ marginBottom: 16 }}>
-              <FieldLabel>Xe *</FieldLabel>
+              <FieldLabel>{t('reminders.vehicle_label')}</FieldLabel>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 4 }}>
                 {vehicles.map((v: any) => (
                   <TouchableOpacity
@@ -157,11 +159,11 @@ export default function AddReminderScreen() {
           )}
 
           {/* Hạng mục */}
-          <FieldLabel>Hạng mục *</FieldLabel>
+          <FieldLabel>{t('reminders.item_label')}</FieldLabel>
           <TextInput
             value={hang_muc}
             onChangeText={setHangMuc}
-            placeholder="VD: Thay nhớt, Đăng kiểm..."
+            placeholder={t('reminders.item_placeholder')}
             placeholderTextColor={colors.textSecondary}
             style={inputStyle}
           />
@@ -234,7 +236,7 @@ export default function AddReminderScreen() {
           {/* Chu kỳ fields */}
           {che_do === 'chu_ky' && (
             <>
-              <FieldLabel>Chu kỳ km</FieldLabel>
+              <FieldLabel>{t('reminders.km_cycle_label')}</FieldLabel>
               <TextInput
                 value={interval_km}
                 onChangeText={setIntervalKm}
@@ -244,7 +246,7 @@ export default function AddReminderScreen() {
                 style={inputStyle}
               />
 
-              <FieldLabel>Chu kỳ tháng</FieldLabel>
+              <FieldLabel>{t('reminders.month_cycle_label')}</FieldLabel>
               <TextInput
                 value={interval_thang}
                 onChangeText={setIntervalThang}
@@ -278,7 +280,7 @@ export default function AddReminderScreen() {
           {/* Ngày đến hạn */}
           {(che_do === 'ngay_co_dinh' || che_do === 'mot_lan') && (
             <>
-              <FieldLabel>Ngày đến hạn (YYYY-MM-DD)</FieldLabel>
+              <FieldLabel>{t('reminders.due_date_label')}</FieldLabel>
               <TextInput
                 value={due_date}
                 onChangeText={setDueDate}
@@ -306,9 +308,9 @@ export default function AddReminderScreen() {
             backgroundColor: colors.surface, borderRadius: 10, padding: 14, marginTop: 12,
           }}>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: colors.text, fontWeight: '600', fontSize: 14 }}>Nhận email nhắc</Text>
+              <Text style={{ color: colors.text, fontWeight: '600', fontSize: 14 }}>{t('reminders.email_reminder_label')}</Text>
               <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 2 }}>
-                Gửi email trước 7/3/1 ngày đến hạn
+                {t('reminders.email_reminder_desc')}
               </Text>
             </View>
             <Switch
@@ -320,7 +322,7 @@ export default function AddReminderScreen() {
           </View>
 
           <Text style={{ color: colors.textSecondary, fontSize: 11, textAlign: 'center', marginTop: 10 }}>
-            Mẹo: điền cả km và tháng, NoteDri sẽ nhắc theo mốc đến trước.
+            {t('reminders.tip_text')}
           </Text>
 
           <TouchableOpacity
@@ -336,7 +338,7 @@ export default function AddReminderScreen() {
             }}>
             {isPending
               ? <ActivityIndicator color="#fff" />
-              : <Text style={{ color: '#fff', fontWeight: '800', fontSize: 16 }}>Lưu lời nhắc</Text>}
+              : <Text style={{ color: colors.primaryText, fontWeight: '800', fontSize: 16 }}>{t('reminders.save_button')}</Text>}
           </TouchableOpacity>
 
         </ScrollView>

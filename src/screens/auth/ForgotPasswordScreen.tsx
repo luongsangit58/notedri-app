@@ -6,12 +6,14 @@ import {
 import axios from 'axios';
 import { API_URL } from '../../utils/api';
 import { useColors } from '../../utils/theme';
+import { useT } from '../../i18n';
 
 interface Props {
   navigation: any;
 }
 
 export default function ForgotPasswordScreen({ navigation }: Props) {
+  const t = useT();
   const colors = useColors();
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -22,7 +24,7 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
     setError(null);
 
     if (!email.trim()) {
-      setError('Vui lòng nhập email');
+      setError(t('auth.email_required'));
       return;
     }
 
@@ -36,7 +38,7 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
         const firstField = Object.values(data.errors)[0] as string[];
         setError(firstField[0]);
       } else {
-        setError(data?.message ?? 'Gửi email thất bại. Vui lòng thử lại.');
+        setError(data?.message ?? t('auth.forgot_password_send_fail'));
       }
     } finally {
       setIsLoading(false);
@@ -73,12 +75,12 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
 
           {/* Title */}
           <Text style={{ fontSize: 28, fontWeight: '800', color: colors.text, marginBottom: 12 }}>
-            Quên mật khẩu
+            {t('auth.forgot_password_title')}
           </Text>
 
           {/* Description */}
           <Text style={{ color: colors.textSecondary, fontSize: 15, lineHeight: 22, marginBottom: 32 }}>
-            Nhập email của bạn, chúng tôi sẽ gửi link đặt lại mật khẩu.
+            {t('auth.forgot_password_desc')}
           </Text>
 
           {/* Success message */}
@@ -92,7 +94,7 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
               marginBottom: 24,
             }}>
               <Text style={{ color: '#4CAF50', fontSize: 15, lineHeight: 22 }}>
-                Email đã được gửi! Kiểm tra hộp thư của bạn.
+                {t('auth.forgot_password_success')}
               </Text>
             </View>
           ) : null}
@@ -101,7 +103,7 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
           <TextInput
             value={email}
             onChangeText={(v) => { setError(null); setEmail(v); }}
-            placeholder="Email"
+            placeholder={t('auth.email')}
             placeholderTextColor={colors.textSecondary}
             keyboardType="email-address"
             autoCapitalize="none"
@@ -140,8 +142,8 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
               opacity: isLoading || success ? 0.6 : 1,
             }}
           >
-            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 16 }}>
-              {isLoading ? 'Đang gửi...' : success ? 'Đã gửi' : 'Gửi email'}
+            <Text style={{ color: colors.primaryText, fontWeight: '700', fontSize: 16 }}>
+              {isLoading ? t('auth.sending') : success ? t('auth.sent') : t('auth.forgot_password_send')}
             </Text>
           </TouchableOpacity>
 
@@ -151,8 +153,8 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
             style={{ marginTop: 24, alignItems: 'center' }}
           >
             <Text style={{ color: colors.textSecondary, fontSize: 14 }}>
-              Quay lại{' '}
-              <Text style={{ color: colors.primary, fontWeight: '600' }}>Đăng nhập</Text>
+              {t('common.back')}{' '}
+              <Text style={{ color: colors.primary, fontWeight: '600' }}>{t('auth.login')}</Text>
             </Text>
           </TouchableOpacity>
         </ScrollView>

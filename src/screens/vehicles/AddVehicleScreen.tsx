@@ -16,9 +16,11 @@ import { useCreateVehicle } from '../../hooks/useVehicles';
 import { useFuelTypes } from '../../hooks/useFuelTypes';
 import client from '../../api/client';
 import { useColors } from '../../utils/theme';
+import { useT } from '../../i18n';
 
 export default function AddVehicleScreen() {
   const colors = useColors();
+  const t = useT();
   const inputStyle = {
     backgroundColor: colors.surface,
     color: colors.text,
@@ -94,7 +96,7 @@ export default function AddVehicleScreen() {
 
   const handleSubmit = async () => {
     if (!ten.trim()) {
-      Alert.alert('Thiếu thông tin', 'Vui lòng nhập tên xe.');
+      Alert.alert(t('vehicles.missing_info_title'), t('vehicles.name_required_msg'));
       return;
     }
 
@@ -125,7 +127,7 @@ export default function AddVehicleScreen() {
       const msg =
         err?.response?.data?.message ??
         err?.response?.data?.error ??
-        'Có lỗi xảy ra. Vui lòng thử lại.';
+        t('vehicles.error_generic');
       setApiError(msg);
     }
   };
@@ -149,20 +151,20 @@ export default function AddVehicleScreen() {
           </View>
         ) : null}
 
-        <Text style={labelStyle}>Tên xe *</Text>
+        <Text style={labelStyle}>{t('vehicles.name_label')}</Text>
         <TextInput
           style={inputStyle}
-          placeholder="Tên xe, VD: Honda Wave Alpha"
+          placeholder={t('vehicles.name_placeholder')}
           placeholderTextColor={colors.textSecondary}
           value={ten}
           onChangeText={setTen}
           returnKeyType="next"
         />
 
-        <Text style={labelStyle}>Biển số</Text>
+        <Text style={labelStyle}>{t('vehicles.plate_label')}</Text>
         <TextInput
           style={inputStyle}
-          placeholder="Biển số (tuỳ chọn)"
+          placeholder={t('vehicles.plate_placeholder')}
           placeholderTextColor={colors.textSecondary}
           value={bien_so}
           onChangeText={setBienSo}
@@ -171,7 +173,7 @@ export default function AddVehicleScreen() {
         />
 
         {/* Spec autocomplete */}
-        <Text style={labelStyle}>Tìm xe theo tên (gợi ý tự động)</Text>
+        <Text style={labelStyle}>{t('vehicles.search_hint')}</Text>
         <TextInput
           style={inputStyle}
           placeholder="VD: Toyota Vios, Honda Wave..."
@@ -203,30 +205,30 @@ export default function AddVehicleScreen() {
           </View>
         )}
 
-        <Text style={labelStyle}>Hãng xe</Text>
+        <Text style={labelStyle}>{t('vehicles.make_label')}</Text>
         <TextInput
           style={inputStyle}
-          placeholder="Hãng xe, VD: Honda, Toyota"
+          placeholder={t('vehicles.make_placeholder')}
           placeholderTextColor={colors.textSecondary}
           value={make}
           onChangeText={setMake}
           returnKeyType="next"
         />
 
-        <Text style={labelStyle}>Model</Text>
+        <Text style={labelStyle}>{t('vehicles.model_label')}</Text>
         <TextInput
           style={inputStyle}
-          placeholder="Model, VD: Wave Alpha, Vios"
+          placeholder={t('vehicles.model_placeholder')}
           placeholderTextColor={colors.textSecondary}
           value={model}
           onChangeText={setModel}
           returnKeyType="next"
         />
 
-        <Text style={labelStyle}>Năm sản xuất</Text>
+        <Text style={labelStyle}>{t('vehicles.year_label')}</Text>
         <TextInput
           style={inputStyle}
-          placeholder="Năm sản xuất (VD: 2020)"
+          placeholder={t('vehicles.year_placeholder')}
           placeholderTextColor={colors.textSecondary}
           value={nam}
           onChangeText={setNam}
@@ -234,7 +236,7 @@ export default function AddVehicleScreen() {
           returnKeyType="next"
         />
 
-        <Text style={labelStyle}>Loại nhiên liệu</Text>
+        <Text style={labelStyle}>{t('vehicles.fuel_type_label')}</Text>
         {fuelTypesLoading ? (
           <ActivityIndicator color={colors.primary} style={{ marginBottom: 12, alignSelf: 'flex-start' }} />
         ) : (
@@ -270,10 +272,10 @@ export default function AddVehicleScreen() {
           </ScrollView>
         )}
 
-        <Text style={labelStyle}>ODO ban đầu</Text>
+        <Text style={labelStyle}>{t('vehicles.odo_initial_label')}</Text>
         <TextInput
           style={inputStyle}
-          placeholder="ODO ban đầu (km)"
+          placeholder={t('vehicles.odo_placeholder')}
           placeholderTextColor={colors.textSecondary}
           value={odo_ban_dau}
           onChangeText={setOdoBanDau}
@@ -281,7 +283,7 @@ export default function AddVehicleScreen() {
           returnKeyType="done"
         />
 
-        <Text style={labelStyle}>Dung tích bình xăng (L)</Text>
+        <Text style={labelStyle}>{t('vehicles.tank_capacity_label')}</Text>
         <TextInput
           style={inputStyle}
           placeholder="VD: 40"
@@ -292,7 +294,7 @@ export default function AddVehicleScreen() {
           returnKeyType="done"
         />
 
-        <Text style={labelStyle}>Mức tiêu hao NSX công bố (L/100km)</Text>
+        <Text style={labelStyle}>{t('vehicles.consumption_official_label')}</Text>
         <TextInput
           style={inputStyle}
           placeholder="VD: 6.5"
@@ -313,7 +315,7 @@ export default function AddVehicleScreen() {
             borderWidth: 1, borderColor: colors.border,
           }}>
           <Text style={{ color: colors.textSecondary, fontSize: 14 }}>
-            {showExtra ? 'Ẩn thông tin bổ sung' : 'Thêm thông tin xe (ngày mua, giá, VIN...)'}
+            {showExtra ? t('vehicles.hide_more') : t('vehicles.show_more')}
           </Text>
           <Text style={{ color: colors.textSecondary }}>{showExtra ? '▲' : '▼'}</Text>
         </TouchableOpacity>
@@ -349,7 +351,7 @@ export default function AddVehicleScreen() {
               autoCapitalize="characters"
             />
 
-            <Text style={labelStyle}>Ghi chú</Text>
+            <Text style={labelStyle}>{t('common.note')}</Text>
             <TextInput
               style={[inputStyle, { minHeight: 72, textAlignVertical: 'top' }]}
               placeholder="Ghi chú về xe..."
@@ -373,7 +375,7 @@ export default function AddVehicleScreen() {
           borderWidth: 1,
           borderColor: '#2E2E2E',
         }}>
-          <Text style={{ color: colors.text, fontSize: 15 }}>Đặt làm xe mặc định</Text>
+          <Text style={{ color: colors.text, fontSize: 15 }}>{t('vehicles.set_default')}</Text>
           <Switch
             value={is_default}
             onValueChange={setIsDefault}
@@ -395,7 +397,7 @@ export default function AddVehicleScreen() {
           {createVehicle.isPending ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>Thêm xe</Text>
+            <Text style={{ color: colors.primaryText, fontSize: 16, fontWeight: '700' }}>{t('vehicles.submit_add')}</Text>
           )}
         </TouchableOpacity>
       </ScrollView>

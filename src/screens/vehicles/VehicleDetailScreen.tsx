@@ -10,6 +10,7 @@ import ErrorView from '../../components/ErrorView';
 import { useColors } from '../../utils/theme';
 import { formatKm } from '../../utils/format';
 import { useAuthStore } from '../../store/authStore';
+import { useT } from '../../i18n';
 import dayjs from 'dayjs';
 
 // ─── Health helpers ──────────────────────────────────────────────────────────
@@ -127,6 +128,7 @@ function OrganRow({ organ }: { organ: Organ }) {
 }
 
 function HealthBreakdownCard({ health }: { health: HealthData }) {
+  const t = useT();
   const colors = useColors();
   const scoreData = health.score;
   const total = scoreData?.total;
@@ -141,10 +143,10 @@ function HealthBreakdownCard({ health }: { health: HealthData }) {
 
   const confidenceLabel = (c?: string) => {
     switch (c) {
-      case 'high':     return 'Độ tin cậy: Cao';
-      case 'medium':   return 'Độ tin cậy: Trung bình';
-      case 'low':      return 'Độ tin cậy: Thấp';
-      default:         return 'Độ tin cậy: Rất thấp — cần thêm dữ liệu';
+      case 'high':     return t('vehicle_detail.confidence_high');
+      case 'medium':   return t('vehicle_detail.confidence_medium');
+      case 'low':      return t('vehicle_detail.confidence_low');
+      default:         return t('vehicle_detail.confidence_very_low');
     }
   };
 
@@ -154,7 +156,7 @@ function HealthBreakdownCard({ health }: { health: HealthData }) {
       <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
           <FontAwesome5 name="stethoscope" size={15} color={colors.text} solid />
-          <Text style={{ color: colors.text, fontWeight: '700', fontSize: 15 }}>Sức khoẻ xe</Text>
+          <Text style={{ color: colors.text, fontWeight: '700', fontSize: 15 }}>{t('vehicle_detail.health_card_title')}</Text>
         </View>
         {warnCount > 0 && (
           <View style={{
@@ -165,7 +167,7 @@ function HealthBreakdownCard({ health }: { health: HealthData }) {
           }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
               <FontAwesome5 name="exclamation-triangle" size={11} color="#fff" solid />
-              <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>{warnCount} cần chú ý</Text>
+              <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>{t('vehicle_detail.warn_count', { count: warnCount })}</Text>
             </View>
           </View>
         )}
@@ -194,7 +196,7 @@ function HealthBreakdownCard({ health }: { health: HealthData }) {
             )}
             {critical && (
               <Text style={{ color: colors.error, fontSize: 11, marginTop: 2, fontWeight: '600' }}>
-                ⚡ Rủi ro gộp: bảo dưỡng + giấy tờ đều quá hạn
+                {t('vehicle_detail.combined_risk')}
               </Text>
             )}
           </View>
@@ -226,6 +228,7 @@ function HealthBreakdownCard({ health }: { health: HealthData }) {
 // ─── Main screen ─────────────────────────────────────────────────────────────
 
 export default function VehicleDetailScreen() {
+  const t = useT();
   const colors = useColors();
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
@@ -238,7 +241,7 @@ export default function VehicleDetailScreen() {
   const { data: dtcData } = useObdDtcEvents(vehicleId);
 
   if (isLoading) return <LoadingView />;
-  if (isError) return <ErrorView message="Không tải được chi tiết xe" onRetry={refetch} />;
+  if (isError) return <ErrorView message={t('vehicles.cannot_load_detail')} onRetry={refetch} />;
 
   const v = vehicle?.data ?? vehicle;
 
@@ -253,9 +256,9 @@ export default function VehicleDetailScreen() {
 
   const badgeColor = scoreTotal == null ? colors.textSecondary : scoreColor(scoreTotal, colors);
   const badgeLabel = scoreTotal == null ? null
-    : scoreTotal >= 80 ? 'Tốt'
-    : scoreTotal >= 50 ? 'Trung bình'
-    : 'Cần chú ý';
+    : scoreTotal >= 80 ? t('vehicles.score_good')
+    : scoreTotal >= 50 ? t('vehicles.score_medium')
+    : t('vehicles.score_warn');
 
   const reminders = remindersData?.data ?? remindersData ?? [];
   const activeDtc: any[] = dtcData?.data ?? [];
@@ -315,19 +318,19 @@ export default function VehicleDetailScreen() {
             onPress={() => navigation.navigate('EditVehicle', { vehicleId })}
             style={{ flex: 1, backgroundColor: colors.surface, padding: 12, borderRadius: 10, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6 }}>
             <FontAwesome5 name="pen" size={13} color={colors.text} solid />
-            <Text style={{ color: colors.text, fontWeight: '600', fontSize: 13 }}>Sửa xe</Text>
+            <Text style={{ color: colors.text, fontWeight: '600', fontSize: 13 }}>{t('vehicles.edit_label')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => navigation.navigate('Reminders', { vehicleId })}
             style={{ flex: 1, backgroundColor: colors.surface, padding: 12, borderRadius: 10, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6 }}>
             <FontAwesome5 name="bell" size={13} color={colors.text} solid />
-            <Text style={{ color: colors.text, fontWeight: '600', fontSize: 13 }}>Lời nhắc</Text>
+            <Text style={{ color: colors.text, fontWeight: '600', fontSize: 13 }}>{t('vehicles.detail_reminders')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => navigation.navigate('AddService')}
             style={{ flex: 1, backgroundColor: colors.surface, padding: 12, borderRadius: 10, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6 }}>
             <FontAwesome5 name="wrench" size={13} color={colors.text} solid />
-            <Text style={{ color: colors.text, fontWeight: '600', fontSize: 13 }}>Bảo dưỡng</Text>
+            <Text style={{ color: colors.text, fontWeight: '600', fontSize: 13 }}>{t('vehicles.detail_service')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -337,23 +340,19 @@ export default function VehicleDetailScreen() {
             onPress={() => navigation.navigate('AddRefuel')}
             style={{ flex: 1, backgroundColor: colors.primary, padding: 14, borderRadius: 10, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6 }}>
             <FontAwesome5 name="gas-pump" size={14} color="#fff" solid />
-            <Text style={{ color: '#fff', fontWeight: '700' }}>Đổ xăng</Text>
+            <Text style={{ color: colors.primaryText, fontWeight: '700' }}>{t('vehicles.detail_add_refuel')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => navigation.navigate('AddOdometer')}
             style={{ flex: 1, backgroundColor: colors.surface, padding: 14, borderRadius: 10, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6 }}>
             <FontAwesome5 name="road" size={14} color={colors.text} solid />
-            <Text style={{ color: colors.text, fontWeight: '600' }}>Cập nhật ODO</Text>
+            <Text style={{ color: colors.text, fontWeight: '600' }}>{t('vehicle_detail.update_odo')}</Text>
           </TouchableOpacity>
         </View>
 
         {/* OBD - Premium feature */}
         <TouchableOpacity
           onPress={() => {
-            if (!isPremium) {
-              navigation.navigate('Premium');
-              return;
-            }
             navigation.navigate('OBDSetup', {
               vehicleId,
               vehicleName: v?.ten ?? v?.name ?? '',
@@ -373,7 +372,7 @@ export default function VehicleDetailScreen() {
           </View>
           <View style={{ flex: 1 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Text style={{ color: '#F1F5F9', fontWeight: '700', fontSize: 14 }}>Ket noi OBD</Text>
+              <Text style={{ color: '#F1F5F9', fontWeight: '700', fontSize: 14 }}>{t('vehicle_detail.obd_title')}</Text>
               {!isPremium && (
                 <View style={{
                   backgroundColor: '#F59E0B', borderRadius: 4,
@@ -385,10 +384,10 @@ export default function VehicleDetailScreen() {
             </View>
             <Text style={{ color: '#94A3B8', fontSize: 12, marginTop: 1 }}>
               {!isPremium
-                ? 'Nang cap de doc du lieu xe qua Bluetooth'
+                ? t('vehicle_detail.obd_premium_desc')
                 : activeDtc.length > 0
-                  ? `${activeDtc.length} ma loi chua xu ly`
-                  : 'Doc du lieu xe tu dong qua Bluetooth'}
+                  ? t('vehicle_detail.obd_dtc_desc', { count: activeDtc.length })
+                  : t('vehicle_detail.obd_connected_desc')}
             </Text>
           </View>
           {isPremium && activeDtc.length > 0 && (
@@ -415,7 +414,7 @@ export default function VehicleDetailScreen() {
                 paddingHorizontal: 14, paddingVertical: 7,
                 backgroundColor: colors.surface, borderRadius: 10,
               }}>
-              <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 13 }}>Xem chi tiết →</Text>
+              <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 13 }}>{t('vehicles.health_detail_arrow')}</Text>
             </TouchableOpacity>
           </>
         )}
@@ -423,7 +422,7 @@ export default function VehicleDetailScreen() {
         {/* Nhắc nhở */}
         {reminders.length > 0 && (
           <View style={{ backgroundColor: colors.surface, borderRadius: 14, padding: 16, marginBottom: 12 }}>
-            <Text style={{ color: colors.text, fontWeight: '700', fontSize: 15, marginBottom: 10 }}>Nhắc nhở sắp tới</Text>
+            <Text style={{ color: colors.text, fontWeight: '700', fontSize: 15, marginBottom: 10 }}>{t('vehicles.upcoming_reminders')}</Text>
             {reminders.slice(0, 5).map((r: any, i: number) => {
               const days = r.remaining_days ?? r.days_remaining;
               const urgentColor = days != null && days <= 30 ? colors.error : days != null && days <= 90 ? colors.warning : colors.textSecondary;
@@ -432,7 +431,7 @@ export default function VehicleDetailScreen() {
                   <Text style={{ color: colors.text, flex: 1, fontSize: 13 }}>{r.hang_muc ?? r.service_type ?? r.title}</Text>
                   {days != null ? (
                     <Text style={{ color: urgentColor, fontSize: 12, fontWeight: '700' }}>
-                      {days <= 0 ? 'Quá hạn' : `${days} ngày`}
+                      {days <= 0 ? t('dashboard.overdue') : t('dashboard.days_remaining', { days })}
                     </Text>
                   ) : r.due_date ? (
                     <Text style={{ color: colors.textSecondary, fontSize: 12 }}>{dayjs(r.due_date).format('DD/MM/YYYY')}</Text>

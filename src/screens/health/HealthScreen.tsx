@@ -10,6 +10,7 @@ import { useVehicles } from '../../hooks/useVehicles';
 import { vehiclesApi } from '../../api/vehicles';
 import client from '../../api/client';
 import { useColors } from '../../utils/theme';
+import { useT } from '../../i18n';
 
 /* ─── types ─── */
 type OrganStatus = 'urgent' | 'warn' | 'info' | 'ok' | 'na';
@@ -116,6 +117,7 @@ function PillarBar({ pillar }: { pillar: Pillar }) {
 /* ─── OrganRow ─── */
 function OrganRow({ organ, onCta }: { organ: Organ & { cta?: string }; onCta?: (screen: string) => void }) {
   const colors = useColors();
+  const t = useT();
   if (organ.status === 'na') return null;
   const clr = organStatusColor(organ.status);
   return (
@@ -145,10 +147,10 @@ function OrganRow({ organ, onCta }: { organ: Organ & { cta?: string }; onCta?: (
             paddingHorizontal: 10, paddingVertical: 4,
           }}>
           <Text style={{ color: clr, fontSize: 11, fontWeight: '700' }}>
-            {organ.cta === 'AddService' ? '+ Ghi bảo dưỡng'
-              : organ.cta === 'AddReminder' ? '+ Thêm nhắc nhở'
-              : organ.cta === 'AddOdometer' ? '+ Cập nhật ODO'
-              : '→ Xử lý'}
+            {organ.cta === 'AddService' ? t('health.cta_add_service')
+              : organ.cta === 'AddReminder' ? t('health.cta_add_reminder')
+              : organ.cta === 'AddOdometer' ? t('health.cta_update_odo')
+              : t('health.cta_handle')}
           </Text>
         </TouchableOpacity>
       )}
@@ -161,6 +163,7 @@ interface TrendPoint { total: number; band: string; date: string }
 
 function ScoreTrendChart({ points }: { points: TrendPoint[] }) {
   const colors = useColors();
+  const t = useT();
   if (points.length < 2) return null;
   const BAR_W = 6;
   const GAP = 3;
@@ -432,7 +435,7 @@ export default function HealthScreen() {
         <TouchableOpacity
           onPress={() => refetchVehicles()}
           style={{ backgroundColor: colors.primary, borderRadius: 10, paddingHorizontal: 24, paddingVertical: 10, marginTop: 12 }}>
-          <Text style={{ color: '#fff', fontWeight: '700' }}>Thử lại</Text>
+          <Text style={{ color: colors.primaryText, fontWeight: '700' }}>Thử lại</Text>
         </TouchableOpacity>
       </SafeAreaView>
     );

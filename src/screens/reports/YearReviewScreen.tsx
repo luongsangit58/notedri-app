@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useRoute } from '@react-navigation/native';
 import { formatVND } from '../../utils/format';
+import { useT } from '../../i18n';
 
 /* Dark navy card matching web design */
 const NAVY = '#0b1220';
@@ -37,6 +38,7 @@ function Tile({ label, value, sub }: { label: string; value: string; sub?: strin
 }
 
 export default function YearReviewScreen() {
+  const t = useT();
   const route = useRoute<any>();
   const { yr, year } = route.params ?? {};
 
@@ -54,7 +56,7 @@ export default function YearReviewScreen() {
       <SafeAreaView style={{ flex: 1, backgroundColor: NAVY, justifyContent: 'center', alignItems: 'center', padding: 24 }} edges={['bottom']}>
         <FontAwesome5 name="calendar-alt" size={48} color={SLATE} />
         <Text style={{ color: SLATE, fontSize: 15, marginTop: 12, textAlign: 'center' }}>
-          Chưa có dữ liệu cho năm này.
+          {t('year_review.no_data')}
         </Text>
       </SafeAreaView>
     );
@@ -76,11 +78,11 @@ export default function YearReviewScreen() {
           </Text>
         </View>
 
-        {/* Hero: km đã đi */}
+        {/* Hero: km da di */}
         {km != null && (
           <View style={{ marginBottom: 20 }}>
             <Text style={{ color: SLATE, fontSize: 12, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>
-              Tổng quãng đường
+              {t('year_review.total_km')}
             </Text>
             <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 6 }}>
               <Text style={{ color: WHITE, fontWeight: '800', fontSize: 48, lineHeight: 52 }}>
@@ -95,14 +97,14 @@ export default function YearReviewScreen() {
         <View style={{ flexDirection: 'row', gap: 10, marginBottom: 10 }}>
           {fuelCost != null && (
             <Tile
-              label="Tiền xăng"
+              label={t('year_review.fuel_cost')}
               value={formatVND(fuelCost)}
               sub={liters != null ? fmtLit(liters) + (fillCount != null ? ` · ${fillCount} lần` : '') : undefined}
             />
           )}
           {serviceCost != null && (
             <Tile
-              label="Bảo dưỡng"
+              label={t('year_review.service_cost')}
               value={formatVND(serviceCost)}
               sub={serviceCount != null ? `${serviceCount} lần` : undefined}
             />
@@ -111,7 +113,7 @@ export default function YearReviewScreen() {
 
         {totalCost != null && (
           <View style={{ gap: 10, marginBottom: 10 }}>
-            <Tile label="Tổng chi phí cả năm" value={formatVND(totalCost)} />
+            <Tile label={t('year_review.total_cost')} value={formatVND(totalCost)} />
           </View>
         )}
 
@@ -125,7 +127,7 @@ export default function YearReviewScreen() {
           }}>
             <FontAwesome5 name="gas-pump" size={16} color={AMBER} solid />
             <View style={{ flex: 1 }}>
-              <Text style={{ color: SLATE, fontSize: 11 }}>Điểm tiếp nhiên liệu chính</Text>
+              <Text style={{ color: SLATE, fontSize: 11 }}>{t('year_review.top_station')}</Text>
               <Text style={{ color: WHITE, fontWeight: '700', fontSize: 14, marginTop: 2 }}>{topStation}</Text>
             </View>
           </View>
@@ -133,7 +135,7 @@ export default function YearReviewScreen() {
 
         {/* Footer */}
         <Text style={{ color: SLATE, fontSize: 11, textAlign: 'center', marginTop: 28, letterSpacing: 0.3 }}>
-          notedri.com · Quản lý xe thông minh
+          {t('year_review.footer')}
         </Text>
       </ScrollView>
     </SafeAreaView>

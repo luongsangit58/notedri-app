@@ -5,6 +5,7 @@ export type ThemeMode = 'dark' | 'light';
 
 export interface ColorPalette {
   primary: string;
+  primaryText: string;
   background: string;
   surface: string;
   text: string;
@@ -17,7 +18,8 @@ export interface ColorPalette {
 }
 
 export const darkColors: ColorPalette = {
-  primary: '#E85D04',
+  primary: '#F59E0B',
+  primaryText: '#1C1917',
   background: '#121212',
   surface: '#1E1E1E',
   text: '#FFFFFF',
@@ -30,7 +32,8 @@ export const darkColors: ColorPalette = {
 };
 
 export const lightColors: ColorPalette = {
-  primary: '#E85D04',
+  primary: '#F59E0B',
+  primaryText: '#1C1917',
   background: '#F4F4F5',
   surface: '#FFFFFF',
   text: '#111827',

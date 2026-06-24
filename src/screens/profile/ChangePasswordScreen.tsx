@@ -9,6 +9,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useMutation } from '@tanstack/react-query';
 import { profileApi } from '../../api/profile';
 import { useColors } from '../../utils/theme';
+import { useT } from '../../i18n';
 
 type FieldErrors = Record<string, string[]>;
 
@@ -19,7 +20,7 @@ function FieldError({ errors, field }: { errors: FieldErrors; field: string }) {
   return <Text style={{ color: colors.error, fontSize: 12, marginTop: 2, marginBottom: 6 }}>{msgs[0]}</Text>;
 }
 
-function PasswordInput({
+function PasswordField({
   label, value, onChange, errors, field,
 }: {
   label: string; value: string; onChange: (v: string) => void;
@@ -58,6 +59,7 @@ function PasswordInput({
 }
 
 export default function ChangePasswordScreen() {
+  const t = useT();
   const colors = useColors();
   const navigation = useNavigation<any>();
   const [current, setCurrent] = useState('');
@@ -72,7 +74,7 @@ export default function ChangePasswordScreen() {
       password_confirmation: confirm,
     }),
     onSuccess: () => {
-      Alert.alert('Thành công', 'Mật khẩu đã được cập nhật.', [
+      Alert.alert(t('common.confirm'), t('change_password.success'), [
         { text: 'OK', onPress: () => navigation.goBack() },
       ]);
     },
@@ -81,7 +83,7 @@ export default function ChangePasswordScreen() {
       if (Object.keys(errors).length) {
         setFieldErrors(errors);
       } else {
-        Alert.alert('Lỗi', err?.response?.data?.message ?? 'Không thể đổi mật khẩu.');
+        Alert.alert(t('common.error'), err?.response?.data?.message ?? t('change_password.cannot_change'));
       }
     },
   });
@@ -89,11 +91,11 @@ export default function ChangePasswordScreen() {
   const handleSave = () => {
     setFieldErrors({});
     if (!current || !next || !confirm) {
-      Alert.alert('Thiếu thông tin', 'Vui lòng điền đầy đủ cả 3 trường.');
+      Alert.alert(t('common.error'), t('change_password.missing_fields'));
       return;
     }
     if (next !== confirm) {
-      setFieldErrors({ password_confirmation: ['Mật khẩu xác nhận không khớp.'] });
+      setFieldErrors({ password_confirmation: [t('change_password.confirm_mismatch')] });
       return;
     }
     mutate();
@@ -103,25 +105,25 @@ export default function ChangePasswordScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom']}>
       <ScrollView contentContainerStyle={{ padding: 20 }} keyboardShouldPersistTaps="handled">
         <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 24, lineHeight: 18 }}>
-          Nhập mật khẩu hiện tại và mật khẩu mới. Mật khẩu mới phải có ít nhất 8 ký tự.
+          {t('change_password.hint')}
         </Text>
 
-        <PasswordInput
-          label="Mật khẩu hiện tại"
+        <PasswordField
+          label={t('change_password.current_label')}
           value={current}
           onChange={setCurrent}
           errors={fieldErrors}
           field="current_password"
         />
-        <PasswordInput
-          label="Mật khẩu mới"
+        <PasswordField
+          label={t('change_password.new_label')}
           value={next}
           onChange={setNext}
           errors={fieldErrors}
           field="password"
         />
-        <PasswordInput
-          label="Xác nhận mật khẩu mới"
+        <PasswordField
+          label={t('change_password.confirm_label')}
           value={confirm}
           onChange={setConfirm}
           errors={fieldErrors}
@@ -136,8 +138,8 @@ export default function ChangePasswordScreen() {
             paddingVertical: 14, alignItems: 'center', marginTop: 8,
           }}>
           {isPending
-            ? <ActivityIndicator color="#fff" />
-            : <Text style={{ color: '#fff', fontWeight: '700', fontSize: 16 }}>Lưu mật khẩu</Text>
+            ? <ActivityIndicator color={colors.primaryText} />
+            : <Text style={{ color: colors.primaryText, fontWeight: '700', fontSize: 16 }}>{t('change_password.save_button')}</Text>
           }
         </TouchableOpacity>
       </ScrollView>

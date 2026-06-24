@@ -8,15 +8,17 @@ import VehicleCard from '../../components/VehicleCard';
 import LoadingView from '../../components/LoadingView';
 import ErrorView from '../../components/ErrorView';
 import { useColors } from '../../utils/theme';
+import { useT } from '../../i18n';
 
 export default function VehiclesScreen() {
   const colors = useColors();
+  const t = useT();
   const { data, isLoading, isError, refetch, isFetching } = useVehicles();
   const navigation = useNavigation<any>();
   const { mutate: setDefault } = useSetDefaultVehicle();
 
   if (isLoading) return <LoadingView />;
-  if (isError) return <ErrorView message="Không tải được danh sách xe" onRetry={refetch} />;
+  if (isError) return <ErrorView message={t('vehicles.cannot_load_list')} onRetry={refetch} />;
 
   const vehicles: any[] = data?.data ?? data ?? [];
   const scores: Record<number, { total: number; band: string }> = data?.meta?.scores ?? {};
@@ -52,13 +54,13 @@ export default function VehiclesScreen() {
                 onPress={() => navigation.navigate('Dossier', { vehicleId: item.id })}
                 style={{ backgroundColor: colors.background, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <FontAwesome5 name="book" size={13} color={colors.textSecondary} solid />
-                <Text style={{ color: colors.textSecondary, fontSize: 13 }}>Sổ tay</Text>
+                <Text style={{ color: colors.textSecondary, fontSize: 13 }}>{t('vehicles.notebook_label')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => navigation.navigate('EditVehicle', { vehicleId: item.id })}
                 style={{ backgroundColor: colors.background, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <FontAwesome5 name="pen" size={13} color={colors.textSecondary} solid />
-                <Text style={{ color: colors.textSecondary, fontSize: 13 }}>Sửa</Text>
+                <Text style={{ color: colors.textSecondary, fontSize: 13 }}>{t('vehicles.edit_label')}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -68,8 +70,8 @@ export default function VehiclesScreen() {
         ListEmptyComponent={
           <View style={{ alignItems: 'center', marginTop: 64 }}>
             <FontAwesome5 name="car-side" size={48} color={colors.textSecondary} solid style={{ marginBottom: 12 }} />
-            <Text style={{ color: colors.text, fontSize: 16, fontWeight: '700', marginBottom: 6 }}>Chưa có xe nào</Text>
-            <Text style={{ color: colors.textSecondary, fontSize: 13 }}>Bấm + để thêm xe đầu tiên</Text>
+            <Text style={{ color: colors.text, fontSize: 16, fontWeight: '700', marginBottom: 6 }}>{t('vehicles.empty_title')}</Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 13 }}>{t('vehicles.empty_subtitle')}</Text>
           </View>
         }
       />
@@ -83,7 +85,7 @@ export default function VehiclesScreen() {
         }}>
           <FontAwesome5 name="crown" size={14} color="#F59E0B" solid />
           <Text style={{ color: '#F59E0B', fontSize: 13, flex: 1 }}>
-            Gói Free tối đa {vehicleLimit} xe. Nâng cấp Premium để thêm không giới hạn.
+            {t('vehicles.free_limit_warning', { limit: vehicleLimit })}
           </Text>
         </View>
       )}
@@ -99,7 +101,7 @@ export default function VehiclesScreen() {
           justifyContent: 'center', alignItems: 'center', elevation: 6,
           shadowColor: colors.primary, shadowOpacity: canAddVehicle ? 0.4 : 0, shadowRadius: 8, shadowOffset: { width: 0, height: 4 },
         }}>
-        <FontAwesome5 name="plus" size={22} color="#fff" solid />
+        <FontAwesome5 name="plus" size={22} color={colors.primaryText} solid />
       </TouchableOpacity>
     </SafeAreaView>
   );

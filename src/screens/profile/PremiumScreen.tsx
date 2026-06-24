@@ -7,36 +7,31 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import client from '../../api/client';
 import { useColors } from '../../utils/theme';
+import { useT } from '../../i18n';
 
 const AMBER = '#F59E0B';
 
-const FREE_FEATURES = [
-  'Tối đa 2 xe',
-  'Lịch sử 12 tháng gần nhất',
-  'Báo cáo chi phí cơ bản',
-  'Nhắc nhở bảo dưỡng',
-  'Hồ sơ xe kỹ thuật số',
-];
-
-const PREMIUM_FEATURES = [
-  { icon: 'crown',       text: 'Không giới hạn số xe' },
-  { icon: 'history',     text: 'Lịch sử không giới hạn' },
-  { icon: 'chart-line',  text: 'Báo cáo toàn bộ các năm' },
-  { icon: 'search-location', text: 'Tìm cây xăng gần đây' },
-  { icon: 'envelope',    text: 'Nhắc nhở qua email' },
-  { icon: 'file-export', text: 'Xuất dữ liệu toàn bộ' },
-];
-
-function statusLabel(s?: string | null): string {
-  if (s === 'pending')  return 'Đang chờ xét duyệt';
-  if (s === 'approved') return 'Đã được duyệt';
-  if (s === 'rejected') return 'Không được duyệt lần trước';
-  return '';
-}
-
 export default function PremiumScreen() {
   const colors = useColors();
+  const t = useT();
   const qc = useQueryClient();
+
+  const FREE_FEATURES = [
+    t('premium.free_feature_2_vehicles'),
+    t('premium.free_feature_12months'),
+    t('premium.free_feature_basic_reports'),
+    t('premium.free_feature_reminders'),
+    t('premium.free_feature_dossier'),
+  ];
+
+  const PREMIUM_FEATURES = [
+    { icon: 'crown',            text: t('premium.feature_unlimited_vehicles') },
+    { icon: 'history',          text: t('premium.feature_unlimited_history') },
+    { icon: 'chart-line',       text: t('premium.feature_all_year_reports') },
+    { icon: 'search-location',  text: t('premium.feature_nearby_stations') },
+    { icon: 'envelope',         text: t('premium.feature_email_reminders') },
+    { icon: 'file-export',      text: t('premium.feature_export') },
+  ];
 
   const { data, isLoading, refetch, isFetching } = useQuery({
     queryKey: ['premium-status'],
@@ -47,13 +42,13 @@ export default function PremiumScreen() {
   const { mutate: requestTrial, isPending } = useMutation({
     mutationFn: () => client.post('/premium/trial', { context: 'mobile' }),
     onSuccess: (res: any) => {
-      const msg = res?.data?.message ?? 'Đã gửi yêu cầu!';
-      Alert.alert('Gửi thành công', msg);
+      const msg = res?.data?.message ?? t('common.send');
+      Alert.alert(t('premium.notification_title'), msg);
       qc.invalidateQueries({ queryKey: ['premium-status'] });
     },
     onError: (err: any) => {
-      const msg = err?.response?.data?.message ?? 'Có lỗi xảy ra.';
-      Alert.alert('Thông báo', msg);
+      const msg = err?.response?.data?.message ?? t('common.error_generic');
+      Alert.alert(t('premium.notification_title'), msg);
     },
   });
 
@@ -64,6 +59,13 @@ export default function PremiumScreen() {
   const trialUsed: boolean = data?.trial_used ?? false;
   const trialDays: number = data?.trial_days ?? 14;
   const planExpiresAt: string | null = data?.plan_expires_at ?? null;
+
+  function statusLabel(s?: string | null): string {
+    if (s === 'pending')  return t('premium.request_pending_label');
+    if (s === 'approved') return t('premium.request_approved_label');
+    if (s === 'rejected') return t('premium.request_rejected_label');
+    return '';
+  }
 
   if (isLoading) {
     return (
@@ -89,10 +91,10 @@ export default function PremiumScreen() {
             <FontAwesome5 name="crown" size={32} color={AMBER} solid />
           </View>
           <Text style={{ color: colors.text, fontWeight: '800', fontSize: 24, letterSpacing: -0.5 }}>
-            NoteDri Premium
+            {t('premium.title')}
           </Text>
           <Text style={{ color: colors.textSecondary, fontSize: 14, marginTop: 6, textAlign: 'center' }}>
-            Không giới hạn xe. Không giới hạn lịch sử.
+            {t('premium.tagline')}
           </Text>
         </View>
 
@@ -106,11 +108,11 @@ export default function PremiumScreen() {
             <FontAwesome5 name="check-circle" size={22} color={AMBER} solid />
             <View style={{ flex: 1 }}>
               <Text style={{ color: AMBER, fontWeight: '800', fontSize: 16 }}>
-                {onTrial ? 'Đang dùng thử Premium' : 'Premium kích hoạt'}
+                {onTrial ? t('premium.trial_active_label') : t('premium.active_label')}
               </Text>
               {planExpiresAt && (
                 <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 2 }}>
-                  Hết hạn: {planExpiresAt}
+                  {t('premium.expires_label')}: {planExpiresAt}
                 </Text>
               )}
             </View>
@@ -124,10 +126,10 @@ export default function PremiumScreen() {
             <FontAwesome5 name="clock" size={20} color="#0EA5E9" solid />
             <View style={{ flex: 1 }}>
               <Text style={{ color: '#0EA5E9', fontWeight: '700', fontSize: 15 }}>
-                Yêu cầu đang chờ duyệt
+                {t('premium.pending_title')}
               </Text>
               <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 2 }}>
-                Admin sẽ xét duyệt trong vòng 1–2 ngày làm việc.
+                {t('premium.pending_desc')}
               </Text>
             </View>
           </View>
@@ -136,7 +138,7 @@ export default function PremiumScreen() {
         {/* Premium features */}
         <View style={{ backgroundColor: colors.surface, borderRadius: 14, padding: 16, marginBottom: 20 }}>
           <Text style={{ color: AMBER, fontWeight: '800', fontSize: 14, marginBottom: 12, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-            Premium bao gồm
+            {t('premium.includes_title')}
           </Text>
           {PREMIUM_FEATURES.map((f, i) => (
             <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 }}>
@@ -149,7 +151,7 @@ export default function PremiumScreen() {
         {/* Free plan */}
         <View style={{ backgroundColor: colors.surface, borderRadius: 14, padding: 16, marginBottom: 24 }}>
           <Text style={{ color: colors.textSecondary, fontWeight: '700', fontSize: 13, marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-            Gói Miễn phí
+            {t('premium.free_title')}
           </Text>
           {FREE_FEATURES.map((f, i) => (
             <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 }}>
@@ -174,12 +176,12 @@ export default function PremiumScreen() {
                 ? <ActivityIndicator color="#fff" />
                 : (
                   <Text style={{ color: '#fff', fontWeight: '800', fontSize: 17 }}>
-                    Dùng thử {trialDays} ngày miễn phí
+                    {t('premium.trial_cta').replace('{days}', String(trialDays))}
                   </Text>
                 )}
             </TouchableOpacity>
             <Text style={{ color: colors.textSecondary, fontSize: 12, textAlign: 'center', marginBottom: 16 }}>
-              Gửi yêu cầu → admin xét duyệt → nhận email xác nhận
+              {t('premium.request_flow_desc')}
             </Text>
           </>
         )}
@@ -188,7 +190,7 @@ export default function PremiumScreen() {
           <View style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 14, marginBottom: 16 }}>
             <Text style={{ color: colors.textSecondary, fontSize: 13, textAlign: 'center' }}>
               {trialUsed
-                ? 'Bạn đã từng dùng thử Premium. Mỗi tài khoản chỉ 1 lần.'
+                ? t('premium.trial_used_msg')
                 : statusLabel(requestStatus)
               }
             </Text>
@@ -196,7 +198,7 @@ export default function PremiumScreen() {
         )}
 
         <Text style={{ color: colors.textSecondary, fontSize: 11, textAlign: 'center' }}>
-          Giá chính thức sẽ được thông báo khi ra mắt.{'\n'}Người dùng sớm được ưu đãi đặc biệt.
+          {t('premium.pricing_note')}
         </Text>
       </ScrollView>
     </SafeAreaView>

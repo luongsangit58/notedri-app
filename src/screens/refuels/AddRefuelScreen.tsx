@@ -13,6 +13,7 @@ import { useFuelTypes } from '../../hooks/useFuelTypes';
 import OcrCamera from '../../components/OcrCamera';
 import { useColors } from '../../utils/theme';
 import { formatVND } from '../../utils/format';
+import { useT } from '../../i18n';
 
 function FieldLabel({ children }: any) {
   const colors = useColors();
@@ -20,6 +21,7 @@ function FieldLabel({ children }: any) {
 }
 
 export default function AddRefuelScreen() {
+  const t = useT();
   const colors = useColors();
   const input = {
     backgroundColor: colors.surface,
@@ -268,7 +270,7 @@ export default function AddRefuelScreen() {
               : (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                   <FontAwesome5 name="gas-pump" size={16} color="#fff" solid />
-                  <Text style={{ color: '#fff', fontWeight: '800', fontSize: 16 }}>Lưu lần đổ xăng</Text>
+                  <Text style={{ color: colors.primaryText, fontWeight: '800', fontSize: 16 }}>Lưu lần đổ xăng</Text>
                 </View>
               )}
           </TouchableOpacity>

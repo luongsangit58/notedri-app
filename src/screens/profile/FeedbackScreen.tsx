@@ -9,34 +9,36 @@ import { useMutation } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
 import client from '../../api/client';
 import { useColors } from '../../utils/theme';
+import { useT } from '../../i18n';
 
-const LOAI_OPTIONS = [
-  { key: 'loi',     label: 'Lỗi / trục trặc', icon: 'bug' },
-  { key: 'y_tuong', label: 'Ý tưởng / đề xuất', icon: 'lightbulb' },
-  { key: 'khac',    label: 'Góp ý khác', icon: 'comment-alt' },
-] as const;
-
-type LoaiKey = typeof LOAI_OPTIONS[number]['key'];
+type LoaiKey = 'loi' | 'y_tuong' | 'khac';
 
 const STARS = [1, 2, 3, 4, 5];
 
 export default function FeedbackScreen() {
   const colors = useColors();
+  const t = useT();
   const navigation = useNavigation<any>();
   const [loai, setLoai] = useState<LoaiKey>('loi');
   const [noi_dung, setNoiDung] = useState('');
   const [rating, setRating] = useState<number | null>(null);
 
+  const LOAI_OPTIONS: { key: LoaiKey; label: string; icon: string }[] = [
+    { key: 'loi',     label: t('feedback.type_bug'),   icon: 'bug' },
+    { key: 'y_tuong', label: t('feedback.type_idea'),  icon: 'lightbulb' },
+    { key: 'khac',    label: t('feedback.type_other'), icon: 'comment-alt' },
+  ];
+
   const { mutate, isPending } = useMutation({
     mutationFn: () => client.post('/feedback', { loai, noi_dung, rating }),
     onSuccess: () => {
-      Alert.alert('Cảm ơn!', 'Góp ý của bạn đã được ghi nhận.', [
+      Alert.alert(t('feedback.success_title'), t('feedback.success_message'), [
         { text: 'OK', onPress: () => navigation.goBack() },
       ]);
     },
     onError: (err: any) => {
-      const msg = err?.response?.data?.message ?? 'Có lỗi xảy ra.';
-      Alert.alert('Lỗi', msg);
+      const msg = err?.response?.data?.message ?? t('common.error_generic');
+      Alert.alert(t('common.error'), msg);
     },
   });
 
@@ -47,15 +49,15 @@ export default function FeedbackScreen() {
       <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
 
         <Text style={{ color: colors.text, fontWeight: '800', fontSize: 20, marginBottom: 4 }}>
-          Góp ý cho NoteDri
+          {t('feedback.heading')}
         </Text>
         <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 24 }}>
-          Bạn thấy gì chưa ổn? Có ý tưởng gì hay? Nhóm phát triển đọc hết.
+          {t('feedback.subheading')}
         </Text>
 
         {/* Loại */}
         <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>
-          Loại góp ý
+          {t('feedback.type_label')}
         </Text>
         <View style={{ flexDirection: 'row', gap: 8, marginBottom: 20 }}>
           {LOAI_OPTIONS.map(opt => {
@@ -81,7 +83,7 @@ export default function FeedbackScreen() {
 
         {/* Rating */}
         <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>
-          Đánh giá tổng thể (tuỳ chọn)
+          {t('feedback.rating_label')}
         </Text>
         <View style={{ flexDirection: 'row', gap: 8, marginBottom: 20 }}>
           {STARS.map(s => (
@@ -98,14 +100,14 @@ export default function FeedbackScreen() {
 
         {/* Nội dung */}
         <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>
-          Nội dung
+          {t('feedback.content_label')}
         </Text>
         <TextInput
           value={noi_dung}
           onChangeText={setNoiDung}
           multiline
           numberOfLines={6}
-          placeholder="Mô tả chi tiết — bước nào xảy ra, trên thiết bị gì, kỳ vọng là gì..."
+          placeholder={t('feedback.placeholder_detailed')}
           placeholderTextColor={colors.textSecondary}
           style={{
             backgroundColor: colors.surface, color: colors.text,
@@ -115,7 +117,7 @@ export default function FeedbackScreen() {
           }}
         />
         <Text style={{ color: colors.textSecondary, fontSize: 11, marginBottom: 24, textAlign: 'right' }}>
-          {noi_dung.trim().length} / 2000 ký tự (tối thiểu 10)
+          {t('feedback.char_count').replace('{count}', String(noi_dung.trim().length))}
         </Text>
 
         <TouchableOpacity
@@ -127,8 +129,8 @@ export default function FeedbackScreen() {
             opacity: canSubmit ? 1 : 0.4,
           }}>
           {isPending
-            ? <ActivityIndicator color="#fff" />
-            : <Text style={{ color: '#fff', fontWeight: '700', fontSize: 16 }}>Gửi góp ý</Text>
+            ? <ActivityIndicator color={colors.primaryText} />
+            : <Text style={{ color: colors.primaryText, fontWeight: '700', fontSize: 16 }}>{t('feedback.submit')}</Text>
           }
         </TouchableOpacity>
       </ScrollView>

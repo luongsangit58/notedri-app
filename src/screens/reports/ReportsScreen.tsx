@@ -11,6 +11,7 @@ import client from '../../api/client';
 import LoadingView from '../../components/LoadingView';
 import ErrorView from '../../components/ErrorView';
 import { useColors } from '../../utils/theme';
+import { useT } from '../../i18n';
 
 /* ─── helpers ─── */
 function fmtVnd(n: number | string | null | undefined): string {
@@ -86,7 +87,7 @@ function VehicleChips({
             }}>
             <Text
               style={{
-                color: active ? '#fff' : colors.textSecondary,
+                color: active ? colors.primaryText : colors.textSecondary,
                 fontWeight: active ? '700' : '400',
                 fontSize: 14,
               }}>
@@ -133,7 +134,7 @@ function YearChips({
             }}>
             <Text
               style={{
-                color: active ? '#fff' : colors.textSecondary,
+                color: active ? colors.primaryText : colors.textSecondary,
                 fontWeight: active ? '700' : '400',
                 fontSize: 13,
               }}>
@@ -245,6 +246,7 @@ function ReportContent({
   onViewYearReview?: (yr: any, year: number) => void;
 }) {
   const colors = useColors();
+  const t = useT();
   const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ['report', vehicleId, selectedYear],
     queryFn: () =>
@@ -263,7 +265,7 @@ function ReportContent({
   if (isLoading) return <LoadingView />;
   if (isError)
     return (
-      <ErrorView message="Không tải được báo cáo" onRetry={refetch} />
+      <ErrorView message={t('common.error_load')} onRetry={refetch} />
     );
 
   if (!data) return null;
@@ -414,7 +416,7 @@ function ReportContent({
             borderLeftColor: colors.primary,
           }}>
           <Text style={{ color: colors.textSecondary, fontSize: 12, marginBottom: 4 }}>
-            Tổng chi phí
+            {t('reports.total_cost')}
           </Text>
           <Text style={{ color: colors.primary, fontWeight: '800', fontSize: 26 }}>
             {fmtVnd(totalCost)}
@@ -426,7 +428,7 @@ function ReportContent({
       <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
         <StatCard
           icon={<FontAwesome5 name="gas-pump" size={20} color={colors.primary} solid />}
-          label="Chi phí xăng"
+          label={t('reports.fuel_cost')}
           value={fuelCost != null ? fmtVnd(fuelCost) : '—'}
           sub={
             refuelCount != null
@@ -436,7 +438,7 @@ function ReportContent({
         />
         <StatCard
           icon={<FontAwesome5 name="wrench" size={20} color={colors.primary} solid />}
-          label="Chi phí dịch vụ"
+          label={t('reports.service_cost')}
           value={serviceCost != null ? fmtVnd(serviceCost) : '—'}
           sub={
             serviceCount != null
@@ -450,12 +452,12 @@ function ReportContent({
       <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
         <StatCard
           icon={<FontAwesome5 name="road" size={20} color={colors.primary} solid />}
-          label="Tổng quãng đường"
+          label={t('reports.total_km')}
           value={totalKm != null ? fmtNum(totalKm, 'km') : '—'}
         />
         <StatCard
           icon={<FontAwesome5 name="chart-bar" size={20} color={colors.primary} solid />}
-          label="Tiêu hao TB"
+          label={t('reports.avg_consumption')}
           value={
             avgConsumption != null
               ? `${Number(avgConsumption).toFixed(2)} L/100km`
@@ -466,14 +468,14 @@ function ReportContent({
 
       {/* ── year review card ── */}
       {yr != null && (
-        <SectionCard title={`Nhìn lại năm ${selectedYear}`}>
+        <SectionCard title={t('reports.year_review_link') + ` ${selectedYear}`}>
           {yrKm != null && (
-            <CardRow index={0} label="Km đã đi" value={fmtNum(yrKm, 'km')} />
+            <CardRow index={0} label={t('year_review.total_km')} value={fmtNum(yrKm, 'km')} />
           )}
           {yrCost != null && (
             <CardRow
               index={yrKm != null ? 1 : 0}
-              label="Tổng chi"
+              label={t('year_review.total_cost')}
               value={fmtVnd(yrCost)}
               valueColor={colors.primary}
             />
@@ -488,7 +490,7 @@ function ReportContent({
           {yr?.service_cost != null && yr.service_cost > 0 && (
             <CardRow
               index={[yrKm, yrCost, yrRefuels].filter(x => x != null).length}
-              label="Chi phí dịch vụ"
+              label={t('year_review.service_cost')}
               value={fmtVnd(yr.service_cost)}
             />
           )}
@@ -501,7 +503,7 @@ function ReportContent({
             }}>
             <FontAwesome5 name="magic" size={12} color="#F59E0B" solid />
             <Text style={{ color: '#F59E0B', fontSize: 13, fontWeight: '700' }}>
-              Xem bản Nhìn lại {selectedYear}
+              {t('reports.year_review_link')} {selectedYear}
             </Text>
           </TouchableOpacity>
         </SectionCard>
@@ -509,7 +511,7 @@ function ReportContent({
 
       {/* ── benchmark / so sánh cộng đồng ── */}
       {benchmark != null && (
-        <SectionCard title="So sánh cộng đồng">
+        <SectionCard title={t('reports.benchmark_title')}>
           <Text style={{ color: colors.textSecondary, fontSize: 12, marginBottom: 10 }}>
             {benchmark.model} · {benchmark.sample} xe cùng dòng
           </Text>
@@ -603,7 +605,7 @@ function ReportContent({
 
       {/* ── top 3 stations ── */}
       {top3Stations.length > 0 && (
-        <SectionCard title="Trạm xăng hay dùng">
+        <SectionCard title={t('year_review.top_station')}>
           {top3Stations.map((s, i) => {
             const name =
               s.ten ?? s.name ?? s.station_name ?? `Trạm ${i + 1}`;
@@ -634,7 +636,7 @@ function ReportContent({
         <SectionCard title={`Dự báo chi tiêu năm ${selectedYear}`}>
           {sfPct != null && (
             <Text style={{ color: colors.textSecondary, fontSize: 12, marginBottom: 10 }}>
-              Theo đà thực chi tới nay ({sfPct}% năm đã qua) — ước tính thô
+              Theo đà thực chi tới nay ({sfPct}% năm đã qua) - ước tính thô
             </Text>
           )}
           <CardRow index={0} label="Dự báo tổng" value={fmtVnd(sfTotal)} valueColor={colors.primary} />
@@ -649,7 +651,7 @@ function ReportContent({
 
       {/* ── TCO (chi phí toàn đời xe) ── */}
       {tco != null && (
-        <SectionCard title="Chi phí toàn đời xe (TCO)">
+        <SectionCard title={t('reports.tco_title')}>
           {tcoTotal != null && (
             <CardRow
               index={0}
@@ -661,14 +663,14 @@ function ReportContent({
           {tcoFuel != null && (
             <CardRow
               index={tcoTotal != null ? 1 : 0}
-              label="Chi phí xăng"
+              label={t('reports.fuel_cost')}
               value={fmtVnd(tcoFuel)}
             />
           )}
           {tcoService != null && (
             <CardRow
               index={[tcoTotal, tcoFuel].filter(Boolean).length}
-              label="Chi phí dịch vụ"
+              label={t('reports.service_cost')}
               value={fmtVnd(tcoService)}
             />
           )}
@@ -705,7 +707,7 @@ function ReportContent({
         }}>
           <FontAwesome5 name="crown" size={14} color="#F59E0B" solid />
           <Text style={{ color: '#F59E0B', fontSize: 13, flex: 1 }}>
-            Nâng cấp Premium để xem báo cáo các năm trước.
+            {t('reports.premium_lock')}
           </Text>
         </View>
       )}
@@ -717,6 +719,7 @@ function ReportContent({
 /* ─── screen ─── */
 export default function ReportsScreen() {
   const colors = useColors();
+  const t = useT();
   const navigation = useNavigation<any>();
   const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(null);
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
@@ -752,10 +755,10 @@ export default function ReportsScreen() {
           paddingBottom: 12,
         }}>
         <Text style={{ color: colors.text, fontWeight: '800', fontSize: 20 }}>
-          Báo cáo
+          {t('reports.title')}
         </Text>
         <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 2 }}>
-          Tổng hợp chi phí và hành trình
+          {t('reports.subtitle')}
         </Text>
       </View>
 
@@ -778,7 +781,7 @@ export default function ReportsScreen() {
             padding: 32,
           }}>
           <Text style={{ color: colors.textSecondary, textAlign: 'center', fontSize: 15 }}>
-            Chưa có xe nào. Vào tab Xe để thêm.
+            {t('reports.no_vehicle')}
           </Text>
         </View>
       )}
@@ -813,7 +816,7 @@ export default function ReportsScreen() {
             justifyContent: 'center',
             alignItems: 'center',
           }}>
-          <Text style={{ color: colors.textSecondary }}>Chọn xe để xem báo cáo</Text>
+          <Text style={{ color: colors.textSecondary }}>{t('reports.select_vehicle_hint')}</Text>
         </View>
       ) : null}
     </SafeAreaView>

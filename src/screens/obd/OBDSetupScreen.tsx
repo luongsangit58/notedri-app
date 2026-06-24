@@ -14,6 +14,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { useObdConnection } from '../../hooks/useObd';
 import { useColors } from '../../utils/theme';
 import { useAuthStore } from '../../store/authStore';
+import { useT } from '../../i18n';
 
 export default function OBDSetupScreen() {
   const navigation = useNavigation<any>();
@@ -22,6 +23,7 @@ export default function OBDSetupScreen() {
   const vehicleName: string = route.params?.vehicleName ?? '';
   const consumptionOfficial: number | null = route.params?.consumptionOfficial ?? null;
 
+  const t = useT();
   const colors = useColors();
   const isPremium = useAuthStore((s) => s.user?.is_premium ?? false);
   const {
@@ -61,7 +63,7 @@ export default function OBDSetupScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <FontAwesome5 name="arrow-left" size={18} color={colors.text} />
         </TouchableOpacity>
-        <Text style={[styles.title, { color: colors.text }]}>Ket noi OBD</Text>
+        <Text style={[styles.title, { color: colors.text }]}>{t('obd.setup_title')}</Text>
         <View style={{ width: 32 }} />
       </View>
 
@@ -75,12 +77,12 @@ export default function OBDSetupScreen() {
           />
           <Text style={[styles.statusText, { color: colors.text }]}>
             {isConnecting
-              ? 'Dang ket noi...'
+              ? t('obd.connecting')
               : isScanning
-              ? 'Dang tim thiet bi OBD...'
+              ? t('obd.scanning')
               : foundDevices.length === 0
-              ? 'Chua tim thay thiet bi'
-              : `Tim thay ${foundDevices.length} thiet bi`}
+              ? t('obd.no_device_found')
+              : t('obd.devices_found', { n: foundDevices.length })}
           </Text>
           {(isScanning || isConnecting) && (
             <ActivityIndicator color="#3B82F6" style={{ marginTop: 8 }} />
@@ -119,24 +121,24 @@ export default function OBDSetupScreen() {
             onPress={startScan}
           >
             <FontAwesome5 name="sync" size={14} color="#3B82F6" />
-            <Text style={[styles.scanBtnText, { color: '#3B82F6' }]}>Quet lai</Text>
+            <Text style={[styles.scanBtnText, { color: '#3B82F6' }]}>{t('obd.scan_retry')}</Text>
           </TouchableOpacity>
         )}
 
         {/* Hint */}
         <View style={[styles.hintCard, { backgroundColor: colors.card }]}>
-          <Text style={[styles.hintTitle, { color: colors.text }]}>Huong dan</Text>
+          <Text style={[styles.hintTitle, { color: colors.text }]}>{t('obd.guide_title')}</Text>
           <Text style={[styles.hintText, { color: colors.textSecondary }]}>
-            1. Cam adapter BLE ELM327 vao cong OBD tren xe (thuong o goc lai, duoi dashboard)
+            {t('obd.guide_step1')}
           </Text>
           <Text style={[styles.hintText, { color: colors.textSecondary }]}>
-            2. No may xe (hoac bat contact)
+            {t('obd.guide_step2')}
           </Text>
           <Text style={[styles.hintText, { color: colors.textSecondary }]}>
-            3. Bat Bluetooth tren dien thoai va nhan "Quet lai"
+            {t('obd.guide_step3')}
           </Text>
           <Text style={[styles.hintText, { color: colors.textSecondary }]}>
-            Khuyen dung: Vgate iCar Pro BLE, VEEPEAK Mini BLE
+            {t('obd.guide_recommended')}
           </Text>
         </View>
       </View>

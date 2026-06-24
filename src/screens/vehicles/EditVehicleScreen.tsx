@@ -16,9 +16,11 @@ import { useFuelTypes } from '../../hooks/useFuelTypes';
 import LoadingView from '../../components/LoadingView';
 import ErrorView from '../../components/ErrorView';
 import { useColors } from '../../utils/theme';
+import { useT } from '../../i18n';
 
 export default function EditVehicleScreen() {
   const colors = useColors();
+  const t = useT();
   const inputStyle = {
     backgroundColor: colors.surface,
     color: colors.text,
@@ -81,7 +83,7 @@ export default function EditVehicleScreen() {
 
   const handleSubmit = async () => {
     if (!ten.trim()) {
-      Alert.alert('Thiếu thông tin', 'Vui lòng nhập tên xe.');
+      Alert.alert(t('vehicles.missing_info_title'), t('vehicles.name_required_msg'));
       return;
     }
 
@@ -107,19 +109,19 @@ export default function EditVehicleScreen() {
       const msg =
         err?.response?.data?.message ??
         err?.response?.data?.error ??
-        'Có lỗi xảy ra. Vui lòng thử lại.';
+        t('vehicles.error_generic');
       setApiError(msg);
     }
   };
 
   const handleDelete = () => {
     Alert.alert(
-      'Xoá xe',
-      'Bạn có chắc muốn xoá xe này? Hành động này không thể hoàn tác.',
+      t('vehicles.delete_confirm_title'),
+      t('vehicles.delete_confirm_message'),
       [
-        { text: 'Huỷ', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Xoá',
+          text: t('vehicles.delete'),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -129,8 +131,8 @@ export default function EditVehicleScreen() {
               const msg =
                 err?.response?.data?.message ??
                 err?.response?.data?.error ??
-                'Không thể xoá xe. Vui lòng thử lại.';
-              Alert.alert('Lỗi', msg);
+                t('vehicles.cannot_delete');
+              Alert.alert(t('common.error'), msg);
             }
           },
         },
@@ -139,7 +141,7 @@ export default function EditVehicleScreen() {
   };
 
   if (isLoading) return <LoadingView />;
-  if (isError) return <ErrorView message="Không tải được thông tin xe" onRetry={refetch} />;
+  if (isError) return <ErrorView message={t('common.error_load')} onRetry={refetch} />;
 
   const isBusy = updateVehicle.isPending || deleteVehicle.isPending;
 
@@ -162,20 +164,20 @@ export default function EditVehicleScreen() {
           </View>
         ) : null}
 
-        <Text style={labelStyle}>Tên xe *</Text>
+        <Text style={labelStyle}>{t('vehicles.name_label')}</Text>
         <TextInput
           style={inputStyle}
-          placeholder="Tên xe, VD: Honda Wave Alpha"
+          placeholder={t('vehicles.name_placeholder')}
           placeholderTextColor={colors.textSecondary}
           value={ten}
           onChangeText={setTen}
           returnKeyType="next"
         />
 
-        <Text style={labelStyle}>Biển số</Text>
+        <Text style={labelStyle}>{t('vehicles.plate_label')}</Text>
         <TextInput
           style={inputStyle}
-          placeholder="Biển số (tuỳ chọn)"
+          placeholder={t('vehicles.plate_placeholder')}
           placeholderTextColor={colors.textSecondary}
           value={bien_so}
           onChangeText={setBienSo}
@@ -183,30 +185,30 @@ export default function EditVehicleScreen() {
           returnKeyType="next"
         />
 
-        <Text style={labelStyle}>Hãng xe</Text>
+        <Text style={labelStyle}>{t('vehicles.make_label')}</Text>
         <TextInput
           style={inputStyle}
-          placeholder="Hãng xe, VD: Honda, Toyota"
+          placeholder={t('vehicles.make_placeholder')}
           placeholderTextColor={colors.textSecondary}
           value={make}
           onChangeText={setMake}
           returnKeyType="next"
         />
 
-        <Text style={labelStyle}>Model</Text>
+        <Text style={labelStyle}>{t('vehicles.model_label')}</Text>
         <TextInput
           style={inputStyle}
-          placeholder="Model, VD: Wave Alpha, Vios"
+          placeholder={t('vehicles.model_placeholder')}
           placeholderTextColor={colors.textSecondary}
           value={model}
           onChangeText={setModel}
           returnKeyType="next"
         />
 
-        <Text style={labelStyle}>Năm sản xuất</Text>
+        <Text style={labelStyle}>{t('vehicles.year_label')}</Text>
         <TextInput
           style={inputStyle}
-          placeholder="Năm sản xuất (VD: 2020)"
+          placeholder={t('vehicles.year_placeholder')}
           placeholderTextColor={colors.textSecondary}
           value={nam}
           onChangeText={setNam}
@@ -214,7 +216,7 @@ export default function EditVehicleScreen() {
           returnKeyType="next"
         />
 
-        <Text style={labelStyle}>Loại nhiên liệu</Text>
+        <Text style={labelStyle}>{t('vehicles.fuel_type_label')}</Text>
         {fuelTypesLoading ? (
           <ActivityIndicator color={colors.primary} style={{ marginBottom: 12, alignSelf: 'flex-start' }} />
         ) : (
@@ -238,7 +240,7 @@ export default function EditVehicleScreen() {
                     borderColor: selected ? colors.primary : '#2E2E2E',
                   }}>
                   <Text style={{
-                    color: selected ? '#fff' : colors.textSecondary,
+                    color: selected ? colors.primaryText : colors.textSecondary,
                     fontSize: 13,
                     fontWeight: selected ? '700' : '400',
                   }}>
@@ -250,10 +252,10 @@ export default function EditVehicleScreen() {
           </ScrollView>
         )}
 
-        <Text style={labelStyle}>ODO ban đầu</Text>
+        <Text style={labelStyle}>{t('vehicles.odo_initial_label')}</Text>
         <TextInput
           style={inputStyle}
-          placeholder="ODO ban đầu (km)"
+          placeholder={t('vehicles.odo_placeholder')}
           placeholderTextColor={colors.textSecondary}
           value={odo_ban_dau}
           onChangeText={setOdoBanDau}
@@ -261,7 +263,7 @@ export default function EditVehicleScreen() {
           returnKeyType="done"
         />
 
-        <Text style={labelStyle}>Dung tích bình xăng (L)</Text>
+        <Text style={labelStyle}>{t('vehicles.tank_capacity_label')}</Text>
         <TextInput
           style={inputStyle}
           placeholder="VD: 40"
@@ -272,7 +274,7 @@ export default function EditVehicleScreen() {
           returnKeyType="done"
         />
 
-        <Text style={labelStyle}>Mức tiêu hao NSX công bố (L/100km)</Text>
+        <Text style={labelStyle}>{t('vehicles.consumption_official_label')}</Text>
         <TextInput
           style={inputStyle}
           placeholder="VD: 6.5"
@@ -295,7 +297,7 @@ export default function EditVehicleScreen() {
           borderWidth: 1,
           borderColor: '#2E2E2E',
         }}>
-          <Text style={{ color: colors.text, fontSize: 15 }}>Đặt làm xe mặc định</Text>
+          <Text style={{ color: colors.text, fontSize: 15 }}>{t('vehicles.set_default')}</Text>
           <Switch
             value={is_default}
             onValueChange={setIsDefault}
@@ -316,9 +318,9 @@ export default function EditVehicleScreen() {
             opacity: isBusy ? 0.7 : 1,
           }}>
           {updateVehicle.isPending ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={colors.primaryText} />
           ) : (
-            <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>Lưu thay đổi</Text>
+            <Text style={{ color: colors.primaryText, fontSize: 16, fontWeight: '700' }}>{t('vehicles.save_changes')}</Text>
           )}
         </TouchableOpacity>
 
@@ -337,7 +339,7 @@ export default function EditVehicleScreen() {
           {deleteVehicle.isPending ? (
             <ActivityIndicator color={colors.error} />
           ) : (
-            <Text style={{ color: colors.error, fontSize: 16, fontWeight: '700' }}>Xoá xe</Text>
+            <Text style={{ color: colors.error, fontSize: 16, fontWeight: '700' }}>{t('vehicles.delete')}</Text>
           )}
         </TouchableOpacity>
       </ScrollView>

@@ -11,6 +11,8 @@ import {
 import { useAuthStore } from '../../store/authStore';
 import { profileApi } from '../../api/profile';
 import { useColors } from '../../utils/theme';
+import { useT } from '../../i18n';
+import PasswordInput from '../../components/PasswordInput';
 
 type FieldErrors = Record<string, string[]>;
 
@@ -31,6 +33,7 @@ function FieldError({ errors, field }: { errors: FieldErrors; field: string }) {
 
 export default function EditProfileScreen() {
   const colors = useColors();
+  const t = useT();
 
   const inputStyle = {
     backgroundColor: colors.background,
@@ -85,14 +88,14 @@ export default function EditProfileScreen() {
       const response = await profileApi.update({ name, email });
       const updatedUser = response.data.data;
       setUser(updatedUser);
-      Alert.alert('Thành công', 'Thông tin cá nhân đã được cập nhật.');
+      Alert.alert(t('edit_profile.success'), t('edit_profile.info_updated'));
     } catch (error: any) {
       const errors = extractErrors(error);
       if (Object.keys(errors).length > 0) {
         setInfoErrors(errors);
       } else {
-        const message = error?.response?.data?.message ?? 'Đã có lỗi xảy ra.';
-        Alert.alert('Lỗi', message);
+        const message = error?.response?.data?.message ?? t('edit_profile.error_generic');
+        Alert.alert(t('common.error'), message);
       }
     } finally {
       setInfoLoading(false);
@@ -111,14 +114,14 @@ export default function EditProfileScreen() {
       setCurrentPassword('');
       setPassword('');
       setPasswordConfirmation('');
-      Alert.alert('Thành công', 'Mật khẩu đã được thay đổi.');
+      Alert.alert(t('edit_profile.success'), t('edit_profile.password_changed'));
     } catch (error: any) {
       const errors = extractErrors(error);
       if (Object.keys(errors).length > 0) {
         setPasswordErrors(errors);
       } else {
-        const message = error?.response?.data?.message ?? 'Đã có lỗi xảy ra.';
-        Alert.alert('Lỗi', message);
+        const message = error?.response?.data?.message ?? t('edit_profile.error_generic');
+        Alert.alert(t('common.error'), message);
       }
     } finally {
       setPasswordLoading(false);
@@ -131,15 +134,15 @@ export default function EditProfileScreen() {
       contentContainerStyle={{ padding: 16 }}
       keyboardShouldPersistTaps="handled"
     >
-      {/* Section 1: Thông tin cá nhân */}
+      {/* Section 1: Personal info */}
       <View style={cardStyle}>
-        <Text style={sectionTitleStyle}>Thông tin cá nhân</Text>
+        <Text style={sectionTitleStyle}>{t('edit_profile.personal_info_title')}</Text>
 
         <TextInput
           style={inputStyle}
           value={name}
           onChangeText={setName}
-          placeholder="Họ và tên"
+          placeholder={t('auth.name')}
           placeholderTextColor={colors.textSecondary}
         />
         <FieldError errors={infoErrors} field="name" />
@@ -148,7 +151,7 @@ export default function EditProfileScreen() {
           style={inputStyle}
           value={email}
           onChangeText={setEmail}
-          placeholder="Email"
+          placeholder={t('auth.email')}
           placeholderTextColor={colors.textSecondary}
           keyboardType="email-address"
           autoCapitalize="none"
@@ -161,44 +164,38 @@ export default function EditProfileScreen() {
           disabled={infoLoading}
         >
           {infoLoading ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={colors.primaryText} />
           ) : (
-            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Lưu thông tin</Text>
+            <Text style={{ color: colors.primaryText, fontWeight: '700', fontSize: 15 }}>{t('edit_profile.save_info_button')}</Text>
           )}
         </TouchableOpacity>
       </View>
 
-      {/* Section 2: Đổi mật khẩu */}
+      {/* Section 2: Change password */}
       <View style={cardStyle}>
-        <Text style={sectionTitleStyle}>Đổi mật khẩu</Text>
+        <Text style={sectionTitleStyle}>{t('edit_profile.change_password_title')}</Text>
 
-        <TextInput
-          style={inputStyle}
+        <PasswordInput
           value={currentPassword}
           onChangeText={setCurrentPassword}
-          placeholder="Mật khẩu hiện tại"
-          placeholderTextColor={colors.textSecondary}
-          secureTextEntry
+          placeholder={t('auth.password')}
+          style={{ marginBottom: 4 }}
         />
         <FieldError errors={passwordErrors} field="current_password" />
 
-        <TextInput
-          style={inputStyle}
+        <PasswordInput
           value={password}
           onChangeText={setPassword}
-          placeholder="Mật khẩu mới (min. 8 ký tự)"
-          placeholderTextColor={colors.textSecondary}
-          secureTextEntry
+          placeholder={t('auth.password')}
+          style={{ marginBottom: 4 }}
         />
         <FieldError errors={passwordErrors} field="password" />
 
-        <TextInput
-          style={inputStyle}
+        <PasswordInput
           value={passwordConfirmation}
           onChangeText={setPasswordConfirmation}
-          placeholder="Xác nhận mật khẩu mới"
-          placeholderTextColor={colors.textSecondary}
-          secureTextEntry
+          placeholder={t('auth.password_confirm')}
+          style={{ marginBottom: 4 }}
         />
         <FieldError errors={passwordErrors} field="password_confirmation" />
 
@@ -208,9 +205,9 @@ export default function EditProfileScreen() {
           disabled={passwordLoading}
         >
           {passwordLoading ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={colors.primaryText} />
           ) : (
-            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Đổi mật khẩu</Text>
+            <Text style={{ color: colors.primaryText, fontWeight: '700', fontSize: 15 }}>{t('edit_profile.change_password_button')}</Text>
           )}
         </TouchableOpacity>
       </View>

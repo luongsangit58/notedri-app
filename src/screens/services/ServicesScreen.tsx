@@ -11,6 +11,7 @@ import { useServices } from '../../hooks/useServices';
 import { useVehicles } from '../../hooks/useVehicles';
 import { useColors } from '../../utils/theme';
 import { formatVND } from '../../utils/format';
+import { useT } from '../../i18n';
 
 const LOAI_LABELS: Record<string, string> = {
   bao_duong: 'Bảo dưỡng',
@@ -105,6 +106,7 @@ function ServiceCard({ item, onPress }: { item: ServiceItem; onPress?: () => voi
 
 export default function ServicesScreen() {
   const colors = useColors();
+  const t = useT();
   const navigation = useNavigation<any>();
 
   const [searchText, setSearchText] = useState('');
@@ -166,7 +168,7 @@ export default function ServicesScreen() {
     },
     chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
     chipText: { color: colors.textSecondary, fontSize: 13, fontWeight: '400' },
-    chipTextActive: { color: '#fff', fontWeight: '700' },
+    chipTextActive: { color: colors.primaryText, fontWeight: '700' },
     listContent: { padding: 16, paddingBottom: 80 },
     emptyContainer: { flexGrow: 1, padding: 16, paddingBottom: 80 },
     emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 80 },

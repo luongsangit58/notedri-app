@@ -18,6 +18,7 @@ import { useOdometer } from '../../hooks/useOdometer';
 import { useVehicles } from '../../hooks/useVehicles';
 import { useColors } from '../../utils/theme';
 import { formatKm } from '../../utils/format';
+import { useT } from '../../i18n';
 
 const PER_PAGE = 15;
 
@@ -130,6 +131,7 @@ function SingleVehicleList({
   vehicleId: number;
   onNavigateEdit: (id: number) => void;
 }) {
+  const t = useT();
   const colors = useColors();
   const styles = StyleSheet.create({
     loadMoreBtn: {
@@ -216,7 +218,7 @@ function SingleVehicleList({
       {isFetching && page > 1 ? (
         <ActivityIndicator color={colors.primary} size="small" />
       ) : (
-        <Text style={styles.loadMoreText}>Tải thêm</Text>
+        <Text style={styles.loadMoreText}>{t('common.load_more')}</Text>
       )}
     </TouchableOpacity>
   ) : null;
@@ -228,7 +230,7 @@ function SingleVehicleList({
   ) : (
     <View style={styles.emptyState}>
       <FontAwesome5 name="road" size={48} color={colors.textSecondary} solid />
-      <Text style={[styles.emptyText, { marginTop: 12 }]}>Chưa có mốc ODO nào</Text>
+      <Text style={[styles.emptyText, { marginTop: 12 }]}>{t('odometer.empty')}</Text>
     </View>
   );
 
@@ -244,7 +246,7 @@ function SingleVehicleList({
           <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4 }}>
             {odoCurrentKm != null && (
               <View style={{ flex: 1, backgroundColor: colors.surface, borderRadius: 10, padding: 10, alignItems: 'center' }}>
-                <Text style={{ color: colors.textSecondary, fontSize: 10 }}>ODO hiện tại</Text>
+                <Text style={{ color: colors.textSecondary, fontSize: 10 }}>{t('odometer.current')}</Text>
                 <Text style={{ color: colors.text, fontWeight: '700', fontSize: 15, marginTop: 2 }}>
                   {formatKm(odoCurrentKm)}
                 </Text>
@@ -252,7 +254,7 @@ function SingleVehicleList({
             )}
             {totalKmTracked != null && totalKmTracked > 0 && (
               <View style={{ flex: 1, backgroundColor: colors.surface, borderRadius: 10, padding: 10, alignItems: 'center' }}>
-                <Text style={{ color: colors.textSecondary, fontSize: 10 }}>Km đã ghi nhận</Text>
+                <Text style={{ color: colors.textSecondary, fontSize: 10 }}>{t('odometer.tracked_km')}</Text>
                 <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 15, marginTop: 2 }}>
                   {'+' + formatKm(totalKmTracked)}
                 </Text>
@@ -409,7 +411,7 @@ export default function OdometerListScreen() {
       fontWeight: '400',
     },
     chipTextActive: {
-      color: '#fff',
+      color: colors.primaryText,
       fontWeight: '700',
     },
     fab: {

@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
 import client from '../../api/client';
 import { useColors } from '../../utils/theme';
+import { useT } from '../../i18n';
 
 function InfoRow({ icon, label, value }: { icon: string; label: string; value: string | number }) {
   const colors = useColors();
@@ -20,6 +21,7 @@ function InfoRow({ icon, label, value }: { icon: string; label: string; value: s
 
 export default function ExportDataScreen() {
   const colors = useColors();
+  const t = useT();
   const [loading, setLoading] = useState(false);
   const [preview, setPreview] = useState<any>(null);
 
@@ -30,7 +32,7 @@ export default function ExportDataScreen() {
       const exportData = res.data?.data ?? res.data;
       setPreview(exportData);
     } catch {
-      Alert.alert('Lỗi', 'Không thể tải dữ liệu. Vui lòng thử lại.');
+      Alert.alert(t('common.error'), t('export.error_msg'));
     } finally {
       setLoading(false);
     }
@@ -41,7 +43,7 @@ export default function ExportDataScreen() {
     const json = JSON.stringify(preview, null, 2);
     await Share.share({
       message: json,
-      title: 'Dữ liệu NoteDri',
+      title: t('export.title'),
     });
   };
 
@@ -69,27 +71,27 @@ export default function ExportDataScreen() {
             <FontAwesome5 name="download" size={26} color={colors.primary} solid />
           </View>
           <Text style={{ color: colors.text, fontWeight: '800', fontSize: 18, textAlign: 'center' }}>
-            Xuất dữ liệu
+            {t('export.title')}
           </Text>
           <Text style={{ color: colors.textSecondary, fontSize: 13, textAlign: 'center', marginTop: 8, lineHeight: 18 }}>
-            Tải toàn bộ dữ liệu xe, lịch sử đổ xăng, bảo dưỡng và lời nhắc về dưới dạng JSON.
+            {t('export.full_subtitle')}
           </Text>
         </View>
 
         {/* What's included */}
         <View style={{ backgroundColor: colors.surface, borderRadius: 14, paddingHorizontal: 16, marginBottom: 20 }}>
           <Text style={{ color: colors.textSecondary, fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, paddingTop: 14, paddingBottom: 4 }}>
-            Dữ liệu bao gồm
+            {t('export.included_label')}
           </Text>
-          <InfoRow icon="car-side"   label="Xe" value={preview ? vehicleCount : '—'} />
-          <InfoRow icon="gas-pump"   label="Lịch sử đổ xăng" value={preview ? refuelCount : '—'} />
-          <InfoRow icon="wrench"     label="Bảo dưỡng" value={preview ? serviceCount : '—'} />
-          <InfoRow icon="road"       label="Mốc ODO" value={preview ? odoCount : '—'} />
-          <InfoRow icon="bell"       label="Lời nhắc" value={preview ? reminderCount : '—'} />
+          <InfoRow icon="car-side"   label={t('export.vehicles')}  value={preview ? vehicleCount : '—'} />
+          <InfoRow icon="gas-pump"   label={t('export.refuels')}   value={preview ? refuelCount : '—'} />
+          <InfoRow icon="wrench"     label={t('export.services')}  value={preview ? serviceCount : '—'} />
+          <InfoRow icon="road"       label={t('export.odo')}       value={preview ? odoCount : '—'} />
+          <InfoRow icon="bell"       label={t('export.reminders')} value={preview ? reminderCount : '—'} />
           {preview?.exported_at && (
             <View style={{ paddingVertical: 10 }}>
               <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
-                Xuất lúc: {new Date(preview.exported_at).toLocaleString('vi-VN')}
+                {t('export.exported_at_label')}: {new Date(preview.exported_at).toLocaleString('vi-VN')}
               </Text>
             </View>
           )}
@@ -106,10 +108,10 @@ export default function ExportDataScreen() {
               opacity: loading ? 0.6 : 1,
             }}>
             {loading
-              ? <ActivityIndicator color="#fff" />
+              ? <ActivityIndicator color={colors.primaryText} />
               : <>
-                  <FontAwesome5 name="download" size={16} color="#fff" solid />
-                  <Text style={{ color: '#fff', fontWeight: '700', fontSize: 16 }}>Tải dữ liệu</Text>
+                  <FontAwesome5 name="download" size={16} color={colors.primaryText} solid />
+                  <Text style={{ color: colors.primaryText, fontWeight: '700', fontSize: 16 }}>{t('export.download_button')}</Text>
                 </>
             }
           </TouchableOpacity>
@@ -121,8 +123,8 @@ export default function ExportDataScreen() {
                 backgroundColor: colors.primary, borderRadius: 12,
                 paddingVertical: 16, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 10,
               }}>
-              <FontAwesome5 name="share-alt" size={16} color="#fff" solid />
-              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 16 }}>Chia sẻ / Lưu JSON</Text>
+              <FontAwesome5 name="share-alt" size={16} color={colors.primaryText} solid />
+              <Text style={{ color: colors.primaryText, fontWeight: '700', fontSize: 16 }}>{t('export.share_button')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => { setPreview(null); }}
@@ -130,13 +132,13 @@ export default function ExportDataScreen() {
                 backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1, borderColor: colors.border,
                 paddingVertical: 14, alignItems: 'center',
               }}>
-              <Text style={{ color: colors.textSecondary, fontWeight: '600' }}>Tải lại</Text>
+              <Text style={{ color: colors.textSecondary, fontWeight: '600' }}>{t('export.reload_button')}</Text>
             </TouchableOpacity>
           </View>
         )}
 
         <Text style={{ color: colors.textSecondary, fontSize: 11, textAlign: 'center', marginTop: 20, lineHeight: 16 }}>
-          Dữ liệu của bạn thuộc về bạn. NoteDri không bán hay chia sẻ thông tin này với bên thứ ba.
+          {t('export.privacy_note')}
         </Text>
       </ScrollView>
     </SafeAreaView>

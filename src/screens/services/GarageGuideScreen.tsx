@@ -9,6 +9,7 @@ import { useNavigation } from '@react-navigation/native';
 import { servicesApi } from '../../api/services';
 import { useColors } from '../../utils/theme';
 import { formatVND } from '../../utils/format';
+import { useT } from '../../i18n';
 
 /* ─── FA6 → FA5 icon name map ─── */
 const FA_MAP: Record<string, string> = {
@@ -38,6 +39,7 @@ interface Topic {
 
 function TopicCard({ topic, last }: { topic: Topic; last?: LastEntry }) {
   const colors = useColors();
+  const t = useT();
   return (
     <View style={{
       backgroundColor: colors.surface,
@@ -65,7 +67,7 @@ function TopicCard({ topic, last }: { topic: Topic; last?: LastEntry }) {
               {'~' + formatVND(last.chi_phi)}
             </Text>
             <Text style={{ color: colors.textSecondary, fontSize: 11 }}>
-              lần trước · {formatMonthYear(last.ngay)}
+              {t('services.garage_prev_service', { month: formatMonthYear(last.ngay) })}
             </Text>
           </View>
         )}
@@ -75,7 +77,7 @@ function TopicCard({ topic, last }: { topic: Topic; last?: LastEntry }) {
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
         <FontAwesome5 name="comment-dots" size={11} color={colors.textSecondary} solid />
         <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: '600' }}>
-          Nên hỏi thợ:
+          {t('services.garage_ask_tech')}
         </Text>
       </View>
 
@@ -97,6 +99,7 @@ function TopicCard({ topic, last }: { topic: Topic; last?: LastEntry }) {
 
 export default function GarageGuideScreen() {
   const colors = useColors();
+  const t = useT();
   const navigation = useNavigation<any>();
 
   const { data, isLoading, isError, refetch } = useQuery({
@@ -118,10 +121,10 @@ export default function GarageGuideScreen() {
   if (isError) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', padding: 24 }} edges={['bottom']}>
-        <Text style={{ color: colors.error, fontWeight: '700', marginBottom: 12 }}>Không tải được dữ liệu</Text>
+        <Text style={{ color: colors.error, fontWeight: '700', marginBottom: 12 }}>{t('common.error_load')}</Text>
         <TouchableOpacity onPress={() => refetch()}
           style={{ backgroundColor: colors.primary, borderRadius: 10, paddingHorizontal: 24, paddingVertical: 10 }}>
-          <Text style={{ color: '#fff', fontWeight: '700' }}>Thử lại</Text>
+          <Text style={{ color: colors.primaryText, fontWeight: '700' }}>{t('common.retry')}</Text>
         </TouchableOpacity>
       </SafeAreaView>
     );
@@ -132,7 +135,7 @@ export default function GarageGuideScreen() {
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
         {/* Subtitle */}
         <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 16, lineHeight: 18 }}>
-          Mang theo khi ra tiệm để khỏi bị hét giá hay làm thừa. Giá tham khảo lấy từ lần gần nhất chính xe bạn đã làm.
+          {t('services.garage_desc')}
         </Text>
 
         {topics.map(topic => (
@@ -144,7 +147,7 @@ export default function GarageGuideScreen() {
         ))}
 
         <Text style={{ color: colors.textSecondary, fontSize: 11, textAlign: 'center', marginTop: 8 }}>
-          NoteDri không bán dịch vụ — chỉ giúp bạn hỏi đúng & nhớ giá cũ.
+          {t('services.garage_footer')}
         </Text>
       </ScrollView>
     </SafeAreaView>

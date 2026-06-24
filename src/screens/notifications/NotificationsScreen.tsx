@@ -11,6 +11,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useNotifications, useMarkAllRead, useMarkRead } from '../../hooks/useNotifications';
 import { useColors } from '../../utils/theme';
 import { navigateFromUrl } from '../../utils/navigation';
+import { useT } from '../../i18n';
 
 dayjs.extend(relativeTime);
 dayjs.locale('vi');
@@ -97,16 +98,18 @@ function NotifRow({
 
 function EmptyState({ styles }: { styles: ReturnType<typeof StyleSheet.create> }) {
   const colors = useColors();
+  const t = useT();
   return (
     <View style={styles.emptyContainer}>
       <FontAwesome5 name="check-circle" size={48} color={colors.success} solid />
-      <Text style={[styles.emptyText, { marginTop: 12 }]}>Không có thông báo nào</Text>
+      <Text style={[styles.emptyText, { marginTop: 12 }]}>{t('notifications.empty')}</Text>
     </View>
   );
 }
 
 export default function NotificationsScreen() {
   const colors = useColors();
+  const t = useT();
   const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
     header: {
@@ -149,7 +152,7 @@ export default function NotificationsScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Thông báo</Text>
+        <Text style={styles.headerTitle}>{t('notifications.title')}</Text>
         <TouchableOpacity
           onPress={() => markAllRead()}
           disabled={isMarking}
@@ -160,7 +163,7 @@ export default function NotificationsScreen() {
             : (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <FontAwesome5 name="check" size={13} color={colors.primary} solid />
-                <Text style={styles.markAllText}>Đọc tất cả</Text>
+                <Text style={styles.markAllText}>{t('notifications.mark_all_read')}</Text>
               </View>
             )
           }
@@ -193,4 +196,3 @@ export default function NotificationsScreen() {
     </SafeAreaView>
   );
 }
-

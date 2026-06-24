@@ -16,6 +16,7 @@ import { useRefuels } from '../../hooks/useRefuels';
 import { useVehicles } from '../../hooks/useVehicles';
 import { useColors } from '../../utils/theme';
 import { formatVND, formatKm } from '../../utils/format';
+import { useT } from '../../i18n';
 
 const PER_PAGE = 15;
 
@@ -284,7 +285,7 @@ export default function RefuelsListScreen() {
       fontWeight: '400',
     },
     chipTextActive: {
-      color: '#fff',
+      color: colors.primaryText,
       fontWeight: '700',
     },
     listContent: {

@@ -6,6 +6,7 @@ import { useQuery } from '@tanstack/react-query';
 import client from '../../api/client';
 import LoadingView from '../../components/LoadingView';
 import { useColors } from '../../utils/theme';
+import { useT } from '../../i18n';
 import { formatVND } from '../../utils/format';
 
 function fmt(n: number | string | null | undefined): string {
@@ -107,6 +108,7 @@ type TabKey = 'current' | 'history';
 
 export default function FuelPricesScreen() {
   const colors = useColors();
+  const t = useT();
   const [tab, setTab] = useState<TabKey>('current');
 
   const { data, isLoading, refetch: refetchTypes, isFetching: fetchingTypes } = useQuery({

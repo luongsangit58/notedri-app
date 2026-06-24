@@ -21,17 +21,10 @@ import { useVehicles } from '../../hooks/useVehicles';
 import LoadingView from '../../components/LoadingView';
 import ErrorView from '../../components/ErrorView';
 import { useColors } from '../../utils/theme';
+import { useT } from '../../i18n';
 
 type LoaiKey = 'bao_duong' | 'dang_kiem' | 'bao_hiem' | 'giay_to' | 'khac';
 type StatusKey = 'ok' | 'warning' | 'danger' | 'overdue';
-
-const LOAI_LABELS: Record<LoaiKey, string> = {
-  bao_duong: 'Bảo dưỡng',
-  dang_kiem: 'Đăng kiểm',
-  bao_hiem: 'Bảo hiểm',
-  giay_to: 'Giấy tờ',
-  khac: 'Khác',
-};
 
 function formatShortDate(s: string): string {
   const d = new Date(s);
@@ -40,12 +33,6 @@ function formatShortDate(s: string): string {
   const yyyy = String(d.getFullYear());
   return `${dd}/${mm}/${yyyy}`;
 }
-
-const CHE_DO_LABELS: Record<string, string> = {
-  chu_ky: 'Định kỳ',
-  ngay_co_dinh: 'Cố định',
-  mot_lan: 'Một lần',
-};
 
 interface Reminder {
   id: number;
@@ -76,6 +63,7 @@ function ReminderCard({
   onDelete: (id: number) => void;
   onEdit: (id: number) => void;
 }) {
+  const t = useT();
   const colors = useColors();
   const STATUS_COLORS: Record<StatusKey, string> = {
     ok: colors.success,
@@ -180,15 +168,32 @@ function ReminderCard({
     },
   });
   const statusColor = STATUS_COLORS[item.status] ?? colors.textSecondary;
-  const loaiLabel = LOAI_LABELS[item.loai] ?? item.loai;
+
+  const loaiLabel = (() => {
+    switch (item.loai) {
+      case 'bao_duong': return t('reminders.type_bao_duong');
+      case 'dang_kiem': return t('reminders.type_dang_kiem');
+      case 'bao_hiem': return t('reminders.type_bao_hiem');
+      case 'giay_to': return t('reminders.type_giay_to');
+      case 'khac': return t('reminders.type_khac');
+      default: return item.loai;
+    }
+  })();
+
+  const cheDo = item.che_do;
+  const cheDolabel = cheDo === 'chu_ky'
+    ? t('reminders.mode_chu_ky')
+    : cheDo === 'ngay_co_dinh'
+      ? t('reminders.mode_ngay_co_dinh')
+      : t('reminders.mode_mot_lan');
 
   const handleDelete = () => {
     Alert.alert(
-      'Xác nhận xoá',
-      `Bạn có chắc muốn xoá lời nhắc "${item.hang_muc}" không?`,
+      t('reminders.delete_confirm_title'),
+      t('reminders.delete_confirm_message'),
       [
-        { text: 'Huỷ', style: 'cancel' },
-        { text: 'Xoá', style: 'destructive', onPress: () => onDelete(item.id) },
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: t('common.delete'), style: 'destructive', onPress: () => onDelete(item.id) },
       ],
     );
   };
@@ -244,13 +249,13 @@ function ReminderCard({
             <Text style={[styles.loaiText, {
               color: item.che_do === 'chu_ky' ? colors.primary : colors.textSecondary,
             }]}>
-              {CHE_DO_LABELS[item.che_do] ?? item.che_do}
+              {cheDolabel}
             </Text>
           </View>
         )}
         {!item.is_active && (
           <View style={styles.inactiveBadge}>
-            <Text style={styles.inactiveText}>Tắt</Text>
+            <Text style={styles.inactiveText}>{t('reminders.status_off')}</Text>
           </View>
         )}
       </View>
@@ -309,7 +314,7 @@ function ReminderCard({
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
           <FontAwesome5 name="check" size={14} color={colors.success} solid />
           <Text style={styles.doneBtnText}>
-            {item.che_do === 'ngay_co_dinh' ? 'Gia hạn' : item.che_do === 'mot_lan' ? 'Hoàn tất' : 'Đã làm'}
+            {item.che_do === 'ngay_co_dinh' ? t('reminders.renew') : item.che_do === 'mot_lan' ? t('reminders.done_button') : t('reminders.done_button')}
           </Text>
         </View>
       </TouchableOpacity>
@@ -318,6 +323,7 @@ function ReminderCard({
 }
 
 export default function RemindersScreen() {
+  const t = useT();
   const colors = useColors();
   const styles = StyleSheet.create({
     container: {
@@ -442,7 +448,7 @@ export default function RemindersScreen() {
   const [doneDate, setDoneDate] = useState('');
 
   React.useLayoutEffect(() => {
-    navigation.setOptions({ title: `Lời nhắc — ${vehicleName}` });
+    navigation.setOptions({ title: `${t('reminders.title')} - ${vehicleName}` });
   }, [navigation, vehicleName]);
 
   const openDoneModal = (id: number, che_do: Reminder['che_do']) => {
@@ -485,14 +491,14 @@ export default function RemindersScreen() {
         }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>Chưa có lời nhắc nào</Text>
+            <Text style={styles.emptyText}>{t('reminders.empty')}</Text>
           </View>
         }
         ListFooterComponent={
           suggestions.length > 0 ? (
             <View style={{ padding: 16, paddingTop: 8 }}>
               <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 }}>
-                Gợi ý thêm
+                {t('reminders.suggest_more')}
               </Text>
               {suggestions.map((s: any, i: number) => (
                 <TouchableOpacity
@@ -537,7 +543,7 @@ export default function RemindersScreen() {
           <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
             <Pressable style={styles.modalBox}>
               <Text style={styles.modalTitle}>
-                {doneCheDo === 'ngay_co_dinh' ? 'Gia hạn ngày hẹn' : doneCheDo === 'mot_lan' ? 'Hoàn tất lời nhắc' : 'Xác nhận đã làm'}
+                {doneCheDo === 'ngay_co_dinh' ? t('reminders.renew') : doneCheDo === 'mot_lan' ? t('reminders.complete_title') : t('reminders.complete_title')}
               </Text>
               <Text style={styles.modalSub}>
                 {doneCheDo === 'ngay_co_dinh'
@@ -555,7 +561,7 @@ export default function RemindersScreen() {
                     onChangeText={setDoneDate}
                     returnKeyType="next"
                   />
-                  <Text style={styles.modalLabel}>Số ODO (km) — tuỳ chọn</Text>
+                  <Text style={styles.modalLabel}>{t('reminders.complete_odo_label')}</Text>
                   <TextInput
                     style={styles.modalInput}
                     keyboardType="numeric"
@@ -582,10 +588,10 @@ export default function RemindersScreen() {
               )}
               <View style={styles.modalActions}>
                 <TouchableOpacity onPress={() => setDoneModalId(null)} style={styles.modalCancel}>
-                  <Text style={{ color: colors.textSecondary, fontWeight: '600' }}>Huỷ</Text>
+                  <Text style={{ color: colors.textSecondary, fontWeight: '600' }}>{t('common.cancel')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={confirmDone} style={styles.modalConfirm}>
-                  <Text style={{ color: '#fff', fontWeight: '700' }}>Xác nhận</Text>
+                  <Text style={{ color: '#fff', fontWeight: '700' }}>{t('common.confirm')}</Text>
                 </TouchableOpacity>
               </View>
             </Pressable>
@@ -595,4 +601,3 @@ export default function RemindersScreen() {
     </SafeAreaView>
   );
 }
-

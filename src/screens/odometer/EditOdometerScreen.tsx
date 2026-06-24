@@ -8,6 +8,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { odometerApi } from '../../api/odometer';
 import { useUpdateOdometer, useDeleteOdometer } from '../../hooks/useOdometer';
 import { useColors } from '../../utils/theme';
+import { useT } from '../../i18n';
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
   const colors = useColors();
@@ -15,6 +16,7 @@ function FieldLabel({ children }: { children: React.ReactNode }) {
 }
 
 export default function EditOdometerScreen() {
+  const t = useT();
   const colors = useColors();
   const styles = StyleSheet.create({
     container: {
@@ -138,11 +140,11 @@ export default function EditOdometerScreen() {
 
   const handleUpdate = async () => {
     if (!odo) {
-      Alert.alert('Lỗi', 'Vui lòng nhập số ODO');
+      Alert.alert(t('common.error'), 'Vui lòng nhập số ODO');
       return;
     }
     if (!ngay) {
-      Alert.alert('Lỗi', 'Vui lòng nhập ngày');
+      Alert.alert(t('common.error'), 'Vui lòng nhập ngày');
       return;
     }
     setUpdating(true);
@@ -159,7 +161,7 @@ export default function EditOdometerScreen() {
     } catch (err: any) {
       const errs = err?.response?.data?.errors;
       const detail = errs ? Object.values(errs).flat().join('\n') : null;
-      Alert.alert('Lỗi', detail ?? err?.response?.data?.message ?? 'Không cập nhật được');
+      Alert.alert(t('common.error'), detail ?? err?.response?.data?.message ?? 'Không cập nhật được');
     } finally {
       setUpdating(false);
     }
@@ -167,18 +169,18 @@ export default function EditOdometerScreen() {
 
   const handleDelete = () => {
     Alert.alert(
-      'Xoá mốc ODO',
-      'Bạn có chắc muốn xoá mốc ODO này? Hành động này không thể hoàn tác.',
+      t('odometer.delete_confirm_title'),
+      t('odometer.delete_confirm_message'),
       [
-        { text: 'Huỷ', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Xoá',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: () => {
             deleteOdometer.mutate(odometerReadingId, {
               onSuccess: () => navigation.goBack(),
               onError: (e: any) =>
-                Alert.alert('Lỗi', e?.response?.data?.message ?? 'Không xoá được'),
+                Alert.alert(t('common.error'), e?.response?.data?.message ?? 'Không xoá được'),
             });
           },
         },
@@ -203,14 +205,14 @@ export default function EditOdometerScreen() {
 
           {/* Header row */}
           <View style={styles.header}>
-            <Text style={styles.headerTitle}>Sửa ODO</Text>
+            <Text style={styles.headerTitle}>{t('odometer.edit_title')}</Text>
             <TouchableOpacity onPress={() => navigation.goBack()} style={styles.closeBtn}>
               <Text style={styles.closeBtnText}>✕</Text>
             </TouchableOpacity>
           </View>
 
           {/* ODO field */}
-          <FieldLabel>Số ODO (km) *</FieldLabel>
+          <FieldLabel>{t('odometer.value_label')}</FieldLabel>
           <TextInput
             value={odo}
             onChangeText={setOdo}
@@ -221,7 +223,7 @@ export default function EditOdometerScreen() {
           />
 
           {/* Ngay field */}
-          <FieldLabel>Ngày *</FieldLabel>
+          <FieldLabel>{t('odometer.date_required')}</FieldLabel>
           <TextInput
             value={ngay}
             onChangeText={setNgay}
@@ -231,7 +233,7 @@ export default function EditOdometerScreen() {
           />
 
           {/* Ghi chu field */}
-          <FieldLabel>Ghi chú</FieldLabel>
+          <FieldLabel>{t('common.note')}</FieldLabel>
           <TextInput
             value={ghiChu}
             onChangeText={setGhiChu}
@@ -249,7 +251,7 @@ export default function EditOdometerScreen() {
           >
             {updating
               ? <ActivityIndicator color="#fff" />
-              : <Text style={styles.submitText}>Cập nhật</Text>}
+              : <Text style={styles.submitText}>{t('common.update')}</Text>}
           </TouchableOpacity>
 
           {/* Delete button */}
@@ -260,7 +262,7 @@ export default function EditOdometerScreen() {
           >
             {deleteOdometer.isPending
               ? <ActivityIndicator color={colors.error} />
-              : <Text style={styles.deleteText}>Xoá mốc ODO</Text>}
+              : <Text style={styles.deleteText}>{t('odometer.delete_confirm_title')}</Text>}
           </TouchableOpacity>
 
         </ScrollView>
