@@ -31,8 +31,10 @@ export const useDeleteReminder = () => {
 export const useDoneReminder = () => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, odo }: { id: number; odo?: number }) =>
-      remindersApi.done(id, odo ? { last_done_odo: odo } : undefined).then(r => r.data),
+    mutationFn: ({ id, odo, date }: { id: number; odo?: number; date?: string }) =>
+      remindersApi.done(id, (odo || date)
+        ? { last_done_odo: odo, last_done_date: date }
+        : undefined).then(r => r.data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['reminders'] });
       qc.invalidateQueries({ queryKey: ['dashboard'] });

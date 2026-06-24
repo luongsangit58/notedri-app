@@ -58,6 +58,7 @@ interface Reminder {
   last_done_odo?: number | null;
   due_date?: string | null;
   ghi_chu?: string | null;
+  why?: string | null;
   is_active: boolean;
   remaining_days?: number | null;
   remaining_km?: number | null;
@@ -71,7 +72,7 @@ function ReminderCard({
   onEdit,
 }: {
   item: Reminder;
-  onDone: (id: number, odo?: number) => void;
+  onDone: (id: number, che_do: Reminder['che_do']) => void;
   onDelete: (id: number) => void;
   onEdit: (id: number) => void;
 }) {
@@ -290,14 +291,26 @@ function ReminderCard({
         </Text>
       ) : null}
 
+      {/* Why explanation for urgent/warning reminders */}
+      {item.why && (item.status === 'danger' || item.status === 'warning' || item.status === 'overdue') ? (
+        <View style={{
+          backgroundColor: statusColor + '11', borderRadius: 6,
+          padding: 8, marginBottom: 8, borderLeftWidth: 2, borderLeftColor: statusColor,
+        }}>
+          <Text style={{ color: statusColor, fontSize: 11 }}>{item.why}</Text>
+        </View>
+      ) : null}
+
       <TouchableOpacity
         style={styles.doneBtn}
-        onPress={() => onDone(item.id)}
+        onPress={() => onDone(item.id, item.che_do)}
         activeOpacity={0.7}
       >
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
           <FontAwesome5 name="check" size={14} color={colors.success} solid />
-          <Text style={styles.doneBtnText}>Đã làm</Text>
+          <Text style={styles.doneBtnText}>
+            {item.che_do === 'ngay_co_dinh' ? 'Gia hạn' : item.che_do === 'mot_lan' ? 'Hoàn tất' : 'Đã làm'}
+          </Text>
         </View>
       </TouchableOpacity>
     </View>
@@ -424,21 +437,26 @@ export default function RemindersScreen() {
   const canAdd: boolean = reminderMeta?.can_add_reminder ?? true;
 
   const [doneModalId, setDoneModalId] = useState<number | null>(null);
+  const [doneCheDo, setDoneCheDo] = useState<Reminder['che_do']>('chu_ky');
   const [doneOdo, setDoneOdo] = useState('');
+  const [doneDate, setDoneDate] = useState('');
 
   React.useLayoutEffect(() => {
     navigation.setOptions({ title: `Lời nhắc — ${vehicleName}` });
   }, [navigation, vehicleName]);
 
-  const openDoneModal = (id: number) => {
+  const openDoneModal = (id: number, che_do: Reminder['che_do']) => {
     setDoneOdo('');
+    setDoneDate(new Date().toISOString().slice(0, 10));
+    setDoneCheDo(che_do);
     setDoneModalId(id);
   };
 
   const confirmDone = () => {
     if (doneModalId == null) return;
     const odo = doneOdo.trim() !== '' ? parseInt(doneOdo, 10) : undefined;
-    doneReminder.mutate({ id: doneModalId, odo });
+    const date = doneDate.trim() || undefined;
+    doneReminder.mutate({ id: doneModalId, odo, date });
     setDoneModalId(null);
   };
 
@@ -459,7 +477,7 @@ export default function RemindersScreen() {
         data={reminders}
         keyExtractor={(item) => String(item.id)}
         renderItem={({ item }) => (
-          <ReminderCard item={item} onDone={openDoneModal} onDelete={handleDelete} onEdit={handleEdit} />
+          <ReminderCard item={item} onDone={(id, che_do) => openDoneModal(id, che_do)} onDelete={handleDelete} onEdit={handleEdit} />
         )}
         contentContainerStyle={styles.listContent}
         refreshControl={
@@ -513,23 +531,55 @@ export default function RemindersScreen() {
         <FontAwesome5 name="plus" size={22} color="#fff" solid />
       </TouchableOpacity>
 
-      {/* Done modal — capture ODO */}
+      {/* Done modal */}
       <Modal visible={doneModalId !== null} transparent animationType="fade" onRequestClose={() => setDoneModalId(null)}>
         <Pressable style={styles.modalOverlay} onPress={() => setDoneModalId(null)}>
           <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
             <Pressable style={styles.modalBox}>
-              <Text style={styles.modalTitle}>Xác nhận đã làm</Text>
-              <Text style={styles.modalSub}>Ngày ghi nhận: hôm nay (tự động)</Text>
-              <Text style={styles.modalLabel}>Số ODO hiện tại (km) — tuỳ chọn</Text>
-              <TextInput
-                style={styles.modalInput}
-                keyboardType="numeric"
-                placeholder="Bỏ qua nếu không biết"
-                placeholderTextColor={colors.textSecondary}
-                value={doneOdo}
-                onChangeText={setDoneOdo}
-                returnKeyType="done"
-              />
+              <Text style={styles.modalTitle}>
+                {doneCheDo === 'ngay_co_dinh' ? 'Gia hạn ngày hẹn' : doneCheDo === 'mot_lan' ? 'Hoàn tất lời nhắc' : 'Xác nhận đã làm'}
+              </Text>
+              <Text style={styles.modalSub}>
+                {doneCheDo === 'ngay_co_dinh'
+                  ? 'Nhập ngày gia hạn mới'
+                  : 'Ghi lại thông tin để tính lần nhắc tiếp theo'}
+              </Text>
+              {doneCheDo !== 'ngay_co_dinh' && (
+                <>
+                  <Text style={styles.modalLabel}>Ngày đã làm</Text>
+                  <TextInput
+                    style={[styles.modalInput, { marginBottom: 12 }]}
+                    placeholder="YYYY-MM-DD"
+                    placeholderTextColor={colors.textSecondary}
+                    value={doneDate}
+                    onChangeText={setDoneDate}
+                    returnKeyType="next"
+                  />
+                  <Text style={styles.modalLabel}>Số ODO (km) — tuỳ chọn</Text>
+                  <TextInput
+                    style={styles.modalInput}
+                    keyboardType="numeric"
+                    placeholder="Bỏ qua nếu không biết"
+                    placeholderTextColor={colors.textSecondary}
+                    value={doneOdo}
+                    onChangeText={setDoneOdo}
+                    returnKeyType="done"
+                  />
+                </>
+              )}
+              {doneCheDo === 'ngay_co_dinh' && (
+                <>
+                  <Text style={styles.modalLabel}>Ngày hạn mới (YYYY-MM-DD)</Text>
+                  <TextInput
+                    style={styles.modalInput}
+                    placeholder="2026-12-31"
+                    placeholderTextColor={colors.textSecondary}
+                    value={doneDate}
+                    onChangeText={setDoneDate}
+                    returnKeyType="done"
+                  />
+                </>
+              )}
               <View style={styles.modalActions}>
                 <TouchableOpacity onPress={() => setDoneModalId(null)} style={styles.modalCancel}>
                   <Text style={{ color: colors.textSecondary, fontWeight: '600' }}>Huỷ</Text>

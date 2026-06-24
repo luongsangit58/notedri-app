@@ -35,8 +35,10 @@ interface RefuelItem {
   so_lit: number;
   gia_lit: number;
   odometer?: number;
+  est_odo?: number | null;
   day_binh?: boolean;
   cay_xang?: string;
+  ghi_chu?: string | null;
   km_since_last?: number | null;
   l100km?: number | null;
 }
@@ -164,6 +166,10 @@ function RefuelCard({ item, onPress }: { item: RefuelItem; onPress: () => void }
             <Text style={styles.odoText}>
               {formatKm(item.odometer)}
             </Text>
+          ) : item.est_odo != null ? (
+            <Text style={[styles.odoText, { color: colors.textSecondary, fontStyle: 'italic' }]}>
+              ~{formatKm(item.est_odo)}
+            </Text>
           ) : null}
           {item.day_binh === false ? (
             <View style={styles.notFullBadge}>
@@ -172,6 +178,11 @@ function RefuelCard({ item, onPress }: { item: RefuelItem; onPress: () => void }
           ) : null}
         </View>
       </View>
+      {item.ghi_chu ? (
+        <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 6, fontStyle: 'italic' }} numberOfLines={1}>
+          {item.ghi_chu}
+        </Text>
+      ) : null}
     </TouchableOpacity>
   );
 }

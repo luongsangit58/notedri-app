@@ -9,6 +9,6 @@ export const remindersApi = {
     client.put(`/reminders/${id}`, data),
   delete: (id: number) =>
     client.delete(`/reminders/${id}`),
-  done: (id: number, data?: { last_done_odo?: number }) =>
+  done: (id: number, data?: { last_done_odo?: number; last_done_date?: string }) =>
     client.post(`/reminders/${id}/done`, data ?? {}),
 };

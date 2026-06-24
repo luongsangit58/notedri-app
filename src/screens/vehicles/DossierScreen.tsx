@@ -26,6 +26,9 @@ interface Vehicle {
   fuel_type?: string;
   odo_hien_tai?: number | string;
   current_odometer?: number | string;
+  tank_capacity_l?: number | string | null;
+  consumption_official?: number | string | null;
+  ngay_mua?: string | null;
 }
 
 interface ServiceLog {
@@ -248,6 +251,7 @@ export default function DossierScreen() {
   const odo = Number(vehicle.odo_hien_tai ?? vehicle.current_odometer ?? 0);
   const totalCost = services.reduce((s, r) => s + serviceCost(r), 0);
   const healthScore: number | null = health?.score?.total ?? health?.health_score ?? null;
+  const actualConsumption: number | null = health?.data?.consumption ?? null;
   const healthColor = healthScore == null ? colors.textSecondary
     : healthScore >= 80 ? colors.success
     : healthScore >= 50 ? colors.warning
@@ -305,13 +309,32 @@ export default function DossierScreen() {
                 {vehicle.fuel_type ? (
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                     <FontAwesome5 name="gas-pump" size={12} color={colors.textSecondary} solid />
-                    <Text style={{ color: colors.textSecondary, fontSize: 13 }}>{vehicle.fuel_type}</Text>
+                    <Text style={{ color: colors.textSecondary, fontSize: 13 }}>
+                      {vehicle.fuel_type}
+                      {vehicle.tank_capacity_l ? ` · Bình ${vehicle.tank_capacity_l}L` : ''}
+                    </Text>
+                  </View>
+                ) : null}
+                {vehicle.consumption_official != null ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <FontAwesome5 name="chart-bar" size={12} color={colors.textSecondary} solid />
+                    <Text style={{ color: colors.textSecondary, fontSize: 13 }}>
+                      Tiêu hao NSX: {vehicle.consumption_official} L/100km
+                    </Text>
+                  </View>
+                ) : null}
+                {vehicle.ngay_mua ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <FontAwesome5 name="calendar-alt" size={12} color={colors.textSecondary} solid />
+                    <Text style={{ color: colors.textSecondary, fontSize: 13 }}>
+                      Mua: {dayjs(vehicle.ngay_mua).format('DD/MM/YYYY')}
+                    </Text>
                   </View>
                 ) : null}
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                   <FontAwesome5 name="road" size={12} color={colors.primary} solid />
                   <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '700' }}>
-                    {formatKm(odo)}
+                    ODO: {formatKm(odo)}
                   </Text>
                 </View>
               </View>
@@ -329,23 +352,40 @@ export default function DossierScreen() {
           </View>
         </View>
 
-        {/* 3 stat cards */}
-        <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14 }}>
-          <StatCard
-            label="Tổng chi bảo dưỡng"
-            value={formatVND(totalCost)}
-            accent={colors.warning}
-          />
-          <StatCard
-            label="Số lần BD"
-            value={String(services.length)}
-            accent={colors.success}
-          />
-          <StatCard
-            label="ODO hiện tại"
-            value={odo >= 1000 ? `${(odo / 1000).toFixed(0)}k km` : `${odo} km`}
-            accent={colors.primary}
-          />
+        {/* Stat cards */}
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
+          <View style={{ flexDirection: 'row', gap: 8, flex: 1 }}>
+            <StatCard
+              label="Tổng chi BD"
+              value={formatVND(totalCost)}
+              accent={colors.warning}
+            />
+            <StatCard
+              label="Số lần BD"
+              value={String(services.length)}
+              accent={colors.success}
+            />
+          </View>
+          <View style={{ flexDirection: 'row', gap: 8, flex: 1 }}>
+            <StatCard
+              label="ODO hiện tại"
+              value={odo >= 1000 ? `${(odo / 1000).toFixed(0)}k km` : `${odo} km`}
+              accent={colors.primary}
+            />
+            {healthScore != null ? (
+              <StatCard
+                label="Điểm sức khoẻ"
+                value={`${healthScore}/100`}
+                accent={healthColor}
+              />
+            ) : (
+              <StatCard
+                label="Loại nhiên liệu"
+                value={vehicle.fuel_type ?? '—'}
+                accent={colors.textSecondary}
+              />
+            )}
+          </View>
         </View>
 
         {/* Service history */}

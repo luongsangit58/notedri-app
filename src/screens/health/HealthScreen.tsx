@@ -22,6 +22,7 @@ interface Organ {
   verdict: string;
   detail?: string;
   note?: string;
+  cta?: string;
 }
 
 interface Pillar {
@@ -58,9 +59,15 @@ function scoreColor(score: number): string {
 function scoreBand(score: number): string {
   if (score >= 85) return 'Xuất sắc';
   if (score >= 70) return 'Tốt';
-  if (score >= 55) return 'Khá';
-  if (score >= 40) return 'Cần chú ý';
-  return 'Nghiêm trọng';
+  if (score >= 55) return 'Cần chú ý';
+  if (score >= 40) return 'Kém';
+  return 'Cần kiểm tra';
+}
+
+function pillarQualLabel(pct: number): string {
+  if (pct >= 80) return 'Tốt';
+  if (pct >= 50) return 'Khá';
+  return 'Cần chú ý';
 }
 
 function organStatusColor(status: OrganStatus): string {
@@ -85,22 +92,22 @@ function OrganStatusIcon({ status }: { status: OrganStatus }) {
 }
 
 /* ─── PillarBar ─── */
-function PillarBar({ pillar, keyLabel }: { pillar: Pillar; keyLabel: string }) {
+function PillarBar({ pillar }: { pillar: Pillar }) {
   const colors = useColors();
   const pct = Math.min(100, Math.round((pillar.score / pillar.max) * 100));
   const clr = scoreColor(pct);
+  const qualLabel = pillarQualLabel(pct);
   return (
-    <View style={{ marginBottom: 8 }}>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 3 }}>
-        <Text style={{ color: colors.textSecondary, fontSize: 11 }}>
-          {keyLabel.toUpperCase()} · {pillar.label}
-        </Text>
-        <Text style={{ color: clr, fontSize: 11, fontWeight: '700' }}>
-          {pillar.score}/{pillar.max}
-        </Text>
+    <View style={{ marginBottom: 10 }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+        <Text style={{ color: colors.text, fontSize: 13, fontWeight: '600' }}>{pillar.label}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <Text style={{ color: colors.textSecondary, fontSize: 11 }}>{qualLabel}</Text>
+          <Text style={{ color: clr, fontSize: 12, fontWeight: '700' }}>{pillar.score}/{pillar.max}</Text>
+        </View>
       </View>
-      <View style={{ height: 5, backgroundColor: colors.border, borderRadius: 3, overflow: 'hidden' }}>
-        <View style={{ height: 5, width: `${pct}%` as any, backgroundColor: clr, borderRadius: 3 }} />
+      <View style={{ height: 7, backgroundColor: colors.border, borderRadius: 4, overflow: 'hidden' }}>
+        <View style={{ height: 7, width: `${pct}%` as any, backgroundColor: clr, borderRadius: 4 }} />
       </View>
     </View>
   );
@@ -283,7 +290,7 @@ function HealthCard({ vehicle, health, loading, onAddReminder, onCta, history }:
       {pillars && (
         <View style={{ marginBottom: 8 }}>
           {PILLAR_KEYS.map(k => (
-            <PillarBar key={k} pillar={pillars[k]} keyLabel={k} />
+            <PillarBar key={k} pillar={pillars[k]} />
           ))}
         </View>
       )}
@@ -305,12 +312,50 @@ function HealthCard({ vehicle, health, loading, onAddReminder, onCta, history }:
         </Text>
       )}
 
+      {/* Cách tăng điểm */}
+      {organs.filter(o => o.status === 'urgent' || o.status === 'warn').length > 0 && (
+        <View style={{ marginTop: 12 }}>
+          <View style={{ height: 1, backgroundColor: colors.border, marginBottom: 10 }} />
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+            <FontAwesome5 name="chart-line" size={12} color={colors.primary} solid />
+            <Text style={{ color: colors.text, fontWeight: '700', fontSize: 13 }}>Cách tăng điểm</Text>
+          </View>
+          {organs.filter(o => o.status === 'urgent' || o.status === 'warn').slice(0, 3).map(o => (
+            <TouchableOpacity
+              key={o.key}
+              onPress={() => onCta && o.cta && onCta((o as any).cta)}
+              activeOpacity={(o as any).cta ? 0.7 : 1}
+              style={{
+                flexDirection: 'row', alignItems: 'center', gap: 8,
+                backgroundColor: colors.background, borderRadius: 8,
+                padding: 10, marginBottom: 6,
+              }}>
+              <FontAwesome5
+                name={o.status === 'urgent' ? 'exclamation-circle' : 'wrench'}
+                size={13}
+                color={organStatusColor(o.status)}
+                solid
+              />
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: colors.text, fontSize: 12, fontWeight: '600' }}>{o.label}</Text>
+                {!!o.verdict && (
+                  <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 1 }}>{o.verdict}</Text>
+                )}
+              </View>
+              {(o as any).cta && (
+                <FontAwesome5 name="chevron-right" size={10} color={colors.textSecondary} />
+              )}
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+
       {/* Action: add reminder */}
       {needsAttention && (
         <TouchableOpacity
           onPress={onAddReminder}
           style={{
-            marginTop: 10, alignSelf: 'flex-start',
+            marginTop: 8, alignSelf: 'flex-start',
             backgroundColor: colors.warning + '22', borderRadius: 8,
             paddingHorizontal: 12, paddingVertical: 6,
           }}>

@@ -217,6 +217,12 @@ export default function DashboardScreen() {
         {/* Giấy tờ sắp hết hạn — chip strip */}
         {legal.filter((l: any) => (l.remaining_days ?? 999) <= 30).length > 0 && (
           <View style={{ marginBottom: 10 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+              <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: '600' }}>Giấy tờ sắp hết hạn</Text>
+              <TouchableOpacity onPress={() => effectiveVehicleId && nav.navigate('Reminders', { vehicleId: effectiveVehicleId })}>
+                <Text style={{ color: colors.primary, fontSize: 12 }}>Quản lý →</Text>
+              </TouchableOpacity>
+            </View>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 2 }}>
               {legal.filter((l: any) => (l.remaining_days ?? 999) <= 30).map((l: any, i: number) => {
                 const days = l.remaining_days ?? 0;
@@ -566,11 +572,16 @@ export default function DashboardScreen() {
         {/* Giá xăng hôm nay */}
         {fuelBoard.length > 0 && (
           <View style={{ backgroundColor: colors.surface, borderRadius: 14, padding: 16, marginBottom: 10 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
-              <FontAwesome5 name="coins" size={14} color={colors.primary} solid />
-              <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14, marginLeft: 6 }}>
-                Giá xăng hôm nay · {fuelBoard[0]?.ngay ? dayjs(fuelBoard[0].ngay).format('DD/MM') : ''} · Petrolimex Vùng 1
-              </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                <FontAwesome5 name="coins" size={14} color={colors.primary} solid />
+                <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14, marginLeft: 6 }}>
+                  Giá xăng · {fuelBoard[0]?.ngay ? dayjs(fuelBoard[0].ngay).format('DD/MM') : ''} · Petrolimex
+                </Text>
+              </View>
+              <TouchableOpacity onPress={() => nav.navigate('Reports')}>
+                <Text style={{ color: colors.primary, fontSize: 12 }}>Biểu đồ →</Text>
+              </TouchableOpacity>
             </View>
             {fuelBoard.map((f: any, i: number) => (
               <View key={i} style={{

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
-  KeyboardAvoidingView, Platform, Alert, ActivityIndicator,
+  KeyboardAvoidingView, Platform, Alert, ActivityIndicator, Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -20,10 +20,10 @@ const LOAI_OPTIONS: { value: Loai; label: string }[] = [
   { value: 'khac', label: 'Khác' },
 ];
 
-const CHE_DO_OPTIONS: { value: CheDo; label: string }[] = [
-  { value: 'chu_ky', label: 'Định kỳ' },
-  { value: 'ngay_co_dinh', label: 'Ngày cố định' },
-  { value: 'mot_lan', label: 'Một lần' },
+const CHE_DO_OPTIONS: { value: CheDo; label: string; desc: string }[] = [
+  { value: 'chu_ky', label: 'Định kỳ', desc: 'Theo số km hoặc tháng - phù hợp bảo dưỡng định kỳ' },
+  { value: 'ngay_co_dinh', label: 'Ngày cố định', desc: 'Hẹn một ngày cụ thể và gia hạn khi hoàn tất' },
+  { value: 'mot_lan', label: 'Một lần', desc: 'Việc làm một lần, tự động tắt sau khi hoàn tất' },
 ];
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
@@ -72,6 +72,7 @@ export default function AddReminderScreen() {
   const [last_done_date, setLastDoneDate] = useState('');
   const [due_date, setDueDate] = useState('');
   const [ghi_chu, setGhiChu] = useState('');
+  const [notify_email, setNotifyEmail] = useState(true);
 
   const handleSubmit = () => {
     if (!hang_muc.trim()) {
@@ -96,6 +97,7 @@ export default function AddReminderScreen() {
           last_done_date: last_done_date || undefined,
           due_date: due_date || undefined,
           ghi_chu: ghi_chu || undefined,
+          notify_email,
         },
       },
       {
@@ -191,28 +193,43 @@ export default function AddReminderScreen() {
 
           {/* Chế độ */}
           <FieldLabel>Chế độ *</FieldLabel>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 4 }}>
+          <View style={{ gap: 8, marginBottom: 4 }}>
             {CHE_DO_OPTIONS.map((opt) => (
               <TouchableOpacity
                 key={opt.value}
                 onPress={() => setCheĐo(opt.value)}
                 style={{
-                  paddingHorizontal: 14,
-                  paddingVertical: 8,
-                  borderRadius: 8,
-                  marginRight: 8,
-                  backgroundColor: che_do === opt.value ? colors.primary : colors.surface,
+                  flexDirection: 'row', alignItems: 'center',
+                  borderRadius: 10, padding: 12,
+                  backgroundColor: che_do === opt.value ? colors.primary + '22' : colors.surface,
+                  borderWidth: 1.5,
+                  borderColor: che_do === opt.value ? colors.primary : colors.border,
                 }}>
-                <Text style={{
-                  color: che_do === opt.value ? '#fff' : colors.textSecondary,
-                  fontSize: 13,
-                  fontWeight: '600',
+                <View style={{
+                  width: 18, height: 18, borderRadius: 9,
+                  borderWidth: 2,
+                  borderColor: che_do === opt.value ? colors.primary : colors.border,
+                  alignItems: 'center', justifyContent: 'center',
+                  marginRight: 10,
                 }}>
-                  {opt.label}
-                </Text>
+                  {che_do === opt.value && (
+                    <View style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: colors.primary }} />
+                  )}
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{
+                    color: che_do === opt.value ? colors.primary : colors.text,
+                    fontSize: 14, fontWeight: '600',
+                  }}>
+                    {opt.label}
+                  </Text>
+                  <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 2 }}>
+                    {opt.desc}
+                  </Text>
+                </View>
               </TouchableOpacity>
             ))}
-          </ScrollView>
+          </View>
 
           {/* Chu kỳ fields */}
           {che_do === 'chu_ky' && (
@@ -283,6 +300,29 @@ export default function AddReminderScreen() {
             style={[inputStyle, { minHeight: 80, textAlignVertical: 'top' }]}
           />
 
+          {/* Nhận email nhắc */}
+          <View style={{
+            flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+            backgroundColor: colors.surface, borderRadius: 10, padding: 14, marginTop: 12,
+          }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: colors.text, fontWeight: '600', fontSize: 14 }}>Nhận email nhắc</Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 2 }}>
+                Gửi email trước 7/3/1 ngày đến hạn
+              </Text>
+            </View>
+            <Switch
+              value={notify_email}
+              onValueChange={setNotifyEmail}
+              trackColor={{ false: colors.border, true: colors.primary }}
+              thumbColor="#fff"
+            />
+          </View>
+
+          <Text style={{ color: colors.textSecondary, fontSize: 11, textAlign: 'center', marginTop: 10 }}>
+            Mẹo: điền cả km và tháng, NoteDri sẽ nhắc theo mốc đến trước.
+          </Text>
+
           <TouchableOpacity
             onPress={handleSubmit}
             disabled={isPending}
@@ -291,7 +331,7 @@ export default function AddReminderScreen() {
               padding: 16,
               borderRadius: 12,
               alignItems: 'center',
-              marginTop: 24,
+              marginTop: 16,
               opacity: isPending ? 0.7 : 1,
             }}>
             {isPending

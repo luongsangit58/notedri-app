@@ -204,6 +204,24 @@ export default function ServicesScreen() {
         onEndReachedThreshold={0.3}
         ListHeaderComponent={
           <View style={{ paddingBottom: 8 }}>
+            {/* Garage guide quick link */}
+            <TouchableOpacity
+              onPress={() => navigation.navigate('GarageGuide')}
+              style={{
+                flexDirection: 'row', alignItems: 'center', gap: 8,
+                backgroundColor: colors.primary + '15', borderRadius: 10, padding: 12, marginBottom: 12,
+                borderWidth: 1, borderColor: colors.primary + '33',
+              }}>
+              <FontAwesome5 name="suitcase" size={14} color={colors.primary} solid />
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 13 }}>Bỏ túi đi garage</Text>
+                <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 1 }}>
+                  Danh sách câu hỏi nên hỏi kỹ thuật viên
+                </Text>
+              </View>
+              <FontAwesome5 name="chevron-right" size={11} color={colors.primary} />
+            </TouchableOpacity>
+
             {/* Stats */}
             {totalCost > 0 && (
               <View style={{ flexDirection: 'row', gap: 8, paddingBottom: 12 }}>
