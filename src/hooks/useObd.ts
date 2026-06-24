@@ -7,7 +7,7 @@ import { TripSession, TripSummary } from '../services/obd/TripSession';
 import { enqueueTripSync } from '../services/obd/TripSyncQueue';
 import { useAuthStore } from '../store/authStore';
 
-export type ObdWarning = 'no_data' | null;
+export type ObdWarning = { type: 'no_data'; rawResponse?: string } | null;
 
 // ---- Data queries ----
 
@@ -144,7 +144,11 @@ export function useObdConnection(vehicleId: number) {
       if (!result.ok) throw new Error('Khong the khoi tao ELM327');
 
       setConnectionState('connected');
-      setWarning(result.dataAvailable ? null : 'no_data');
+      setWarning(
+        result.dataAvailable
+          ? null
+          : { type: 'no_data', rawResponse: result.rawRpmResponse },
+      );
 
       const snap = await readSnapshot();
       setLiveSnapshot(snap);

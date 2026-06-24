@@ -12,6 +12,7 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useObdConnection } from '../../hooks/useObd';
 import { useColors } from '../../utils/theme';
+import { useT } from '../../i18n';
 
 function StatBox({
   label,
@@ -52,6 +53,7 @@ export default function OBDDashboardScreen() {
   const vehicleName: string = route.params?.vehicleName ?? '';
   const consumptionOfficial: number | null = route.params?.consumptionOfficial ?? null;
 
+  const t = useT();
   const colors = useColors();
   const {
     connectionState,
@@ -66,10 +68,10 @@ export default function OBDDashboardScreen() {
   } = useObdConnection(vehicleId);
 
   async function handleDisconnect() {
-    Alert.alert('Ngat ket noi', 'Ban co muon ngat ket noi OBD?', [
-      { text: 'Huy', style: 'cancel' },
+    Alert.alert(t('obd.disconnect_title'), t('obd.disconnect_confirm'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Ngat ket noi',
+        text: t('obd.disconnect_title'),
         style: 'destructive',
         onPress: async () => {
           await disconnect();
@@ -117,33 +119,38 @@ export default function OBDDashboardScreen() {
               { color: isConnected ? '#15803D' : '#B91C1C' },
             ]}
           >
-            {isConnected ? 'Da ket noi' : 'Mat ket noi'}
+            {isConnected ? t('obd.connected') : t('obd.disconnected')}
           </Text>
         </View>
 
         {/* No-data warning: adapter connected but ECU not responding */}
-        {warning === 'no_data' && (
+        {warning?.type === 'no_data' && (
           <View style={styles.warningBanner}>
             <FontAwesome5 name="exclamation-triangle" size={13} color="#FEF3C7" solid />
-            <Text style={styles.warningText}>
-              Ket noi duoc nhung khong doc duoc du lieu xe. Thu no may va ket noi lai, hoac kiem tra xe co ho tro OBD-II (2005+).
-            </Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.warningText}>{t('obd.no_data_warning')}</Text>
+              {warning.rawResponse ? (
+                <Text style={[styles.warningText, { fontSize: 10, opacity: 0.65, marginTop: 4 }]}>
+                  Raw: {warning.rawResponse.replace(/[\r\n]+/g, ' ').trim().slice(0, 60)}
+                </Text>
+              ) : null}
+            </View>
           </View>
         )}
 
         {/* Live stats grid */}
         <View style={styles.statsGrid}>
           <View style={styles.statsRow}>
-            <StatBox label="Toc do" value={snap?.speedKmh ?? null} unit=" km/h" icon="tachometer-alt" color="#3B82F6" />
+            <StatBox label={t('obd.stat_speed')} value={snap?.speedKmh ?? null} unit=" km/h" icon="tachometer-alt" color="#3B82F6" />
             <StatBox label="RPM" value={snap?.rpm !== null ? Math.round(snap?.rpm ?? 0) : null} icon="cogs" color="#8B5CF6" />
           </View>
           <View style={styles.statsRow}>
-            <StatBox label="Tai dong co" value={snap?.engineLoadPct ?? null} unit="%" icon="fire" color="#F59E0B" />
-            <StatBox label="Nhiet do nuoc" value={snap?.coolantTempC ?? null} unit="°C" icon="thermometer-half" color="#EF4444" />
+            <StatBox label={t('obd.stat_engine_load')} value={snap?.engineLoadPct ?? null} unit="%" icon="fire" color="#F59E0B" />
+            <StatBox label={t('obd.stat_coolant')} value={snap?.coolantTempC ?? null} unit="°C" icon="thermometer-half" color="#EF4444" />
           </View>
           <View style={styles.statsRow}>
-            <StatBox label="Xang con" value={snap?.fuelLevelPct ?? null} unit="%" icon="gas-pump" color="#10B981" />
-            <StatBox label="Nhiet do dau" value={snap?.oilTempC ?? null} unit="°C" icon="oil-can" color="#F97316" />
+            <StatBox label={t('obd.stat_fuel')} value={snap?.fuelLevelPct ?? null} unit="%" icon="gas-pump" color="#10B981" />
+            <StatBox label={t('obd.stat_oil_temp')} value={snap?.oilTempC ?? null} unit="°C" icon="oil-can" color="#F97316" />
           </View>
         </View>
 
@@ -152,13 +159,13 @@ export default function OBDDashboardScreen() {
           style={[styles.historyBtn, { backgroundColor: colors.card }]}
           onPress={() => navigation.navigate('OBDTrips', { vehicleId, vehicleName, consumptionOfficial })}>
           <FontAwesome5 name="route" size={14} color={colors.primary} />
-          <Text style={[styles.historyBtnText, { color: colors.primary }]}>Xem lich su chuyen di</Text>
+          <Text style={[styles.historyBtnText, { color: colors.primary }]}>{t('obd.trip_history')}</Text>
           <FontAwesome5 name="chevron-right" size={12} color={colors.textSecondary} />
         </TouchableOpacity>
 
         {/* Trip control */}
         <View style={[styles.tripCard, { backgroundColor: colors.card }]}>
-          <Text style={[styles.tripTitle, { color: colors.text }]}>Chuyen di</Text>
+          <Text style={[styles.tripTitle, { color: colors.text }]}>{t('obd.trip_title')}</Text>
           {isTripActive && currentTripRef.current && (
             <Text style={[styles.tripKm, { color: '#3B82F6' }]}>
               {currentTripRef.current.getCurrentDistanceKm()} km
@@ -167,7 +174,7 @@ export default function OBDDashboardScreen() {
           {!isTripActive && lastTripSummary && (
             <View style={styles.tripSummary}>
               <Text style={[styles.tripSummaryText, { color: colors.textSecondary }]}>
-                Chuyen cuoi: {lastTripSummary.distanceKm} km - TB {lastTripSummary.avgSpeedKmh} km/h
+                {t('obd.trip_last', { dist: lastTripSummary.distanceKm, speed: lastTripSummary.avgSpeedKmh })}
               </Text>
             </View>
           )}
@@ -185,7 +192,7 @@ export default function OBDDashboardScreen() {
               color="#fff"
             />
             <Text style={styles.tripBtnText}>
-              {isTripActive ? 'Ket thuc chuyen' : 'Bat dau chuyen'}
+              {isTripActive ? t('obd.trip_end') : t('obd.trip_start')}
             </Text>
           </TouchableOpacity>
         </View>

@@ -1,8 +1,9 @@
+import { AppState, AppStateStatus } from 'react-native';
 import { readSnapshot, readDtcCodes, ObdSnapshot, DtcCode } from './ObdReader';
 
 const POLL_INTERVAL_MS = 3000;
-const IDLE_RPM_THRESHOLD = 200; // RPM below this = engine off
-const IDLE_STOP_DELAY_MS = 30000; // 30s of idle RPM before ending trip
+const IDLE_RPM_THRESHOLD = 200;
+const IDLE_STOP_DELAY_MS = 30000;
 
 export type TripSummary = {
   vehicleId: number;
@@ -37,6 +38,13 @@ export class TripSession {
   private idleMs: number = 0;
   private dtcCodes: DtcCode[] = [];
 
+  // iOS background handling: when app is suspended, setInterval pauses.
+  // On foreground return we reset lastTimestamp so the next poll calculates
+  // elapsedMs correctly (~POLL_INTERVAL_MS) instead of the entire background gap.
+  // Distance for the suspended period is lost (conservative — can't read OBD in bg).
+  private suspendedAt: number | null = null;
+  private appStateSubscription: ReturnType<typeof AppState.addEventListener> | null = null;
+
   onTripEnd: ((summary: TripSummary) => void) | null = null;
   onSnapshot: ((snapshot: ObdSnapshot) => void) | null = null;
   onDtcFound: ((codes: DtcCode[]) => void) | null = null;
@@ -55,6 +63,7 @@ export class TripSession {
     this.dtcCodes = [];
     this.lastTimestamp = Date.now();
 
+    this.appStateSubscription = AppState.addEventListener('change', this.handleAppState);
     this.pollTimer = setInterval(() => this.poll(), POLL_INTERVAL_MS);
   }
 
@@ -62,6 +71,20 @@ export class TripSession {
     this.state = 'stopping';
     this.finalize();
   }
+
+  private handleAppState = (next: AppStateStatus) => {
+    if (next === 'background' || next === 'inactive') {
+      this.suspendedAt = Date.now();
+    } else if (next === 'active' && this.suspendedAt !== null) {
+      // App returned from background. Reset lastTimestamp so the next poll
+      // treats elapsed time as if we just polled (avoids distance spike).
+      this.lastTimestamp = Date.now() - POLL_INTERVAL_MS;
+      this.suspendedAt = null;
+      // Also reset idle start time so the 30s auto-stop doesn't trigger
+      // immediately after a long background period.
+      this.idleStartTime = null;
+    }
+  };
 
   private async poll() {
     if (this.state !== 'running') return;
@@ -75,26 +98,25 @@ export class TripSession {
       const elapsedMs = this.lastTimestamp ? now - this.lastTimestamp : POLL_INTERVAL_MS;
       this.lastTimestamp = now;
 
-      // Record fuel level at trip start
       if (this.fuelLevelStart === null && snapshot.fuelLevelPct !== null) {
         this.fuelLevelStart = snapshot.fuelLevelPct;
       }
 
-      // Calculate distance from speed integration
       if (snapshot.speedKmh !== null && snapshot.speedKmh > 0) {
-        const distanceThisInterval = (snapshot.speedKmh / 3600) * (elapsedMs / 1000);
+        // Cap elapsedMs at 2x poll interval to guard against any remaining
+        // timing edge cases (e.g. device sleep that slips through AppState).
+        const safeElapsedMs = Math.min(elapsedMs, POLL_INTERVAL_MS * 2);
+        const distanceThisInterval = (snapshot.speedKmh / 3600) * (safeElapsedMs / 1000);
         this.distanceKm += distanceThisInterval;
         this.lastSpeedReading = snapshot.speedKmh;
         this.idleStartTime = null;
       }
 
-      // Detect engine idle/off
       const rpm = snapshot.rpm ?? 0;
       if (rpm < IDLE_RPM_THRESHOLD) {
         if (this.idleStartTime === null) {
           this.idleStartTime = now;
         } else if (now - this.idleStartTime >= IDLE_STOP_DELAY_MS) {
-          // Engine has been off for 30s - end trip automatically
           this.state = 'stopping';
           this.finalize();
           return;
@@ -104,7 +126,6 @@ export class TripSession {
         this.idleStartTime = null;
       }
 
-      // Read DTCs every 5 minutes
       if (this.snapshots.length % Math.round(300000 / POLL_INTERVAL_MS) === 0) {
         const codes = await readDtcCodes();
         if (codes.length > 0) {
@@ -122,6 +143,8 @@ export class TripSession {
       clearInterval(this.pollTimer);
       this.pollTimer = null;
     }
+    this.appStateSubscription?.remove();
+    this.appStateSubscription = null;
 
     if (!this.startedAt || this.snapshots.length === 0) {
       this.state = 'stopped';
@@ -129,22 +152,16 @@ export class TripSession {
     }
 
     const now = new Date();
-    const speeds = this.snapshots
-      .map((s) => s.speedKmh)
-      .filter((s): s is number => s !== null);
-    const loads = this.snapshots
-      .map((s) => s.engineLoadPct)
-      .filter((s): s is number => s !== null);
-    const temps = this.snapshots
-      .map((s) => s.coolantTempC)
-      .filter((s): s is number => s !== null);
+    const speeds = this.snapshots.map((s) => s.speedKmh).filter((s): s is number => s !== null);
+    const loads  = this.snapshots.map((s) => s.engineLoadPct).filter((s): s is number => s !== null);
+    const temps  = this.snapshots.map((s) => s.coolantTempC).filter((s): s is number => s !== null);
 
     const avgSpeed = speeds.length > 0 ? speeds.reduce((a, b) => a + b, 0) / speeds.length : 0;
     const maxSpeed = speeds.length > 0 ? Math.max(...speeds) : 0;
-    const avgLoad = loads.length > 0 ? loads.reduce((a, b) => a + b, 0) / loads.length : null;
-    const avgTemp = temps.length > 0 ? temps.reduce((a, b) => a + b, 0) / temps.length : null;
+    const avgLoad  = loads.length > 0 ? loads.reduce((a, b) => a + b, 0) / loads.length : null;
+    const avgTemp  = temps.length > 0 ? temps.reduce((a, b) => a + b, 0) / temps.length : null;
 
-    const totalMs = now.getTime() - this.startedAt.getTime();
+    const totalMs   = now.getTime() - this.startedAt.getTime();
     const drivingMs = totalMs - this.idleMs;
 
     const lastFuel = this.snapshots
