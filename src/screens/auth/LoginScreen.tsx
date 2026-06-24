@@ -15,9 +15,11 @@ WebBrowser.maybeCompleteAuthSession();
 
 const GOOGLE_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? '';
 
-// Dùng Expo auth proxy — URI này đã đăng ký trong Google Console:
-// https://auth.expo.io/@luongsangit58/notedri-app
-const REDIRECT_URI = makeRedirectUri({ useProxy: true });
+// Dùng scheme của app — không qua Expo proxy.
+// Expo proxy không có client_secret nên không đổi được code → không có idToken.
+// responseType='id_token': Google trả idToken thẳng vào URL, không cần server exchange.
+// URI cần đăng ký trong Google Console: notedri://
+const REDIRECT_URI = makeRedirectUri({ scheme: 'notedri' });
 
 export default function LoginScreen({ navigation }: { navigation: any }) {
   const t = useT();
@@ -30,34 +32,25 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
     clientId: GOOGLE_CLIENT_ID,
     redirectUri: REDIRECT_URI,
     scopes: ['openid', 'profile', 'email'],
+    responseType: 'id_token',
+    usePKCE: false,
   });
 
   useEffect(() => {
     if (!response) return;
     if (response.type === 'success') {
-      const idToken = (response as any).authentication?.idToken
-        ?? (response.params as any)?.id_token;
+      // responseType='id_token': Google trả trực tiếp trong params
+      const idToken = (response.params as any)?.id_token
+        ?? (response as any).authentication?.idToken;
       if (idToken) {
         loginWithGoogle(idToken).catch(() => {});
       } else {
-        // Debug: log full response để tìm nguyên nhân
-        console.warn('[Google Auth] No idToken. response.params:', response.params);
         Alert.alert(t('common.error'), t('auth.google_no_id_token'));
       }
     } else if (response.type === 'error') {
-      // Debug: log full error để tìm nguyên nhân
-      const errCode = (response as any).error?.code
-        ?? (response.params as any)?.error;
-      const errDesc = (response as any).error?.message
-        ?? (response.params as any)?.error_description
-        ?? '';
-      console.warn('[Google Auth] Error:', errCode, errDesc, response);
-      Alert.alert(
-        'Google: ' + (errCode ?? 'Lỗi'),
-        errDesc || 'Đăng nhập Google thất bại',
-      );
-    } else if (response.type === 'dismiss' || response.type === 'cancel') {
-      // User tự đóng browser - không cần thông báo
+      const errCode = (response.params as any)?.error ?? 'error';
+      const errDesc = (response.params as any)?.error_description ?? 'Đăng nhập Google thất bại';
+      Alert.alert('Google: ' + errCode, errDesc);
     }
   }, [response]);
 
