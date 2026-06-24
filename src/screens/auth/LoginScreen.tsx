@@ -15,8 +15,6 @@ WebBrowser.maybeCompleteAuthSession();
 
 const GOOGLE_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? '';
 
-// Expo Go dùng auth proxy: https://auth.expo.io/@luongsangit58/notedri-app
-// Redirect URI này phải được thêm vào Google Cloud Console → OAuth 2.0 Client → Authorized redirect URIs
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const REDIRECT_URI = (makeRedirectUri as any)({ useProxy: true });
 
@@ -35,7 +33,6 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
 
   useEffect(() => {
     if (response?.type === 'success') {
-      // Khi dùng proxy: idToken trong authentication; khi dùng implicit: params.id_token
       const idToken = (response as any).authentication?.idToken ?? response.params?.id_token;
       if (idToken) {
         loginWithGoogle(idToken).catch(() => {});
@@ -63,83 +60,135 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
     await promptAsync();
   };
 
+  const inputStyle = {
+    backgroundColor: colors.background,
+    color: colors.text,
+    borderRadius: 10,
+    padding: 14,
+    fontSize: 15,
+    borderWidth: 1,
+    borderColor: colors.border,
+  } as const;
+
   return (
     <KeyboardAvoidingView
       style={{ flex: 1, backgroundColor: colors.background }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 24 }}>
-        <View style={{ alignItems: 'center', marginBottom: 48 }}>
-          <Text style={{ fontSize: 36, fontWeight: '800', color: colors.primary }}>NoteDri</Text>
-          <Text style={{ color: colors.textSecondary, marginTop: 8 }}>{t('auth.app_tagline')}</Text>
+      <ScrollView
+        contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24, paddingVertical: 32 }}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Brand wordmark */}
+        <View style={{ alignItems: 'center', marginBottom: 32 }}>
+          <Text style={{ fontWeight: '800', fontSize: 52, lineHeight: 60, letterSpacing: -1 }}>
+            <Text style={{ color: colors.text }}>Note</Text>
+            <Text style={{ color: colors.primary }}>Dri</Text>
+          </Text>
+          <Text style={{ color: colors.textSecondary, fontSize: 15, fontWeight: '600', marginTop: 4 }}>
+            {t('auth.app_tagline')}
+          </Text>
+          <Text style={{ color: colors.primary, fontSize: 13, fontStyle: 'italic', marginTop: 4 }}>
+            "Quản lý chi phí, tối ưu vận hành"
+          </Text>
         </View>
 
-        {error ? (
-          <View style={{ backgroundColor: '#4A1010', borderRadius: 8, padding: 12, marginBottom: 16 }}>
-            <Text style={{ color: colors.error }}>{error}</Text>
+        {/* Card */}
+        <View style={{
+          backgroundColor: colors.surface,
+          borderRadius: 16,
+          padding: 20,
+          borderWidth: 1,
+          borderColor: colors.border,
+        }}>
+          <Text style={{ color: colors.text, fontSize: 17, fontWeight: '700', marginBottom: 16 }}>
+            {t('auth.login')}
+          </Text>
+
+          {error ? (
+            <View style={{ backgroundColor: colors.error + '22', borderRadius: 8, padding: 12, marginBottom: 14, borderWidth: 1, borderColor: colors.error + '55' }}>
+              <Text style={{ color: colors.error, fontSize: 13 }}>{error}</Text>
+            </View>
+          ) : null}
+
+          <TextInput
+            value={email}
+            onChangeText={(v) => { clearError(); setEmail(v); }}
+            placeholder={t('auth.email')}
+            placeholderTextColor={colors.textSecondary}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            returnKeyType="next"
+            style={[inputStyle, { marginBottom: 12 }]}
+          />
+          <PasswordInput
+            value={password}
+            onChangeText={(v) => { clearError(); setPassword(v); }}
+            placeholder={t('auth.password')}
+            style={{ marginBottom: 6, borderColor: colors.border }}
+            returnKeyType="done"
+            onSubmitEditing={handleLogin}
+          />
+
+          <TouchableOpacity
+            onPress={() => navigation.navigate('ForgotPassword')}
+            style={{ alignSelf: 'flex-end', marginBottom: 18, paddingVertical: 4 }}>
+            <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '500' }}>
+              {t('auth.forgot_password')}
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={handleLogin}
+            disabled={isLoading}
+            style={{
+              backgroundColor: colors.primary,
+              paddingVertical: 14,
+              borderRadius: 10,
+              alignItems: 'center',
+              opacity: isLoading ? 0.7 : 1,
+              marginBottom: 16,
+            }}
+          >
+            <Text style={{ color: colors.primaryText, fontWeight: '700', fontSize: 16 }}>
+              {isLoading ? t('auth.logging_in') : t('auth.login')}
+            </Text>
+          </TouchableOpacity>
+
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+            <View style={{ flex: 1, height: 1, backgroundColor: colors.border }} />
+            <Text style={{ color: colors.textSecondary, marginHorizontal: 12, fontSize: 13 }}>{t('auth.or')}</Text>
+            <View style={{ flex: 1, height: 1, backgroundColor: colors.border }} />
           </View>
-        ) : null}
 
-        <TextInput
-          value={email}
-          onChangeText={(v) => { clearError(); setEmail(v); }}
-          placeholder={t('auth.email')}
-          placeholderTextColor={colors.textSecondary}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          style={{ backgroundColor: colors.surface, color: colors.text, borderRadius: 10, padding: 14, marginBottom: 12, fontSize: 16 }}
-        />
-        <PasswordInput
-          value={password}
-          onChangeText={(v) => { clearError(); setPassword(v); }}
-          placeholder={t('auth.password')}
-          style={{ marginBottom: 20 }}
-          returnKeyType="done"
-          onSubmitEditing={handleLogin}
-        />
-
-        <TouchableOpacity
-          onPress={handleLogin}
-          disabled={isLoading}
-          style={{ backgroundColor: colors.primary, padding: 16, borderRadius: 10, alignItems: 'center', opacity: isLoading ? 0.7 : 1 }}
-        >
-          <Text style={{ color: colors.primaryText, fontWeight: '700', fontSize: 16 }}>
-            {isLoading ? t('auth.logging_in') : t('auth.login')}
-          </Text>
-        </TouchableOpacity>
-
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 20 }}>
-          <View style={{ flex: 1, height: 1, backgroundColor: colors.border }} />
-          <Text style={{ color: colors.textSecondary, marginHorizontal: 12 }}>{t('auth.or')}</Text>
-          <View style={{ flex: 1, height: 1, backgroundColor: colors.border }} />
+          <TouchableOpacity
+            onPress={handleGoogle}
+            disabled={isLoading || !request}
+            style={{
+              backgroundColor: colors.background,
+              paddingVertical: 12,
+              borderRadius: 10,
+              alignItems: 'center',
+              flexDirection: 'row',
+              justifyContent: 'center',
+              gap: 10,
+              borderWidth: 1,
+              borderColor: colors.border,
+              opacity: (!request || isLoading) ? 0.5 : 1,
+            }}
+          >
+            <Text style={{ fontSize: 18, lineHeight: 20 }}>🇬</Text>
+            <Text style={{ color: colors.text, fontWeight: '600', fontSize: 14 }}>{t('auth.login_with_google')}</Text>
+          </TouchableOpacity>
         </View>
-
-        <TouchableOpacity
-          onPress={handleGoogle}
-          disabled={isLoading || !request}
-          style={{ backgroundColor: colors.surface, padding: 16, borderRadius: 10, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', opacity: (!request || isLoading) ? 0.5 : 1 }}
-        >
-          <Text style={{ fontSize: 20, marginRight: 8 }}>G</Text>
-          <Text style={{ color: colors.text, fontWeight: '600', fontSize: 16 }}>{t('auth.login_with_google')}</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={() => navigation.navigate('ForgotPassword')}
-          style={{ marginTop: 20, alignItems: 'center' }}
-        >
-          <Text style={{ color: colors.textSecondary, fontSize: 14 }}>
-            {t('auth.forgot_password')}{' '}
-            <Text style={{ color: colors.primary, fontWeight: '600' }}>{t('auth.reset')}</Text>
-          </Text>
-        </TouchableOpacity>
 
         <TouchableOpacity
           onPress={() => navigation.navigate('Register')}
-          style={{ marginTop: 12, alignItems: 'center' }}
+          style={{ marginTop: 20, alignItems: 'center', paddingVertical: 8 }}
         >
           <Text style={{ color: colors.textSecondary, fontSize: 14 }}>
             {t('auth.no_account')}{' '}
-            <Text style={{ color: colors.primary, fontWeight: '600' }}>{t('auth.register')}</Text>
+            <Text style={{ color: colors.primary, fontWeight: '700' }}>{t('auth.register')}</Text>
           </Text>
         </TouchableOpacity>
       </ScrollView>

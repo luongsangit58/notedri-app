@@ -12,18 +12,20 @@ import LoadingView from '../../components/LoadingView';
 import ErrorView from '../../components/ErrorView';
 import { useColors } from '../../utils/theme';
 import { useT } from '../../i18n';
+import { formatVND, formatKm } from '../../utils/format';
 
 /* ─── helpers ─── */
 function fmtVnd(n: number | string | null | undefined): string {
   const v = Number(n ?? 0);
   if (isNaN(v)) return '—';
-  return v.toLocaleString('vi-VN') + 'đ';
+  return formatVND(v);
 }
 
 function fmtNum(n: number | string | null | undefined, unit = ''): string {
   const v = Number(n ?? 0);
   if (isNaN(v)) return '—';
-  return v.toLocaleString('vi-VN') + (unit ? ' ' + unit : '');
+  if (unit === 'km') return formatKm(v);
+  return v.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') + (unit ? ' ' + unit : '');
 }
 
 /* ─── stat card ─── */
