@@ -13,7 +13,10 @@
       }
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSBluetoothAlwaysUsageDescription": "NoteDri cần Bluetooth để kết nối với thiết bị OBD của xe bạn"
+      }
     },
     "android": {
       "package": "com.notedri",
@@ -31,7 +34,10 @@
         "ACCESS_COARSE_LOCATION",
         "RECEIVE_BOOT_COMPLETED",
         "VIBRATE",
-        "USE_EXACT_ALARM"
+        "USE_EXACT_ALARM",
+        "android.permission.BLUETOOTH_SCAN",
+        "android.permission.BLUETOOTH_CONNECT",
+        "android.permission.BLUETOOTH_ADVERTISE"
       ]
     },
     "web": {
@@ -61,7 +67,15 @@
         }
       ],
       "expo-secure-store",
-      "expo-localization"
+      "expo-localization",
+      [
+        "react-native-ble-plx",
+        {
+          "isBackgroundEnabled": false,
+          "modes": ["central"],
+          "bluetoothAlwaysPermission": "NoteDri cần Bluetooth để kết nối với thiết bị OBD của xe bạn"
+        }
+      ]
     ]
   }
 }

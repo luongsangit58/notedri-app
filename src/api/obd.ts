@@ -1,0 +1,58 @@
+import client from './client';
+import { TripSummary } from '../services/obd/TripSession';
+
+export type ObdTripRecord = {
+  id: number;
+  vehicle_id: number;
+  started_at: string;
+  ended_at: string;
+  distance_km: number;
+  avg_speed_kmh: number | null;
+  max_speed_kmh: number | null;
+  avg_engine_load_pct: number | null;
+  avg_coolant_temp_c: number | null;
+  fuel_level_start_pct: number | null;
+  fuel_level_end_pct: number | null;
+  idle_time_seconds: number;
+  driving_time_seconds: number;
+  obd_device_id: string | null;
+};
+
+export type DtcEventRecord = {
+  id: number;
+  vehicle_id: number;
+  code: string;
+  description: string | null;
+  is_resolved: boolean;
+  detected_at: string;
+  resolved_at: string | null;
+};
+
+export const obdApi = {
+  saveTrip: (summary: TripSummary, deviceId: string | null) =>
+    client.post('/obd/trips', {
+      vehicle_id:            summary.vehicleId,
+      started_at:            summary.startedAt,
+      ended_at:              summary.endedAt,
+      distance_km:           summary.distanceKm,
+      avg_speed_kmh:         summary.avgSpeedKmh,
+      max_speed_kmh:         summary.maxSpeedKmh,
+      avg_engine_load_pct:   summary.avgEngineLoad,
+      avg_coolant_temp_c:    summary.avgCoolantTemp,
+      fuel_level_start_pct:  summary.fuelLevelStart,
+      fuel_level_end_pct:    summary.fuelLevelEnd,
+      idle_time_seconds:     summary.idleTimeSeconds,
+      driving_time_seconds:  summary.drivingTimeSeconds,
+      obd_device_id:         deviceId,
+      dtc_codes:             summary.dtcCodes,
+    }),
+
+  trips: (vehicleId: number, page = 1) =>
+    client.get('/obd/trips', { params: { vehicle_id: vehicleId, page } }),
+
+  dtcEvents: (vehicleId: number) =>
+    client.get('/obd/dtc', { params: { vehicle_id: vehicleId } }),
+
+  resolveDtc: (dtcEventId: number) =>
+    client.post(`/obd/dtc/${dtcEventId}/resolve`),
+};

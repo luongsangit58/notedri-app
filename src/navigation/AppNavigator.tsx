@@ -39,6 +39,8 @@ import PremiumScreen from '../screens/profile/PremiumScreen';
 import AboutScreen from '../screens/profile/AboutScreen';
 import NotificationSettingsScreen from '../screens/profile/NotificationSettingsScreen';
 import ExportDataScreen from '../screens/profile/ExportDataScreen';
+import OBDSetupScreen from '../screens/obd/OBDSetupScreen';
+import OBDDashboardScreen from '../screens/obd/OBDDashboardScreen';
 
 const Tab = createBottomTabNavigator();
 const RootStack = createStackNavigator();
@@ -237,6 +239,12 @@ export default function AppNavigator() {
           headerTitleStyle: { fontWeight: '800', color: '#F59E0B' },
           title: 'Premium',
         }} />
+
+      {/* OBD */}
+      <RootStack.Screen name="OBDSetup" component={OBDSetupScreen}
+        options={{ headerShown: false }} />
+      <RootStack.Screen name="OBDDashboard" component={OBDDashboardScreen}
+        options={{ headerShown: false }} />
 
       {/* Year Review */}
       <RootStack.Screen name="YearReview" component={YearReviewScreen}
