@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Alert, ScrollView, Modal, TextInput, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, Alert, ScrollView, Modal, TextInput, ActivityIndicator, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -77,13 +77,20 @@ export default function ProfileScreen() {
       <ScrollView>
         {/* Avatar */}
         <View style={{ alignItems: 'center', paddingVertical: 32 }}>
-          <View style={{
-            width: 80, height: 80, borderRadius: 40,
-            backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center',
-            marginBottom: 14,
-          }}>
-            <Text style={{ color: colors.primaryText, fontSize: 34, fontWeight: '800' }}>{initial}</Text>
-          </View>
+          {user?.avatar ? (
+            <Image
+              source={{ uri: user.avatar }}
+              style={{ width: 80, height: 80, borderRadius: 40, marginBottom: 14 }}
+            />
+          ) : (
+            <View style={{
+              width: 80, height: 80, borderRadius: 40,
+              backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center',
+              marginBottom: 14,
+            }}>
+              <Text style={{ color: colors.primaryText, fontSize: 34, fontWeight: '800' }}>{initial}</Text>
+            </View>
+          )}
           <Text style={{ color: colors.text, fontSize: 20, fontWeight: '800' }}>{user?.name}</Text>
           <Text style={{ color: colors.textSecondary, marginTop: 4, fontSize: 14 }}>{user?.email}</Text>
         </View>
