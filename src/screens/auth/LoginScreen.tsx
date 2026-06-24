@@ -15,8 +15,9 @@ WebBrowser.maybeCompleteAuthSession();
 
 const GOOGLE_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? '';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const REDIRECT_URI = (makeRedirectUri as any)({ useProxy: true });
+// Development Build: dùng scheme của app để Google redirect về.
+// URI này phải được đăng ký trong Google Console → OAuth 2.0 Client → Authorized redirect URIs.
+const REDIRECT_URI = makeRedirectUri({ scheme: 'notedri', path: 'auth' });
 
 export default function LoginScreen({ navigation }: { navigation: any }) {
   const t = useT();
@@ -29,16 +30,26 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
     clientId: GOOGLE_CLIENT_ID,
     redirectUri: REDIRECT_URI,
     scopes: ['openid', 'profile', 'email'],
+    responseType: 'id_token',
+    usePKCE: false,
   });
 
   useEffect(() => {
-    if (response?.type === 'success') {
-      const idToken = (response as any).authentication?.idToken ?? response.params?.id_token;
+    if (!response) return;
+    if (response.type === 'success') {
+      // id_token nằm trong params khi responseType='id_token'
+      const idToken = (response.params as any)?.id_token
+        ?? (response as any).authentication?.idToken;
       if (idToken) {
         loginWithGoogle(idToken).catch(() => {});
       } else {
         Alert.alert(t('common.error'), t('auth.google_no_id_token'));
       }
+    } else if (response.type === 'error') {
+      const msg = (response as any).error?.message
+        ?? (response as any).params?.error_description
+        ?? 'Đăng nhập Google thất bại';
+      Alert.alert(t('common.error'), msg);
     }
   }, [response]);
 
