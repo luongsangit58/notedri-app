@@ -105,15 +105,21 @@ export default function OcrCamera({ visible, onClose, onResult, onReceiptResult,
 
   const pickImage = async (useCamera: boolean) => {
     const picked = useCamera
-      ? await ImagePicker.launchCameraAsync({ quality: 0.9 })
-      : await ImagePicker.launchImageLibraryAsync({ quality: 0.9 });
+      ? await ImagePicker.launchCameraAsync({ quality: 1.0 })
+      : await ImagePicker.launchImageLibraryAsync({ quality: 1.0 });
 
     if (picked.canceled || !picked.assets[0]) return;
 
+    const asset = picked.assets[0];
+    // For ODO: keep original resolution (no resize) at max quality so digits are sharp
+    // For receipt: cap at 1600px wide since text is larger and we save memory
+    const ops = mode === 'odo'
+      ? []
+      : [{ resize: { width: 1600 } } as const];
     const processed = await ImageManipulator.manipulateAsync(
-      picked.assets[0].uri,
-      [{ resize: { width: 1200 } }],
-      { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG },
+      asset.uri,
+      ops,
+      { compress: mode === 'odo' ? 1.0 : 0.92, format: ImageManipulator.SaveFormat.JPEG },
     );
 
     setImageUri(processed.uri);
@@ -169,11 +175,18 @@ export default function OcrCamera({ visible, onClose, onResult, onReceiptResult,
 
           {step === 'pick' && (
             <>
-              <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 20 }}>
+              <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 8 }}>
                 {mode === 'receipt'
                   ? 'Chụp toàn bộ hoá đơn - app tự đọc số lít và tổng tiền.'
-                  : 'Căn vùng số ODO vào giữa khung - app tự đọc số km.'}
+                  : 'Chụp gần, chỉ lấy vùng đồng hồ ODO - không cần cả tay lái.'}
               </Text>
+              {mode === 'odo' && (
+                <View style={{ backgroundColor: colors.background, borderRadius: 8, padding: 10, marginBottom: 12 }}>
+                  <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
+                    {'Mẹo: Lại gần 20-30 cm, giữ tay thẳng. Số ODO càng to trên ảnh thì đọc càng chính xác.'}
+                  </Text>
+                </View>
+              )}
               <View style={{ gap: 12 }}>
                 <TouchableOpacity
                   onPress={() => pickImage(true)}
@@ -271,7 +284,11 @@ export default function OcrCamera({ visible, onClose, onResult, onReceiptResult,
                 <Text style={{ color: '#fff', fontWeight: '600' }}>Xác nhận</Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={() => setStep('pick')} style={{ alignItems: 'center', padding: 8 }}>
-                <Text style={{ color: colors.textSecondary }}>Chụp lại</Text>
+                <Text style={{ color: colors.textSecondary, fontSize: 13 }}>
+                  {ocrStatus === 'manual' && mode === 'odo'
+                    ? 'Chụp lại gần hơn (20-30 cm)'
+                    : 'Chụp lại'}
+                </Text>
               </TouchableOpacity>
             </>
           )}
