@@ -16,13 +16,14 @@
 export function navigateFromUrl(navigation: any, url: string, vehicleId?: number): void {
   if (!url) return;
 
-  const vehicleMatch = url.match(/vehicles\/(\d+)/);
+  // Match /vehicles/{id}/... OR ?vehicle={id} query param (backend uses both patterns)
+  const vehicleMatch = url.match(/vehicles\/(\d+)/) ?? url.match(/[?&]vehicle=(\d+)/);
   const vid = vehicleMatch ? parseInt(vehicleMatch[1], 10) : vehicleId;
 
   if (url.includes('/services/guide') || url.includes('services.guide')) {
     navigation.navigate('GarageGuide');
   } else if (url.includes('/health')) {
-    navigation.navigate('Health');
+    navigation.navigate('Health', vid ? { vehicleId: vid } : undefined);
   } else if (url.includes('/reminders')) {
     navigation.navigate('Reminders', vid ? { vehicleId: vid } : undefined);
   } else if (url.includes('/odometer')) {
@@ -37,6 +38,10 @@ export function navigateFromUrl(navigation: any, url: string, vehicleId?: number
     navigation.navigate('RefuelsList', vid ? { vehicleId: vid } : undefined);
   } else if (url.includes('/dossier') || url.includes('dossier')) {
     navigation.navigate('Dossier', vid ? { vehicleId: vid } : undefined);
+  } else if (url.includes('/premium')) {
+    navigation.navigate('Premium');
+  } else if (url.includes('/feedback')) {
+    navigation.navigate('Feedback');
   }
 }
 

@@ -426,16 +426,18 @@ export default function RemindersScreen() {
   });
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
-  const { vehicleId } = route.params as { vehicleId: number };
+  const { vehicleId } = (route.params ?? {}) as { vehicleId?: number };
+  const { data: vehiclesData0 } = useVehicles();
+  const vehicles0: any[] = vehiclesData0?.data ?? vehiclesData0 ?? [];
+  const resolvedVehicleId: number = vehicleId ?? vehicles0.find((v: any) => v.is_default)?.id ?? vehicles0[0]?.id;
 
-  const { data: remindersData, isLoading, isError, refetch, isFetching } = useReminders(vehicleId);
-  const { data: vehiclesData } = useVehicles();
+  const { data: remindersData, isLoading, isError, refetch, isFetching } = useReminders(resolvedVehicleId);
   const deleteReminder = useDeleteReminder();
   const doneReminder = useDoneReminder();
 
-  const vehicles: any[] = vehiclesData?.data ?? vehiclesData ?? [];
-  const vehicle = vehicles.find((v: any) => v.id === vehicleId);
-  const vehicleName = vehicle?.ten_xe ?? vehicle?.ten ?? vehicle?.name ?? `Xe #${vehicleId}`;
+  const vehicles: any[] = vehicles0;
+  const vehicle = vehicles.find((v: any) => v.id === resolvedVehicleId);
+  const vehicleName = vehicle?.ten_xe ?? vehicle?.ten ?? vehicle?.name ?? `Xe #${resolvedVehicleId}`;
 
   const reminders: Reminder[] = remindersData?.data ?? remindersData ?? [];
   const reminderMeta = remindersData?.meta ?? null;
@@ -471,7 +473,7 @@ export default function RemindersScreen() {
   };
 
   const handleEdit = (reminderId: number) => {
-    navigation.navigate('EditReminder', { reminderId, vehicleId });
+    navigation.navigate('EditReminder', { reminderId, vehicleId: resolvedVehicleId });
   };
 
   if (isLoading) return <LoadingView />;
@@ -504,7 +506,7 @@ export default function RemindersScreen() {
                 <TouchableOpacity
                   key={i}
                   disabled={!canAdd}
-                  onPress={() => navigation.navigate('AddReminder', { vehicleId, hang_muc: s.hang_muc, loai: s.loai })}
+                  onPress={() => navigation.navigate('AddReminder', { vehicleId: resolvedVehicleId, hang_muc: s.hang_muc, loai: s.loai })}
                   style={{
                     flexDirection: 'row', alignItems: 'center', gap: 10,
                     backgroundColor: colors.surface, borderRadius: 10, padding: 12, marginBottom: 8,
@@ -531,7 +533,7 @@ export default function RemindersScreen() {
 
       <TouchableOpacity
         style={styles.fab}
-        onPress={() => navigation.navigate('AddReminder', { vehicleId })}
+        onPress={() => navigation.navigate('AddReminder', { vehicleId: resolvedVehicleId })}
         activeOpacity={0.85}
       >
         <FontAwesome5 name="plus" size={22} color="#fff" solid />
