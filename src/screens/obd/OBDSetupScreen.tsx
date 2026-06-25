@@ -96,7 +96,7 @@ export default function OBDSetupScreen() {
         {foundDevices.length > 0 && (
           <FlatList
             data={foundDevices}
-            keyExtractor={(item) => item.id}
+            keyExtractor={(item, index) => item.id ?? `device-${index}`}
             style={{ marginTop: 16 }}
             renderItem={({ item }) => (
               <TouchableOpacity

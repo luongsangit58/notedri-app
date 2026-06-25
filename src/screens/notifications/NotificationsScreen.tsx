@@ -177,7 +177,7 @@ export default function NotificationsScreen() {
       ) : (
         <FlatList<NotificationItem>
           data={notifications}
-          keyExtractor={item => item.key}
+          keyExtractor={(item, index) => item.key ?? `notif-${index}`}
           renderItem={({ item }) => (
             <NotifRow
               item={item}

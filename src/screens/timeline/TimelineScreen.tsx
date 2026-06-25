@@ -105,7 +105,7 @@ export default function TimelineScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom']}>
       <FlatList
         data={filteredItems}
-        keyExtractor={(item: any) => `${item.type}-${item.id}`}
+        keyExtractor={(item: any, index) => item.id ? `${item.type}-${item.id}` : `timeline-${index}`}
         renderItem={({ item }) => (
           <TimelineItem
             item={item}
