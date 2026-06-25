@@ -125,7 +125,7 @@ export default function AddOdometerScreen() {
           <TextInput
             value={odo}
             onChangeText={setOdo}
-            placeholder="98443"
+            placeholder=""
             placeholderTextColor={colors.textSecondary}
             keyboardType="numeric"
             style={[input, { fontSize: 28, fontWeight: '800', textAlign: 'center', letterSpacing: 2, marginBottom: 10 }]}

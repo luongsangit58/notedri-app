@@ -37,7 +37,23 @@ export function useVoiceInput(): UseVoiceInputResult {
 
   useSpeechRecognitionEvent('error', (event) => {
     setStatus('error');
-    setError(event.message ?? 'Không nhận dạng được giọng nói');
+    const code = ((event as any).error ?? '').toLowerCase();
+    const msg = (event.message ?? '').toLowerCase();
+    let viMsg: string;
+    if (code === 'no-speech' || msg.includes('no speech') || msg.includes('no_speech')) {
+      viMsg = 'Không nghe thấy giọng nói, hãy thử lại';
+    } else if (code === 'not-allowed' || code === 'service-not-allowed' || msg.includes('permission') || msg.includes('not_allowed')) {
+      viMsg = 'Cần cấp quyền micro để dùng tính năng này';
+    } else if (code === 'network' || msg.includes('network')) {
+      viMsg = 'Lỗi kết nối mạng, kiểm tra lại';
+    } else if (code === 'audio-capture' || msg.includes('audio')) {
+      viMsg = 'Không thể truy cập micro';
+    } else if (code === 'aborted' || msg.includes('aborted')) {
+      viMsg = 'Đã hủy nhận dạng giọng nói';
+    } else {
+      viMsg = 'Không nhận dạng được giọng nói';
+    }
+    setError(viMsg);
   });
 
   const listen = useCallback(async (onResult: (value: string, raw: string) => void) => {
