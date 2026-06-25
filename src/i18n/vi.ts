@@ -110,6 +110,7 @@ const vi = {
   "refuels.date_label": "Ngày",
   "refuels.station_label": "Cây xăng",
   "refuels.full_tank_label": "Đổ đầy bình",
+  "refuels.full_tank_hint": "Tính L/100km chính xác hơn",
   "refuels.save_button": "Lưu lần đổ xăng",
   "refuels.delete_confirm_title": "Xoá lần đổ xăng",
   "refuels.delete_confirm_message": "Bạn có chắc muốn xoá lần đổ xăng này?",
@@ -438,6 +439,7 @@ const vi = {
   "refuels.ocr_label": "OCR từ hoá đơn xăng",
   "refuels.find_nearby": "Tìm trạm xăng gần đây",
   "refuels.note_label": "Ghi chú",
+  "refuels.note_placeholder": "Ghi chú thêm...",
 
   // NearbyStations (new)
   "nearby_stations.getting_location": "Đang lấy vị trí của bạn...",

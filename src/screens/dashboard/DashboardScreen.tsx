@@ -18,6 +18,7 @@ import { navigateFromCta } from '../../utils/navigation';
 import { useAuthStore } from '../../store/authStore';
 import client from '../../api/client';
 import dayjs from 'dayjs';
+import 'dayjs/locale/vi';
 import { useT } from '../../i18n';
 
 /* ─── FA6 class → FA5 icon name ─── */
@@ -230,7 +231,7 @@ export default function DashboardScreen() {
               <UserAvatar size={40} />
               <View style={{ flex: 1 }}>
                 <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12 }}>
-                  {dayjs().format('dddd, DD/MM')}
+                  {(() => { const d = dayjs().locale('vi'); const wd = d.format('dddd'); return wd.charAt(0).toUpperCase() + wd.slice(1) + ', ' + d.format('DD/MM/YYYY'); })()}
                 </Text>
                 <Text style={{ color: '#fff', fontSize: 17, fontWeight: '800', lineHeight: 22 }} numberOfLines={1}>
                   {t('dashboard.hello')} {user?.name?.split(' ').pop() ?? ''}

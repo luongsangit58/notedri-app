@@ -10,6 +10,7 @@ import { refuelsApi } from '../../api/refuels';
 import client from '../../api/client';
 import { useColors } from '../../utils/theme';
 import { useT } from '../../i18n';
+import DatePickerField from '../../components/DatePickerField';
 
 const FUEL_TYPES = ['E5 RON 95-V', 'RON 95-III', 'E5 RON 92', 'Dầu DO 0,05S-V', 'Dầu DO 0,001S'];
 
@@ -209,14 +210,7 @@ export default function EditRefuelScreen() {
             style={[inputStyle, { marginBottom: 4 }]}
           />
 
-          <FieldLabel>{t('refuels.date_label')}</FieldLabel>
-          <TextInput
-            value={ngay}
-            onChangeText={setNgay}
-            placeholder="YYYY-MM-DD"
-            placeholderTextColor={colors.textSecondary}
-            style={[inputStyle, { marginBottom: 4 }]}
-          />
+          <DatePickerField label={t('refuels.date_label')} value={ngay} onChange={setNgay} />
 
           <FieldLabel>{t('refuels.station_label')}</FieldLabel>
           <TextInput
@@ -227,39 +221,34 @@ export default function EditRefuelScreen() {
             style={[inputStyle, { marginBottom: 4 }]}
           />
 
-          <FieldLabel>{t('refuels.note_label')}</FieldLabel>
-          <TextInput
-            value={ghiChu}
-            onChangeText={setGhiChu}
-            placeholder="Ghi chú thêm..."
-            placeholderTextColor={colors.textSecondary}
-            multiline
-            style={[inputStyle, { minHeight: 72, textAlignVertical: 'top', marginBottom: 4 }]}
-          />
-
           {/* Full tank toggle */}
           <View style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            backgroundColor: colors.surface,
-            borderRadius: 10,
-            padding: 14,
-            marginBottom: 20,
+            flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+            backgroundColor: colors.surface, borderRadius: 10, padding: 14, marginBottom: 8,
           }}>
             <View>
               <Text style={{ color: colors.text, fontWeight: '600' }}>{t('refuels.full_tank_label')}</Text>
               <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>
-                Tính L/100km chính xác hơn
+                {t('refuels.full_tank_hint')}
               </Text>
             </View>
             <Switch
               value={isFullTank}
               onValueChange={setIsFullTank}
               trackColor={{ false: colors.border, true: colors.primary }}
-              thumbColor="#fff"
+              thumbColor={colors.text}
             />
           </View>
+
+          <FieldLabel>{t('refuels.note_label')}</FieldLabel>
+          <TextInput
+            value={ghiChu}
+            onChangeText={setGhiChu}
+            placeholder={t('refuels.note_placeholder')}
+            placeholderTextColor={colors.textSecondary}
+            multiline
+            style={[inputStyle, { minHeight: 72, textAlignVertical: 'top', marginBottom: 20 }]}
+          />
 
           {/* Cập nhật button */}
           <TouchableOpacity
