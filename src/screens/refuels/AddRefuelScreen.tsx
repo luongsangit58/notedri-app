@@ -10,10 +10,11 @@ import dayjs from 'dayjs';
 import { useVehicles } from '../../hooks/useVehicles';
 import { useCreateRefuel } from '../../hooks/useRefuels';
 import { useFuelTypes } from '../../hooks/useFuelTypes';
-import OcrCamera from '../../components/OcrCamera';
+import OcrCamera, { ReceiptData } from '../../components/OcrCamera';
 import { useColors } from '../../utils/theme';
-import { formatVND } from '../../utils/format';
+import { formatVND, formatKm } from '../../utils/format';
 import { useT } from '../../i18n';
+import { useVoiceInput } from '../../hooks/useVoiceInput';
 
 function FieldLabel({ children }: any) {
   const colors = useColors();
@@ -55,7 +56,8 @@ export default function AddRefuelScreen() {
   const [cayXang, setCayXang] = useState('');
   const [ghiChu, setGhiChu] = useState('');
   const [isFullTank, setIsFullTank] = useState(true);
-  const [ocrOpen, setOcrOpen] = useState(false);
+  const [ocrTarget, setOcrTarget] = useState<'receipt' | 'odo' | null>(null);
+  const voice = useVoiceInput();
 
   // Set default vehicle when vehicles load
   useEffect(() => {
@@ -84,11 +86,22 @@ export default function AddRefuelScreen() {
 
   const selectedFuelType = fuelTypes.find((ft: any) => ft.id === fuelTypeId) ?? null;
   const marketPrice = selectedFuelType?.gia_hien_tai ?? null;
+  const currentVehicle = vehicles.find((v: any) => v.id === vehicleId);
+  const odoWarning = odometer && currentVehicle?.odo_hien_tai
+    && parseInt(odometer) < currentVehicle.odo_hien_tai
+    ? `ODO thấp hơn lần trước (${formatKm(currentVehicle.odo_hien_tai)}), kiểm tra lại`
+    : null;
 
-  const handleOcrResult = (text: string) => {
+  const handleReceiptResult = ({ tongTien: t, soLit: s }: ReceiptData) => {
+    if (t) setTongTien(t);
+    if (s) setSoLit(s);
+    const tNum = parseFloat(t), sNum = parseFloat(s);
+    if (tNum > 0 && sNum > 0) setGiaLit(Math.round(tNum / sNum).toString());
+  };
+
+  const handleOdoOcrResult = (text: string) => {
     const num = text.replace(/[^0-9]/g, '');
-    if (num) setTongTien(num);
-    setOcrOpen(false);
+    if (num) setOdometer(num);
   };
 
   const handleTongTienChange = (v: string) => {
@@ -184,13 +197,13 @@ export default function AddRefuelScreen() {
 
           {/* OCR */}
           <TouchableOpacity
-            onPress={() => setOcrOpen(true)}
+            onPress={() => setOcrTarget('receipt')}
             style={{
               backgroundColor: colors.surface, padding: 12, borderRadius: 10,
               alignItems: 'center', marginBottom: 16, flexDirection: 'row', justifyContent: 'center', gap: 8,
             }}>
             <FontAwesome5 name="camera" size={18} color={colors.primary} solid />
-            <Text style={{ color: colors.primary, fontWeight: '600' }}>OCR từ hóa đơn xăng</Text>
+            <Text style={{ color: colors.primary, fontWeight: '600' }}>Chụp hoá đơn xăng</Text>
           </TouchableOpacity>
 
           {/* Nearby stations */}
@@ -205,24 +218,59 @@ export default function AddRefuelScreen() {
           </TouchableOpacity>
 
           {/* 3 ô tính tiền */}
-          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 4 }}>
-            <View style={{ flex: 1 }}>
-              <FieldLabel>Tổng tiền (đ) *</FieldLabel>
-              <TextInput
-                value={tongTien}
-                onChangeText={handleTongTienChange}
-                placeholder="0"
-                placeholderTextColor={colors.textSecondary}
-                keyboardType="numeric"
-                style={[input, { fontSize: 18, fontWeight: '700' }]}
+          <FieldLabel>Tổng tiền (đ) *</FieldLabel>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+            <TextInput
+              value={tongTien}
+              onChangeText={handleTongTienChange}
+              placeholder="0"
+              placeholderTextColor={colors.textSecondary}
+              keyboardType="numeric"
+              style={[input, { flex: 1, fontSize: 18, fontWeight: '700' }]}
+            />
+            <TouchableOpacity
+              onPress={() => voice.status === 'listening'
+                ? voice.stop()
+                : voice.listen(v => handleTongTienChange(v))}
+              style={{
+                width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center',
+                backgroundColor: voice.status === 'listening' ? colors.primary : colors.surface,
+              }}>
+              <FontAwesome5
+                name={voice.status === 'listening' ? 'stop-circle' : 'microphone'}
+                size={16}
+                color={voice.status === 'listening' ? '#fff' : colors.primary}
+                solid
               />
-            </View>
+            </TouchableOpacity>
           </View>
 
           <View style={{ flexDirection: 'row', gap: 8, marginBottom: 4 }}>
             <View style={{ flex: 1 }}>
               <FieldLabel>Số lít</FieldLabel>
-              <TextInput value={soLit} onChangeText={handleSoLitChange} placeholder="0.0" placeholderTextColor={colors.textSecondary} keyboardType="numeric" style={input} />
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <TextInput
+                  value={soLit}
+                  onChangeText={handleSoLitChange}
+                  placeholder="0.0"
+                  placeholderTextColor={colors.textSecondary}
+                  keyboardType="decimal-pad"
+                  style={[input, { flex: 1 }]}
+                />
+                <TouchableOpacity
+                  onPress={() => voice.status === 'listening'
+                    ? voice.stop()
+                    : voice.listen(v => handleSoLitChange(v))}
+                  style={{
+                    width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center',
+                    backgroundColor: voice.status === 'listening' ? colors.primary : colors.surface,
+                  }}>
+                  <FontAwesome5
+                    name={voice.status === 'listening' ? 'stop-circle' : 'microphone'}
+                    size={14} color={voice.status === 'listening' ? '#fff' : colors.primary} solid
+                  />
+                </TouchableOpacity>
+              </View>
             </View>
             <View style={{ flex: 1 }}>
               <FieldLabel>Giá/lít</FieldLabel>
@@ -236,7 +284,27 @@ export default function AddRefuelScreen() {
           </View>
 
           <FieldLabel>ODO (km)</FieldLabel>
-          <TextInput value={odometer} onChangeText={setOdometer} placeholder="Số km hiện tại" placeholderTextColor={colors.textSecondary} keyboardType="numeric" style={[input, { marginBottom: 4 }]} />
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+            <TextInput
+              value={odometer}
+              onChangeText={setOdometer}
+              placeholder="Số km hiện tại"
+              placeholderTextColor={colors.textSecondary}
+              keyboardType="numeric"
+              style={[input, { flex: 1 }]}
+            />
+            <TouchableOpacity
+              onPress={() => setOcrTarget('odo')}
+              style={{
+                width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center',
+                backgroundColor: colors.surface,
+              }}>
+              <FontAwesome5 name="camera" size={14} color={colors.primary} solid />
+            </TouchableOpacity>
+          </View>
+          {odoWarning && (
+            <Text style={{ color: colors.warning, fontSize: 12, marginBottom: 4 }}>{odoWarning}</Text>
+          )}
 
           <FieldLabel>Ngày</FieldLabel>
           <TextInput value={ngay} onChangeText={setNgay} placeholder="YYYY-MM-DD" placeholderTextColor={colors.textSecondary} style={[input, { marginBottom: 4 }]} />
@@ -278,7 +346,14 @@ export default function AddRefuelScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      <OcrCamera visible={ocrOpen} onClose={() => setOcrOpen(false)} onResult={handleOcrResult} hint="Đọc số tiền từ hóa đơn xăng" />
+      <OcrCamera
+        visible={ocrTarget !== null}
+        onClose={() => setOcrTarget(null)}
+        mode={ocrTarget === 'odo' ? 'odo' : 'receipt'}
+        onResult={handleOdoOcrResult}
+        onReceiptResult={handleReceiptResult}
+        hint={ocrTarget === 'odo' ? 'Chụp đồng hồ xe để lấy số ODO' : 'Chụp hoá đơn xăng'}
+      />
     </SafeAreaView>
   );
 }

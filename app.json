@@ -81,7 +81,14 @@
           "bluetoothAlwaysPermission": "NoteDri cần Bluetooth để kết nối với thiết bị OBD của xe bạn"
         }
       ],
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "@react-native-voice/voice",
+        {
+          "microphonePermission": "NoteDri cần micro để nhận nhập số ODO và số tiền bằng giọng nói",
+          "speechRecognitionPermission": "NoteDri cần nhận dạng giọng nói để đọc số ODO và số tiền"
+        }
+      ]
     ]
   }
 }
