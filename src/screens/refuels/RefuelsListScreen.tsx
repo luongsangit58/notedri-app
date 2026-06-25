@@ -142,6 +142,14 @@ export default function RefuelsListScreen() {
     ? vehiclesRaw.data
     : Array.isArray(vehiclesRaw) ? vehiclesRaw : [];
 
+  // Auto-select default vehicle on first load
+  React.useEffect(() => {
+    if (vehicles.length > 0 && selectedVehicleId === undefined) {
+      const def = vehicles.find((v: any) => v.is_default) ?? vehicles[0];
+      setSelectedVehicleId(def.id);
+    }
+  }, [vehicles.length]);
+
   const { data, isLoading, isFetching, refetch } = useRefuels(selectedVehicleId, page);
 
   const pageItems: RefuelItem[] = Array.isArray(data?.data) ? data.data
@@ -181,46 +189,33 @@ export default function RefuelsListScreen() {
 
   const ListHeader = (
     <View style={{ marginBottom: 4 }}>
-      {/* Vehicle filter chips */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ gap: 8, paddingHorizontal: 16, paddingVertical: 10 }}
-      >
-        <TouchableOpacity
-          onPress={() => handleSelectVehicle(undefined)}
-          style={{
-            paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20,
-            backgroundColor: selectedVehicleId === undefined ? colors.primary : colors.surface,
-            borderWidth: 1,
-            borderColor: selectedVehicleId === undefined ? colors.primary : colors.border,
-          }}>
-          <Text style={{
-            color: selectedVehicleId === undefined ? colors.primaryText : colors.textSecondary,
-            fontSize: 13, fontWeight: selectedVehicleId === undefined ? '700' : '400',
-          }}>
-            {t('common.all')}
-          </Text>
-        </TouchableOpacity>
-        {vehicles.map((v: any) => (
-          <TouchableOpacity
-            key={v.id}
-            onPress={() => handleSelectVehicle(v.id)}
-            style={{
-              paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20,
-              backgroundColor: selectedVehicleId === v.id ? colors.primary : colors.surface,
-              borderWidth: 1,
-              borderColor: selectedVehicleId === v.id ? colors.primary : colors.border,
-            }}>
-            <Text style={{
-              color: selectedVehicleId === v.id ? colors.primaryText : colors.textSecondary,
-              fontSize: 13, fontWeight: selectedVehicleId === v.id ? '700' : '400',
-            }}>
-              {v.ten}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+      {/* Vehicle filter chips - only show when user has multiple vehicles */}
+      {vehicles.length > 1 && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ gap: 8, paddingHorizontal: 16, paddingVertical: 10 }}
+        >
+          {vehicles.map((v: any) => (
+            <TouchableOpacity
+              key={v.id}
+              onPress={() => handleSelectVehicle(v.id)}
+              style={{
+                paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20,
+                backgroundColor: selectedVehicleId === v.id ? colors.primary : colors.surface,
+                borderWidth: 1,
+                borderColor: selectedVehicleId === v.id ? colors.primary : colors.border,
+              }}>
+              <Text style={{
+                color: selectedVehicleId === v.id ? colors.primaryText : colors.textSecondary,
+                fontSize: 13, fontWeight: selectedVehicleId === v.id ? '700' : '400',
+              }}>
+                {v.ten}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      )}
 
       {/* Stats tổng */}
       {consumption != null && (

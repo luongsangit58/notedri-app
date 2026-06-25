@@ -118,6 +118,13 @@ export default function ServicesScreen() {
     ? vehiclesData.data
     : Array.isArray(vehiclesData) ? vehiclesData : [];
 
+  React.useEffect(() => {
+    if (vehicles.length > 0 && selectedVehicleId === undefined) {
+      const def = vehicles.find((v: any) => v.is_default) ?? vehicles[0];
+      setSelectedVehicleId(def.id);
+    }
+  }, [vehicles.length]);
+
   const {
     data,
     isLoading,
@@ -246,13 +253,6 @@ export default function ServicesScreen() {
                 horizontal showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.chipsContainer}
                 style={{ marginBottom: 8 }}>
-                <TouchableOpacity
-                  onPress={() => setSelectedVehicleId(undefined)}
-                  style={[styles.chip, selectedVehicleId === undefined && styles.chipActive]}>
-                  <Text style={[styles.chipText, selectedVehicleId === undefined && styles.chipTextActive]}>
-                    Tất cả xe
-                  </Text>
-                </TouchableOpacity>
                 {vehicles.map((v: any) => {
                   const active = v.id === selectedVehicleId;
                   return (

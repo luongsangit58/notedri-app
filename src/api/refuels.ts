@@ -2,7 +2,7 @@ import client from './client';
 
 export const refuelsApi = {
   list: (vehicleId?: number, page = 1) =>
-    client.get('/refuels', { params: { vehicle_id: vehicleId, page } }),
+    client.get('/refuels', { params: { vehicle: vehicleId, page } }),
   get: (id: number) => client.get(`/refuels/${id}`),
   create: (data: any) => client.post('/refuels', data),
   update: (id: number, data: any) => client.put(`/refuels/${id}`, data),
