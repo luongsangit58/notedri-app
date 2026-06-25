@@ -58,7 +58,6 @@ function VehiclesStack({ colors }: { colors: ColorPalette }) {
     <Stack.Navigator screenOptions={headerOpts}>
       <Stack.Screen name="VehiclesList" component={VehiclesScreen} options={{ title: t('vehicles.title') }} />
       <Stack.Screen name="VehicleDetail" component={VehicleDetailScreen} options={({ route }: any) => ({ title: route.params?.vehicleName ?? t('common.vehicle') })} />
-      <Stack.Screen name="Reminders" component={RemindersScreen} options={{ title: t('reminders.title') }} />
     </Stack.Navigator>
   );
 }
@@ -170,6 +169,8 @@ export default function AppNavigator() {
         options={{ headerShown: true, ...headerOpts, title: t('change_password.title') }} />
 
       {/* Reminders */}
+      <RootStack.Screen name="Reminders" component={RemindersScreen}
+        options={{ headerShown: true, ...headerOpts, title: t('reminders.title') }} />
       <RootStack.Screen name="AddReminder" component={AddReminderScreen}
         options={{ headerShown: false }} />
       <RootStack.Screen name="EditReminder" component={EditReminderScreen}
