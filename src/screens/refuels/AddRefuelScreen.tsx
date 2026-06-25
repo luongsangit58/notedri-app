@@ -65,6 +65,11 @@ export default function AddRefuelScreen() {
     if (!vehicleId && defaultVehicle) setVehicleId(defaultVehicle.id);
   }, [vehicles]);
 
+  // Clear voiceFeedback timer on unmount
+  useEffect(() => {
+    return () => { if (voiceFeedbackTimer.current) clearTimeout(voiceFeedbackTimer.current); };
+  }, []);
+
   // Set default fuel type when fuel types load
   useEffect(() => {
     if (fuelTypes.length > 0 && fuelTypeId === null) {

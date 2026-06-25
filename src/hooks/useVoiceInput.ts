@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { ExpoSpeechRecognitionModule, useSpeechRecognitionEvent } from 'expo-speech-recognition';
 
 type Status = 'idle' | 'listening' | 'done' | 'error';
@@ -20,12 +20,14 @@ export function parseNumberFromSpeech(text: string): string {
 export function useVoiceInput(): UseVoiceInputResult {
   const [status, setStatus] = useState<Status>('idle');
   const [error, setError] = useState<string | null>(null);
-  const [callback, setCallback] = useState<((value: string, raw: string) => void) | null>(null);
+  // Bug fix: use ref instead of state so event handlers always see the latest callback
+  // (state captured in useSpeechRecognitionEvent closure would be stale after first render)
+  const callbackRef = useRef<((value: string, raw: string) => void) | null>(null);
 
   useSpeechRecognitionEvent('result', (event) => {
     const raw = event.results[0]?.transcript ?? '';
     const parsed = parseNumberFromSpeech(raw);
-    if (parsed && callback) callback(parsed, raw);
+    if (parsed && callbackRef.current) callbackRef.current(parsed, raw);
     setStatus('idle');
   });
 
@@ -45,7 +47,7 @@ export function useVoiceInput(): UseVoiceInputResult {
       setError('Cần cấp quyền micro để dùng tính năng này');
       return;
     }
-    setCallback(() => onResult);
+    callbackRef.current = onResult;
     setError(null);
     setStatus('listening');
     ExpoSpeechRecognitionModule.start({

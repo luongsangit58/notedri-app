@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View, Text, TouchableOpacity, Modal, TextInput,
   Image, ActivityIndicator,
@@ -103,7 +103,7 @@ export default function OcrCamera({ visible, onClose, onResult, onReceiptResult,
     onClose();
   };
 
-  const pickImage = async (useCamera: boolean) => {
+  const pickImage = useCallback(async (useCamera: boolean) => {
     const picked = useCamera
       ? await ImagePicker.launchCameraAsync({ quality: 1.0 })
       : await ImagePicker.launchImageLibraryAsync({ quality: 1.0 });
@@ -144,7 +144,7 @@ export default function OcrCamera({ visible, onClose, onResult, onReceiptResult,
     }
 
     setStep('confirm');
-  };
+  }, [mode]);
 
   const handleConfirm = () => {
     if (mode === 'receipt' && onReceiptResult) {
