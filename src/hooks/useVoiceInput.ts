@@ -4,7 +4,7 @@ import { ExpoSpeechRecognitionModule, useSpeechRecognitionEvent } from 'expo-spe
 type Status = 'idle' | 'listening' | 'done' | 'error';
 
 interface UseVoiceInputResult {
-  listen: (onResult: (value: string) => void) => void;
+  listen: (onResult: (value: string) => void) => Promise<void>;
   stop: () => void;
   status: Status;
   error: string | null;
@@ -38,7 +38,13 @@ export function useVoiceInput(): UseVoiceInputResult {
     setError(event.message ?? 'Không nhận dạng được giọng nói');
   });
 
-  const listen = useCallback((onResult: (value: string) => void) => {
+  const listen = useCallback(async (onResult: (value: string) => void) => {
+    const { granted } = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+    if (!granted) {
+      setStatus('error');
+      setError('Cần cấp quyền micro để dùng tính năng này');
+      return;
+    }
     setCallback(() => onResult);
     setError(null);
     setStatus('listening');
