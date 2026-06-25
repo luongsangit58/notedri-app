@@ -69,6 +69,13 @@ export default function TimelineScreen() {
     ? vehiclesData
     : [];
 
+  React.useEffect(() => {
+    if (vehicles.length > 0 && selectedVehicleId === undefined) {
+      const def = vehicles.find((v: any) => v.is_default) ?? vehicles[0];
+      setSelectedVehicleId(def.id);
+    }
+  }, [vehicles.length]);
+
   const {
     data,
     isLoading,
@@ -123,30 +130,14 @@ export default function TimelineScreen() {
         onEndReachedThreshold={0.3}
         ListHeaderComponent={
           <View style={styles.filterHeader}>
-            {/* Vehicle chips */}
-            {vehicles.length > 0 && (
+            {/* Vehicle chips - only for multi-vehicle users */}
+            {vehicles.length > 1 && (
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.chipsContainer}
                 style={styles.chipRow}
               >
-                <TouchableOpacity
-                  onPress={() => setSelectedVehicleId(undefined)}
-                  style={[
-                    styles.chip,
-                    selectedVehicleId === undefined && styles.chipActive,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.chipText,
-                      selectedVehicleId === undefined && styles.chipTextActive,
-                    ]}
-                  >
-                    Tất cả xe
-                  </Text>
-                </TouchableOpacity>
                 {vehicles.map((v: any) => {
                   const active = v.id === selectedVehicleId;
                   return (
