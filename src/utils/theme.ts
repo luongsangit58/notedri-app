@@ -18,8 +18,8 @@ export interface ColorPalette {
 }
 
 export const darkColors: ColorPalette = {
-  primary: '#F59E0B',
-  primaryText: '#1C1917',
+  primary: '#D97706',
+  primaryText: '#FFFFFF',
   background: '#0d1527',
   surface: '#1a2744',
   text: '#e2e8f0',
@@ -32,8 +32,8 @@ export const darkColors: ColorPalette = {
 };
 
 export const lightColors: ColorPalette = {
-  primary: '#F59E0B',
-  primaryText: '#1C1917',
+  primary: '#D97706',
+  primaryText: '#FFFFFF',
   background: '#F4F4F5',
   surface: '#FFFFFF',
   text: '#111827',
