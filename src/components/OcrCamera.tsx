@@ -7,7 +7,7 @@ import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
 import TextRecognition from '@react-native-ml-kit/text-recognition';
 import { FontAwesome5 } from '@expo/vector-icons';
-import { colors } from '../utils/colors';
+import { useColors } from '../utils/theme';
 
 export type OcrMode = 'odo' | 'receipt';
 
@@ -84,6 +84,7 @@ type Step = 'pick' | 'processing' | 'confirm';
 type OcrStatus = 'found' | 'partial' | 'manual';
 
 export default function OcrCamera({ visible, onClose, onResult, onReceiptResult, mode = 'odo', hint }: Props) {
+  const colors = useColors();
   const [step, setStep] = useState<Step>('pick');
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [ocrValue, setOcrValue] = useState('');
