@@ -131,8 +131,8 @@ export default function AddOdometerScreen() {
             style={[input, { fontSize: 28, fontWeight: '800', textAlign: 'center', letterSpacing: 2, marginBottom: 10 }]}
           />
           <VoiceButton
-            label="Nói số ODO"
-            hint="Đọc số ODO trên đồng hồ xe, VD: chín tám bốn bốn ba"
+            label={t('odometer.voice_label')}
+            hint={t('odometer.voice_hint')}
             onResult={(value) => setOdo(value)}
             compact={false}
           />
@@ -172,7 +172,7 @@ export default function AddOdometerScreen() {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      <OcrCamera visible={ocrOpen} onClose={() => setOcrOpen(false)} onResult={handleOcrResult} hint="Đọc số ODO từ đồng hồ xe" />
+      <OcrCamera visible={ocrOpen} onClose={() => setOcrOpen(false)} onResult={handleOcrResult} hint={t('odometer.ocr_hint')} />
     </SafeAreaView>
   );
 }

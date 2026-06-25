@@ -492,7 +492,7 @@ function ReportContent({
           {yrRefuels != null && (
             <CardRow
               index={[yrKm, yrCost].filter(Boolean).length}
-              label="Lần đổ xăng"
+              label={t('reports.refuel_label')}
               value={fmtNum(yrRefuels, 'lần')}
             />
           )}
@@ -560,7 +560,7 @@ function ReportContent({
 
       {/* ── tiêu hao vs nhà sản xuất ── */}
       {cvo != null && (
-        <SectionCard title="Thực tế vs Nhà sản xuất">
+        <SectionCard title={t('reports.actual_vs_spec')}>
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <View style={{ flex: 1, backgroundColor: colors.background, borderRadius: 10, padding: 12, alignItems: 'center' }}>
               <Text style={{ color: colors.textSecondary, fontSize: 11, marginBottom: 4 }}>Thực tế</Text>
@@ -593,7 +593,7 @@ function ReportContent({
 
       {/* ── top 3 months by spend ── */}
       {top3Months.length > 0 && (
-        <SectionCard title="Tháng chi nhiều nhất">
+        <SectionCard title={t('reports.top_spending_month')}>
           {top3Months.map((m, i) => {
             const month =
               m.thang ?? m.month ?? m.month_number ?? (i + 1);
@@ -642,18 +642,18 @@ function ReportContent({
 
       {/* ── spend forecast ── */}
       {sf != null && sfTotal != null && (
-        <SectionCard title={`Dự báo chi tiêu năm ${selectedYear}`}>
+        <SectionCard title={t('reports.forecast_title', { year: selectedYear })}>
           {sfPct != null && (
             <Text style={{ color: colors.textSecondary, fontSize: 12, marginBottom: 10 }}>
               Theo đà thực chi tới nay ({sfPct}% năm đã qua) - ước tính thô
             </Text>
           )}
-          <CardRow index={0} label="Dự báo tổng" value={fmtVnd(sfTotal)} valueColor={colors.primary} />
+          <CardRow index={0} label={t('reports.forecast_total')} value={fmtVnd(sfTotal)} valueColor={colors.primary} />
           {sfFuel != null && (
-            <CardRow index={1} label="Dự báo xăng" value={fmtVnd(sfFuel)} />
+            <CardRow index={1} label={t('reports.forecast_fuel')} value={fmtVnd(sfFuel)} />
           )}
           {sfService != null && (
-            <CardRow index={sfFuel != null ? 2 : 1} label="Dự báo dịch vụ" value={fmtVnd(sfService)} />
+            <CardRow index={sfFuel != null ? 2 : 1} label={t('reports.forecast_service')} value={fmtVnd(sfService)} />
           )}
         </SectionCard>
       )}
@@ -664,7 +664,7 @@ function ReportContent({
           {tcoTotal != null && (
             <CardRow
               index={0}
-              label="Tổng tích lũy"
+              label={t('reports.cumulative_total')}
               value={fmtVnd(tcoTotal)}
               valueColor={colors.primary}
             />
@@ -686,7 +686,7 @@ function ReportContent({
           {tcoPerKm != null && (
             <CardRow
               index={[tcoTotal, tcoFuel, tcoService].filter(x => x != null).length}
-              label="Chi phí / km"
+              label={t('reports.cost_per_km')}
               value={`${fmtNum(tcoPerKm)}đ/km${tcoKm != null ? ` · ${fmtNum(tcoKm)} km` : ''}`}
             />
           )}
@@ -695,7 +695,7 @@ function ReportContent({
 
       {/* ── by category ── */}
       {byCategory.length > 0 && (
-        <SectionCard title="Chi tiêu theo danh mục">
+        <SectionCard title={t('reports.spending_by_category')}>
           {byCategory.map((c, i) => (
             <CardRow
               key={i}

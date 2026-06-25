@@ -161,6 +161,15 @@ export default function DashboardScreen() {
   });
   const unreadCount = notifData?.meta?.unread_count ?? notifData?.data?.filter?.((n: any) => !n.read)?.length ?? 0;
 
+  const dashVehicleId: number | undefined =
+    (raw as any)?.data?.vehicle?.id ?? selectedVehicleId;
+  const { data: remindersRaw } = useQuery({
+    queryKey: ['reminders', 'dash-summary', dashVehicleId],
+    queryFn: () => client.get(`/vehicles/${dashVehicleId}/reminders`).then(r => r.data),
+    enabled: !!dashVehicleId,
+    staleTime: 2 * 60 * 1000,
+  });
+
   if (isLoading) return <LoadingView />;
   if (isError) return <ErrorView message={t('common.error_load')} onRetry={refetch} />;
 
@@ -180,6 +189,12 @@ export default function DashboardScreen() {
   const recent: any[] = Array.isArray(d.recent) ? d.recent : [];
   const fuelBoard: any[] = Array.isArray(d.fuel_board) ? d.fuel_board : [];
   const odaStaleDays: number | null = d.odo_stale_days ?? null;
+
+  const allReminders: any[] = Array.isArray(remindersRaw?.data) ? remindersRaw.data : [];
+  const remindersDue = allReminders
+    .filter((r: any) => r.is_active && (r.status === 'overdue' || r.status === 'danger' || r.status === 'warning'))
+    .slice(0, 3);
+  const remindersLoaded = !!remindersRaw;
 
   const healthOverall: string | null = health?.overall ?? null;
   const HEALTH_COLOR: Record<string, string> = { ok: colors.success, warn: colors.warning, urgent: colors.error };
@@ -376,6 +391,64 @@ export default function DashboardScreen() {
             </View>
             <FontAwesome5 name="chevron-right" size={12} color={colors.textSecondary} style={{ marginLeft: 8 }} />
           </TouchableOpacity>
+        )}
+
+        {/* Lời nhắc — always visible shortcut */}
+        {remindersLoaded && (
+          <View style={{
+            backgroundColor: colors.surface, borderRadius: 14, padding: 14, marginBottom: 10,
+          }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: remindersDue.length > 0 ? 10 : 0 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <FontAwesome5
+                  name="bell"
+                  size={14}
+                  color={remindersDue.length > 0 ? colors.warning : colors.textSecondary}
+                  solid
+                />
+                <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14 }}>
+                  {t('dashboard.reminders_card_title')}
+                </Text>
+                {remindersDue.length > 0 && (
+                  <View style={{ backgroundColor: colors.warning + '22', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2 }}>
+                    <Text style={{ color: colors.warning, fontSize: 12, fontWeight: '700' }}>
+                      {t('dashboard.reminders_due', { count: remindersDue.length })}
+                    </Text>
+                  </View>
+                )}
+              </View>
+              <TouchableOpacity
+                onPress={() => effectiveVehicleId && nav.navigate('Reminders', { vehicleId: effectiveVehicleId })}>
+                <Text style={{ color: colors.primary, fontSize: 12 }}>{t('dashboard.manage_arrow')}</Text>
+              </TouchableOpacity>
+            </View>
+            {remindersDue.length === 0 ? (
+              <Text style={{ color: colors.textSecondary, fontSize: 13 }}>{t('dashboard.reminders_empty')}</Text>
+            ) : (
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                {remindersDue.map((r: any, i: number) => {
+                  const rColor = r.status === 'overdue' || r.status === 'danger' ? colors.error : colors.warning;
+                  return (
+                    <View key={i} style={{
+                      backgroundColor: rColor + '22', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4,
+                      borderWidth: 1, borderColor: rColor + '55',
+                      flexDirection: 'row', alignItems: 'center', gap: 5,
+                    }}>
+                      <FontAwesome5 name="tools" size={10} color={rColor} solid />
+                      <Text style={{ color: rColor, fontSize: 12, fontWeight: '600' }} numberOfLines={1}>
+                        {r.hang_muc}
+                      </Text>
+                      {r.remaining_days != null && (
+                        <Text style={{ color: rColor, fontSize: 11 }}>
+                          {r.remaining_days <= 0 ? t('dashboard.overdue') : `${r.remaining_days}d`}
+                        </Text>
+                      )}
+                    </View>
+                  );
+                })}
+              </View>
+            )}
+          </View>
         )}
 
         {/* Gợi ý hôm nay */}

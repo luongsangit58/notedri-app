@@ -92,7 +92,7 @@ export default function TimelineScreen() {
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   if (isLoading) return <LoadingView />;
-  if (isError) return <ErrorView message="Không tải được nhật ký" onRetry={refetch} />;
+  if (isError) return <ErrorView message={t('timeline.load_error')} onRetry={refetch} />;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom']}>

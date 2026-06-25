@@ -364,6 +364,9 @@ const en = {
   "dashboard.health_band_warn": "Needs attention",
   "dashboard.health_band_poor": "Poor",
   "dashboard.health_band_danger": "Danger",
+  "dashboard.reminders_card_title": "Reminders",
+  "dashboard.reminders_empty": "No reminders",
+  "dashboard.reminders_due": "{{count}} upcoming",
   "dashboard.health_no_data": "Insufficient data",
 
   // Health (new)
@@ -630,6 +633,24 @@ const en = {
   "premium.request_approved_label": "Approved",
   "premium.request_rejected_label": "Not approved previously",
   "premium.notification_title": "Notice",
+  // Voice & OCR hints
+  "odometer.voice_label": "Say ODO reading",
+  "odometer.voice_hint": "Read the ODO number on your dashboard, e.g. ninety-eight four four three",
+  "odometer.ocr_hint": "Read ODO from dashboard photo",
+  "refuels.voice_label": "Say amount or liters",
+  "refuels.voice_hint": "Say amount (e.g. two hundred thousand) or liters (e.g. fifteen liters)",
+
+  // Reports labels
+  "reports.actual_vs_spec": "Actual vs Manufacturer",
+  "reports.top_spending_month": "Top spending month",
+  "reports.forecast_total": "Total forecast",
+  "reports.forecast_fuel": "Fuel forecast",
+  "reports.forecast_service": "Service forecast",
+  "reports.cumulative_total": "Cumulative total",
+  "reports.cost_per_km": "Cost per km",
+  "reports.spending_by_category": "Spending by category",
+  "reports.refuel_label": "Refuel events",
+  "reports.forecast_title": "Spending forecast for {{year}}",
 } as const;
 
 export default en;

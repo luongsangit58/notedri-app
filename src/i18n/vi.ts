@@ -58,7 +58,7 @@ const vi = {
   "dashboard.title": "Tổng quan",
   "dashboard.add_refuel": "Đổ xăng",
   "dashboard.add_odo": "Cập nhật ODO",
-  "dashboard.health": "Sức khoẻ xe",
+  "dashboard.health": "Sức khỏe xe",
   "dashboard.no_vehicle": "Chưa có xe nào. Vào tab Xe để thêm.",
   "dashboard.fuel_cost_month": "Chi xăng tháng này",
   "dashboard.consumption_latest": "Tiêu thụ gần nhất",
@@ -163,10 +163,10 @@ const vi = {
   "reminders.type_khac": "Khác",
 
   // Health
-  "health.title": "Kiểm tra sức khoẻ xe",
+  "health.title": "Kiểm tra sức khỏe xe",
   "health.no_vehicles": "Chưa có xe nào",
-  "health.no_vehicles_subtitle": "Thêm xe vào NoteDri để xem sức khoẻ xe.",
-  "health.trend_title": "Xu hướng điểm sức khoẻ",
+  "health.no_vehicles_subtitle": "Thêm xe vào NoteDri để xem sức khỏe xe.",
+  "health.trend_title": "Xu hướng điểm sức khỏe",
 
   // Reports
   "reports.title": "Báo cáo",
@@ -364,11 +364,14 @@ const vi = {
   "dashboard.health_band_warn": "Cần chú ý",
   "dashboard.health_band_poor": "Kém",
   "dashboard.health_band_danger": "Nguy hiểm",
+  "dashboard.reminders_card_title": "Lời nhắc",
+  "dashboard.reminders_empty": "Chưa có lời nhắc nào",
+  "dashboard.reminders_due": "{{count}} cần chú ý",
   "dashboard.health_no_data": "Chưa đủ dữ liệu",
 
   // Health (new)
   "health.loading": "Đang tải dữ liệu xe...",
-  "health.no_health_data": "Chưa có dữ liệu sức khoẻ. Hãy thêm lịch sử bảo dưỡng để xem.",
+  "health.no_health_data": "Chưa có dữ liệu sức khỏe. Hãy thêm lịch sử bảo dưỡng để xem.",
   "health.improve_score_tip": "Cách tăng điểm",
   "health.add_reminder_arrow": "→ Thêm lời nhắc",
   "health.cta_add_service": "+ Ghi bảo dưỡng",
@@ -513,9 +516,9 @@ const vi = {
   // Dossier (new)
   "dossier.loading": "Đang tải sổ tay xe...",
   "dossier.error_title": "Không tải được dữ liệu",
-  "dossier.total_service_cost": "Tổng chi BD",
-  "dossier.service_count": "Số lần BD",
-  "dossier.health_score": "Điểm sức khoẻ",
+  "dossier.total_service_cost": "Tổng chi bảo dưỡng",
+  "dossier.service_count": "Số lần bảo dưỡng",
+  "dossier.health_score": "Điểm sức khỏe",
   "dossier.consumption_official_label": "Tiêu hao NSX: {{value}} L/100km",
   "dossier.purchase_date_label": "Mua: {{date}}",
   "dossier.share_with_link": "Chia sẻ kèm link",
@@ -544,7 +547,7 @@ const vi = {
   "vehicle_detail.confidence_medium": "Độ tin cậy: Trung bình",
   "vehicle_detail.confidence_low": "Độ tin cậy: Thấp",
   "vehicle_detail.confidence_very_low": "Độ tin cậy: Rất thấp - cần thêm dữ liệu",
-  "vehicle_detail.health_card_title": "Sức khoẻ xe",
+  "vehicle_detail.health_card_title": "Sức khỏe xe",
   "vehicle_detail.warn_count": "{{n}} cần chú ý",
   "vehicle_detail.update_odo": "Cập nhật ODO",
   "vehicle_detail.add_refuel": "Đổ xăng",
@@ -561,7 +564,7 @@ const vi = {
   "about.features_title": "Tính năng chính",
   "about.feature_refuel": "Theo dõi đổ xăng & tiêu hao nhiên liệu",
   "about.feature_service": "Nhật ký bảo dưỡng & lịch nhắc nhở",
-  "about.feature_health": "Chẩn đoán sức khoẻ xe tự động",
+  "about.feature_health": "Chẩn đoán sức khỏe xe tự động",
   "about.feature_reports": "Báo cáo chi phí theo năm",
   "about.feature_odo": "Theo dõi ODO & lịch sử hành trình",
   "about.feature_dossier": "Hồ sơ xe kỹ thuật số",
@@ -630,6 +633,24 @@ const vi = {
   "premium.request_approved_label": "Đã được duyệt",
   "premium.request_rejected_label": "Không được duyệt lần trước",
   "premium.notification_title": "Thông báo",
+  // Voice & OCR hints (hardcoded strings wired to t())
+  "odometer.voice_label": "Nói số ODO",
+  "odometer.voice_hint": "Đọc số ODO trên đồng hồ xe, VD: chín tám bốn bốn ba",
+  "odometer.ocr_hint": "Đọc số ODO từ đồng hồ xe",
+  "refuels.voice_label": "Nói số tiền hoặc số lít",
+  "refuels.voice_hint": "Nói số tiền (VD: hai trăm nghìn) hoặc số lít (VD: mười lăm lít)",
+
+  // Reports labels (previously hardcoded)
+  "reports.actual_vs_spec": "Thực tế vs Nhà sản xuất",
+  "reports.top_spending_month": "Tháng chi nhiều nhất",
+  "reports.forecast_total": "Dự báo tổng",
+  "reports.forecast_fuel": "Dự báo xăng",
+  "reports.forecast_service": "Dự báo dịch vụ",
+  "reports.cumulative_total": "Tổng tích lũy",
+  "reports.cost_per_km": "Chi phí / km",
+  "reports.spending_by_category": "Chi tiêu theo danh mục",
+  "reports.refuel_label": "Lần đổ xăng",
+  "reports.forecast_title": "Dự báo chi tiêu năm {{year}}",
 } as const;
 
 export default vi;

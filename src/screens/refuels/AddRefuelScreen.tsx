@@ -248,8 +248,8 @@ export default function AddRefuelScreen() {
           {/* Single voice input button */}
           <View style={{ marginBottom: 16 }}>
             <VoiceButton
-              label="Nói số tiền hoặc số lít"
-              hint="Nói số tiền (VD: hai trăm nghìn) hoặc số lít (VD: mười lăm lít)"
+              label={t('refuels.voice_label')}
+              hint={t('refuels.voice_hint')}
               onResult={handleSmartVoice}
             />
             {voiceFeedback && (

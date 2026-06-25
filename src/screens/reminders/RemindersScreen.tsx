@@ -475,7 +475,7 @@ export default function RemindersScreen() {
   };
 
   if (isLoading) return <LoadingView />;
-  if (isError) return <ErrorView message="Không tải được lời nhắc" onRetry={refetch} />;
+  if (isError) return <ErrorView message={t('reminders.error_load_failed')} onRetry={refetch} />;
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
