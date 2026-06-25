@@ -394,53 +394,67 @@ export default function DashboardScreen() {
           </TouchableOpacity>
         )}
 
-        {/* Lời nhắc — chỉ hiện full card khi có hạng mục sắp/đã đến hạn */}
-        {remindersLoaded && remindersDue.length > 0 && (
-          <View style={{
-            backgroundColor: colors.warning + '12',
-            borderRadius: 14, padding: 14, marginBottom: 10,
-            borderWidth: 1, borderColor: colors.warning + '44',
-          }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+        {/* Lời nhắc — luôn hiển thị để người dùng biết vào từ đây */}
+        {remindersLoaded && (
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={() => effectiveVehicleId && nav.navigate('Reminders', { vehicleId: effectiveVehicleId })}
+            style={{
+              backgroundColor: remindersDue.length > 0 ? colors.warning + '12' : colors.surface,
+              borderRadius: 14, padding: 14, marginBottom: 10,
+              borderWidth: 1,
+              borderColor: remindersDue.length > 0 ? colors.warning + '44' : colors.border,
+            }}
+          >
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: remindersDue.length > 0 ? 10 : 0 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
-                <FontAwesome5 name="bell" size={14} color={colors.warning} solid />
+                <FontAwesome5 name="bell" size={14} color={remindersDue.length > 0 ? colors.warning : colors.textSecondary} solid />
                 <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14 }}>
                   {t('dashboard.reminders_card_title')}
                 </Text>
-                <View style={{ backgroundColor: colors.warning + '33', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2 }}>
-                  <Text style={{ color: colors.warning, fontSize: 12, fontWeight: '700' }}>
-                    {t('dashboard.reminders_due', { count: remindersDue.length })}
-                  </Text>
-                </View>
-              </View>
-              <TouchableOpacity
-                onPress={() => effectiveVehicleId && nav.navigate('Reminders', { vehicleId: effectiveVehicleId })}>
-                <Text style={{ color: colors.primary, fontSize: 12 }}>{t('dashboard.manage_arrow')}</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-              {remindersDue.map((r: any, i: number) => {
-                const rColor = r.status === 'overdue' || r.status === 'danger' ? colors.error : colors.warning;
-                return (
-                  <View key={i} style={{
-                    backgroundColor: rColor + '22', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4,
-                    borderWidth: 1, borderColor: rColor + '55',
-                    flexDirection: 'row', alignItems: 'center', gap: 5,
-                  }}>
-                    <FontAwesome5 name="tools" size={10} color={rColor} solid />
-                    <Text style={{ color: rColor, fontSize: 12, fontWeight: '600' }} numberOfLines={1}>
-                      {r.hang_muc}
+                {remindersDue.length > 0 && (
+                  <View style={{ backgroundColor: colors.warning + '33', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2 }}>
+                    <Text style={{ color: colors.warning, fontSize: 12, fontWeight: '700' }}>
+                      {t('dashboard.reminders_due', { count: remindersDue.length })}
                     </Text>
-                    {r.remaining_days != null && (
-                      <Text style={{ color: rColor, fontSize: 11 }}>
-                        {r.remaining_days <= 0 ? t('dashboard.overdue') : `${r.remaining_days}d`}
-                      </Text>
-                    )}
                   </View>
-                );
-              })}
+                )}
+                {remindersDue.length === 0 && allReminders.length > 0 && (
+                  <FontAwesome5 name="check-circle" size={13} color={colors.success} solid />
+                )}
+              </View>
+              <FontAwesome5 name="chevron-right" size={12} color={colors.textSecondary} />
             </View>
-          </View>
+            {remindersDue.length > 0 && (
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                {remindersDue.map((r: any, i: number) => {
+                  const rColor = r.status === 'overdue' || r.status === 'danger' ? colors.error : colors.warning;
+                  return (
+                    <View key={i} style={{
+                      backgroundColor: rColor + '22', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4,
+                      borderWidth: 1, borderColor: rColor + '55',
+                      flexDirection: 'row', alignItems: 'center', gap: 5,
+                    }}>
+                      <FontAwesome5 name="tools" size={10} color={rColor} solid />
+                      <Text style={{ color: rColor, fontSize: 12, fontWeight: '600' }} numberOfLines={1}>
+                        {r.hang_muc}
+                      </Text>
+                      {r.remaining_days != null && (
+                        <Text style={{ color: rColor, fontSize: 11 }}>
+                          {r.remaining_days <= 0 ? t('dashboard.overdue') : `${r.remaining_days}d`}
+                        </Text>
+                      )}
+                    </View>
+                  );
+                })}
+              </View>
+            )}
+            {remindersDue.length === 0 && allReminders.length === 0 && (
+              <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 4 }}>
+                Chưa có lời nhắc - nhấn để thêm
+              </Text>
+            )}
+          </TouchableOpacity>
         )}
 
         {/* Gợi ý hôm nay */}
