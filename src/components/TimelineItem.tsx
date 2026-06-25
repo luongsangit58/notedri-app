@@ -1,13 +1,14 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
-import { colors } from '../utils/colors';
+import { useColors } from '../utils/theme';
 import dayjs from 'dayjs';
 
 function TypeIcon({ type }: { type: string }) {
+  const colors = useColors();
   switch (type) {
     case 'refuel':
-      return <FontAwesome5 name="gas-pump" size={18} color="#F59E0B" solid />;
+      return <FontAwesome5 name="gas-pump" size={18} color={colors.primary} solid />;
     case 'service':
       return <FontAwesome5 name="wrench" size={18} color={colors.textSecondary} solid />;
     case 'odometer':
@@ -18,6 +19,7 @@ function TypeIcon({ type }: { type: string }) {
 }
 
 export default function TimelineItem({ item, onPress }: { item: any; onPress?: () => void }) {
+  const colors = useColors();
   return (
     <TouchableOpacity
       activeOpacity={onPress ? 0.7 : 1}
@@ -29,6 +31,8 @@ export default function TimelineItem({ item, onPress }: { item: any; onPress?: (
         marginBottom: 10,
         flexDirection: 'row',
         alignItems: 'flex-start',
+        borderWidth: 1,
+        borderColor: colors.border,
       }}>
       <View style={{ width: 28, alignItems: 'center', marginRight: 12, marginTop: 2 }}>
         <TypeIcon type={item.type} />
