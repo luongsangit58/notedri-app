@@ -73,7 +73,7 @@ export default function VoiceButton({ label, hint, onResult, compact = false }: 
             <FontAwesome5
               name={isListening ? 'stop-circle' : 'microphone'}
               size={16}
-              color={isListening ? '#fff' : colors.primary}
+              color={isListening ? colors.primaryText : colors.primary}
               solid
             />
           </Animated.View>
@@ -82,13 +82,13 @@ export default function VoiceButton({ label, hint, onResult, compact = false }: 
         {feedback && (
           <Animated.View style={{ opacity: feedbackOpacity, position: 'absolute', top: 48, right: 0, zIndex: 99 }}>
             <View style={[styles.feedbackBubble, { backgroundColor: colors.primary }]}>
-              <Text style={{ color: '#fff', fontSize: 11, fontWeight: '600' }}>{feedback}</Text>
+              <Text style={{ color: colors.primaryText, fontSize: 11, fontWeight: '600' }}>{feedback}</Text>
             </View>
           </Animated.View>
         )}
 
         {voice.error && voice.status !== 'listening' && (
-          <Text style={{ color: '#F59000', fontSize: 11, marginTop: 4, textAlign: 'right' }}>{voice.error}</Text>
+          <Text style={{ color: colors.warning, fontSize: 11, marginTop: 4, textAlign: 'right' }}>{voice.error}</Text>
         )}
       </View>
     );
@@ -111,7 +111,7 @@ export default function VoiceButton({ label, hint, onResult, compact = false }: 
                 { borderColor: colors.primary, transform: [{ scale: innerRingScale }], opacity: 0.45 },
               ]} />
               <View style={[styles.micCircle, { backgroundColor: colors.primary }]}>
-                <FontAwesome5 name="microphone" size={28} color="#fff" solid />
+                <FontAwesome5 name="microphone" size={28} color={colors.primaryText} solid />
               </View>
             </View>
             <Text style={{ color: colors.text, fontSize: 17, fontWeight: '700', marginTop: 20 }}>
@@ -137,14 +137,14 @@ export default function VoiceButton({ label, hint, onResult, compact = false }: 
       </TouchableOpacity>
 
       {feedback && (
-        <Animated.View style={[styles.toast, { backgroundColor: '#16A34A', opacity: feedbackOpacity }]}>
-          <FontAwesome5 name="check-circle" size={13} color="#fff" solid />
-          <Text style={{ color: '#fff', fontSize: 13, fontWeight: '600', marginLeft: 6 }}>{feedback}</Text>
+        <Animated.View style={[styles.toast, { backgroundColor: colors.success, opacity: feedbackOpacity }]}>
+          <FontAwesome5 name="check-circle" size={13} color={colors.primaryText} solid />
+          <Text style={{ color: colors.primaryText, fontSize: 13, fontWeight: '600', marginLeft: 6 }}>{feedback}</Text>
         </Animated.View>
       )}
 
       {voice.error && voice.status !== 'listening' && (
-        <Text style={{ color: '#F59000', fontSize: 12, marginTop: 6, textAlign: 'center' }}>{voice.error}</Text>
+        <Text style={{ color: colors.warning, fontSize: 12, marginTop: 6, textAlign: 'center' }}>{voice.error}</Text>
       )}
     </View>
   );

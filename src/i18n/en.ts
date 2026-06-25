@@ -94,6 +94,8 @@ const en = {
   "vehicles.detail_edit": "Edit",
   "vehicles.detail_reminders": "Reminders",
   "vehicles.detail_service": "Service",
+  "vehicles.rest_toggle": "Vehicle at rest",
+  "vehicles.rest_toggle_hint": "Pause ODO warnings and reminders while not in use",
   "vehicles.detail_add_refuel": "Add fuel",
 
   // Refuels
@@ -650,6 +652,24 @@ const en = {
   "reports.cost_per_km": "Cost per km",
   "reports.spending_by_category": "Spending by category",
   "reports.refuel_label": "Refuel events",
+
+  // Reports - inline labels
+  "reports.your_vehicle": "Your vehicle",
+  "reports.community_avg": "Community",
+  "reports.vs_label": "vs.",
+  "reports.saves_more": "saves more",
+  "reports.consumes_more": "uses more",
+  "reports.actual": "Actual",
+  "reports.manufacturer_spec": "Mfr. spec",
+  "reports.difference": "Difference",
+  "reports.better_than_spec": "better than spec",
+  "reports.worse_than_spec": "worse than spec",
+  "reports.month_label": "Month {{n}}",
+  "reports.station_fallback": "Station {{n}}",
+  "reports.benchmark_subtitle": "{{model}} · {{count}} vehicles",
+  "reports.forecast_note": "Based on spending to date ({{pct}}% of year elapsed) - rough estimate",
+  "reports.refuels_count": "{{count}} refuels",
+  "reports.services_count": "{{count}} services",
   "reports.forecast_title": "Spending forecast for {{year}}",
 } as const;
 

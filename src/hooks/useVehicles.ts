@@ -47,3 +47,14 @@ export const useSetDefaultVehicle = () => {
     },
   });
 };
+
+export const useToggleVehicleRest = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => vehiclesApi.toggleRest(id).then(r => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['vehicles'] });
+      qc.invalidateQueries({ queryKey: ['dashboard'] });
+    },
+  });
+};

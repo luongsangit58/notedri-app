@@ -441,7 +441,7 @@ function ReportContent({
           value={fuelCost != null ? fmtVnd(fuelCost) : '—'}
           sub={
             refuelCount != null
-              ? `${fmtNum(refuelCount)} lần đổ${totalLiters != null ? ` · ${Number(totalLiters).toFixed(1)} L` : ''}`
+              ? `${t('reports.refuels_count', { count: fmtNum(refuelCount) })}${totalLiters != null ? ` · ${Number(totalLiters).toFixed(1)} L` : ''}`
               : undefined
           }
         />
@@ -451,7 +451,7 @@ function ReportContent({
           value={serviceCost != null ? fmtVnd(serviceCost) : '—'}
           sub={
             serviceCount != null
-              ? `${fmtNum(serviceCount)} lần bảo dưỡng`
+              ? t('reports.services_count', { count: fmtNum(serviceCount) })
               : undefined
           }
         />
@@ -507,11 +507,11 @@ function ReportContent({
             onPress={() => onViewYearReview && onViewYearReview(yr, selectedYear)}
             style={{
               marginTop: 12, flexDirection: 'row', alignItems: 'center', gap: 6,
-              backgroundColor: '#F59E0B22', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8,
+              backgroundColor: colors.primary + '22', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8,
               alignSelf: 'flex-start',
             }}>
-            <FontAwesome5 name="magic" size={12} color="#F59E0B" solid />
-            <Text style={{ color: '#F59E0B', fontSize: 13, fontWeight: '700' }}>
+            <FontAwesome5 name="magic" size={12} color={colors.primary} solid />
+            <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '700' }}>
               {t('reports.year_review_link')} {selectedYear}
             </Text>
           </TouchableOpacity>
@@ -522,36 +522,36 @@ function ReportContent({
       {benchmark != null && (
         <SectionCard title={t('reports.benchmark_title')}>
           <Text style={{ color: colors.textSecondary, fontSize: 12, marginBottom: 10 }}>
-            {benchmark.model} · {benchmark.sample} xe cùng dòng
+            {t('reports.benchmark_subtitle', { model: benchmark.model ?? '?', count: benchmark.sample ?? '?' })}
           </Text>
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <View style={{ flex: 1, backgroundColor: colors.background, borderRadius: 10, padding: 12, alignItems: 'center' }}>
-              <Text style={{ color: colors.textSecondary, fontSize: 11, marginBottom: 4 }}>Xe bạn</Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 11, marginBottom: 4 }}>{t('reports.your_vehicle')}</Text>
               <Text style={{ color: colors.text, fontWeight: '800', fontSize: 20 }}>
-                {Number(benchmark.mine).toFixed(1)}
+                {benchmark.mine != null ? Number(benchmark.mine).toFixed(1) : "—"}
               </Text>
               <Text style={{ color: colors.textSecondary, fontSize: 11 }}>L/100km</Text>
             </View>
             <View style={{ flex: 1, backgroundColor: colors.background, borderRadius: 10, padding: 12, alignItems: 'center' }}>
-              <Text style={{ color: colors.textSecondary, fontSize: 11, marginBottom: 4 }}>Cộng đồng</Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 11, marginBottom: 4 }}>{t('reports.community_avg')}</Text>
               <Text style={{ color: colors.text, fontWeight: '800', fontSize: 20 }}>
-                {Number(benchmark.avg).toFixed(1)}
+                {benchmark.avg != null ? Number(benchmark.avg).toFixed(1) : "—"}
               </Text>
-              <Text style={{ color: colors.textSecondary, fontSize: 11 }}>L/100km TB</Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 11 }}>L/100km</Text>
             </View>
             <View style={{
               flex: 1, borderRadius: 10, padding: 12, alignItems: 'center',
-              backgroundColor: (benchmark.diff_pct ?? 0) <= 0 ? '#10B98122' : '#F43F5E22',
+              backgroundColor: (benchmark.diff_pct ?? 0) <= 0 ? colors.success + '22' : colors.error + '22',
             }}>
-              <Text style={{ color: colors.textSecondary, fontSize: 11, marginBottom: 4 }}>So sánh</Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 11, marginBottom: 4 }}>{t('reports.vs_label')}</Text>
               <Text style={{
                 fontWeight: '800', fontSize: 20,
-                color: (benchmark.diff_pct ?? 0) <= 0 ? '#10B981' : '#F43F5E',
+                color: (benchmark.diff_pct ?? 0) <= 0 ? colors.success : colors.error,
               }}>
                 {(benchmark.diff_pct ?? 0) > 0 ? '+' : ''}{benchmark.diff_pct}%
               </Text>
               <Text style={{ color: colors.textSecondary, fontSize: 10, textAlign: 'center' }}>
-                {(benchmark.diff_pct ?? 0) <= 0 ? 'tiết kiệm hơn' : 'tiêu nhiều hơn'}
+                {(benchmark.diff_pct ?? 0) <= 0 ? t('reports.saves_more') : t('reports.consumes_more')}
               </Text>
             </View>
           </View>
@@ -563,28 +563,28 @@ function ReportContent({
         <SectionCard title={t('reports.actual_vs_spec')}>
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <View style={{ flex: 1, backgroundColor: colors.background, borderRadius: 10, padding: 12, alignItems: 'center' }}>
-              <Text style={{ color: colors.textSecondary, fontSize: 11, marginBottom: 4 }}>Thực tế</Text>
-              <Text style={{ color: colors.text, fontWeight: '800', fontSize: 20 }}>{Number(cvo.real).toFixed(1)}</Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 11, marginBottom: 4 }}>{t('reports.actual')}</Text>
+              <Text style={{ color: colors.text, fontWeight: '800', fontSize: 20 }}>{cvo.real != null ? Number(cvo.real).toFixed(1) : "—"}</Text>
               <Text style={{ color: colors.textSecondary, fontSize: 11 }}>L/100km</Text>
             </View>
             <View style={{ flex: 1, backgroundColor: colors.background, borderRadius: 10, padding: 12, alignItems: 'center' }}>
-              <Text style={{ color: colors.textSecondary, fontSize: 11, marginBottom: 4 }}>NSX công bố</Text>
-              <Text style={{ color: colors.text, fontWeight: '800', fontSize: 20 }}>{Number(cvo.official).toFixed(1)}</Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 11, marginBottom: 4 }}>{t('reports.manufacturer_spec')}</Text>
+              <Text style={{ color: colors.text, fontWeight: '800', fontSize: 20 }}>{cvo.official != null ? Number(cvo.official).toFixed(1) : "—"}</Text>
               <Text style={{ color: colors.textSecondary, fontSize: 11 }}>L/100km</Text>
             </View>
             <View style={{
               flex: 1, borderRadius: 10, padding: 12, alignItems: 'center',
-              backgroundColor: (cvo.diff_pct ?? 0) <= 0 ? '#10B98122' : '#F43F5E22',
+              backgroundColor: (cvo.diff_pct ?? 0) <= 0 ? colors.success + '22' : colors.error + '22',
             }}>
-              <Text style={{ color: colors.textSecondary, fontSize: 11, marginBottom: 4 }}>Chênh lệch</Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 11, marginBottom: 4 }}>{t('reports.difference')}</Text>
               <Text style={{
                 fontWeight: '800', fontSize: 20,
-                color: (cvo.diff_pct ?? 0) <= 0 ? '#10B981' : '#F43F5E',
+                color: (cvo.diff_pct ?? 0) <= 0 ? colors.success : colors.error,
               }}>
                 {(cvo.diff_pct ?? 0) > 0 ? '+' : ''}{cvo.diff_pct}%
               </Text>
               <Text style={{ color: colors.textSecondary, fontSize: 10 }}>
-                {(cvo.diff_pct ?? 0) <= 0 ? 'tốt hơn' : 'kém hơn'}
+                {(cvo.diff_pct ?? 0) <= 0 ? t('reports.better_than_spec') : t('reports.worse_than_spec')}
               </Text>
             </View>
           </View>
@@ -603,7 +603,7 @@ function ReportContent({
               <CardRow
                 key={`month-${i}`}
                 index={i}
-                label={`Tháng ${month}`}
+                label={t('reports.month_label', { n: month })}
                 value={cost != null ? fmtVnd(cost) : '—'}
                 valueColor={i === 0 ? colors.primary : undefined}
               />
@@ -617,7 +617,7 @@ function ReportContent({
         <SectionCard title={t('year_review.top_station')}>
           {top3Stations.map((s, i) => {
             const name =
-              s.cay_xang ?? s.ten ?? s.name ?? s.station_name ?? `Trạm ${i + 1}`;
+              s.cay_xang ?? s.ten ?? s.name ?? s.station_name ?? t('reports.station_fallback', { n: i + 1 });
             const count =
               s.so_lan ?? s.count ?? s.visits ?? null;
             const amount =
@@ -645,7 +645,7 @@ function ReportContent({
         <SectionCard title={t('reports.forecast_title', { year: selectedYear })}>
           {sfPct != null && (
             <Text style={{ color: colors.textSecondary, fontSize: 12, marginBottom: 10 }}>
-              Theo đà thực chi tới nay ({sfPct}% năm đã qua) - ước tính thô
+              {t('reports.forecast_note', { pct: sfPct })}
             </Text>
           )}
           <CardRow index={0} label={t('reports.forecast_total')} value={fmtVnd(sfTotal)} valueColor={colors.primary} />
@@ -710,12 +710,12 @@ function ReportContent({
       {/* ── premium lock nudge ── */}
       {hasLockedYears && (
         <View style={{
-          backgroundColor: '#2C1B00', borderRadius: 10, padding: 12,
-          borderWidth: 1, borderColor: '#F59E0B',
+          backgroundColor: colors.primary + '15', borderRadius: 10, padding: 12,
+          borderWidth: 1, borderColor: colors.primary,
           flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12,
         }}>
-          <FontAwesome5 name="crown" size={14} color="#F59E0B" solid />
-          <Text style={{ color: '#F59E0B', fontSize: 13, flex: 1 }}>
+          <FontAwesome5 name="crown" size={14} color={colors.primary} solid />
+          <Text style={{ color: colors.primary, fontSize: 13, flex: 1 }}>
             {t('reports.premium_lock')}
           </Text>
         </View>

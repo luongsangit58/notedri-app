@@ -1,9 +1,9 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, RefreshControl, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
-import { useVehicle, useVehicleHealth, useVehicleReminders } from '../../hooks/useVehicles';
+import { useVehicle, useVehicleHealth, useVehicleReminders, useToggleVehicleRest } from '../../hooks/useVehicles';
 import { useObdDtcEvents } from '../../hooks/useObd';
 import LoadingView from '../../components/LoadingView';
 import ErrorView from '../../components/ErrorView';
@@ -55,7 +55,7 @@ function organStatusColor(status: OrganStatus, colors: ReturnType<typeof useColo
   switch (status) {
     case 'urgent': return colors.error;
     case 'warn':   return colors.warning;
-    case 'info':   return '#42A5F5'; // blue-ish for info
+    case 'info':   return colors.primary;
     case 'ok':     return colors.success;
     default:       return colors.textSecondary;
   }
@@ -71,7 +71,7 @@ function organStatusIconName(status: OrganStatus, colors: ReturnType<typeof useC
   switch (status) {
     case 'urgent': return { name: 'exclamation-triangle', color: colors.error };
     case 'warn':   return { name: 'exclamation-triangle', color: colors.warning };
-    case 'info':   return { name: 'info-circle', color: '#42A5F5' };
+    case 'info':   return { name: 'info-circle', color: colors.primary };
     case 'ok':     return { name: 'check-circle', color: colors.success };
     default:       return { name: 'info-circle', color: colors.textSecondary };
   }
@@ -166,8 +166,8 @@ function HealthBreakdownCard({ health }: { health: HealthData }) {
             borderRadius: 10,
           }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-              <FontAwesome5 name="exclamation-triangle" size={11} color="#fff" solid />
-              <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>{t('vehicle_detail.warn_count', { n: warnCount })}</Text>
+              <FontAwesome5 name="exclamation-triangle" size={11} color={colors.primaryText} solid />
+              <Text style={{ color: colors.primaryText, fontSize: 11, fontWeight: '700' }}>{t('vehicle_detail.warn_count', { n: warnCount })}</Text>
             </View>
           </View>
         )}
@@ -239,6 +239,7 @@ export default function VehicleDetailScreen() {
   const { data: health } = useVehicleHealth(vehicleId);
   const { data: remindersData } = useVehicleReminders(vehicleId);
   const { data: dtcData } = useObdDtcEvents(vehicleId);
+  const { mutate: toggleRest, isPending: togglingRest } = useToggleVehicleRest();
 
   if (isLoading) return <LoadingView />;
   if (isError) return <ErrorView message={t('vehicles.cannot_load_detail')} onRetry={refetch} />;
@@ -339,7 +340,7 @@ export default function VehicleDetailScreen() {
           <TouchableOpacity
             onPress={() => navigation.navigate('AddRefuel')}
             style={{ flex: 1, backgroundColor: colors.primary, padding: 14, borderRadius: 10, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6 }}>
-            <FontAwesome5 name="gas-pump" size={14} color="#fff" solid />
+            <FontAwesome5 name="gas-pump" size={14} color={colors.primaryText} solid />
             <Text style={{ color: colors.primaryText, fontWeight: '700' }}>{t('vehicles.detail_add_refuel')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -349,6 +350,41 @@ export default function VehicleDetailScreen() {
             <Text style={{ color: colors.text, fontWeight: '600' }}>{t('vehicle_detail.update_odo')}</Text>
           </TouchableOpacity>
         </View>
+
+        {/* At Rest toggle */}
+        <TouchableOpacity
+          onPress={() => toggleRest(vehicleId)}
+          disabled={togglingRest}
+          style={{
+            flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+            backgroundColor: v?.dang_nghi ? colors.warning + '22' : colors.surface,
+            borderRadius: 12, padding: 14, marginBottom: 10,
+            borderWidth: 1, borderColor: v?.dang_nghi ? colors.warning + '66' : colors.border,
+          }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+            <FontAwesome5
+              name={v?.dang_nghi ? 'pause-circle' : 'play-circle'}
+              size={18}
+              color={v?.dang_nghi ? colors.warning : colors.textSecondary}
+              solid
+            />
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: colors.text, fontWeight: '600', fontSize: 14 }}>
+                {t('vehicles.rest_toggle')}
+              </Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 1 }}>
+                {t('vehicles.rest_toggle_hint')}
+              </Text>
+            </View>
+          </View>
+          <Switch
+            value={!!(v?.dang_nghi)}
+            onValueChange={() => toggleRest(vehicleId)}
+            disabled={togglingRest}
+            trackColor={{ false: colors.border, true: colors.warning }}
+            thumbColor={colors.text}
+          />
+        </TouchableOpacity>
 
         {/* OBD - Premium feature */}
         <TouchableOpacity
@@ -361,28 +397,28 @@ export default function VehicleDetailScreen() {
           }}
           style={{
             flexDirection: 'row', alignItems: 'center', gap: 12,
-            backgroundColor: '#0F172A', borderRadius: 12, padding: 14, marginBottom: 12,
+            backgroundColor: colors.surface, borderRadius: 12, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: colors.border,
             opacity: isPremium ? 1 : 0.85,
           }}>
           <View style={{
             width: 40, height: 40, borderRadius: 20,
-            backgroundColor: '#1E3A5F', alignItems: 'center', justifyContent: 'center',
+            backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center',
           }}>
-            <FontAwesome5 name={isPremium ? 'plug' : 'lock'} size={16} color="#60A5FA" solid />
+            <FontAwesome5 name={isPremium ? 'plug' : 'lock'} size={16} color={colors.primary} solid />
           </View>
           <View style={{ flex: 1 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Text style={{ color: '#F1F5F9', fontWeight: '700', fontSize: 14 }}>{t('vehicle_detail.obd_title')}</Text>
+              <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14 }}>{t('vehicle_detail.obd_title')}</Text>
               {!isPremium && (
                 <View style={{
-                  backgroundColor: '#F59E0B', borderRadius: 4,
+                  backgroundColor: colors.primary, borderRadius: 4,
                   paddingHorizontal: 5, paddingVertical: 1,
                 }}>
-                  <Text style={{ color: '#000', fontSize: 9, fontWeight: '800' }}>PREMIUM</Text>
+                  <Text style={{ color: colors.primaryText, fontSize: 9, fontWeight: '800' }}>PREMIUM</Text>
                 </View>
               )}
             </View>
-            <Text style={{ color: '#94A3B8', fontSize: 12, marginTop: 1 }}>
+            <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 1 }}>
               {!isPremium
                 ? t('vehicle_detail.obd_premium_desc')
                 : activeDtc.length > 0
@@ -392,15 +428,15 @@ export default function VehicleDetailScreen() {
           </View>
           {isPremium && activeDtc.length > 0 && (
             <View style={{
-              backgroundColor: '#EF4444', borderRadius: 10,
+              backgroundColor: colors.error, borderRadius: 10,
               paddingHorizontal: 8, paddingVertical: 2,
             }}>
-              <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }}>
+              <Text style={{ color: colors.primaryText, fontSize: 12, fontWeight: '700' }}>
                 {activeDtc.length}
               </Text>
             </View>
           )}
-          <FontAwesome5 name={isPremium ? 'chevron-right' : 'arrow-right'} size={13} color="#475569" />
+          <FontAwesome5 name={isPremium ? 'chevron-right' : 'arrow-right'} size={13} color={colors.textSecondary} />
         </TouchableOpacity>
 
         {/* Sức khoẻ xe — breakdown card */}

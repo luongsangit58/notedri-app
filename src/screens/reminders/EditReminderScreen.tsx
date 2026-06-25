@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
-  KeyboardAvoidingView, Platform, Alert, ActivityIndicator,
+  KeyboardAvoidingView, Platform, Alert, ActivityIndicator, Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -65,6 +65,7 @@ export default function EditReminderScreen() {
   const [last_done_date, setLastDoneDate] = useState('');
   const [due_date, setDueDate] = useState('');
   const [ghi_chu, setGhiChu] = useState('');
+  const [notify_email, setNotifyEmail] = useState(true);
 
   useEffect(() => {
     remindersApi.list(vehicleId)
@@ -85,6 +86,7 @@ export default function EditReminderScreen() {
         setLastDoneDate(found.last_done_date ?? '');
         setDueDate(found.due_date ?? '');
         setGhiChu(found.ghi_chu ?? '');
+        setNotifyEmail(found.notify_email ?? true);
       })
       .catch((e: any) => {
         Alert.alert(t('common.error'), e?.response?.data?.message ?? t('reminders.error_load_failed'));
@@ -110,6 +112,7 @@ export default function EditReminderScreen() {
       last_done_date: last_done_date || undefined,
       due_date: due_date || undefined,
       ghi_chu: ghi_chu || undefined,
+      notify_email,
     })
       .then(() => {
         qc.invalidateQueries({ queryKey: ['reminders', vehicleId] });
@@ -309,6 +312,20 @@ export default function EditReminderScreen() {
             multiline
             style={[inputStyle, { minHeight: 80, textAlignVertical: 'top' }]}
           />
+
+          {/* Email nhắc */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, backgroundColor: colors.surface, borderRadius: 12, padding: 14 }}>
+            <View style={{ flex: 1, marginRight: 12 }}>
+              <Text style={{ color: colors.text, fontWeight: '600', fontSize: 14 }}>{t('reminders.email_reminder_label')}</Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>{t('reminders.email_reminder_desc')}</Text>
+            </View>
+            <Switch
+              value={notify_email}
+              onValueChange={setNotifyEmail}
+              trackColor={{ false: colors.border, true: colors.primary }}
+              thumbColor={colors.text}
+            />
+          </View>
 
           {/* Cập nhật button */}
           <TouchableOpacity

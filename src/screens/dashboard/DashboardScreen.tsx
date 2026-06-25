@@ -250,11 +250,11 @@ export default function DashboardScreen() {
               {unreadCount > 0 && (
                 <View style={{
                   position: 'absolute', top: -4, right: -4,
-                  backgroundColor: '#F44336', borderRadius: 9,
+                  backgroundColor: colors.error, borderRadius: 9,
                   minWidth: 18, height: 18, justifyContent: 'center', alignItems: 'center',
                   paddingHorizontal: 4,
                 }}>
-                  <Text style={{ color: '#fff', fontSize: 10, fontWeight: '800' }}>
+                  <Text style={{ color: colors.primaryText, fontSize: 10, fontWeight: '800' }}>
                     {unreadCount > 99 ? '99+' : unreadCount}
                   </Text>
                 </View>

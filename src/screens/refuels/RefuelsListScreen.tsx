@@ -79,14 +79,14 @@ function RefuelCard({ item, onPress }: { item: RefuelItem; onPress: () => void }
       marginBottom: 6,
     },
     fuelChip: {
-      backgroundColor: '#0EA5E9',
+      backgroundColor: colors.primary,
       borderRadius: 999,
       paddingHorizontal: 8,
       paddingVertical: 2,
       alignSelf: 'flex-start',
     },
     fuelChipText: {
-      color: '#fff',
+      color: colors.primaryText,
       fontSize: 11,
       fontWeight: '600',
     },
@@ -118,13 +118,13 @@ function RefuelCard({ item, onPress }: { item: RefuelItem; onPress: () => void }
       textAlign: 'right',
     },
     notFullBadge: {
-      backgroundColor: '#F59E0B' + '33',
+      backgroundColor: colors.primary + '33',
       borderRadius: 6,
       paddingHorizontal: 6,
       paddingVertical: 2,
     },
     notFullText: {
-      color: '#F59E0B',
+      color: colors.primary,
       fontSize: 10,
       fontWeight: '700',
     },
@@ -344,7 +344,7 @@ export default function RefuelsListScreen() {
       shadowRadius: 6,
     },
     fabText: {
-      color: '#fff',
+      color: colors.primaryText,
       fontSize: 28,
       lineHeight: 32,
       fontWeight: '400',
@@ -413,9 +413,9 @@ export default function RefuelsListScreen() {
 
       {/* Prediction */}
       {prediction?.days_left != null && (
-        <View style={{ marginHorizontal: 16, marginBottom: 12, backgroundColor: '#1C2D1C', borderRadius: 10, padding: 10, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <FontAwesome5 name="gas-pump" size={13} color="#10B981" solid />
-          <Text style={{ color: '#10B981', fontSize: 12, flex: 1 }}>
+        <View style={{ marginHorizontal: 16, marginBottom: 12, backgroundColor: colors.success + '22', borderRadius: 10, padding: 10, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <FontAwesome5 name="gas-pump" size={13} color={colors.success} solid />
+          <Text style={{ color: colors.success, fontSize: 12, flex: 1 }}>
             Dự đoán đổ xăng lần tới sau ~{prediction.days_left} ngày
             {prediction.next_date ? ` (${prediction.next_date})` : ''}
           </Text>
@@ -479,7 +479,7 @@ export default function RefuelsListScreen() {
         onPress={() => navigation.navigate('AddRefuel')}
         activeOpacity={0.85}
       >
-        <FontAwesome5 name="plus" size={22} color="#fff" solid />
+        <FontAwesome5 name="plus" size={22} color={colors.primaryText} solid />
       </TouchableOpacity>
     </SafeAreaView>
   );

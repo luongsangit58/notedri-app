@@ -9,4 +9,5 @@ export const vehiclesApi = {
   health: (id: number) => client.get(`/vehicles/${id}/health`),
   reminders: (id: number) => client.get(`/vehicles/${id}/reminders`),
   setDefault: (id: number) => client.post(`/vehicles/${id}/set-default`),
+  toggleRest: (id: number) => client.post(`/vehicles/${id}/rest`),
 };

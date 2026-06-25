@@ -140,7 +140,7 @@ export default function AddVehicleScreen() {
 
         {apiError ? (
           <View style={{
-            backgroundColor: '#2C1010',
+            backgroundColor: colors.error + '22',
             borderRadius: 10,
             padding: 12,
             marginBottom: 16,
@@ -191,7 +191,7 @@ export default function AddVehicleScreen() {
               <TouchableOpacity
                 key={s.id}
                 onPress={() => applySpec(s)}
-                style={{ padding: 12, borderBottomWidth: 1, borderBottomColor: '#333' }}>
+                style={{ padding: 12, borderBottomWidth: 1, borderBottomColor: colors.border }}>
                 <Text style={{ color: colors.text, fontSize: 14 }}>{s.label}</Text>
                 <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 2 }}>
                   {s.tank_capacity_l ? `Bình ${s.tank_capacity_l}L` : ''}
@@ -257,10 +257,10 @@ export default function AddVehicleScreen() {
                     borderRadius: 20,
                     backgroundColor: selected ? colors.primary : colors.surface,
                     borderWidth: 1,
-                    borderColor: selected ? colors.primary : '#2E2E2E',
+                    borderColor: selected ? colors.primary : colors.border,
                   }}>
                   <Text style={{
-                    color: selected ? '#fff' : colors.textSecondary,
+                    color: selected ? colors.primaryText : colors.textSecondary,
                     fontSize: 13,
                     fontWeight: selected ? '700' : '400',
                   }}>
@@ -373,14 +373,14 @@ export default function AddVehicleScreen() {
           paddingVertical: 14,
           marginBottom: 24,
           borderWidth: 1,
-          borderColor: '#2E2E2E',
+          borderColor: colors.border,
         }}>
           <Text style={{ color: colors.text, fontSize: 15 }}>{t('vehicles.set_default')}</Text>
           <Switch
             value={is_default}
             onValueChange={setIsDefault}
-            trackColor={{ false: '#3A3A3A', true: colors.primary }}
-            thumbColor="#fff"
+            trackColor={{ false: colors.border, true: colors.primary }}
+            thumbColor={colors.text}
           />
         </View>
 
@@ -395,7 +395,7 @@ export default function AddVehicleScreen() {
             opacity: createVehicle.isPending ? 0.7 : 1,
           }}>
           {createVehicle.isPending ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color={colors.primaryText} />
           ) : (
             <Text style={{ color: colors.primaryText, fontSize: 16, fontWeight: '700' }}>{t('vehicles.submit_add')}</Text>
           )}

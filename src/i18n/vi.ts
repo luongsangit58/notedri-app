@@ -94,6 +94,8 @@ const vi = {
   "vehicles.detail_edit": "Sửa xe",
   "vehicles.detail_reminders": "Lời nhắc",
   "vehicles.detail_service": "Bảo dưỡng",
+  "vehicles.rest_toggle": "Xe đang nghỉ",
+  "vehicles.rest_toggle_hint": "Tắt cảnh báo ODO và nhắc nhở khi xe không sử dụng",
   "vehicles.detail_add_refuel": "Đổ xăng",
 
   // Refuels
@@ -650,6 +652,24 @@ const vi = {
   "reports.cost_per_km": "Chi phí / km",
   "reports.spending_by_category": "Chi tiêu theo danh mục",
   "reports.refuel_label": "Lần đổ xăng",
+
+  // Reports - inline labels
+  "reports.your_vehicle": "Xe bạn",
+  "reports.community_avg": "Cộng đồng",
+  "reports.vs_label": "So sánh",
+  "reports.saves_more": "tiết kiệm hơn",
+  "reports.consumes_more": "tiêu nhiều hơn",
+  "reports.actual": "Thực tế",
+  "reports.manufacturer_spec": "NSX công bố",
+  "reports.difference": "Chênh lệch",
+  "reports.better_than_spec": "tốt hơn",
+  "reports.worse_than_spec": "kém hơn",
+  "reports.month_label": "Tháng {{n}}",
+  "reports.station_fallback": "Trạm {{n}}",
+  "reports.benchmark_subtitle": "{{model}} · {{count}} xe cùng dòng",
+  "reports.forecast_note": "Theo đà thực chi ({{pct}}% năm đã qua) - ước tính thô",
+  "reports.refuels_count": "{{count}} lần đổ",
+  "reports.services_count": "{{count}} lần bảo dưỡng",
   "reports.forecast_title": "Dự báo chi tiêu năm {{year}}",
 } as const;
 
