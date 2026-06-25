@@ -167,7 +167,7 @@ function HealthBreakdownCard({ health }: { health: HealthData }) {
           }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
               <FontAwesome5 name="exclamation-triangle" size={11} color="#fff" solid />
-              <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>{t('vehicle_detail.warn_count', { count: warnCount })}</Text>
+              <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>{t('vehicle_detail.warn_count', { n: warnCount })}</Text>
             </View>
           </View>
         )}
@@ -386,7 +386,7 @@ export default function VehicleDetailScreen() {
               {!isPremium
                 ? t('vehicle_detail.obd_premium_desc')
                 : activeDtc.length > 0
-                  ? t('vehicle_detail.obd_dtc_desc', { count: activeDtc.length })
+                  ? t('vehicle_detail.obd_dtc_desc', { n: activeDtc.length })
                   : t('vehicle_detail.obd_connected_desc')}
             </Text>
           </View>

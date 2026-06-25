@@ -306,7 +306,7 @@ export default function NearbyStationsScreen() {
         contentContainerStyle={{ padding: 16 }}
         ListHeaderComponent={
           <Text style={styles.listHeader}>
-            {t('nearby_stations.count_title', { count: stations.length })}
+            {t('nearby_stations.count_title', { n: stations.length })}
           </Text>
         }
         ItemSeparatorComponent={() => <View style={{ height: 10 }} />}

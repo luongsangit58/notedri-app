@@ -83,7 +83,7 @@
       ],
       "expo-web-browser",
       [
-        "@react-native-voice/voice",
+        "expo-speech-recognition",
         {
           "microphonePermission": "NoteDri cần micro để nhận nhập số ODO và số tiền bằng giọng nói",
           "speechRecognitionPermission": "NoteDri cần nhận dạng giọng nói để đọc số ODO và số tiền"
