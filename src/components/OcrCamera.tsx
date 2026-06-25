@@ -26,10 +26,30 @@ interface Props {
 }
 
 function extractOdo(blocks: { text: string }[]): string {
-  const fullText = blocks.map(b => b.text).join(' ');
-  const matches = fullText.match(/\b\d{5,6}\b/g) ?? [];
-  if (matches.length === 0) return '';
-  return [...matches].sort((a, b) => parseInt(b) - parseInt(a))[0];
+  // Merge spaces inside each block independently, then join — avoids merging cross-block
+  const normalize = (s: string) => {
+    let t = s;
+    // Remove spaces between digits (up to 6 passes for "0 9 0 0 0 0")
+    for (let i = 0; i < 6; i++) t = t.replace(/(\d)[ \t]+(\d)/g, '$1$2');
+    return t;
+  };
+  const fullText = blocks.map(b => normalize(b.text)).join('\n');
+
+  // Pass 1: 5-6 digit sequence not adjacent to other digits
+  // (?<!\d)/(?!\d) instead of \b — so "090000km" also matches
+  const pass1 = fullText.match(/(?<!\d)\d{5,6}(?!\d)/g) ?? [];
+  if (pass1.length > 0) {
+    return [...pass1].sort((a, b) => parseInt(b) - parseInt(a))[0];
+  }
+
+  // Pass 2: OCR confuses O (letter) with 0 on LCD displays — replace and retry
+  const deOed = fullText.replace(/[Oo]/g, '0');
+  const pass2 = deOed.match(/(?<!\d)\d{5,6}(?!\d)/g) ?? [];
+  if (pass2.length > 0) {
+    return [...pass2].sort((a, b) => parseInt(b) - parseInt(a))[0];
+  }
+
+  return '';
 }
 
 function extractReceiptData(blocks: { text: string }[]): ReceiptData {
