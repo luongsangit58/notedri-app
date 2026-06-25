@@ -393,61 +393,52 @@ export default function DashboardScreen() {
           </TouchableOpacity>
         )}
 
-        {/* Lời nhắc — always visible shortcut */}
-        {remindersLoaded && (
+        {/* Lời nhắc — chỉ hiện full card khi có hạng mục sắp/đã đến hạn */}
+        {remindersLoaded && remindersDue.length > 0 && (
           <View style={{
-            backgroundColor: colors.surface, borderRadius: 14, padding: 14, marginBottom: 10,
+            backgroundColor: colors.warning + '12',
+            borderRadius: 14, padding: 14, marginBottom: 10,
+            borderWidth: 1, borderColor: colors.warning + '44',
           }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: remindersDue.length > 0 ? 10 : 0 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <FontAwesome5
-                  name="bell"
-                  size={14}
-                  color={remindersDue.length > 0 ? colors.warning : colors.textSecondary}
-                  solid
-                />
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+                <FontAwesome5 name="bell" size={14} color={colors.warning} solid />
                 <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14 }}>
                   {t('dashboard.reminders_card_title')}
                 </Text>
-                {remindersDue.length > 0 && (
-                  <View style={{ backgroundColor: colors.warning + '22', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2 }}>
-                    <Text style={{ color: colors.warning, fontSize: 12, fontWeight: '700' }}>
-                      {t('dashboard.reminders_due', { count: remindersDue.length })}
-                    </Text>
-                  </View>
-                )}
+                <View style={{ backgroundColor: colors.warning + '33', borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2 }}>
+                  <Text style={{ color: colors.warning, fontSize: 12, fontWeight: '700' }}>
+                    {t('dashboard.reminders_due', { count: remindersDue.length })}
+                  </Text>
+                </View>
               </View>
               <TouchableOpacity
                 onPress={() => effectiveVehicleId && nav.navigate('Reminders', { vehicleId: effectiveVehicleId })}>
                 <Text style={{ color: colors.primary, fontSize: 12 }}>{t('dashboard.manage_arrow')}</Text>
               </TouchableOpacity>
             </View>
-            {remindersDue.length === 0 ? (
-              <Text style={{ color: colors.textSecondary, fontSize: 13 }}>{t('dashboard.reminders_empty')}</Text>
-            ) : (
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-                {remindersDue.map((r: any, i: number) => {
-                  const rColor = r.status === 'overdue' || r.status === 'danger' ? colors.error : colors.warning;
-                  return (
-                    <View key={i} style={{
-                      backgroundColor: rColor + '22', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4,
-                      borderWidth: 1, borderColor: rColor + '55',
-                      flexDirection: 'row', alignItems: 'center', gap: 5,
-                    }}>
-                      <FontAwesome5 name="tools" size={10} color={rColor} solid />
-                      <Text style={{ color: rColor, fontSize: 12, fontWeight: '600' }} numberOfLines={1}>
-                        {r.hang_muc}
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+              {remindersDue.map((r: any, i: number) => {
+                const rColor = r.status === 'overdue' || r.status === 'danger' ? colors.error : colors.warning;
+                return (
+                  <View key={i} style={{
+                    backgroundColor: rColor + '22', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4,
+                    borderWidth: 1, borderColor: rColor + '55',
+                    flexDirection: 'row', alignItems: 'center', gap: 5,
+                  }}>
+                    <FontAwesome5 name="tools" size={10} color={rColor} solid />
+                    <Text style={{ color: rColor, fontSize: 12, fontWeight: '600' }} numberOfLines={1}>
+                      {r.hang_muc}
+                    </Text>
+                    {r.remaining_days != null && (
+                      <Text style={{ color: rColor, fontSize: 11 }}>
+                        {r.remaining_days <= 0 ? t('dashboard.overdue') : `${r.remaining_days}d`}
                       </Text>
-                      {r.remaining_days != null && (
-                        <Text style={{ color: rColor, fontSize: 11 }}>
-                          {r.remaining_days <= 0 ? t('dashboard.overdue') : `${r.remaining_days}d`}
-                        </Text>
-                      )}
-                    </View>
-                  );
-                })}
-              </View>
-            )}
+                    )}
+                  </View>
+                );
+              })}
+            </View>
           </View>
         )}
 
@@ -651,21 +642,13 @@ export default function DashboardScreen() {
         {recent.length > 0 && (
           <View style={{ backgroundColor: colors.surface, borderRadius: 14, padding: 16, marginBottom: 10 }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 8 }}>
                 <FontAwesome5 name="gas-pump" size={14} color={colors.text} solid />
-                <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14, marginLeft: 6 }}>{t('dashboard.recent_refuels')}</Text>
+                <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14, marginLeft: 6 }} numberOfLines={1}>{t('dashboard.recent_refuels')}</Text>
               </View>
-              <View style={{ flexDirection: 'row', gap: 10 }}>
-                <TouchableOpacity onPress={() => nav.navigate('RefuelsList')}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                    <FontAwesome5 name="gas-pump" size={12} color={colors.primary} solid />
-                    <Text style={{ color: colors.primary, fontSize: 13 }}>{t('dashboard.see_all_fuel')}</Text>
-                  </View>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => nav.navigate('Timeline')}>
-                  <Text style={{ color: colors.textSecondary, fontSize: 13 }}>{t('dashboard.timeline_arrow')}</Text>
-                </TouchableOpacity>
-              </View>
+              <TouchableOpacity onPress={() => nav.navigate('RefuelsList')}>
+                <Text style={{ color: colors.primary, fontSize: 13 }}>{t('dashboard.see_all_fuel')} →</Text>
+              </TouchableOpacity>
             </View>
             {recent.slice(0, 5).map((r: any, i: number) => (
               <View key={r.id ?? i} style={{

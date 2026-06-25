@@ -3,9 +3,11 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useColors } from '../utils/theme';
 
+// band có thể là string (key) hoặc object { key, label, color } từ API
+interface BandObj { key: string; label: string; color?: string }
 interface HealthScore {
   total: number;
-  band: string;
+  band: string | BandObj;
 }
 
 interface Props {
@@ -17,17 +19,26 @@ interface Props {
 const BAND_LABEL: Record<string, string> = {
   excellent: 'Xuất sắc',
   good:      'Tốt',
-  fair:      'Khá',
+  caution:   'Cần chú ý',
   poor:      'Kém',
+  critical:  'Cần kiểm tra',
 };
 
 export default function VehicleCard({ vehicle, onPress, score }: Props) {
   const colors = useColors();
   const name = vehicle.ten ?? vehicle.name;
 
-  const bandColor = (band: string) => {
-    if (band === 'excellent' || band === 'good') return colors.success;
-    if (band === 'fair') return colors.primary;
+  // band có thể là object { key, label } hoặc string key
+  const bandKey: string | undefined = score?.band
+    ? (typeof score.band === 'object' ? score.band.key : score.band)
+    : undefined;
+  const bandLabel: string | undefined = score?.band
+    ? (typeof score.band === 'object' ? score.band.label : BAND_LABEL[score.band])
+    : undefined;
+
+  const bandColor = (key: string) => {
+    if (key === 'excellent' || key === 'good') return colors.success;
+    if (key === 'caution') return colors.warning;
     return colors.error;
   };
 
@@ -67,15 +78,15 @@ export default function VehicleCard({ vehicle, onPress, score }: Props) {
         {vehicle.is_default && (
           <FontAwesome5 name="star" size={14} color={colors.primary} solid />
         )}
-        {score?.band && (
+        {bandKey && bandLabel && score?.total != null && (
           <View style={{
-            backgroundColor: bandColor(score.band) + '22',
+            backgroundColor: bandColor(bandKey) + '22',
             borderRadius: 6,
             paddingHorizontal: 8,
             paddingVertical: 2,
           }}>
-            <Text style={{ color: bandColor(score.band), fontSize: 11, fontWeight: '700' }}>
-              {score.total} · {BAND_LABEL[score.band] ?? score.band}
+            <Text style={{ color: bandColor(bandKey), fontSize: 11, fontWeight: '700' }}>
+              {score.total} · {bandLabel}
             </Text>
           </View>
         )}
