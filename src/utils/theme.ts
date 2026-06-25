@@ -20,15 +20,15 @@ export interface ColorPalette {
 export const darkColors: ColorPalette = {
   primary: '#F59E0B',
   primaryText: '#1C1917',
-  background: '#121212',
-  surface: '#1E1E1E',
-  text: '#FFFFFF',
-  textSecondary: '#9E9E9E',
-  success: '#4CAF50',
-  warning: '#FF9800',
-  error: '#F44336',
-  border: '#2E2E2E',
-  card: '#252525',
+  background: '#0d1527',
+  surface: '#1a2744',
+  text: '#e2e8f0',
+  textSecondary: '#94a3b8',
+  success: '#22c55e',
+  warning: '#f59e0b',
+  error: '#ef4444',
+  border: '#2d3f63',
+  card: '#162035',
 };
 
 export const lightColors: ColorPalette = {
