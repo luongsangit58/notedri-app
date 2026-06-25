@@ -59,7 +59,7 @@ function RefuelCard({ item, onPress }: { item: RefuelItem; onPress: () => void }
       }}>
       <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
         {/* Left: date + fuel_type chip */}
-        <View style={{ width: 76, marginRight: 10 }}>
+        <View style={{ marginRight: 10, maxWidth: 105 }}>
           <Text style={{ color: colors.text, fontSize: 12, fontWeight: '600', marginBottom: 6 }}>
             {formatDate(item.ngay)}
           </Text>
@@ -71,8 +71,8 @@ function RefuelCard({ item, onPress }: { item: RefuelItem; onPress: () => void }
               paddingVertical: 2,
               alignSelf: 'flex-start',
             }}>
-              <Text style={{ color: colors.primaryText, fontSize: 10, fontWeight: '600' }}>
-                {item.fuel_type}
+              <Text style={{ color: colors.primaryText, fontSize: 10, fontWeight: '600' }} numberOfLines={1}>
+                {item.fuel_type.replace(/^Xăng\s+/i, '')}
               </Text>
             </View>
           ) : null}
@@ -265,7 +265,7 @@ export default function RefuelsListScreen() {
           <FontAwesome5 name="magic" size={13} color={colors.success} solid />
           <Text style={{ color: colors.success, fontSize: 12, flex: 1 }}>
             {t('refuels.prediction', { days: prediction.days_left })}
-            {prediction.next_date ? ` (${prediction.next_date})` : ''}
+            {prediction.next_date ? ` (${formatDate(prediction.next_date)})` : ''}
           </Text>
         </View>
       )}
