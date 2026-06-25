@@ -10,10 +10,10 @@ import dayjs from 'dayjs';
 import { useVehicles } from '../../hooks/useVehicles';
 import { useCreateOdometer } from '../../hooks/useOdometer';
 import OcrCamera from '../../components/OcrCamera';
+import VoiceButton from '../../components/VoiceButton';
 import { useColors } from '../../utils/theme';
 import { formatKm } from '../../utils/format';
 import { useT } from '../../i18n';
-import { useVoiceInput } from '../../hooks/useVoiceInput';
 
 export default function AddOdometerScreen() {
   const t = useT();
@@ -41,7 +41,6 @@ export default function AddOdometerScreen() {
   const [ngay, setNgay] = useState(dayjs().format('YYYY-MM-DD'));
   const [ghiChu, setGhiChu] = useState('');
   const [ocrOpen, setOcrOpen] = useState(false);
-  const voice = useVoiceInput();
 
   useEffect(() => {
     if (!vehicleId && defaultVehicle) setVehicleId(defaultVehicle.id);
@@ -123,32 +122,20 @@ export default function AddOdometerScreen() {
           </TouchableOpacity>
 
           <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 6 }}>{t('odometer.value_label')}</Text>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-            <TextInput
-              value={odo}
-              onChangeText={setOdo}
-              placeholder="98443"
-              placeholderTextColor={colors.textSecondary}
-              keyboardType="numeric"
-              style={[input, { flex: 1, fontSize: 28, fontWeight: '800', textAlign: 'center', letterSpacing: 2 }]}
-            />
-            <TouchableOpacity
-              onPress={() => voice.status === 'listening' ? voice.stop() : voice.listen(v => setOdo(v))}
-              style={{
-                width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center',
-                backgroundColor: voice.status === 'listening' ? colors.primary : colors.surface,
-              }}>
-              <FontAwesome5
-                name={voice.status === 'listening' ? 'stop-circle' : 'microphone'}
-                size={20}
-                color={voice.status === 'listening' ? '#fff' : colors.primary}
-                solid
-              />
-            </TouchableOpacity>
-          </View>
-          {voice.error && (
-            <Text style={{ color: colors.warning, fontSize: 12, marginTop: -12, marginBottom: 8 }}>{voice.error}</Text>
-          )}
+          <TextInput
+            value={odo}
+            onChangeText={setOdo}
+            placeholder="98443"
+            placeholderTextColor={colors.textSecondary}
+            keyboardType="numeric"
+            style={[input, { fontSize: 28, fontWeight: '800', textAlign: 'center', letterSpacing: 2, marginBottom: 10 }]}
+          />
+          <VoiceButton
+            label="Nói số ODO"
+            hint="Đọc số ODO trên đồng hồ xe, VD: chín tám bốn bốn ba"
+            onResult={(value) => setOdo(value)}
+            compact={false}
+          />
 
           <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 6 }}>{t('common.date')}</Text>
           <TextInput

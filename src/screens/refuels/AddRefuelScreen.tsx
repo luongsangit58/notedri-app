@@ -11,10 +11,10 @@ import { useVehicles } from '../../hooks/useVehicles';
 import { useCreateRefuel } from '../../hooks/useRefuels';
 import { useFuelTypes } from '../../hooks/useFuelTypes';
 import OcrCamera, { ReceiptData } from '../../components/OcrCamera';
+import VoiceButton from '../../components/VoiceButton';
 import { useColors } from '../../utils/theme';
 import { formatVND, formatKm } from '../../utils/format';
 import { useT } from '../../i18n';
-import { useVoiceInput } from '../../hooks/useVoiceInput';
 
 function FieldLabel({ children }: any) {
   const colors = useColors();
@@ -57,7 +57,8 @@ export default function AddRefuelScreen() {
   const [ghiChu, setGhiChu] = useState('');
   const [isFullTank, setIsFullTank] = useState(true);
   const [ocrTarget, setOcrTarget] = useState<'receipt' | 'odo' | null>(null);
-  const voice = useVoiceInput();
+  const [voiceFeedback, setVoiceFeedback] = useState<string | null>(null);
+  const voiceFeedbackTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Set default vehicle when vehicles load
   useEffect(() => {
@@ -91,6 +92,28 @@ export default function AddRefuelScreen() {
     && parseInt(odometer) < currentVehicle.odo_hien_tai
     ? `ODO thấp hơn lần trước (${formatKm(currentVehicle.odo_hien_tai)}), kiểm tra lại`
     : null;
+
+  const handleSmartVoice = (value: string, raw: string) => {
+    const num = parseFloat(value.replace(',', '.'));
+    const rawLower = raw.toLowerCase();
+    let field: 'tongTien' | 'soLit';
+    // Keyword-based detection first
+    if (rawLower.match(/lít|lit|\bl\b/)) field = 'soLit';
+    else if (rawLower.match(/đồng|nghìn|triệu|ngàn/)) field = 'tongTien';
+    // Magnitude fallback: decimals or 1-200 range → liters, else → amount
+    else if (value.includes('.') || (num >= 1 && num <= 200)) field = 'soLit';
+    else field = 'tongTien';
+
+    if (field === 'tongTien') {
+      handleTongTienChange(value);
+      setVoiceFeedback(`Tổng tiền: ${parseInt(value).toLocaleString('vi-VN')}đ`);
+    } else {
+      handleSoLitChange(value);
+      setVoiceFeedback(`Số lít: ${value} L`);
+    }
+    if (voiceFeedbackTimer.current) clearTimeout(voiceFeedbackTimer.current);
+    voiceFeedbackTimer.current = setTimeout(() => setVoiceFeedback(null), 2500);
+  };
 
   const handleReceiptResult = ({ tongTien: t, soLit: s }: ReceiptData) => {
     if (t) setTongTien(t);
@@ -195,82 +218,65 @@ export default function AddRefuelScreen() {
             </ScrollView>
           )}
 
-          {/* OCR */}
-          <TouchableOpacity
-            onPress={() => setOcrTarget('receipt')}
-            style={{
-              backgroundColor: colors.surface, padding: 12, borderRadius: 10,
-              alignItems: 'center', marginBottom: 16, flexDirection: 'row', justifyContent: 'center', gap: 8,
-            }}>
-            <FontAwesome5 name="camera" size={18} color={colors.primary} solid />
-            <Text style={{ color: colors.primary, fontWeight: '600' }}>Chụp hoá đơn xăng</Text>
-          </TouchableOpacity>
+          {/* Quick action row: camera + voice + nearby */}
+          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
+            <TouchableOpacity
+              onPress={() => setOcrTarget('receipt')}
+              style={{
+                flex: 1, backgroundColor: colors.surface, padding: 12, borderRadius: 10,
+                alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6,
+              }}>
+              <FontAwesome5 name="camera" size={15} color={colors.primary} solid />
+              <Text style={{ color: colors.primary, fontWeight: '600', fontSize: 13 }}>Chụp hoá đơn</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => (navigation as any).navigate('NearbyStations')}
+              style={{
+                flex: 1, backgroundColor: colors.surface, padding: 12, borderRadius: 10,
+                alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6,
+              }}>
+              <FontAwesome5 name="location-arrow" size={14} color={colors.primary} solid />
+              <Text style={{ color: colors.textSecondary, fontWeight: '600', fontSize: 13 }}>Cây xăng gần đây</Text>
+            </TouchableOpacity>
+          </View>
 
-          {/* Nearby stations */}
-          <TouchableOpacity
-            onPress={() => (navigation as any).navigate('NearbyStations')}
-            style={{
-              backgroundColor: colors.surface, padding: 12, borderRadius: 10,
-              alignItems: 'center', marginBottom: 16, flexDirection: 'row', justifyContent: 'center', gap: 8,
-            }}>
-            <FontAwesome5 name="location-arrow" size={16} color={colors.primary} solid />
-            <Text style={{ color: colors.textSecondary, fontWeight: '600' }}>Tìm trạm xăng gần đây</Text>
-          </TouchableOpacity>
+          {/* Single voice input button */}
+          <View style={{ marginBottom: 16 }}>
+            <VoiceButton
+              label="Nói số tiền hoặc số lít"
+              hint="Nói số tiền (VD: hai trăm nghìn) hoặc số lít (VD: mười lăm lít)"
+              onResult={handleSmartVoice}
+            />
+            {voiceFeedback && (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8, paddingHorizontal: 4 }}>
+                <FontAwesome5 name="check-circle" size={12} color="#16A34A" solid />
+                <Text style={{ color: '#16A34A', fontSize: 13, fontWeight: '600' }}>Đã điền: {voiceFeedback}</Text>
+              </View>
+            )}
+          </View>
 
           {/* 3 ô tính tiền */}
           <FieldLabel>Tổng tiền (đ) *</FieldLabel>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-            <TextInput
-              value={tongTien}
-              onChangeText={handleTongTienChange}
-              placeholder="0"
-              placeholderTextColor={colors.textSecondary}
-              keyboardType="numeric"
-              style={[input, { flex: 1, fontSize: 18, fontWeight: '700' }]}
-            />
-            <TouchableOpacity
-              onPress={() => voice.status === 'listening'
-                ? voice.stop()
-                : voice.listen(v => handleTongTienChange(v))}
-              style={{
-                width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center',
-                backgroundColor: voice.status === 'listening' ? colors.primary : colors.surface,
-              }}>
-              <FontAwesome5
-                name={voice.status === 'listening' ? 'stop-circle' : 'microphone'}
-                size={16}
-                color={voice.status === 'listening' ? '#fff' : colors.primary}
-                solid
-              />
-            </TouchableOpacity>
-          </View>
+          <TextInput
+            value={tongTien}
+            onChangeText={handleTongTienChange}
+            placeholder="0"
+            placeholderTextColor={colors.textSecondary}
+            keyboardType="numeric"
+            style={[input, { fontSize: 18, fontWeight: '700', marginBottom: 4 }]}
+          />
 
           <View style={{ flexDirection: 'row', gap: 8, marginBottom: 4 }}>
             <View style={{ flex: 1 }}>
               <FieldLabel>Số lít</FieldLabel>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <TextInput
-                  value={soLit}
-                  onChangeText={handleSoLitChange}
-                  placeholder="0.0"
-                  placeholderTextColor={colors.textSecondary}
-                  keyboardType="decimal-pad"
-                  style={[input, { flex: 1 }]}
-                />
-                <TouchableOpacity
-                  onPress={() => voice.status === 'listening'
-                    ? voice.stop()
-                    : voice.listen(v => handleSoLitChange(v))}
-                  style={{
-                    width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center',
-                    backgroundColor: voice.status === 'listening' ? colors.primary : colors.surface,
-                  }}>
-                  <FontAwesome5
-                    name={voice.status === 'listening' ? 'stop-circle' : 'microphone'}
-                    size={14} color={voice.status === 'listening' ? '#fff' : colors.primary} solid
-                  />
-                </TouchableOpacity>
-              </View>
+              <TextInput
+                value={soLit}
+                onChangeText={handleSoLitChange}
+                placeholder="0.0"
+                placeholderTextColor={colors.textSecondary}
+                keyboardType="decimal-pad"
+                style={input}
+              />
             </View>
             <View style={{ flex: 1 }}>
               <FieldLabel>Giá/lít</FieldLabel>

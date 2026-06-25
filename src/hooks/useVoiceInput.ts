@@ -4,13 +4,13 @@ import { ExpoSpeechRecognitionModule, useSpeechRecognitionEvent } from 'expo-spe
 type Status = 'idle' | 'listening' | 'done' | 'error';
 
 interface UseVoiceInputResult {
-  listen: (onResult: (value: string) => void) => Promise<void>;
+  listen: (onResult: (value: string, raw: string) => void) => Promise<void>;
   stop: () => void;
   status: Status;
   error: string | null;
 }
 
-function parseNumberFromSpeech(text: string): string {
+export function parseNumberFromSpeech(text: string): string {
   const decimal = text.match(/\d+[.,]\d+/);
   if (decimal) return decimal[0].replace(',', '.');
   const digits = text.replace(/\D/g, '');
@@ -20,12 +20,12 @@ function parseNumberFromSpeech(text: string): string {
 export function useVoiceInput(): UseVoiceInputResult {
   const [status, setStatus] = useState<Status>('idle');
   const [error, setError] = useState<string | null>(null);
-  const [callback, setCallback] = useState<((value: string) => void) | null>(null);
+  const [callback, setCallback] = useState<((value: string, raw: string) => void) | null>(null);
 
   useSpeechRecognitionEvent('result', (event) => {
     const raw = event.results[0]?.transcript ?? '';
     const parsed = parseNumberFromSpeech(raw);
-    if (parsed && callback) callback(parsed);
+    if (parsed && callback) callback(parsed, raw);
     setStatus('idle');
   });
 
@@ -38,7 +38,7 @@ export function useVoiceInput(): UseVoiceInputResult {
     setError(event.message ?? 'Không nhận dạng được giọng nói');
   });
 
-  const listen = useCallback(async (onResult: (value: string) => void) => {
+  const listen = useCallback(async (onResult: (value: string, raw: string) => void) => {
     const { granted } = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
     if (!granted) {
       setStatus('error');
