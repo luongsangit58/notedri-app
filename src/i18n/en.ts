@@ -117,6 +117,8 @@ const en = {
   "refuels.total_liters": "Total liters",
   "refuels.total_cost": "Total cost",
   "refuels.prediction": "Next refuel in ~{{days}} days",
+  "refuels.not_full_badge": "Not full",
+  "refuels.unit_l": "L",
 
   // Services
   "services.title": "Service",
@@ -359,7 +361,7 @@ const en = {
   "dashboard.total_fuel_spend": "Total fuel spend",
   "dashboard.year_review_arrow": "{{year}} in Review →",
   "dashboard.chart_arrow": "Chart →",
-  "dashboard.see_all_fuel": "See all fuel →",
+  "dashboard.see_all_fuel": "Lịch sử đổ xăng",
   "dashboard.timeline_arrow": "Timeline →",
   "dashboard.health_band_excellent": "Excellent",
   "dashboard.health_band_good": "Good",

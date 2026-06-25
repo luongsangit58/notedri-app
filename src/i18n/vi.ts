@@ -117,6 +117,8 @@ const vi = {
   "refuels.total_liters": "Tổng lít",
   "refuels.total_cost": "Tổng tiền",
   "refuels.prediction": "Dự đoán đổ xăng lần tới sau ~{{days}} ngày",
+  "refuels.not_full_badge": "Không đầy",
+  "refuels.unit_l": "lít",
 
   // Services
   "services.title": "Bảo dưỡng",
@@ -359,7 +361,7 @@ const vi = {
   "dashboard.total_fuel_spend": "Tổng chi xăng",
   "dashboard.year_review_arrow": "Nhìn lại {{year}} →",
   "dashboard.chart_arrow": "Biểu đồ →",
-  "dashboard.see_all_fuel": "Xem tất cả xăng →",
+  "dashboard.see_all_fuel": "Lịch sử đổ xăng",
   "dashboard.timeline_arrow": "Dòng thời gian →",
   "dashboard.health_band_excellent": "Xuất sắc",
   "dashboard.health_band_good": "Tốt",
