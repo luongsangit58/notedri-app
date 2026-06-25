@@ -456,7 +456,7 @@ export default function DashboardScreen() {
           <View style={{ backgroundColor: colors.surface, borderRadius: 14, padding: 16, marginBottom: 10 }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <FontAwesome5 name="lightbulb" size={16} color="#F59E0B" solid />
+                <FontAwesome5 name="lightbulb" size={16} color={colors.primary} solid />
                 <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14, marginLeft: 6 }}>
                   {t('dashboard.todo_today')}
                   <Text style={{ color: colors.textSecondary, fontWeight: '400', fontSize: 12 }}> ({dayjs().format('DD/MM/YYYY')})</Text>

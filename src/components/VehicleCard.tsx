@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
-import { colors } from '../utils/colors';
+import { useColors } from '../utils/theme';
 
 interface HealthScore {
   total: number;
@@ -14,16 +14,22 @@ interface Props {
   score?: HealthScore | null;
 }
 
-const BAND_CONFIG: Record<string, { label: string; color: string }> = {
-  excellent: { label: 'Xuất sắc', color: '#10B981' },
-  good:      { label: 'Tốt',      color: '#10B981' },
-  fair:      { label: 'Khá',      color: '#F59E0B' },
-  poor:      { label: 'Kém',      color: '#F44336' },
+const BAND_LABEL: Record<string, string> = {
+  excellent: 'Xuất sắc',
+  good:      'Tốt',
+  fair:      'Khá',
+  poor:      'Kém',
 };
 
 export default function VehicleCard({ vehicle, onPress, score }: Props) {
+  const colors = useColors();
   const name = vehicle.ten ?? vehicle.name;
-  const bandCfg = score?.band ? BAND_CONFIG[score.band] : null;
+
+  const bandColor = (band: string) => {
+    if (band === 'excellent' || band === 'good') return colors.success;
+    if (band === 'fair') return colors.primary;
+    return colors.error;
+  };
 
   // Row 2: make · model · year — only non-null parts
   const subtitleParts: string[] = [];
@@ -59,17 +65,17 @@ export default function VehicleCard({ vehicle, onPress, score }: Props) {
           {name}
         </Text>
         {vehicle.is_default && (
-          <FontAwesome5 name="star" size={14} color="#F59E0B" solid />
+          <FontAwesome5 name="star" size={14} color={colors.primary} solid />
         )}
-        {bandCfg && (
+        {score?.band && (
           <View style={{
-            backgroundColor: bandCfg.color + '22',
+            backgroundColor: bandColor(score.band) + '22',
             borderRadius: 6,
             paddingHorizontal: 8,
             paddingVertical: 2,
           }}>
-            <Text style={{ color: bandCfg.color, fontSize: 11, fontWeight: '700' }}>
-              {score!.total} · {bandCfg.label}
+            <Text style={{ color: bandColor(score.band), fontSize: 11, fontWeight: '700' }}>
+              {score.total} · {BAND_LABEL[score.band] ?? score.band}
             </Text>
           </View>
         )}

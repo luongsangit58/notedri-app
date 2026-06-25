@@ -8,12 +8,11 @@ const client = axios.create({
 });
 
 client.interceptors.request.use(async (config) => {
-  // Import lazily to avoid circular dependency
   const { useAuthStore } = await import('../store/authStore');
+  const { useI18nStore } = await import('../i18n');
   const token = useAuthStore.getState().token;
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  config.headers['Accept-Language'] = useI18nStore.getState().lang ?? 'vi';
   return config;
 });
 
