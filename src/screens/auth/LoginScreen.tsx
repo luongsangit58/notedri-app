@@ -26,7 +26,11 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
 
   const handleGoogle = async () => {
     try {
-      const result = await WebBrowser.openAuthSessionAsync(GOOGLE_MOBILE_URL, 'notedri://auth');
+      // preferEphemeralSession (iOS): không dùng chung cookie với Safari, tránh
+      // phiên web đăng nhập sẵn rò vào callback và màn chọn tài khoản Google luôn sạch.
+      const result = await WebBrowser.openAuthSessionAsync(GOOGLE_MOBILE_URL, 'notedri://auth', {
+        preferEphemeralSession: true,
+      });
       if (result.type !== 'success') return;
       const params = new URLSearchParams(result.url.split('?')[1] ?? '');
       const token = params.get('token');
