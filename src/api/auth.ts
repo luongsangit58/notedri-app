@@ -20,6 +20,7 @@ export const authApi = {
     return client.post('/auth/google', { id_token: idToken, ...meta });
   },
   logout: () => client.post('/auth/logout'),
+  unlinkGoogle: () => client.post('/auth/google/unlink'),
   me: (bearerToken?: string) =>
     bearerToken
       ? client.get('/auth/me', { headers: { Authorization: `Bearer ${bearerToken}` } })

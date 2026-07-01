@@ -6,9 +6,12 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { useMutation, useQuery } from '@tanstack/react-query';
+import * as WebBrowser from 'expo-web-browser';
 import { useAuthStore } from '../../store/authStore';
 import { profileApi } from '../../api/profile';
+import { authApi } from '../../api/auth';
 import { achievementsApi } from '../../api/achievements';
+import { BASE_URL } from '../../utils/api';
 import { useColors, useThemeStore } from '../../utils/theme';
 import { useI18nStore, useLang, useT } from '../../i18n';
 
@@ -31,7 +34,7 @@ function MenuItem({ icon, label, onPress, danger, right }: { icon: React.ReactNo
 }
 
 export default function ProfileScreen() {
-  const { user, logout } = useAuthStore();
+  const { user, logout, token, setUser } = useAuthStore();
   const navigation = useNavigation<any>();
   const colors = useColors();
   const { mode: themeMode, toggle: toggleTheme } = useThemeStore();
@@ -40,6 +43,45 @@ export default function ProfileScreen() {
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
   const [deleteError, setDeleteError] = useState('');
+
+  const hasGoogle: boolean = (user as any)?.has_google ?? false;
+  const hasPassword: boolean = (user as any)?.has_password ?? true;
+
+  // Liên kết Google: mở OAuth kèm link_token -> callback gắn Google vào tài khoản này.
+  const handleLinkGoogle = async () => {
+    try {
+      const url = `${BASE_URL}/auth/google/mobile?link_token=${encodeURIComponent(token ?? '')}`;
+      const result = await WebBrowser.openAuthSessionAsync(url, 'notedri://auth', { preferEphemeralSession: true });
+      if (result.type !== 'success') return;
+      const params = new URLSearchParams(result.url.split('?')[1] ?? '');
+      if (params.get('error')) { Alert.alert(t('common.error'), decodeURIComponent(params.get('error')!)); return; }
+      if (params.get('linked')) {
+        const me = await authApi.me();
+        setUser({ ...(user ?? {}), ...(me.data?.data ?? me.data) });
+        Alert.alert(t('profile.google_linked_title'), t('profile.google_linked_msg'));
+      }
+    } catch (e: any) {
+      Alert.alert(t('common.error'), e?.message ?? t('common.error_generic'));
+    }
+  };
+
+  const handleUnlinkGoogle = () => {
+    if (!hasPassword) {
+      Alert.alert(t('profile.google_unlink_need_pw_title'), t('profile.google_unlink_need_pw_msg'));
+      return;
+    }
+    Alert.alert(t('profile.google_unlink_confirm_title'), t('profile.google_unlink_confirm_msg'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('profile.google_unlink'), style: 'destructive', onPress: async () => {
+        try {
+          const res = await authApi.unlinkGoogle();
+          setUser({ ...(user ?? {}), ...(res.data?.data ?? res.data) });
+        } catch (e: any) {
+          Alert.alert(t('common.error'), e?.response?.data?.message ?? t('common.error_generic'));
+        }
+      } },
+    ]);
+  };
 
   // Level (huy hiệu) để hiện tinh tế quanh avatar.
   const { data: ach } = useQuery({ queryKey: ['achievements'], queryFn: () => achievementsApi.get().then(r => r.data?.data) });
@@ -179,6 +221,13 @@ export default function ProfileScreen() {
             icon={<FontAwesome5 name="lock" size={16} color={colors.textSecondary} solid />}
             label={t('profile.change_password')}
             onPress={() => navigation.navigate('ChangePassword')}
+          />
+          {/* Liên kết / Gỡ liên kết Google */}
+          <MenuItem
+            icon={<FontAwesome5 name="google" size={16} color={hasGoogle ? '#EA4335' : colors.textSecondary} solid />}
+            label={hasGoogle ? t('profile.google_unlink') : t('profile.google_link')}
+            onPress={hasGoogle ? handleUnlinkGoogle : handleLinkGoogle}
+            right={hasGoogle ? <Text style={{ color: colors.success, fontSize: 12, fontWeight: '600' }}>{t('profile.google_linked_badge')}</Text> : undefined}
           />
           <MenuItem
             icon={<FontAwesome5 name="mobile-alt" size={16} color={colors.textSecondary} solid />}
