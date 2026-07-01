@@ -6,7 +6,7 @@ import { authApi } from '../../api/auth';
 import { API_URL } from '../../utils/api';
 import { useAuthStore } from '../../store/authStore';
 import { useT } from '../../i18n';
-import { AuthContainer, C, INPUT_STYLE } from './_authLayout';
+import { AuthContainer, C, INPUT_STYLE, LABEL_STYLE } from './_authLayout';
 
 type Step = 'form' | 'otp';
 
@@ -17,6 +17,7 @@ export default function RegisterScreen({ navigation }: { navigation: any }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [passwordConfirmation, setPasswordConfirmation] = useState('');
+  const [agreedTerms, setAgreedTerms] = useState(false);
   const [showPw, setShowPw] = useState(false);
   const [showPwConfirm, setShowPwConfirm] = useState(false);
   const [otp, setOtp] = useState('');
@@ -45,6 +46,7 @@ export default function RegisterScreen({ navigation }: { navigation: any }) {
     if (!password) { setError(t('auth.password_required')); return; }
     if (password.length < 8) { setError(t('auth.password_min_length')); return; }
     if (password !== passwordConfirmation) { setError(t('auth.password_mismatch')); return; }
+    if (!agreedTerms) { setError(t('auth.terms_required')); return; }
     try {
       setIsLoading(true);
       await axios.post(`${API_URL}/auth/register`, {
@@ -128,6 +130,7 @@ export default function RegisterScreen({ navigation }: { navigation: any }) {
           </Text>
 
           {/* Họ tên */}
+          <Text style={LABEL_STYLE}>{t('auth.name')}</Text>
           <TextInput
             value={name}
             onChangeText={(v) => { setError(null); setName(v); }}
@@ -140,6 +143,7 @@ export default function RegisterScreen({ navigation }: { navigation: any }) {
           />
 
           {/* Email */}
+          <Text style={LABEL_STYLE}>{t('auth.email')}</Text>
           <TextInput
             ref={emailRef}
             value={email}
@@ -154,6 +158,7 @@ export default function RegisterScreen({ navigation }: { navigation: any }) {
           />
 
           {/* Mật khẩu */}
+          <Text style={LABEL_STYLE}>{t('auth.password')}</Text>
           <View style={[pwFieldStyle, { marginBottom: 12 }]}>
             <TextInput
               ref={passwordRef}
@@ -173,7 +178,8 @@ export default function RegisterScreen({ navigation }: { navigation: any }) {
           </View>
 
           {/* Xác nhận mật khẩu */}
-          <View style={[pwFieldStyle, { marginBottom: 22 }]}>
+          <Text style={LABEL_STYLE}>{t('auth.password_confirm')}</Text>
+          <View style={[pwFieldStyle, { marginBottom: 18 }]}>
             <TextInput
               ref={confirmRef}
               value={passwordConfirmation}
@@ -191,6 +197,31 @@ export default function RegisterScreen({ navigation }: { navigation: any }) {
             </TouchableOpacity>
           </View>
 
+          {/* Đồng ý điều khoản - checkbox bắt buộc (khớp web) */}
+          <TouchableOpacity
+            onPress={() => { setError(null); setAgreedTerms(a => !a); }}
+            activeOpacity={0.8}
+            style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 18 }}>
+            <View style={{
+              width: 22, height: 22, borderRadius: 6, borderWidth: 1.5,
+              borderColor: agreedTerms ? C.primary : C.inputBorder,
+              backgroundColor: agreedTerms ? C.primary : 'transparent',
+              alignItems: 'center', justifyContent: 'center', marginTop: 1,
+            }}>
+              {agreedTerms && <FontAwesome5 name="check" size={11} color="#1c1917" solid />}
+            </View>
+            <Text style={{ flex: 1, color: C.textSecondary, fontSize: 12, lineHeight: 18 }}>
+              {t('auth.agree_prefix')}{' '}
+              <Text style={{ color: C.primary }} onPress={() => Linking.openURL('https://notedri.com/terms')}>
+                {t('auth.terms_link')}
+              </Text>
+              {' '}{t('auth.and_word')}{' '}
+              <Text style={{ color: C.primary }} onPress={() => Linking.openURL('https://notedri.com/privacy')}>
+                {t('auth.privacy_link')}
+              </Text>
+            </Text>
+          </TouchableOpacity>
+
           <TouchableOpacity
             onPress={handleSubmitForm}
             disabled={isLoading}
@@ -202,18 +233,6 @@ export default function RegisterScreen({ navigation }: { navigation: any }) {
 
           <Text style={{ color: C.textSecondary, fontSize: 12, textAlign: 'center', marginTop: 12 }}>
             {t('auth.otp_will_be_sent')}
-          </Text>
-
-          {/* Đồng ý điều khoản (chuẩn App Store/Play) */}
-          <Text style={{ color: C.textSecondary, fontSize: 12, textAlign: 'center', marginTop: 14, lineHeight: 18 }}>
-            {t('auth.agree_prefix')}{' '}
-            <Text style={{ color: C.primary }} onPress={() => Linking.openURL('https://notedri.com/terms')}>
-              {t('auth.terms_link')}
-            </Text>
-            {' '}{t('auth.and_word')}{' '}
-            <Text style={{ color: C.primary }} onPress={() => Linking.openURL('https://notedri.com/privacy')}>
-              {t('auth.privacy_link')}
-            </Text>
           </Text>
         </View>
       ) : (

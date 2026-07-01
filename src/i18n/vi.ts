@@ -88,6 +88,10 @@ const vi = {
   "vehicles.model_label": "Model",
   "vehicles.year_label": "Năm sản xuất",
   "vehicles.fuel_type_label": "Loại nhiên liệu",
+  "vehicles.fuel_petrol": "Xăng",
+  "vehicles.fuel_diesel": "Dầu (diesel)",
+  "vehicles.fuel_electric": "Điện (xe điện)",
+  "vehicles.fuel_other": "Khác",
   "vehicles.odo_initial_label": "ODO ban đầu",
   "vehicles.tank_capacity_label": "Dung tích bình xăng (L)",
   "vehicles.consumption_official_label": "Mức tiêu hao NSX công bố (L/100km)",
@@ -230,7 +234,7 @@ const vi = {
 
   // Profile
   "profile.title": "Hồ sơ",
-  "profile.free_plan": "Gói Miễn phí",
+  "profile.free_plan": "Free",
   "profile.free_plan_desc": "1 xe • Lịch sử 12 tháng",
   "profile.premium_plan": "Premium",
   "profile.premium_plan_desc": "Không giới hạn lịch sử",
@@ -644,7 +648,8 @@ const vi = {
   "onboarding.lang_switch": "EN",
 
   // Auth - đồng ý điều khoản (new)
-  "auth.agree_prefix": "Khi đăng ký, bạn đồng ý với",
+  "auth.agree_prefix": "Tôi đồng ý với",
+  "auth.terms_required": "Vui lòng đồng ý với Điều khoản và Chính sách bảo mật",
   "auth.terms_link": "Điều khoản sử dụng",
   "auth.and_word": "và",
   "auth.privacy_link": "Chính sách bảo mật",
@@ -694,7 +699,7 @@ const vi = {
 
   // Premium (new)
   "premium.includes_title": "Premium bao gồm",
-  "premium.free_title": "Gói Miễn phí",
+  "premium.free_title": "Free",
   "premium.feature_unlimited_vehicles": "Không giới hạn số xe",
   "premium.feature_unlimited_history": "Lịch sử không giới hạn",
   "premium.feature_all_year_reports": "Báo cáo toàn bộ các năm",
@@ -834,6 +839,8 @@ const vi = {
   "home.charge_title": "Nạp điện",
   "home.find_charging": "Trạm sạc gần đây",
   "home.charging_short": "Trạm sạc",
+  "home.no_vehicle_title": "Bắt đầu với chiếc xe của bạn",
+  "home.no_vehicle_desc": "Thêm xe để theo dõi nhiên liệu, bảo dưỡng, hành trình và nhắc nhở giấy tờ.",
   "home.charging_hint": "Tìm trạm sạc quanh bạn",
   "home.odo_hint": "Ghi số km hiện tại",
   "home.odo_history": "Lịch sử ODO",
@@ -972,7 +979,10 @@ const vi = {
   "add_vehicle.purchase_date_label": "Ngày mua (YYYY-MM-DD)",
   "add_vehicle.purchase_date_placeholder": "VD: 2020-05-15",
   "add_vehicle.purchase_price_label": "Giá mua (đ)",
-  "add_vehicle.purchase_price_placeholder": "VD: 350000000",
+  "add_vehicle.purchase_price_placeholder": "VD: 350.000.000",
+  "add_vehicle.fuel_locked_ev": "Xe điện chỉ dùng nhiên liệu Điện.",
+  "add_vehicle.more_info_title": "Thêm thông tin xe",
+  "add_vehicle.more_info_subtitle": "Ngày mua, giá mua, số VIN, ghi chú (tuỳ chọn)",
   "add_vehicle.vin_label": "Số VIN / Số khung",
   "add_vehicle.vin_placeholder": "Số VIN (17 ký tự)",
   "add_vehicle.notes_placeholder": "Ghi chú về xe...",

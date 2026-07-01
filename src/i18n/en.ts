@@ -88,6 +88,10 @@ const en = {
   "vehicles.model_label": "Model",
   "vehicles.year_label": "Year",
   "vehicles.fuel_type_label": "Fuel type",
+  "vehicles.fuel_petrol": "Petrol",
+  "vehicles.fuel_diesel": "Diesel",
+  "vehicles.fuel_electric": "Electric (EV)",
+  "vehicles.fuel_other": "Other",
   "vehicles.odo_initial_label": "Initial ODO",
   "vehicles.tank_capacity_label": "Tank capacity (L)",
   "vehicles.consumption_official_label": "Official consumption (L/100km)",
@@ -229,7 +233,7 @@ const en = {
 
   // Profile
   "profile.title": "Profile",
-  "profile.free_plan": "Free plan",
+  "profile.free_plan": "Free",
   "profile.free_plan_desc": "1 vehicle • 12-month history",
   "profile.premium_plan": "Premium",
   "profile.premium_plan_desc": "Unlimited history",
@@ -644,7 +648,8 @@ const en = {
   "onboarding.lang_switch": "VI",
 
   // Auth - agree to terms (new)
-  "auth.agree_prefix": "By signing up, you agree to the",
+  "auth.agree_prefix": "I agree to the",
+  "auth.terms_required": "Please agree to the Terms and Privacy Policy",
   "auth.terms_link": "Terms of Use",
   "auth.and_word": "and",
   "auth.privacy_link": "Privacy Policy",
@@ -694,7 +699,7 @@ const en = {
 
   // Premium (new)
   "premium.includes_title": "Premium includes",
-  "premium.free_title": "Free plan",
+  "premium.free_title": "Free",
   "premium.feature_unlimited_vehicles": "Unlimited vehicles",
   "premium.feature_unlimited_history": "Unlimited history",
   "premium.feature_all_year_reports": "All-year reports",
@@ -834,6 +839,8 @@ const en = {
   "home.charge_title": "Charge",
   "home.find_charging": "Nearby charging",
   "home.charging_short": "Charging",
+  "home.no_vehicle_title": "Start with your vehicle",
+  "home.no_vehicle_desc": "Add a vehicle to track fuel, servicing, trips and document reminders.",
   "home.charging_hint": "Find charging nearby",
   "home.odo_hint": "Log current km",
   "home.odo_history": "ODO history",
@@ -972,7 +979,10 @@ const en = {
   "add_vehicle.purchase_date_label": "Purchase date (YYYY-MM-DD)",
   "add_vehicle.purchase_date_placeholder": "e.g. 2020-05-15",
   "add_vehicle.purchase_price_label": "Purchase price (VND)",
-  "add_vehicle.purchase_price_placeholder": "e.g. 350000000",
+  "add_vehicle.purchase_price_placeholder": "e.g. 350.000.000",
+  "add_vehicle.fuel_locked_ev": "Electric vehicles use Electric only.",
+  "add_vehicle.more_info_title": "More vehicle details",
+  "add_vehicle.more_info_subtitle": "Purchase date, price, VIN, notes (optional)",
   "add_vehicle.vin_label": "VIN / Chassis number",
   "add_vehicle.vin_placeholder": "VIN (17 characters)",
   "add_vehicle.notes_placeholder": "Notes about the vehicle...",

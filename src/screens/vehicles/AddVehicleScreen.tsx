@@ -19,11 +19,17 @@ import { useQuery } from '@tanstack/react-query';
 import { FontAwesome5 } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useCreateVehicle } from '../../hooks/useVehicles';
-import { useFuelTypes } from '../../hooks/useFuelTypes';
 import client from '../../api/client';
 import { useColors } from '../../utils/theme';
 import { normalizeSearch } from '../../utils/text';
+import DatePickerField from '../../components/DatePickerField';
 import { useT } from '../../i18n';
+
+// Định dạng tiền: chỉ giữ chữ số + chấm phân tách nghìn (submit sẽ bỏ dấu chấm).
+function formatMoney(v: string): string {
+  const digits = v.replace(/\D/g, '');
+  return digits ? digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.') : '';
+}
 import AppBgPattern from '../../components/AppBgPattern';
 import type { VehiclePhoto } from '../../api/vehicles';
 
@@ -113,10 +119,13 @@ export default function AddVehicleScreen() {
   const t = useT();
   const navigation = useNavigation<any>();
   const createVehicle = useCreateVehicle();
-  const { data: fuelTypesRaw, isLoading: fuelTypesLoading } = useFuelTypes();
-  const fuelTypes: any[] = Array.isArray(fuelTypesRaw)
-    ? fuelTypesRaw.filter((ft: any) => ft.kich_hoat)
-    : [];
+  // Loại nhiên liệu: danh sách TĨNH khớp web (không lấy từ bảng giá xăng dầu).
+  const FUEL_OPTIONS: { value: string; label: string }[] = [
+    { value: 'Xăng', label: t('vehicles.fuel_petrol') },
+    { value: 'Dầu',  label: t('vehicles.fuel_diesel') },
+    { value: 'Điện', label: t('vehicles.fuel_electric') },
+    { value: 'Khác', label: t('vehicles.fuel_other') },
+  ];
 
   const inputStyle = {
     backgroundColor: colors.surface, color: colors.text, borderRadius: 10,
@@ -188,6 +197,8 @@ export default function AddVehicleScreen() {
     if (spec.year_from) setNam(String(spec.year_from));
     if (brand)  setMake(brand.name);
     if (mdl)    setModel(mdl.name);
+    // Xe điện -> tự chọn nhiên liệu "Điện" (khớp web).
+    if (spec.is_ev) setFuelType('Điện');
     setSelectedSpec(spec);
   }, []);
 
@@ -206,11 +217,14 @@ export default function AddVehicleScreen() {
   }, [specsForModel]);
 
   // Reset downstream when type changes
-  const onTypeChange = (t: VehicleType) => {
-    setVehicleType(t);
+  const onTypeChange = (ty: VehicleType) => {
+    setVehicleType(ty);
     setSelectedBrand(null); setSelectedModel(null); setSelectedSpec(null);
     setMake(''); setModel(''); setNam('');
     setTankCapacity(''); setConsumptionOfficial(''); setVehicleSpecId(null);
+    // Xe điện -> khoá nhiên liệu về "Điện"; đổi sang xe xăng/dầu thì bỏ lựa chọn "Điện" cũ.
+    if (ty === 'xe_dien') setFuelType('Điện');
+    else setFuelType(prev => (prev === 'Điện' ? '' : prev));
   };
 
   // ── Fallback text search (when no cascade data or manual override) ─────────
@@ -231,11 +245,6 @@ export default function AddVehicleScreen() {
     if (spec.year_from) setNam(String(spec.year_from));
     setShowSpecSuggestions(false); setSpecQuery('');
   }, []);
-
-  // Default fuel type
-  useEffect(() => {
-    if (fuelTypes.length > 0 && fuel_type === '') setFuelType(fuelTypes[0].ten);
-  }, [fuelTypes]);
 
   // ── Photo picker ──────────────────────────────────────────────────────────
   const pickPhoto = async () => {
@@ -516,30 +525,35 @@ export default function AddVehicleScreen() {
           value={nam} onChangeText={setNam} keyboardType="numeric" returnKeyType="next"
         />
 
-        {/* ── Loại nhiên liệu ── */}
+        {/* ── Loại nhiên liệu (danh sách tĩnh; xe điện -> khoá "Điện") ── */}
         <Text style={labelStyle}>{t('vehicles.fuel_type_label')}</Text>
-        {fuelTypesLoading ? (
-          <ActivityIndicator color={colors.primary} style={{ marginBottom: 12, alignSelf: 'flex-start' }} />
-        ) : (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }} contentContainerStyle={{ gap: 8, paddingVertical: 4 }}>
-            {fuelTypes.map((ft: any) => {
-              const selected = fuel_type === ft.ten;
-              return (
-                <TouchableOpacity
-                  key={ft.id}
-                  onPress={() => setFuelType(ft.ten)}
-                  style={{
-                    paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20,
-                    backgroundColor: selected ? colors.primary : colors.surface,
-                    borderWidth: 1, borderColor: selected ? colors.primary : colors.border,
-                  }}>
-                  <Text style={{ color: selected ? colors.primaryText : colors.textSecondary, fontSize: 13, fontWeight: selected ? '700' : '400' }}>
-                    {ft.ten}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 4, paddingVertical: 4 }}>
+          {FUEL_OPTIONS.map((opt) => {
+            const selected = fuel_type === opt.value;
+            // Xe điện: chỉ cho chọn "Điện", các loại còn lại bị khoá.
+            const locked = vehicleType === 'xe_dien' && opt.value !== 'Điện';
+            return (
+              <TouchableOpacity
+                key={opt.value}
+                disabled={locked}
+                onPress={() => setFuelType(opt.value)}
+                style={{
+                  paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20,
+                  backgroundColor: selected ? colors.primary : colors.surface,
+                  borderWidth: 1, borderColor: selected ? colors.primary : colors.border,
+                  opacity: locked ? 0.4 : 1,
+                }}>
+                <Text style={{ color: selected ? colors.primaryText : colors.textSecondary, fontSize: 13, fontWeight: selected ? '700' : '400' }}>
+                  {opt.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+        {vehicleType === 'xe_dien' && (
+          <Text style={{ color: colors.textSecondary, fontSize: 12, marginBottom: 12 }}>
+            {t('add_vehicle.fuel_locked_ev')}
+          </Text>
         )}
 
         {/* ── ODO ban đầu ── */}
@@ -571,24 +585,50 @@ export default function AddVehicleScreen() {
         {/* ── Extra fields (collapsible) ── */}
         <TouchableOpacity
           onPress={() => setShowExtra(v => !v)}
+          activeOpacity={0.8}
           style={{
-            flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-            backgroundColor: colors.surface, borderRadius: 10,
-            paddingHorizontal: 14, paddingVertical: 12, marginBottom: 12,
-            borderWidth: 1, borderColor: colors.border,
+            flexDirection: 'row', alignItems: 'center', gap: 12,
+            backgroundColor: colors.surface, borderRadius: 12,
+            paddingHorizontal: 14, paddingVertical: 13, marginBottom: 12,
+            borderWidth: 1, borderColor: showExtra ? colors.primary : colors.border,
           }}>
-          <Text style={{ color: colors.textSecondary, fontSize: 14 }}>
-            {showExtra ? t('vehicles.hide_more') : t('vehicles.show_more')}
-          </Text>
-          <Text style={{ color: colors.textSecondary }}>{showExtra ? '▲' : '▼'}</Text>
+          <View style={{
+            width: 32, height: 32, borderRadius: 8,
+            backgroundColor: colors.primary + '1f', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <FontAwesome5 name="sliders-h" size={13} color={colors.primary} solid />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: colors.text, fontSize: 14, fontWeight: '700' }}>
+              {t('add_vehicle.more_info_title')}
+            </Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 1 }}>
+              {t('add_vehicle.more_info_subtitle')}
+            </Text>
+          </View>
+          <FontAwesome5 name={showExtra ? 'chevron-up' : 'chevron-down'} size={13} color={colors.textSecondary} />
         </TouchableOpacity>
 
         {showExtra && (
           <>
             <Text style={labelStyle}>{t('add_vehicle.purchase_date_label')}</Text>
-            <TextInput style={inputStyle} placeholder={t('add_vehicle.purchase_date_placeholder')} placeholderTextColor={colors.textSecondary} value={ngay_mua} onChangeText={setNgayMua} />
+            <DatePickerField value={ngay_mua} onChange={setNgayMua} style={{ marginBottom: 12 }} />
             <Text style={labelStyle}>{t('add_vehicle.purchase_price_label')}</Text>
-            <TextInput style={inputStyle} placeholder={t('add_vehicle.purchase_price_placeholder')} placeholderTextColor={colors.textSecondary} value={gia_mua} onChangeText={setGiaMua} keyboardType="numeric" />
+            <View style={{
+              flexDirection: 'row', alignItems: 'center',
+              backgroundColor: colors.surface, borderRadius: 10, borderWidth: 1, borderColor: colors.border,
+              marginBottom: 12, paddingRight: 14,
+            }}>
+              <TextInput
+                style={{ flex: 1, color: colors.text, fontSize: 15, paddingHorizontal: 14, paddingVertical: 12 }}
+                placeholder={t('add_vehicle.purchase_price_placeholder')}
+                placeholderTextColor={colors.textSecondary}
+                value={gia_mua}
+                onChangeText={(v) => setGiaMua(formatMoney(v))}
+                keyboardType="numeric"
+              />
+              <Text style={{ color: colors.textSecondary, fontSize: 15, fontWeight: '700' }}>đ</Text>
+            </View>
             <Text style={labelStyle}>{t('add_vehicle.vin_label')}</Text>
             <TextInput style={inputStyle} placeholder={t('add_vehicle.vin_placeholder')} placeholderTextColor={colors.textSecondary} value={vin} onChangeText={setVin} autoCapitalize="characters" />
             <Text style={labelStyle}>{t('common.note')}</Text>

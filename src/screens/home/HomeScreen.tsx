@@ -251,19 +251,32 @@ export default function HomeScreen() {
         </View>
 
         {/* Vehicle selector */}
-        {vehicles.length > 0 ? (
+        {vehicles.length > 0 && (
           <View style={{ marginBottom: 16 }}>
             <VehicleSelector vehicles={vehicles} selectedId={vehicleId} onSelect={setSelectedVehicleId} />
           </View>
-        ) : (
-          <TouchableOpacity
-            onPress={() => nav.navigate('AddVehicle')}
-            style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 16, marginBottom: 16, alignItems: 'center', borderWidth: 1, borderColor: colors.border }}>
-            <FontAwesome5 name="plus-circle" size={20} color={colors.primary} solid />
-            <Text style={{ color: colors.text, marginTop: 8, fontWeight: '600' }}>{t('vehicles.add')}</Text>
-          </TouchableOpacity>
         )}
 
+        {/* Chưa có xe -> mời thêm xe làm điểm khởi đầu (hầu hết tính năng cần 1 chiếc xe) */}
+        {vehicles.length === 0 && (
+          <View style={{ backgroundColor: colors.surface, borderRadius: 18, padding: 28, alignItems: 'center', borderWidth: 1, borderColor: colors.border, marginTop: 8 }}>
+            <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: colors.primary + '1f', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+              <FontAwesome5 name="car-side" size={30} color={colors.primary} solid />
+            </View>
+            <Text style={{ color: colors.text, fontSize: 18, fontWeight: '800', textAlign: 'center' }}>{t('home.no_vehicle_title')}</Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 14, textAlign: 'center', marginTop: 8, lineHeight: 20 }}>{t('home.no_vehicle_desc')}</Text>
+            <TouchableOpacity
+              onPress={() => nav.navigate('AddVehicle')}
+              activeOpacity={0.85}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.primary, borderRadius: 12, paddingHorizontal: 22, paddingVertical: 13, marginTop: 20 }}>
+              <FontAwesome5 name="plus" size={14} color={colors.primaryText} solid />
+              <Text style={{ color: colors.primaryText, fontWeight: '800', fontSize: 15 }}>{t('vehicles.add')}</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {vehicles.length > 0 && (
+        <>
         {/* Noi bat - viec gap nhat */}
         {topHighlight && (
           <TouchableOpacity
@@ -498,6 +511,8 @@ export default function HomeScreen() {
               );
             })}
           </View>
+        )}
+        </>
         )}
 
       </ScrollView>

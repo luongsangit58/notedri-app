@@ -12,6 +12,8 @@ import {
   Modal,
   TextInput,
   Pressable,
+  KeyboardAvoidingView,
+  Platform,
   useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -668,6 +670,7 @@ export default function GpsTripsScreen({ embedded }: { embedded?: boolean } = {}
       {/* Modal sửa ghi chú hành trình */}
       <Modal visible={noteTrip !== null} transparent animationType="fade" onRequestClose={() => setNoteTrip(null)}>
         <Pressable style={{ flex: 1, backgroundColor: '#0008', justifyContent: 'center', padding: 28 }} onPress={() => setNoteTrip(null)}>
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <Pressable style={{ backgroundColor: colors.surface, borderRadius: 16, padding: 20 }}>
             <Text style={{ color: colors.text, fontSize: 16, fontWeight: '700', marginBottom: 12 }}>{t('gps_trips.trip_note')}</Text>
             <TextInput
@@ -687,6 +690,7 @@ export default function GpsTripsScreen({ embedded }: { embedded?: boolean } = {}
               </TouchableOpacity>
             </View>
           </Pressable>
+          </KeyboardAvoidingView>
         </Pressable>
       </Modal>
     </Container>

@@ -34,6 +34,13 @@ export const INPUT_STYLE = {
   fontSize: 15,
 } as const;
 
+export const LABEL_STYLE = {
+  color: C.textSecondary,
+  fontSize: 13,
+  fontWeight: '600' as const,
+  marginBottom: 6,
+} as const;
+
 const BG_ICONS = [
   'gas-pump', 'tint', 'bicycle', 'car', 'motorcycle',
   'oil-can', 'wrench', 'gas-pump', 'tint', 'car',

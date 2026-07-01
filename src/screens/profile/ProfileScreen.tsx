@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Alert, ScrollView, Modal, TextInput, ActivityIndicator, Image } from 'react-native';
+import { View, Text, TouchableOpacity, Alert, ScrollView, Modal, TextInput, ActivityIndicator, Image, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AppBgPattern from '../../components/AppBgPattern';
 import { FontAwesome5 } from '@expo/vector-icons';
@@ -338,7 +338,9 @@ export default function ProfileScreen() {
 
       {/* Delete account confirmation modal */}
       <Modal visible={deleteModalVisible} transparent animationType="slide" onRequestClose={() => setDeleteModalVisible(false)}>
-        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.7)' }}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.7)' }}>
           <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24 }}>
             <Text style={{ color: colors.error, fontSize: 17, fontWeight: '700', marginBottom: 8 }}>
               {t('auth.delete_account')}
@@ -378,7 +380,7 @@ export default function ProfileScreen() {
               <Text style={{ color: colors.textSecondary }}>{t('common.cancel')}</Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );

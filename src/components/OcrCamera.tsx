@@ -2,6 +2,7 @@ import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   View, Text, TouchableOpacity, Modal, TextInput,
   Image, ActivityIndicator, Alert, Linking,
+  KeyboardAvoidingView, Platform,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
@@ -281,7 +282,9 @@ export default function OcrCamera({ visible, onClose, onResult, onReceiptResult,
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
-      <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.7)' }}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.7)' }}>
         <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24 }}>
 
           <Text style={{ color: colors.text, fontSize: 18, fontWeight: '600', marginBottom: 8 }}>
@@ -472,7 +475,7 @@ export default function OcrCamera({ visible, onClose, onResult, onReceiptResult,
           </TouchableOpacity>
 
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
