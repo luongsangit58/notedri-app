@@ -5,6 +5,7 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import { useColors } from '../../utils/theme';
 import { useT } from '../../i18n';
 import Constants from 'expo-constants';
+import AppBgPattern from '../../components/AppBgPattern';
 
 const version = Constants.expoConfig?.version ?? '1.0.0';
 
@@ -29,6 +30,7 @@ export default function AboutScreen() {
   const t = useT();
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom']}>
+      <AppBgPattern />
       <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
 
         {/* Logo / Brand */}
@@ -44,7 +46,7 @@ export default function AboutScreen() {
             Note<Text style={{ color: colors.primary }}>Dri</Text>
           </Text>
           <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 4 }}>
-            {t('about.version')} {version}
+            {t('about.version', { version })}
           </Text>
           <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>
             {t('about.tagline')}
@@ -64,12 +66,13 @@ export default function AboutScreen() {
             {t('about.features_title')}
           </Text>
           {[
-            { icon: 'gas-pump',    text: t('about.feature_refuel') },
-            { icon: 'tools',       text: t('about.feature_service') },
-            { icon: 'heartbeat',   text: t('about.feature_health') },
-            { icon: 'chart-bar',   text: t('about.feature_reports') },
-            { icon: 'road',        text: t('about.feature_odo') },
-            { icon: 'folder-open', text: t('about.feature_dossier') },
+            { icon: 'camera',           text: t('about.feature_ocr') },
+            { icon: 'route',            text: t('about.feature_gps') },
+            { icon: 'heartbeat',        text: t('about.feature_obd') },
+            { icon: 'gas-pump',         text: t('about.feature_refuel') },
+            { icon: 'tools',            text: t('about.feature_service') },
+            { icon: 'charging-station', text: t('about.feature_stations') },
+            { icon: 'chart-bar',        text: t('about.feature_reports') },
           ].map((f, i) => (
             <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 }}>
               <FontAwesome5 name={f.icon} size={13} color={colors.primary} solid style={{ width: 18 }} />

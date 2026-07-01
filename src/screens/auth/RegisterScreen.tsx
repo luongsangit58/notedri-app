@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, TextInput as RNTextInput } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, TextInput as RNTextInput, Linking } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import axios from 'axios';
+import { authApi } from '../../api/auth';
 import { API_URL } from '../../utils/api';
 import { useAuthStore } from '../../store/authStore';
 import { useT } from '../../i18n';
@@ -68,7 +69,7 @@ export default function RegisterScreen({ navigation }: { navigation: any }) {
     if (otp.length !== 6) { setError(t('auth.otp_6_digits')); return; }
     try {
       setIsLoading(true);
-      const res = await axios.post(`${API_URL}/auth/register/verify-otp`, { email: email.trim(), code: otp });
+      const res = await authApi.verifyOtp(email.trim(), otp);
       const { token, data: userData } = res.data;
       if (token && userData) {
         await useAuthStore.getState().setSession(token, userData);
@@ -199,6 +200,18 @@ export default function RegisterScreen({ navigation }: { navigation: any }) {
 
           <Text style={{ color: C.textSecondary, fontSize: 12, textAlign: 'center', marginTop: 12 }}>
             {t('auth.otp_will_be_sent')}
+          </Text>
+
+          {/* Đồng ý điều khoản (chuẩn App Store/Play) */}
+          <Text style={{ color: C.textSecondary, fontSize: 12, textAlign: 'center', marginTop: 14, lineHeight: 18 }}>
+            {t('auth.agree_prefix')}{' '}
+            <Text style={{ color: C.primary }} onPress={() => Linking.openURL('https://notedri.com/terms')}>
+              {t('auth.terms_link')}
+            </Text>
+            {' '}{t('auth.and_word')}{' '}
+            <Text style={{ color: C.primary }} onPress={() => Linking.openURL('https://notedri.com/privacy')}>
+              {t('auth.privacy_link')}
+            </Text>
           </Text>
         </View>
       ) : (
