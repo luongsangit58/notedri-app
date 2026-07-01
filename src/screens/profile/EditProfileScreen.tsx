@@ -12,7 +12,6 @@ import { useAuthStore } from '../../store/authStore';
 import { profileApi } from '../../api/profile';
 import { useColors } from '../../utils/theme';
 import { useT } from '../../i18n';
-import PasswordInput from '../../components/PasswordInput';
 import AppBgPattern from '../../components/AppBgPattern';
 
 type FieldErrors = Record<string, string[]>;

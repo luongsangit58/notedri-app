@@ -392,10 +392,10 @@ export default function HomeScreen() {
           onPress={() => vehicleId ? nav.navigate('GpsTrips', { vehicleId, vehicleName }) : nav.navigate('AddVehicle')}
           style={{
             borderRadius: 18, marginBottom: 12, overflow: 'hidden',
-            shadowColor: '#16A34A', shadowOpacity: 0.35, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 5,
+            shadowColor: '#1e40af', shadowOpacity: 0.35, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 5,
           }}>
           {/* GPS green gradient (from-green-500 to-green-700, khớp web) */}
-          <LinearGradient colors={['#22c55e', '#15803d']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+          <LinearGradient colors={['#3b82f6', '#1e3a8a']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
             style={{ padding: 18, flexDirection: 'row', alignItems: 'center', gap: 16 }}>
           <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: '#ffffff22', alignItems: 'center', justifyContent: 'center' }}>
             <FontAwesome5 name="route" size={26} color="#fff" solid />
