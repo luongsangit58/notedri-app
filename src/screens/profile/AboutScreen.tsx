@@ -53,6 +53,16 @@ export default function AboutScreen() {
           </Text>
         </View>
 
+        {/* Sứ mệnh (khớp web) */}
+        <View style={{ marginHorizontal: 16, marginBottom: 18 }}>
+          <Text style={{ color: colors.primary, fontSize: 14, fontWeight: '700', textAlign: 'center', fontStyle: 'italic', marginBottom: 8 }}>
+            "{t('about.slogan')}"
+          </Text>
+          <Text style={{ color: colors.textSecondary, fontSize: 13.5, lineHeight: 21, textAlign: 'center' }}>
+            {t('about.mission')}
+          </Text>
+        </View>
+
         {/* Links */}
         <View style={{ backgroundColor: colors.surface, borderRadius: 14, marginHorizontal: 16, overflow: 'hidden', marginBottom: 16 }}>
           <LinkRow icon="globe" label={t('about.website')} url="https://notedri.com" />

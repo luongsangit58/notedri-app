@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { useRoute } from '@react-navigation/native';
 import { SafeAreaInsetsContext, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useColors } from '../../utils/theme';
@@ -17,7 +18,14 @@ const TABS = [
 ] as const;
 
 export default function ThongKeScreen() {
-  const [activeTab, setActiveTab] = useState<Tab>(0);
+  const route = useRoute<any>();
+  const initTab = ([0, 1, 2] as Tab[]).includes(route.params?.tab) ? (route.params.tab as Tab) : 0;
+  const [activeTab, setActiveTab] = useState<Tab>(initTab);
+  // Đổi sub-tab khi điều hướng tới với param.tab mới (tab đã mount sẵn không remount).
+  useEffect(() => {
+    const p = route.params?.tab;
+    if (([0, 1, 2] as Tab[]).includes(p)) setActiveTab(p as Tab);
+  }, [route.params?.tab]);
   const insets = useSafeAreaInsets();
   const colors = useColors();
   const tr = useT();

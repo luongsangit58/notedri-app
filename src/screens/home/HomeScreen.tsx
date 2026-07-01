@@ -148,6 +148,8 @@ export default function HomeScreen() {
   const vehicleId = selectedVehicleId ?? defaultVehicle?.id;
   const vehicle = vehicles.find((v) => v.id === vehicleId);
   const vehicleName = vehicle?.ten ?? vehicle?.name ?? vehicle?.ten_xe ?? '';
+  // Xe điện? Ưu tiên cờ is_ev từ API, dự phòng đoán theo fuel_type -> hiện UI sạc điện.
+  const isEv: boolean = vehicle?.is_ev ?? /điện|electric|\bev\b/i.test(String(vehicle?.fuel_type ?? ''));
 
   // Dashboard data for quick stats strip
   // Note: useDashboard returns r.data (Axios), but the actual fields are at r.data.data
@@ -301,10 +303,10 @@ export default function HomeScreen() {
                 width: 36, height: 36, borderRadius: 18,
                 backgroundColor: 'rgba(255,255,255,0.35)', alignItems: 'center', justifyContent: 'center', marginBottom: 8,
               }}>
-                <FontAwesome5 name="gas-pump" size={16} color="#1c1917" solid />
+                <FontAwesome5 name={isEv ? 'bolt' : 'gas-pump'} size={16} color="#1c1917" solid />
               </View>
               <Text style={{ color: '#1c1917', fontWeight: '800', fontSize: 14 }}>
-                {t('dashboard.add_refuel')}
+                {isEv ? t('home.charge_title') : t('dashboard.add_refuel')}
               </Text>
               <Text style={{ color: 'rgba(0,0,0,0.55)', fontSize: 11, marginTop: 2 }}>
                 {t('home.refuel_subtitle')}
@@ -313,11 +315,11 @@ export default function HomeScreen() {
             <View style={{ height: 1, backgroundColor: 'rgba(0,0,0,0.12)' }} />
             <TouchableOpacity
               activeOpacity={0.85}
-              onPress={() => nav.navigate('NearbyStations', { standalone: true, latitude: coords?.lat, longitude: coords?.lng })}
+              onPress={() => nav.navigate('NearbyStations', { standalone: true, mode: isEv ? 'charging' : 'fuel', latitude: coords?.lat, longitude: coords?.lng })}
               style={{ paddingHorizontal: 12, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
               <FontAwesome5 name="map-marker-alt" size={9} color="rgba(0,0,0,0.65)" solid />
               <Text style={{ color: 'rgba(0,0,0,0.65)', fontSize: 11, fontWeight: '600' }}>
-                {t('home.find_station')}
+                {isEv ? t('home.find_charging') : t('home.find_station')}
               </Text>
             </TouchableOpacity>
           </LinearGradient>
@@ -421,7 +423,7 @@ export default function HomeScreen() {
         {vehicleId && dashRaw && (
           <TouchableOpacity
             activeOpacity={0.85}
-            onPress={() => nav.navigate('Overview')}
+            onPress={() => nav.navigate('ThongKe', { tab: 1 })}
             style={{
               flexDirection: 'row', backgroundColor: colors.surface, borderRadius: 14,
               paddingVertical: 14, marginBottom: 12, borderWidth: 1, borderColor: colors.border,
@@ -487,7 +489,7 @@ export default function HomeScreen() {
 
         {/* Link to full overview */}
         <TouchableOpacity
-          onPress={() => nav.navigate('Overview')}
+          onPress={() => nav.navigate('ThongKe', { tab: 1 })}
           style={{
             flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
             backgroundColor: colors.surface, borderRadius: 14, paddingVertical: 16, borderWidth: 1, borderColor: colors.border,

@@ -120,7 +120,7 @@ function PillarBar({ pillar }: { pillar: Pillar }) {
 /* Backend trả cta = {label, url} (web route). App điều hướng theo organ.key. */
 function ctaScreenForKey(key?: string): string {
   if (key === 'tieu_thu') return 'AddRefuel';
-  if (key === 'chi_phi') return 'Overview';
+  if (key === 'chi_phi') return 'ThongKe';
   return 'Reminders'; // các organ nhắc nhở (bao_duong, giay_to, dang_kiem, bao_hiem...)
 }
 function ctaLabelOf(organ: any, t: any): string {
