@@ -86,7 +86,7 @@ export default function EditProfileScreen() {
     setInfoErrors({});
     setInfoLoading(true);
     try {
-      const response = await profileApi.update({ name, email });
+      const response = await profileApi.update({ name }); // email KHÔNG cho sửa (khớp web)
       const updatedUser = response.data.data;
       // ProfileController trả raw model (thiếu is_premium/vehicle_limit/can_add_vehicle).
       // Merge vào user hiện tại để không mất các field gói/quyền.
@@ -152,16 +152,14 @@ export default function EditProfileScreen() {
         />
         <FieldError errors={infoErrors} field="name" />
 
+        {/* Email không cho sửa (khớp web) */}
         <TextInput
-          style={inputStyle}
+          style={[inputStyle, { opacity: 0.55 }]}
           value={email}
-          onChangeText={setEmail}
+          editable={false}
           placeholder={t('auth.email')}
           placeholderTextColor={colors.textSecondary}
-          keyboardType="email-address"
-          autoCapitalize="none"
         />
-        <FieldError errors={infoErrors} field="email" />
 
         <TouchableOpacity
           style={saveButtonStyle}

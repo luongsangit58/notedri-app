@@ -58,7 +58,7 @@ export default function ThongKeScreen() {
         <View style={{ flex: 1 }}>
           {activeTab === 0 && <TimelineScreen />}
           {activeTab === 1 && <ReportsScreen />}
-          {activeTab === 2 && <GpsTripsScreen />}
+          {activeTab === 2 && <GpsTripsScreen embedded />}
         </View>
       </SafeAreaInsetsContext.Provider>
     </View>

@@ -260,7 +260,7 @@ export default function DashboardScreen() {
                   paddingHorizontal: 4,
                 }}>
                   <Text style={{ color: colors.primaryText, fontSize: 10, fontWeight: '800' }}>
-                    {unreadCount > 99 ? '99+' : unreadCount}
+                    {unreadCount > 9 ? '9+' : unreadCount}
                   </Text>
                 </View>
               )}

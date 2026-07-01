@@ -635,6 +635,9 @@ const vi = {
   "onboarding.s3_desc": "Chụp đồng hồ ODO hay hoá đơn, camera tự đọc số và điền vào - nhanh và chính xác.",
   "onboarding.s4_title": "Hiểu sức khoẻ chiếc xe",
   "onboarding.s4_desc": "Chẩn đoán qua OBD, nhắc hạn đăng kiểm và bảo dưỡng trước khi trễ.",
+  "onboarding.s5_title": "Nói là xong, khỏi gõ tay",
+  "onboarding.s5_desc": "Bấm micro và đọc số lít, số tiền hay ODO bằng giọng nói - app tự điền vào.",
+  "onboarding.lang_switch": "EN",
 
   // Auth - đồng ý điều khoản (new)
   "auth.agree_prefix": "Khi đăng ký, bạn đồng ý với",

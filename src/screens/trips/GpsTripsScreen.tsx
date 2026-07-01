@@ -557,7 +557,7 @@ function Chip({ icon, label }: { icon: string; label: string }) {
   );
 }
 
-export default function GpsTripsScreen() {
+export default function GpsTripsScreen({ embedded }: { embedded?: boolean } = {}) {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
 
@@ -617,9 +617,14 @@ export default function GpsTripsScreen() {
     }
   }, [noteTrip, noteText, refetch, t]);
 
+  // embedded=true: hiển thị trong tab Thống kê -> KHÔNG tự thêm SafeAreaView(top) + header
+  // (tab Thống kê đã có chrome trên) để tránh "block thừa" ở đầu. Standalone thì giữ nguyên.
+  const Container: any = embedded ? View : SafeAreaView;
+  const containerProps: any = embedded ? {} : { edges: ['top'] };
   return (
-    <SafeAreaView style={[styles.root, { backgroundColor: colors.background }]} edges={['top']}>
+    <Container style={[styles.root, { backgroundColor: colors.background }]} {...containerProps}>
       <AppBgPattern />
+      {!embedded && (
       <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <FontAwesome5 name="arrow-left" size={16} color={colors.text} />
@@ -629,6 +634,7 @@ export default function GpsTripsScreen() {
           <Text style={[styles.headerSub, { color: colors.textSecondary }]}>{vehicleName}</Text>
         </View>
       </View>
+      )}
 
       <FlatList
         data={trips}
@@ -683,7 +689,7 @@ export default function GpsTripsScreen() {
           </Pressable>
         </Pressable>
       </Modal>
-    </SafeAreaView>
+    </Container>
   );
 }
 

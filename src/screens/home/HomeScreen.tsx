@@ -228,7 +228,7 @@ export default function HomeScreen() {
                     alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3,
                   }}>
                     <Text style={{ color: '#fff', fontSize: 9, fontWeight: '800', lineHeight: 14 }}>
-                      {unreadCount > 99 ? '99+' : unreadCount}
+                      {unreadCount > 9 ? '9+' : unreadCount}
                     </Text>
                   </View>
                 )}

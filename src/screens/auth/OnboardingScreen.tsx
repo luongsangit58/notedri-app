@@ -6,7 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useT } from '../../i18n';
+import { useT, useI18nStore } from '../../i18n';
 import { C, BgPattern } from './_authLayout';
 
 export const ONBOARDING_SEEN_KEY = 'onboarding_seen';
@@ -15,6 +15,7 @@ type Slide = { icon: string; title: string; desc: string };
 
 export default function OnboardingScreen({ navigation }: { navigation: any }) {
   const t = useT();
+  const { lang, setLang } = useI18nStore();
   const { width } = useWindowDimensions();
   const listRef = useRef<FlatList<Slide>>(null);
   const [index, setIndex] = useState(0);
@@ -23,6 +24,7 @@ export default function OnboardingScreen({ navigation }: { navigation: any }) {
     { icon: 'bolt',              title: t('onboarding.s1_title'), desc: t('onboarding.s1_desc') },
     { icon: 'route',            title: t('onboarding.s2_title'), desc: t('onboarding.s2_desc') },
     { icon: 'camera',           title: t('onboarding.s3_title'), desc: t('onboarding.s3_desc') },
+    { icon: 'microphone',       title: t('onboarding.s5_title'), desc: t('onboarding.s5_desc') },
     { icon: 'heartbeat',        title: t('onboarding.s4_title'), desc: t('onboarding.s4_desc') },
   ];
   const isLast = index === slides.length - 1;
@@ -47,8 +49,15 @@ export default function OnboardingScreen({ navigation }: { navigation: any }) {
       <StatusBar barStyle="light-content" />
       <BgPattern />
       <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
-        {/* Bỏ qua */}
-        <View style={{ flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: 20, paddingTop: 8 }}>
+        {/* Đổi ngôn ngữ (trái) + Bỏ qua (phải) */}
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 8 }}>
+          <TouchableOpacity
+            onPress={() => setLang(lang === 'vi' ? 'en' : 'vi')}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: C.inputBorder, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 5 }}>
+            <FontAwesome5 name="language" size={13} color={C.primary} solid />
+            <Text style={{ color: C.text, fontSize: 13, fontWeight: '700' }}>{t('onboarding.lang_switch')}</Text>
+          </TouchableOpacity>
           <TouchableOpacity onPress={() => finish('Login')} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
             <Text style={{ color: C.textSecondary, fontSize: 14, fontWeight: '600' }}>
               {t('onboarding.skip')}

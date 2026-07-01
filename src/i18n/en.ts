@@ -635,6 +635,9 @@ const en = {
   "onboarding.s3_desc": "Snap your odometer or a receipt and the camera reads the numbers for you.",
   "onboarding.s4_title": "Know your car's health",
   "onboarding.s4_desc": "OBD diagnostics plus reminders for inspection and service before they're overdue.",
+  "onboarding.s5_title": "Just speak, skip the typing",
+  "onboarding.s5_desc": "Tap the mic and say the liters, amount or ODO by voice - it fills in for you.",
+  "onboarding.lang_switch": "VI",
 
   // Auth - agree to terms (new)
   "auth.agree_prefix": "By signing up, you agree to the",
