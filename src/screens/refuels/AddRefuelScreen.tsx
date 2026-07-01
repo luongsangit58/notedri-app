@@ -44,8 +44,12 @@ export default function AddRefuelScreen() {
   const createRefuel = useCreateRefuel();
   const { data: fuelTypesRaw, isLoading: fuelTypesLoading } = useFuelTypes();
 
-  const vehicles: any[] = Array.isArray(vehiclesData?.data) ? vehiclesData.data
+  const allVehicles: any[] = Array.isArray(vehiclesData?.data) ? vehiclesData.data
     : Array.isArray(vehiclesData) ? vehiclesData : [];
+  // Xe điện không đổ xăng -> loại khỏi danh sách chọn. Nếu chỉ có xe điện thì vẫn giữ đủ để không kẹt form.
+  const isEvV = (v: any) => v?.is_ev ?? /điện|electric|\bev\b/i.test(String(v?.fuel_type ?? ''));
+  const fuelVehicles = allVehicles.filter((v: any) => !isEvV(v));
+  const vehicles: any[] = fuelVehicles.length > 0 ? fuelVehicles : allVehicles;
 
   const fuelTypes: any[] = Array.isArray(fuelTypesRaw)
     ? fuelTypesRaw.filter((ft: any) => ft.kich_hoat)

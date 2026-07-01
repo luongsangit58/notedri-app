@@ -78,14 +78,9 @@ function NotifRow({
         {item.note ? (
           <Text style={styles.itemNote} numberOfLines={2}>{item.note}</Text>
         ) : null}
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          {timeStr ? <Text style={styles.itemTime}>{timeStr}</Text> : null}
-          {hasLink && (
-            <FontAwesome5 name="chevron-right" size={10} color={colors.textSecondary} />
-          )}
-        </View>
+        {timeStr ? <Text style={styles.itemTime}>{timeStr}</Text> : null}
       </View>
-      {!item.read && (
+      {!item.read ? (
         <TouchableOpacity
           onPress={() => onMarkRead(item.key)}
           style={styles.markReadBtn}
@@ -93,7 +88,11 @@ function NotifRow({
         >
           <FontAwesome5 name="check" size={14} color={colors.primary} solid />
         </TouchableOpacity>
-      )}
+      ) : hasLink ? (
+        <View style={styles.markReadBtn}>
+          <FontAwesome5 name="chevron-right" size={13} color={colors.textSecondary} />
+        </View>
+      ) : null}
     </TouchableOpacity>
   );
 }

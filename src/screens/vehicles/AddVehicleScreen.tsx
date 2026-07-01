@@ -22,6 +22,7 @@ import { useCreateVehicle } from '../../hooks/useVehicles';
 import { useFuelTypes } from '../../hooks/useFuelTypes';
 import client from '../../api/client';
 import { useColors } from '../../utils/theme';
+import { normalizeSearch } from '../../utils/text';
 import { useT } from '../../i18n';
 import AppBgPattern from '../../components/AppBgPattern';
 import type { VehiclePhoto } from '../../api/vehicles';
@@ -48,7 +49,7 @@ function PickerModal<T extends { id: number; name: string }>({
   const [q, setQ] = useState('');
   const filtered = useMemo(
     () => q.trim()
-      ? items.filter(i => i.name.toLowerCase().includes(q.toLowerCase()))
+      ? items.filter(i => normalizeSearch(i.name).includes(normalizeSearch(q)))
       : items,
     [items, q],
   );

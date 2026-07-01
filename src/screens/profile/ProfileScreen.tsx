@@ -154,59 +154,63 @@ export default function ProfileScreen() {
           </TouchableOpacity>
           <Text style={{ color: colors.text, fontSize: 20, fontWeight: '800' }}>{user?.name}</Text>
           <Text style={{ color: colors.textSecondary, marginTop: 4, fontSize: 14 }}>{user?.email}</Text>
-        </View>
 
-        {/* Plan badge - Premium: gradient amber nổi bật; Free: thẻ nhã */}
-        <LinearGradient
-          colors={user?.is_premium ? ['#fbbf24', '#d97706'] : [colors.surface, colors.surface]}
-          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-          style={{
-            borderRadius: 14, padding: 14, marginHorizontal: 16, marginBottom: 12,
-            borderWidth: user?.is_premium ? 0 : 1, borderColor: colors.border,
-          }}>
-          {user?.is_premium ? (
-            <>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4, gap: 7 }}>
-                <FontAwesome5 name="crown" size={14} color="#fff" solid />
-                <Text style={{ fontSize: 16, fontWeight: '800', color: '#fff' }}>{t('profile.premium_plan')}</Text>
+          {/* Plan pill - dong bo phong cach chip thanh tich (bam de xem/nang cap) */}
+          <TouchableOpacity activeOpacity={0.85} onPress={() => navigation.navigate('Premium')} style={{ marginTop: 12 }}>
+            {user?.is_premium ? (
+              <LinearGradient
+                colors={['#fbbf24', '#d97706']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 6 }}>
+                <FontAwesome5 name="crown" size={11} color="#fff" solid />
+                <Text style={{ color: '#fff', fontSize: 12, fontWeight: '800' }}>{t('profile.premium_plan')}</Text>
+              </LinearGradient>
+            ) : (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 6, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface }}>
+                <FontAwesome5 name="leaf" size={11} color={colors.primary} solid />
+                <Text style={{ color: colors.text, fontSize: 12, fontWeight: '700' }}>{t('profile.free_plan')}</Text>
+                <FontAwesome5 name="arrow-right" size={9} color={colors.primary} />
               </View>
-              <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.9)' }}>{t('profile.premium_plan_desc')}</Text>
-            </>
-          ) : (
-            <>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4, gap: 7 }}>
-                <FontAwesome5 name="leaf" size={13} color={colors.primary} solid />
-                <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text }}>{t('profile.free_plan')}</Text>
-              </View>
-              <Text style={{ fontSize: 13, color: colors.textSecondary }}>{t('profile.free_plan_desc')}</Text>
-            </>
-          )}
+            )}
+          </TouchableOpacity>
           {user?.vehicle_limit != null && (
-            <Text style={{ fontSize: 12, color: user?.is_premium ? 'rgba(255,255,255,0.85)' : colors.textSecondary, marginTop: 6 }}>
+            <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 8 }}>
               {t('profile.vehicle_limit', { n: user.vehicle_limit })}
             </Text>
           )}
-        </LinearGradient>
+        </View>
 
-        {/* Hồ sơ hoàn chỉnh (khớp web) */}
+        {/* Hồ sơ hoàn chỉnh (khớp web) - 100% thì hiện trạng thái hoàn tất, không cho bấm nữa */}
         {(() => {
           const fields = [user?.name, (user as any)?.phone, (user as any)?.tinh, (user as any)?.dia_chi, user?.avatar];
           const pct = Math.round((fields.filter(Boolean).length / fields.length) * 100);
-          const barColor = pct === 100 ? colors.success : colors.primary;
-          return (
-            <TouchableOpacity activeOpacity={0.85} onPress={() => navigation.navigate('EditProfile')}
-              style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 14, marginHorizontal: 16, marginBottom: 12, borderWidth: 1, borderColor: colors.border }}>
+          const done = pct === 100;
+          const barColor = done ? colors.success : colors.primary;
+          const cardStyle = { backgroundColor: colors.surface, borderRadius: 12, padding: 14, marginHorizontal: 16, marginBottom: 12, borderWidth: 1, borderColor: done ? colors.success + '55' : colors.border };
+          const inner = (
+            <>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                 <Text style={{ color: colors.text, fontSize: 14, fontWeight: '700' }}>{t('profile.completeness_title')}</Text>
-                <Text style={{ color: barColor, fontSize: 14, fontWeight: '800' }}>{pct}%</Text>
+                {done ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                    <FontAwesome5 name="check-circle" size={13} color={colors.success} solid />
+                    <Text style={{ color: colors.success, fontSize: 14, fontWeight: '800' }}>100%</Text>
+                  </View>
+                ) : (
+                  <Text style={{ color: barColor, fontSize: 14, fontWeight: '800' }}>{pct}%</Text>
+                )}
               </View>
               <View style={{ height: 7, borderRadius: 4, backgroundColor: colors.border, overflow: 'hidden' }}>
                 <View style={{ width: `${pct}%`, height: '100%', backgroundColor: barColor }} />
               </View>
-              {pct < 100 && (
+              {!done && (
                 <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 8 }}>{t('profile.completeness_hint')}</Text>
               )}
-            </TouchableOpacity>
+            </>
+          );
+          return done ? (
+            <View style={cardStyle}>{inner}</View>
+          ) : (
+            <TouchableOpacity activeOpacity={0.85} onPress={() => navigation.navigate('EditProfile')} style={cardStyle}>{inner}</TouchableOpacity>
           );
         })()}
 

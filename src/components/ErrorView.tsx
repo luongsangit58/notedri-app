@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity } from 'react-native';
-import { colors } from '../utils/colors';
+import { useColors } from '../utils/theme';
 import { useT } from '../i18n';
 
 interface Props {
@@ -10,6 +10,7 @@ interface Props {
 
 export default function ErrorView({ message, onRetry }: Props) {
   const t = useT();
+  const colors = useColors();
   return (
     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background, padding: 24 }}>
       <Text style={{ color: colors.error, fontSize: 16, textAlign: 'center', marginBottom: 16 }}>{message ?? t('error.generic')}</Text>

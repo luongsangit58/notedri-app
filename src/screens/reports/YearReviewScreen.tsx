@@ -1,14 +1,32 @@
 import React from 'react';
-import { View, Text, ScrollView } from 'react-native';
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRoute } from '@react-navigation/native';
 import { formatVND } from '../../utils/format';
 import { useT } from '../../i18n';
-import AppBgPattern from '../../components/AppBgPattern';
 
 /* Dark navy card matching web design */
 const NAVY = '#0b1220';
+
+/* Nền gradient navy + đốm sáng amber (khớp web recap: linear 160deg + radial glow). */
+function RecapBackground() {
+  return (
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      <LinearGradient
+        colors={['#0b1220', '#13213b', '#1b2c4d']}
+        start={{ x: 0, y: 0 }} end={{ x: 0.35, y: 1 }}
+        style={StyleSheet.absoluteFill}
+      />
+      <View style={{
+        position: 'absolute', top: -70, alignSelf: 'center',
+        width: 320, height: 320, borderRadius: 160,
+        backgroundColor: 'rgba(245,158,11,0.16)',
+      }} />
+    </View>
+  );
+}
 const AMBER = '#F59E0B';
 const AMBER_LIGHT = '#fcd34d';
 const SLATE = '#93a4c0';
@@ -55,8 +73,8 @@ export default function YearReviewScreen() {
 
   if (!hasData) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: NAVY, justifyContent: 'center', alignItems: 'center', padding: 24 }} edges={['bottom']}>
-        <AppBgPattern />
+      <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }} edges={['bottom']}>
+        <RecapBackground />
         <FontAwesome5 name="calendar-alt" size={48} color={SLATE} />
         <Text style={{ color: SLATE, fontSize: 15, marginTop: 12, textAlign: 'center' }}>
           {t('year_review.no_data')}
@@ -69,7 +87,7 @@ export default function YearReviewScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: NAVY }} edges={['bottom']}>
-      <AppBgPattern />
+      <RecapBackground />
       <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 40 }}>
 
         {/* Header brand */}

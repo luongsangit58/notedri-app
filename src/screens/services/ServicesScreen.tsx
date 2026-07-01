@@ -11,6 +11,7 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import { useServices } from '../../hooks/useServices';
 import { useVehicles } from '../../hooks/useVehicles';
 import { useColors } from '../../utils/theme';
+import { normalizeSearch } from '../../utils/text';
 import { contentWide } from '../../utils/layout';
 import { formatVND } from '../../utils/format';
 import { useT } from '../../i18n';
@@ -144,11 +145,11 @@ export default function ServicesScreen() {
     let result = allItems;
     if (selectedLoai !== ALL_CHIP) result = result.filter(i => i.loai === selectedLoai);
     if (searchText.trim()) {
-      const q = searchText.trim().toLowerCase();
+      const q = normalizeSearch(searchText);
       result = result.filter(i =>
-        (i.hang_muc ?? '').toLowerCase().includes(q) ||
-        (i.noi_lam ?? '').toLowerCase().includes(q) ||
-        (i.ghi_chu ?? '').toLowerCase().includes(q),
+        normalizeSearch(i.hang_muc ?? '').includes(q) ||
+        normalizeSearch(i.noi_lam ?? '').includes(q) ||
+        normalizeSearch(i.ghi_chu ?? '').includes(q),
       );
     }
     return result;

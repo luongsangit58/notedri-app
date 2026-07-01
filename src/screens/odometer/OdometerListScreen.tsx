@@ -246,7 +246,7 @@ function SingleVehicleList({
       )}
       ListHeaderComponent={
         (odoCurrentKm != null || totalKmTracked != null) ? (
-          <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4 }}>
+          <View style={{ flexDirection: 'row', gap: 8, paddingTop: 4, paddingBottom: 12 }}>
             {odoCurrentKm != null && (
               <View style={{ flex: 1, backgroundColor: colors.surface, borderRadius: 10, padding: 10, alignItems: 'center' }}>
                 <Text style={{ color: colors.textSecondary, fontSize: 10 }}>{t('odometer.current')}</Text>

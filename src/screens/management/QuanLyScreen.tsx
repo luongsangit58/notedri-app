@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { SafeAreaInsetsContext, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRoute } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useColors } from '../../utils/theme';
 import { useT } from '../../i18n';
@@ -10,7 +11,14 @@ import HealthScreen from '../health/HealthScreen';
 type Tab = 0 | 1;
 
 export default function QuanLyScreen() {
+  const route = useRoute<any>();
   const [activeTab, setActiveTab] = useState<Tab>(0);
+  // Cho phep dieu huong tu Trang chu (vd bam Loi nhac) mo dung tab.
+  // _ts thay doi moi lan navigate de effect chay lai ke ca khi tab lap lai gia tri.
+  useEffect(() => {
+    const tab = route.params?.tab;
+    if (tab === 0 || tab === 1) setActiveTab(tab as Tab);
+  }, [route.params?.tab, route.params?._ts]);
   const insets = useSafeAreaInsets();
   const colors = useColors();
   const t = useT();

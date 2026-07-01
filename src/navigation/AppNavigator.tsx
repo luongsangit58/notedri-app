@@ -6,7 +6,6 @@ import { useColors, ColorPalette } from '../utils/theme';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useT } from '../i18n';
 
-import DashboardScreen from '../screens/dashboard/DashboardScreen';
 import HomeScreen from '../screens/home/HomeScreen';
 import CustomTabBar from './CustomTabBar';
 import AchievementsScreen from '../screens/achievements/AchievementsScreen';
@@ -256,10 +255,6 @@ export default function AppNavigator() {
           headerTitleStyle: { fontWeight: '800', color: '#F59E0B' },
           title: t('payment.history_title'),
         }} />
-
-      {/* Overview (former Dashboard - dense aggregated stats) */}
-      <RootStack.Screen name="Overview" component={DashboardScreen}
-        options={{ headerShown: true, ...headerOpts, title: t('nav.tab_dashboard') }} />
 
       {/* Services list + Garage guide (moved out of tab bar) */}
       <RootStack.Screen name="Services" options={{ headerShown: false }}>

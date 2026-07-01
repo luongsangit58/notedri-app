@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { View, Text, TouchableOpacity, Modal, FlatList, TextInput, Pressable } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useColors } from '../utils/theme';
+import { normalizeSearch } from '../utils/text';
 import { useT } from '../i18n';
 
 type Option = { code: string; name: string };
@@ -23,8 +24,8 @@ export default function SelectField({
   const [q, setQ] = useState('');
 
   const filtered = useMemo(() => {
-    const s = q.trim().toLowerCase();
-    return s ? options.filter(o => o.name.toLowerCase().includes(s)) : options;
+    const s = normalizeSearch(q);
+    return s ? options.filter(o => normalizeSearch(o.name).includes(s)) : options;
   }, [q, options]);
 
   return (

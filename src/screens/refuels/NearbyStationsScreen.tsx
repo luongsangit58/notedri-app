@@ -59,6 +59,8 @@ export default function NearbyStationsScreen() {
   // 'fuel' = cây xăng (Overpass), 'charging' = trạm sạc EV (DB, nguồn VinFast/EVCS). Mặc định theo param, có toggle.
   const [mode, setMode] = useState<'fuel' | 'charging'>(route.params?.mode === 'charging' ? 'charging' : 'fuel');
   const isCharging = mode === 'charging';
+  // Trạm sạc xe điện dùng màu xanh lá; cây xăng dùng màu thương hiệu.
+  const accent = isCharging ? '#10b981' : colors.primary;
 
   const styles = StyleSheet.create({
     container: {
@@ -156,6 +158,7 @@ export default function NearbyStationsScreen() {
     addressRow: {
       flexDirection: 'row',
       alignItems: 'flex-start',
+      gap: 5,
       marginBottom: 6,
     },
     cardContent: {
@@ -295,7 +298,7 @@ export default function NearbyStationsScreen() {
       <TouchableOpacity style={styles.card} onPress={onCardPress} activeOpacity={0.85}>
         <View style={styles.cardRow}>
           <View style={styles.stationIconWrap}>
-            <FontAwesome5 name={isCharging ? 'charging-station' : 'gas-pump'} size={20} color={colors.primary} solid />
+            <FontAwesome5 name={isCharging ? 'charging-station' : 'gas-pump'} size={20} color={accent} solid />
           </View>
           <View style={styles.cardContent}>
             <Text style={styles.stationName} numberOfLines={2}>{name}</Text>
@@ -454,7 +457,7 @@ export default function NearbyStationsScreen() {
           <TouchableOpacity
             key={m}
             onPress={() => { if (mode !== m) { setStations([]); setMode(m); } }}
-            style={[styles.toggleBtn, active && styles.toggleBtnActive]}
+            style={[styles.toggleBtn, active && styles.toggleBtnActive, active && m === 'charging' && { backgroundColor: '#10b981', borderColor: '#10b981' }]}
             activeOpacity={0.85}>
             <FontAwesome5
               name={m === 'charging' ? 'charging-station' : 'gas-pump'}

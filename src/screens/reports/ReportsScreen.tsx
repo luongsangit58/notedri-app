@@ -656,12 +656,12 @@ function ReportContent({
               {t('reports.forecast_note', { pct: sfPct })}
             </Text>
           )}
-          <CardRow index={0} label={t('reports.forecast_total')} value={fmtVnd(sfTotal)} valueColor={colors.primary} />
+          <CardRow index={0} label={t('reports.forecast_total')} value={'~' + fmtVnd(sfTotal)} valueColor={colors.primary} />
           {sfFuel != null && (
-            <CardRow index={1} label={t('reports.forecast_fuel')} value={fmtVnd(sfFuel)} />
+            <CardRow index={1} label={t('reports.forecast_fuel')} value={'~' + fmtVnd(sfFuel)} />
           )}
           {sfService != null && (
-            <CardRow index={sfFuel != null ? 2 : 1} label={t('reports.forecast_service')} value={fmtVnd(sfService)} />
+            <CardRow index={sfFuel != null ? 2 : 1} label={t('reports.forecast_service')} value={'~' + fmtVnd(sfService)} />
           )}
         </SectionCard>
       )}

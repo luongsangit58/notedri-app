@@ -41,7 +41,9 @@ export default function RegisterScreen({ navigation }: { navigation: any }) {
     setError(null);
     if (!name.trim()) { setError(t('auth.name_required')); return; }
     if (!email.trim()) { setError(t('auth.email_required_field')); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) { setError(t('auth.email_invalid')); return; }
     if (!password) { setError(t('auth.password_required')); return; }
+    if (password.length < 8) { setError(t('auth.password_min_length')); return; }
     if (password !== passwordConfirmation) { setError(t('auth.password_mismatch')); return; }
     try {
       setIsLoading(true);
@@ -268,7 +270,7 @@ export default function RegisterScreen({ navigation }: { navigation: any }) {
       )}
 
       {step === 'form' && (
-        <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginTop: 22, alignItems: 'center', paddingVertical: 8 }}>
+        <TouchableOpacity onPress={() => navigation.navigate('Login')} style={{ marginTop: 22, alignItems: 'center', paddingVertical: 8 }}>
           <Text style={{ color: C.textSecondary, fontSize: 14 }}>
             {t('auth.already_account')}{' '}
             <Text style={{ color: C.primary, fontWeight: '700' }}>{t('auth.login')}</Text>

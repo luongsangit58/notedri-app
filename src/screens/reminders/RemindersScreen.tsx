@@ -587,7 +587,7 @@ export default function RemindersScreen() {
         }
         ListFooterComponent={
           suggestions.length > 0 ? (
-            <View style={{ padding: 16, paddingTop: 8 }}>
+            <View style={{ paddingTop: 8, paddingBottom: 8 }}>
               <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 }}>
                 {t('reminders.suggest_more')}
               </Text>

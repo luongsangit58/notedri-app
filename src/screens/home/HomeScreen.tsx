@@ -150,6 +150,10 @@ export default function HomeScreen() {
   const vehicleName = vehicle?.ten ?? vehicle?.name ?? vehicle?.ten_xe ?? '';
   // Xe điện? Ưu tiên cờ is_ev từ API, dự phòng đoán theo fuel_type -> hiện UI sạc điện.
   const isEv: boolean = vehicle?.is_ev ?? /điện|electric|\bev\b/i.test(String(vehicle?.fuel_type ?? ''));
+  // Xe điện: thẻ nạp năng lượng dùng green gradient + chữ trắng (khác xe xăng amber/chữ tối).
+  const energyColors = (isEv ? ['#10b981', '#047857'] : ['#fcd34d', '#d97706']) as [string, string];
+  const energyText = isEv ? '#ffffff' : '#1c1917';
+  const energySub = isEv ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.55)';
 
   // Dashboard data for quick stats strip
   // Note: useDashboard returns r.data (Axios), but the actual fields are at r.data.data
@@ -228,13 +232,16 @@ export default function HomeScreen() {
                 <FontAwesome5 name="bell" size={18} color={colors.text} solid />
                 {unreadCount > 0 && (
                   <View style={{
-                    position: 'absolute', top: -4, right: -4,
-                    backgroundColor: '#ef4444', borderRadius: 8,
-                    minWidth: 16, height: 16,
-                    alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3,
+                    position: 'absolute', top: -5, right: -6,
+                    backgroundColor: '#ef4444', borderRadius: 9,
+                    minWidth: 18, height: 18,
+                    alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4,
                   }}>
-                    <Text style={{ color: '#fff', fontSize: 9, fontWeight: '800', lineHeight: 14 }}>
-                      {unreadCount > 9 ? '9+' : unreadCount}
+                    <Text
+                      allowFontScaling={false}
+                      numberOfLines={1}
+                      style={{ color: '#fff', fontSize: 10, fontWeight: '800' }}>
+                      {unreadCount > 9 ? '9+' : String(unreadCount)}
                     </Text>
                   </View>
                 )}
@@ -261,7 +268,7 @@ export default function HomeScreen() {
         {topHighlight && (
           <TouchableOpacity
             activeOpacity={0.85}
-            onPress={() => vehicleId && nav.navigate('Reminders', { vehicleId })}
+            onPress={() => nav.navigate('QuanLy', { tab: 0, _ts: Date.now() })}
             style={{
               borderRadius: 16, marginBottom: 12, overflow: 'hidden',
               borderWidth: 1, borderColor: topHighlight.remaining_days <= 0 ? '#ef4444' : colors.warning,
@@ -289,11 +296,43 @@ export default function HomeScreen() {
           </TouchableOpacity>
         )}
 
+        {/* GPS hero - dua len dau (tinh nang chu dao) */}
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={() => vehicleId ? nav.navigate('GpsTrips', { vehicleId, vehicleName }) : nav.navigate('AddVehicle')}
+          style={{
+            borderRadius: 18, marginBottom: 12, overflow: 'hidden',
+            shadowColor: '#1e40af', shadowOpacity: 0.35, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 5,
+          }}>
+          <LinearGradient colors={['#3b82f6', '#1e3a8a']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+            style={{ padding: 18, flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+          <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: '#ffffff22', alignItems: 'center', justifyContent: 'center' }}>
+            <FontAwesome5 name="route" size={26} color="#fff" solid />
+          </View>
+          <View style={{ flex: 1 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Text style={{ color: '#fff', fontSize: 18, fontWeight: '800' }}>
+                {t('home.gps_title')}
+              </Text>
+              <View style={{ backgroundColor: '#ffffff33', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 1 }}>
+                <Text style={{ color: '#fff', fontSize: 9, fontWeight: '800' }}>
+                  {t('home.gps_new')}
+                </Text>
+              </View>
+            </View>
+            <Text style={{ color: '#ffffffcc', fontSize: 13, marginTop: 2 }} numberOfLines={1}>
+              {t('home.gps_subtitle')}
+            </Text>
+          </View>
+          <FontAwesome5 name="chevron-right" size={16} color="#ffffffcc" />
+          </LinearGradient>
+        </TouchableOpacity>
+
         {/* Rich CTA cards - 2 col */}
         <View style={{ flexDirection: 'row', gap: 12, marginBottom: 12 }}>
 
-          {/* Do xang - amber gradient (from-amber-300 to-amber-600, khớp web) */}
-          <LinearGradient colors={['#fcd34d', '#d97706']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+          {/* Do xang (amber) hoac Tram sac xe dien (green gradient) */}
+          <LinearGradient colors={energyColors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
             style={{ flex: 1, borderRadius: 16, overflow: 'hidden' }}>
             <TouchableOpacity
               activeOpacity={0.85}
@@ -303,14 +342,14 @@ export default function HomeScreen() {
               style={{ padding: 12 }}>
               <View style={{
                 width: 36, height: 36, borderRadius: 18,
-                backgroundColor: 'rgba(255,255,255,0.35)', alignItems: 'center', justifyContent: 'center', marginBottom: 8,
+                backgroundColor: 'rgba(255,255,255,0.3)', alignItems: 'center', justifyContent: 'center', marginBottom: 8,
               }}>
-                <FontAwesome5 name={isEv ? 'charging-station' : 'gas-pump'} size={16} color="#1c1917" solid />
+                <FontAwesome5 name={isEv ? 'charging-station' : 'gas-pump'} size={16} color={energyText} solid />
               </View>
-              <Text style={{ color: '#1c1917', fontWeight: '800', fontSize: 14 }}>
-                {isEv ? t('home.find_charging') : t('dashboard.add_refuel')}
+              <Text style={{ color: energyText, fontWeight: '800', fontSize: 14 }}>
+                {isEv ? t('home.charging_short') : t('dashboard.add_refuel')}
               </Text>
-              <Text style={{ color: 'rgba(0,0,0,0.55)', fontSize: 11, marginTop: 2 }}>
+              <Text style={{ color: energySub, fontSize: 11, marginTop: 2 }}>
                 {isEv ? t('home.charging_hint') : t('home.refuel_subtitle')}
               </Text>
             </TouchableOpacity>
@@ -393,39 +432,6 @@ export default function HomeScreen() {
           <FontAwesome5 name="chevron-right" size={12} color={colors.textSecondary} />
         </TouchableOpacity>
 
-        {/* GPS hero */}
-        <TouchableOpacity
-          activeOpacity={0.85}
-          onPress={() => vehicleId ? nav.navigate('GpsTrips', { vehicleId, vehicleName }) : nav.navigate('AddVehicle')}
-          style={{
-            borderRadius: 18, marginBottom: 12, overflow: 'hidden',
-            shadowColor: '#1e40af', shadowOpacity: 0.35, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 5,
-          }}>
-          {/* GPS green gradient (from-green-500 to-green-700, khớp web) */}
-          <LinearGradient colors={['#3b82f6', '#1e3a8a']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-            style={{ padding: 18, flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-          <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: '#ffffff22', alignItems: 'center', justifyContent: 'center' }}>
-            <FontAwesome5 name="route" size={26} color="#fff" solid />
-          </View>
-          <View style={{ flex: 1 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Text style={{ color: '#fff', fontSize: 18, fontWeight: '800' }}>
-                {t('home.gps_title')}
-              </Text>
-              <View style={{ backgroundColor: '#ffffff33', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 1 }}>
-                <Text style={{ color: '#fff', fontSize: 9, fontWeight: '800' }}>
-                  {t('home.gps_new')}
-                </Text>
-              </View>
-            </View>
-            <Text style={{ color: '#ffffffcc', fontSize: 13, marginTop: 2 }}>
-              {t('home.gps_subtitle')}
-            </Text>
-          </View>
-          <FontAwesome5 name="chevron-right" size={16} color="#ffffffcc" />
-          </LinearGradient>
-        </TouchableOpacity>
-
         {/* So lieu nhanh (stats strip) */}
         {vehicleId && dashRaw && (
           <TouchableOpacity
@@ -467,7 +473,7 @@ export default function HomeScreen() {
           <View style={{ backgroundColor: colors.surface, borderRadius: 14, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: colors.border }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
               <Text style={{ color: colors.text, fontWeight: '700', fontSize: 15 }}>{t('vehicles.upcoming_reminders')}</Text>
-              <TouchableOpacity onPress={() => vehicleId && nav.navigate('Reminders', { vehicleId })}>
+              <TouchableOpacity onPress={() => nav.navigate('QuanLy', { tab: 0, _ts: Date.now() })}>
                 <Text style={{ color: colors.primary, fontSize: 13 }}>
                   {t('home.see_all')}
                 </Text>
@@ -482,7 +488,7 @@ export default function HomeScreen() {
                   activeOpacity={0.6}
                   onPress={() => r.id != null
                     ? nav.navigate('EditReminder', { reminderId: r.id, vehicleId })
-                    : (vehicleId && nav.navigate('Reminders', { vehicleId }))}
+                    : nav.navigate('QuanLy', { tab: 0, _ts: Date.now() })}
                   style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 7 }}>
                   <Text style={{ color: colors.text, fontSize: 14, flex: 1 }} numberOfLines={1}>{r.hang_muc}</Text>
                   <Text style={{ color: urgent, fontSize: 13, fontWeight: '700' }}>
@@ -494,19 +500,6 @@ export default function HomeScreen() {
           </View>
         )}
 
-        {/* Link to full overview */}
-        <TouchableOpacity
-          onPress={() => nav.navigate('ThongKe', { tab: 1 })}
-          style={{
-            flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-            backgroundColor: colors.surface, borderRadius: 14, paddingVertical: 16, borderWidth: 1, borderColor: colors.border,
-          }}>
-          <FontAwesome5 name="chart-pie" size={15} color={colors.primary} solid />
-          <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 15 }}>
-            {t('home.overview_report')}
-          </Text>
-          <FontAwesome5 name="arrow-right" size={13} color={colors.primary} />
-        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );

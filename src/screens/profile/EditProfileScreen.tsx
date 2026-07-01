@@ -60,6 +60,14 @@ export default function EditProfileScreen() {
     marginBottom: 12,
   };
 
+  const labelStyle = {
+    color: colors.textSecondary,
+    fontWeight: '600' as const,
+    fontSize: 13,
+    marginBottom: 6,
+    marginTop: 4,
+  };
+
   const saveButtonStyle = {
     backgroundColor: colors.primary,
     borderRadius: 10,
@@ -145,6 +153,7 @@ export default function EditProfileScreen() {
       <View style={cardStyle}>
         <Text style={sectionTitleStyle}>{t('edit_profile.personal_info_title')}</Text>
 
+        <Text style={[labelStyle, { marginTop: 0 }]}>{t('auth.name')}</Text>
         <TextInput
           style={inputStyle}
           value={name}
@@ -155,6 +164,7 @@ export default function EditProfileScreen() {
         <FieldError errors={infoErrors} field="name" />
 
         {/* Email không cho sửa (khớp web) */}
+        <Text style={labelStyle}>{t('auth.email')}</Text>
         <TextInput
           style={[inputStyle, { opacity: 0.55 }]}
           value={email}
@@ -164,6 +174,7 @@ export default function EditProfileScreen() {
         />
 
         {/* SĐT + địa chỉ (khớp web) */}
+        <Text style={labelStyle}>{t('edit_profile.phone_placeholder')}</Text>
         <TextInput
           style={inputStyle}
           value={phone}
@@ -172,12 +183,14 @@ export default function EditProfileScreen() {
           placeholderTextColor={colors.textSecondary}
           keyboardType="phone-pad"
         />
+        <Text style={labelStyle}>{t('edit_profile.province_placeholder')}</Text>
         <SelectField
           value={tinh}
           placeholder={t('edit_profile.province_placeholder')}
           options={provinces}
           onSelect={onProvince}
         />
+        <Text style={labelStyle}>{t('edit_profile.ward_placeholder')}</Text>
         <SelectField
           value={phuong_xa}
           placeholder={t('edit_profile.ward_placeholder')}
@@ -185,6 +198,7 @@ export default function EditProfileScreen() {
           onSelect={(o) => setPhuongXa(o.name)}
           disabled={!provinceCode}
         />
+        <Text style={labelStyle}>{t('edit_profile.address_label')}</Text>
         <TextInput
           style={inputStyle}
           value={dia_chi}
