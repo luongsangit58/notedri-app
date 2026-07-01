@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,8 @@ import {
 } from 'react-native';
 import { useAuthStore } from '../../store/authStore';
 import { profileApi } from '../../api/profile';
+import { geoApi, GeoItem } from '../../api/geo';
+import SelectField from '../../components/SelectField';
 import { useColors } from '../../utils/theme';
 import { useT } from '../../i18n';
 import AppBgPattern from '../../components/AppBgPattern';
@@ -77,6 +79,30 @@ export default function EditProfileScreen() {
   const [dia_chi, setDiaChi] = useState((user as any)?.dia_chi ?? '');
   const [infoLoading, setInfoLoading] = useState(false);
   const [infoErrors, setInfoErrors] = useState<FieldErrors>({});
+
+  // Tỉnh/Phường dạng dropdown cascade (khớp web).
+  const [provinces, setProvinces] = useState<GeoItem[]>([]);
+  const [wards, setWards] = useState<GeoItem[]>([]);
+  const [provinceCode, setProvinceCode] = useState<string | null>(null);
+
+  useEffect(() => {
+    geoApi.provinces().then(r => {
+      const list = r.data?.data ?? [];
+      setProvinces(list);
+      if (tinh) {
+        const p = list.find(x => x.name === tinh);
+        if (p) {
+          setProvinceCode(p.code);
+          geoApi.wards(p.code).then(w => setWards(w.data?.data ?? [])).catch(() => {});
+        }
+      }
+    }).catch(() => {});
+  }, []);
+
+  const onProvince = (opt: GeoItem) => {
+    setTinh(opt.name); setProvinceCode(opt.code); setPhuongXa(''); setWards([]);
+    geoApi.wards(opt.code).then(w => setWards(w.data?.data ?? [])).catch(() => {});
+  };
 
   const handleSaveInfo = async () => {
     setInfoErrors({});
@@ -146,19 +172,18 @@ export default function EditProfileScreen() {
           placeholderTextColor={colors.textSecondary}
           keyboardType="phone-pad"
         />
-        <TextInput
-          style={inputStyle}
+        <SelectField
           value={tinh}
-          onChangeText={setTinh}
           placeholder={t('edit_profile.province_placeholder')}
-          placeholderTextColor={colors.textSecondary}
+          options={provinces}
+          onSelect={onProvince}
         />
-        <TextInput
-          style={inputStyle}
+        <SelectField
           value={phuong_xa}
-          onChangeText={setPhuongXa}
           placeholder={t('edit_profile.ward_placeholder')}
-          placeholderTextColor={colors.textSecondary}
+          options={wards}
+          onSelect={(o) => setPhuongXa(o.name)}
+          disabled={!provinceCode}
         />
         <TextInput
           style={inputStyle}

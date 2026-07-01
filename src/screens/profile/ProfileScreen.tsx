@@ -146,6 +146,28 @@ export default function ProfileScreen() {
           )}
         </LinearGradient>
 
+        {/* Hồ sơ hoàn chỉnh (khớp web) */}
+        {(() => {
+          const fields = [user?.name, (user as any)?.phone, (user as any)?.tinh, (user as any)?.dia_chi, user?.avatar];
+          const pct = Math.round((fields.filter(Boolean).length / fields.length) * 100);
+          const barColor = pct === 100 ? colors.success : colors.primary;
+          return (
+            <TouchableOpacity activeOpacity={0.85} onPress={() => navigation.navigate('EditProfile')}
+              style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 14, marginHorizontal: 16, marginBottom: 12, borderWidth: 1, borderColor: colors.border }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <Text style={{ color: colors.text, fontSize: 14, fontWeight: '700' }}>{t('profile.completeness_title')}</Text>
+                <Text style={{ color: barColor, fontSize: 14, fontWeight: '800' }}>{pct}%</Text>
+              </View>
+              <View style={{ height: 7, borderRadius: 4, backgroundColor: colors.border, overflow: 'hidden' }}>
+                <View style={{ width: `${pct}%`, height: '100%', backgroundColor: barColor }} />
+              </View>
+              {pct < 100 && (
+                <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 8 }}>{t('profile.completeness_hint')}</Text>
+              )}
+            </TouchableOpacity>
+          );
+        })()}
+
         {/* Menu items */}
         <View style={{ backgroundColor: colors.surface, borderRadius: 14, marginHorizontal: 16, overflow: 'hidden', marginBottom: 16 }}>
           <MenuItem
