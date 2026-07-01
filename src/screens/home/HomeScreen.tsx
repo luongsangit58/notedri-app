@@ -195,7 +195,11 @@ export default function HomeScreen() {
 
         {/* Header */}
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-          <Text style={{ color: colors.text, fontSize: 22, fontWeight: '800' }}>NoteDri</Text>
+          {/* Two-tone khớp logo: "Note" theo màu chữ (đổi theo chế độ), "Dri" amber */}
+          <Text style={{ fontSize: 22, fontWeight: '800' }}>
+            <Text style={{ color: colors.text }}>Note</Text>
+            <Text style={{ color: '#F59E0B' }}>Dri</Text>
+          </Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
             <WeatherCard data={weatherData} loading={isWeatherLoading && !!coords} />
             <TouchableOpacity onPress={() => nav.navigate('Profile')} style={{ position: 'relative' }}>
@@ -467,7 +471,9 @@ export default function HomeScreen() {
                 <TouchableOpacity
                   key={r.id ?? i}
                   activeOpacity={0.6}
-                  onPress={() => r.id != null && nav.navigate('EditReminder', { reminderId: r.id, vehicleId })}
+                  onPress={() => r.id != null
+                    ? nav.navigate('EditReminder', { reminderId: r.id, vehicleId })
+                    : (vehicleId && nav.navigate('Reminders', { vehicleId }))}
                   style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 7 }}>
                   <Text style={{ color: colors.text, fontSize: 14, flex: 1 }} numberOfLines={1}>{r.hang_muc}</Text>
                   <Text style={{ color: urgent, fontSize: 13, fontWeight: '700' }}>

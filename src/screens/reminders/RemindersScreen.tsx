@@ -30,11 +30,10 @@ type LoaiKey = 'bao_duong' | 'dang_kiem' | 'bao_hiem' | 'giay_to' | 'khac';
 type StatusKey = 'ok' | 'sap_toi' | 'toi_han' | 'qua_han' | 'chua_du_lieu';
 
 function formatShortDate(s: string): string {
-  const d = new Date(s);
-  const dd = String(d.getDate()).padStart(2, '0');
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const yyyy = String(d.getFullYear());
-  return `${dd}/${mm}/${yyyy}`;
+  if (!s) return '';
+  // Parse "YYYY-MM-DD" trực tiếp (tránh new Date() lỗi với ISO 6 chữ số micro -> "00000Z").
+  const [y, m, d] = s.slice(0, 10).split('-');
+  return y && m && d ? `${d}/${m}/${y}` : s;
 }
 
 interface Reminder {

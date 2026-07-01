@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AppBgPattern from '../../components/AppBgPattern';
+import DatePickerField from '../../components/DatePickerField';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { remindersApi } from '../../api/reminders';
 import { useQueryClient } from '@tanstack/react-query';
@@ -282,13 +283,7 @@ export default function EditReminderScreen() {
               />
 
               <FieldLabel>{t('reminders.last_done_date_label')}</FieldLabel>
-              <TextInput
-                value={last_done_date}
-                onChangeText={setLastDoneDate}
-                placeholder="2025-01-15"
-                placeholderTextColor={colors.textSecondary}
-                style={inputStyle}
-              />
+              <DatePickerField value={last_done_date} onChange={setLastDoneDate} style={{ marginBottom: 12 }} />
             </>
           )}
 
@@ -296,13 +291,7 @@ export default function EditReminderScreen() {
           {(che_do === 'ngay_co_dinh' || che_do === 'mot_lan') && (
             <>
               <FieldLabel>{t('reminders.due_date_label')}</FieldLabel>
-              <TextInput
-                value={due_date}
-                onChangeText={setDueDate}
-                placeholder="2025-12-31"
-                placeholderTextColor={colors.textSecondary}
-                style={inputStyle}
-              />
+              <DatePickerField value={due_date} onChange={setDueDate} style={{ marginBottom: 12 }} />
             </>
           )}
 

@@ -1,3 +1,4 @@
+import DatePickerField from '../../components/DatePickerField';
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
@@ -253,13 +254,7 @@ export default function AddServiceScreen() {
 
           {/* Ngay */}
           <FieldLabel>{t('common.date')}</FieldLabel>
-          <TextInput
-            value={ngay}
-            onChangeText={setNgay}
-            placeholder="YYYY-MM-DD"
-            placeholderTextColor={colors.textSecondary}
-            style={styles.input}
-          />
+          <DatePickerField value={ngay} onChange={setNgay} style={{ marginBottom: 12 }} />
 
           {/* Noi lam */}
           <FieldLabel>{t('services.location_label')}</FieldLabel>
