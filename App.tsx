@@ -15,7 +15,20 @@ import { useAuthStore } from './src/store/authStore';
 // Side-effect import: registers the GPS_TRIP_TRACKING background task at module load time
 import './src/services/gps/GpsTripTracker';
 
-const queryClient = new QueryClient();
+// Mặc định caching hợp lý -> KHÔNG refetch (quay spinner) mỗi lần vào lại màn.
+// Dữ liệu "tươi" trong 60s; giữ cache 5 phút; không refetch khi quay lại app.
+// Mutation vẫn invalidate để cập nhật; pull-to-refresh vẫn ép tải mới.
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60_000,
+      gcTime: 5 * 60_000,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: true,
+      retry: 1,
+    },
+  },
+});
 
 function AppLoader({ children }: { children: React.ReactNode }) {
   const loadTheme = useThemeStore(s => s.loadSaved);
