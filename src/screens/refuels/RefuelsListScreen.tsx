@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AppBgPattern from '../../components/AppBgPattern';
 import { useNavigation } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useRefuels } from '../../hooks/useRefuels';
@@ -298,6 +299,7 @@ export default function RefuelsListScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom']}>
+      <AppBgPattern />
       <FlatList
         data={allItems}
         keyExtractor={(item) => String(item.id)}

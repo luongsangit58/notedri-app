@@ -11,4 +11,8 @@ export const remindersApi = {
     client.delete(`/reminders/${id}`),
   done: (id: number, data?: { last_done_odo?: number; last_done_date?: string }) =>
     client.post(`/reminders/${id}/done`, data ?? {}),
+  seedDefaults: (vehicleId: number) =>
+    client.post(`/vehicles/${vehicleId}/reminders/seed`),
+  confirmAll: (vehicleId: number) =>
+    client.post(`/vehicles/${vehicleId}/reminders/confirm-all`),
 };

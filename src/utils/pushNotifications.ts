@@ -1,16 +1,26 @@
 import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
+import { getDeviceId } from './deviceId';
 import client from '../api/client';
 
 Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
+  handleNotification: async (notification) => {
+    // force_logout: xử lý im lặng, không hiện alert
+    if (notification.request.content.data?.type === 'force_logout') {
+      return { shouldShowAlert: false, shouldPlaySound: false, shouldSetBadge: false, shouldShowBanner: false, shouldShowList: false };
+    }
+    return { shouldShowAlert: true, shouldPlaySound: true, shouldSetBadge: true, shouldShowBanner: true, shouldShowList: true };
+  },
+});
+
+// Lắng nghe push "force_logout" → tự đăng xuất ngay
+Notifications.addNotificationReceivedListener((notification) => {
+  if (notification.request.content.data?.type === 'force_logout') {
+    import('../store/authStore').then(({ useAuthStore }) => {
+      useAuthStore.getState().logout();
+    });
+  }
 });
 
 export async function registerPushToken(): Promise<void> {
@@ -34,8 +44,9 @@ export async function registerPushToken(): Promise<void> {
       projectId ? { projectId } : undefined
     );
     const expoPushToken = tokenData.data;
+    const device_id = await getDeviceId();
 
-    await client.post('/auth/push-token', { expo_push_token: expoPushToken });
+    await client.post('/auth/push-token', { expo_push_token: expoPushToken, device_id });
   } catch {
     // Push notifications are non-critical — silently ignore errors
   }

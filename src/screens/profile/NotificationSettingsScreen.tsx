@@ -8,6 +8,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import client from '../../api/client';
 import { useColors } from '../../utils/theme';
 import { useT } from '../../i18n';
+import AppBgPattern from '../../components/AppBgPattern';
 
 type ReminderLevel = 'all' | 'urgent' | 'off';
 
@@ -57,6 +58,7 @@ export default function NotificationSettingsScreen() {
   if (isLoading) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }} edges={['bottom']}>
+        <AppBgPattern />
         <ActivityIndicator color={colors.primary} />
       </SafeAreaView>
     );
@@ -64,6 +66,7 @@ export default function NotificationSettingsScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom']}>
+      <AppBgPattern />
       <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 40 }}>
 
         {/* Toggle nhắc nhở */}

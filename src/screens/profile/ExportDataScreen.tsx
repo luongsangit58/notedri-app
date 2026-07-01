@@ -7,6 +7,7 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import client from '../../api/client';
 import { useColors } from '../../utils/theme';
 import { useT } from '../../i18n';
+import AppBgPattern from '../../components/AppBgPattern';
 
 function InfoRow({ icon, label, value }: { icon: string; label: string; value: string | number }) {
   const colors = useColors();
@@ -61,6 +62,7 @@ export default function ExportDataScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom']}>
+      <AppBgPattern />
       <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 40 }}>
 
         {/* Header card */}
@@ -91,7 +93,7 @@ export default function ExportDataScreen() {
           {preview?.exported_at && (
             <View style={{ paddingVertical: 10 }}>
               <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
-                {t('export.exported_at_label')}: {new Date(preview.exported_at).toLocaleString('vi-VN')}
+                {t('export.exported_at_label', { time: new Date(preview.exported_at).toLocaleString('vi-VN') })}
               </Text>
             </View>
           )}

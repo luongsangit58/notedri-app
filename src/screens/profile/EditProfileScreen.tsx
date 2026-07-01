@@ -13,6 +13,7 @@ import { profileApi } from '../../api/profile';
 import { useColors } from '../../utils/theme';
 import { useT } from '../../i18n';
 import PasswordInput from '../../components/PasswordInput';
+import AppBgPattern from '../../components/AppBgPattern';
 
 type FieldErrors = Record<string, string[]>;
 
@@ -87,7 +88,9 @@ export default function EditProfileScreen() {
     try {
       const response = await profileApi.update({ name, email });
       const updatedUser = response.data.data;
-      setUser(updatedUser);
+      // ProfileController trả raw model (thiếu is_premium/vehicle_limit/can_add_vehicle).
+      // Merge vào user hiện tại để không mất các field gói/quyền.
+      setUser({ ...(user ?? {}), ...updatedUser });
       Alert.alert(t('edit_profile.success'), t('edit_profile.info_updated'));
     } catch (error: any) {
       const errors = extractErrors(error);
@@ -129,11 +132,13 @@ export default function EditProfileScreen() {
   };
 
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: colors.background }}
-      contentContainerStyle={{ padding: 16 }}
-      keyboardShouldPersistTaps="handled"
-    >
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <AppBgPattern />
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ padding: 16 }}
+        keyboardShouldPersistTaps="handled"
+      >
       {/* Section 1: Personal info */}
       <View style={cardStyle}>
         <Text style={sectionTitleStyle}>{t('edit_profile.personal_info_title')}</Text>
@@ -211,6 +216,7 @@ export default function EditProfileScreen() {
           )}
         </TouchableOpacity>
       </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }

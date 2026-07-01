@@ -10,6 +10,7 @@ import { useNavigation } from '@react-navigation/native';
 import client from '../../api/client';
 import { useColors } from '../../utils/theme';
 import { useT } from '../../i18n';
+import AppBgPattern from '../../components/AppBgPattern';
 
 type LoaiKey = 'loi' | 'y_tuong' | 'khac';
 
@@ -46,6 +47,7 @@ export default function FeedbackScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom']}>
+      <AppBgPattern />
       <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
 
         <Text style={{ color: colors.text, fontWeight: '800', fontSize: 20, marginBottom: 4 }}>
@@ -117,7 +119,7 @@ export default function FeedbackScreen() {
           }}
         />
         <Text style={{ color: colors.textSecondary, fontSize: 11, marginBottom: 24, textAlign: 'right' }}>
-          {t('feedback.char_count').replace('{count}', String(noi_dung.trim().length))}
+          {t('feedback.char_count', { count: noi_dung.trim().length })}
         </Text>
 
         <TouchableOpacity

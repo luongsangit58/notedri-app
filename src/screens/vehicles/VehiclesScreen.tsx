@@ -1,6 +1,7 @@
 import React from 'react';
 import { FlatList, View, Text, TouchableOpacity, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AppBgPattern from '../../components/AppBgPattern';
 import { useNavigation } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useVehicles, useSetDefaultVehicle } from '../../hooks/useVehicles';
@@ -8,6 +9,7 @@ import VehicleCard from '../../components/VehicleCard';
 import LoadingView from '../../components/LoadingView';
 import ErrorView from '../../components/ErrorView';
 import { useColors } from '../../utils/theme';
+import { contentWide } from '../../utils/layout';
 import { useT } from '../../i18n';
 
 export default function VehiclesScreen() {
@@ -27,6 +29,7 @@ export default function VehiclesScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom']}>
+      <AppBgPattern />
       <FlatList
         data={vehicles}
         keyExtractor={(item: any) => String(item.id)}
@@ -37,35 +40,15 @@ export default function VehiclesScreen() {
               onPress={() => navigation.navigate('VehicleDetail', { vehicleId: item.id, vehicleName: item.ten ?? item.name })}
               score={scores[item.id] ?? null}
             />
-            <View style={{ position: 'absolute', top: 12, right: 12, flexDirection: 'row', gap: 6 }}>
-              {!item.is_default && (
-                <TouchableOpacity
-                  onPress={() => setDefault(item.id)}
-                  style={{ backgroundColor: colors.background, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 }}>
-                  <FontAwesome5 name="star" size={14} color="#F59E0B" solid />
-                </TouchableOpacity>
-              )}
-              {item.is_default && (
-                <View style={{ backgroundColor: colors.background, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 }}>
-                  <FontAwesome5 name="star" size={14} color="#F59E0B" solid />
-                </View>
-              )}
-              <TouchableOpacity
-                onPress={() => navigation.navigate('Dossier', { vehicleId: item.id })}
-                style={{ backgroundColor: colors.background, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <FontAwesome5 name="book" size={13} color={colors.textSecondary} solid />
-                <Text style={{ color: colors.textSecondary, fontSize: 13 }}>{t('vehicles.notebook_label')}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => navigation.navigate('EditVehicle', { vehicleId: item.id })}
-                style={{ backgroundColor: colors.background, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <FontAwesome5 name="pen" size={13} color={colors.textSecondary} solid />
-                <Text style={{ color: colors.textSecondary, fontSize: 13 }}>{t('vehicles.edit_label')}</Text>
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('EditVehicle', { vehicleId: item.id })}
+              style={{ position: 'absolute', top: 12, right: 12, backgroundColor: colors.background, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <FontAwesome5 name="pen" size={13} color={colors.textSecondary} solid />
+              <Text style={{ color: colors.textSecondary, fontSize: 13 }}>{t('vehicles.edit_label')}</Text>
+            </TouchableOpacity>
           </View>
         )}
-        contentContainerStyle={{ padding: 16, paddingBottom: 80 }}
+        contentContainerStyle={[{ padding: 16, paddingBottom: 80 }, contentWide]}
         refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={colors.primary} />}
         ListEmptyComponent={
           <View style={{ alignItems: 'center', marginTop: 64 }}>

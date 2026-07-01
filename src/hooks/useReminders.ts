@@ -41,3 +41,25 @@ export const useDoneReminder = () => {
     },
   });
 };
+
+export const useSeedReminders = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vehicleId: number) => remindersApi.seedDefaults(vehicleId).then(r => r.data),
+    onSuccess: (_d, vehicleId) => {
+      qc.invalidateQueries({ queryKey: ['reminders', vehicleId] });
+      qc.invalidateQueries({ queryKey: ['dashboard'] });
+    },
+  });
+};
+
+export const useConfirmAllReminders = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (vehicleId: number) => remindersApi.confirmAll(vehicleId).then(r => r.data),
+    onSuccess: (_d, vehicleId) => {
+      qc.invalidateQueries({ queryKey: ['reminders', vehicleId] });
+      qc.invalidateQueries({ queryKey: ['dashboard'] });
+    },
+  });
+};

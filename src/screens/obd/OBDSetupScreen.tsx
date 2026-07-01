@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useObdConnection } from '../../hooks/useObd';
+import AppBgPattern from '../../components/AppBgPattern';
 import { useColors } from '../../utils/theme';
 import { useAuthStore } from '../../store/authStore';
 import { useT } from '../../i18n';
@@ -59,6 +60,7 @@ export default function OBDSetupScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <AppBgPattern />
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <FontAwesome5 name="arrow-left" size={18} color={colors.text} />

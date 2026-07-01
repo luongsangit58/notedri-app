@@ -10,6 +10,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AppBgPattern from '../../components/AppBgPattern';
 import { useNavigation } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useQueries, useQueryClient } from '@tanstack/react-query';
@@ -199,7 +200,9 @@ function SingleVehicleList({
   const odoCurrentKm: number | null = odoMeta?.odo_current ?? null;
   const totalKmTracked: number | null = odoMeta?.total_km_tracked ?? null;
 
-  const hasMore = data?.next_page_url != null || pageItems.length >= PER_PAGE;
+  const hasMore = odoMeta?.current_page != null && odoMeta?.last_page != null
+    ? odoMeta.current_page < odoMeta.last_page
+    : pageItems.length >= PER_PAGE;
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -288,6 +291,7 @@ function AllVehiclesList({
   onRefresh: () => void;
 }) {
   const colors = useColors();
+  const t = useT();
   const styles = StyleSheet.create({
     emptyState: {
       flex: 1,
@@ -353,7 +357,7 @@ function AllVehiclesList({
   ) : (
     <View style={styles.emptyState}>
       <FontAwesome5 name="road" size={48} color={colors.textSecondary} solid />
-      <Text style={[styles.emptyText, { marginTop: 12 }]}>Chưa có mốc ODO nào</Text>
+      <Text style={[styles.emptyText, { marginTop: 12 }]}>{t('odometer.empty')}</Text>
     </View>
   );
 
@@ -379,6 +383,7 @@ function AllVehiclesList({
 
 export default function OdometerListScreen() {
   const colors = useColors();
+  const t = useT();
   const styles = StyleSheet.create({
     container: {
       flex: 1,
@@ -465,7 +470,7 @@ export default function OdometerListScreen() {
           style={[styles.chip, selectedVehicleId === undefined && styles.chipActive]}
         >
           <Text style={[styles.chipText, selectedVehicleId === undefined && styles.chipTextActive]}>
-            Tất cả
+            {t('common.all')}
           </Text>
         </TouchableOpacity>
         {vehicles.map((v: any) => (
@@ -485,6 +490,7 @@ export default function OdometerListScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
+      <AppBgPattern />
       {FilterHeader}
 
       {selectedVehicleId != null ? (

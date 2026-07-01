@@ -11,9 +11,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { useQuery } from '@tanstack/react-query';
 import { useObdTrips, useObdDtcEvents } from '../../hooks/useObd';
-import { refuelsApi } from '../../api/refuels';
+import { useFuelTypes } from '../../hooks/useFuelTypes';
+import AppBgPattern from '../../components/AppBgPattern';
 import { useColors } from '../../utils/theme';
 import { formatVND, formatVNDShort, formatKm } from '../../utils/format';
 import { useAuthStore } from '../../store/authStore';
@@ -68,16 +68,13 @@ export default function OBDTripsScreen() {
 
   const { data: tripsData, isLoading, refetch, isFetching } = useObdTrips(vehicleId);
   const { data: dtcData } = useObdDtcEvents(vehicleId);
-  const { data: fuelPriceData } = useQuery({
-    queryKey: ['fuel-price', 'E5'],
-    queryFn: () => refuelsApi.fuelPrice('E5').then((r) => r.data),
-    staleTime: 1000 * 60 * 60,
-  });
+  const { data: fuelTypesRaw } = useFuelTypes();
 
   const trips = tripsData?.data ?? [];
   const meta = tripsData?.meta ?? {};
   const activeDtc: any[] = dtcData?.data ?? [];
-  const fuelPricePerLiter: number = fuelPriceData?.data?.gia_moi_lit ?? 21000;
+  const fuelTypes: any[] = Array.isArray(fuelTypesRaw) ? fuelTypesRaw.filter((ft: any) => ft.kich_hoat) : [];
+  const fuelPricePerLiter: number = Number(fuelTypes[0]?.gia_hien_tai ?? 0) || 21000;
   const consumption = consumptionOfficial ?? 8; // L/100km fallback
 
   const totalStats = useMemo(() => {
@@ -176,6 +173,7 @@ export default function OBDTripsScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <AppBgPattern />
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <FontAwesome5 name="arrow-left" size={18} color={colors.text} />

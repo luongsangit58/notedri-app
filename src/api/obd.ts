@@ -30,7 +30,7 @@ export type DtcEventRecord = {
 
 export const obdApi = {
   saveTrip: (summary: TripSummary, deviceId: string | null) =>
-    client.post('/obd/trips', {
+    client.post('/obd2/trips', {
       vehicle_id:            summary.vehicleId,
       started_at:            summary.startedAt,
       ended_at:              summary.endedAt,
@@ -48,11 +48,11 @@ export const obdApi = {
     }),
 
   trips: (vehicleId: number, page = 1) =>
-    client.get('/obd/trips', { params: { vehicle_id: vehicleId, page } }),
+    client.get('/obd2/trips', { params: { vehicle_id: vehicleId, page } }),
 
   dtcEvents: (vehicleId: number) =>
-    client.get('/obd/dtc', { params: { vehicle_id: vehicleId } }),
+    client.get('/obd2/dtc', { params: { vehicle_id: vehicleId } }),
 
   resolveDtc: (dtcEventId: number) =>
-    client.post(`/obd/dtc/${dtcEventId}/resolve`),
+    client.post(`/obd2/dtc/${dtcEventId}/resolve`),
 };

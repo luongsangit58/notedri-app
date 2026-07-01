@@ -8,6 +8,12 @@ import RootNavigator from './src/navigation/RootNavigator';
 import { useThemeStore } from './src/utils/theme';
 import { useI18nStore } from './src/i18n';
 import { flushPendingTrips } from './src/services/obd/TripSyncQueue';
+import { flushPendingGpsTrips } from './src/services/gps/GpsTripSyncQueue';
+import { maybeAutoShutdownStale } from './src/services/gps/GpsTripTracker';
+import { sendDeviceHeartbeat } from './src/api/devices';
+import { useAuthStore } from './src/store/authStore';
+// Side-effect import: registers the GPS_TRIP_TRACKING background task at module load time
+import './src/services/gps/GpsTripTracker';
 
 const queryClient = new QueryClient();
 
@@ -19,14 +25,18 @@ function AppLoader({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     loadTheme();
     loadLang();
-    // Flush any OBD trips that failed to sync in previous sessions
     flushPendingTrips().catch(() => {});
+    maybeAutoShutdownStale().catch(() => {}); // đóng chuyến bị kẹt từ phiên trước (app bị kill)
+    flushPendingGpsTrips().catch(() => {});
   }, []);
 
   useEffect(() => {
     const sub = AppState.addEventListener('change', (next: AppStateStatus) => {
       if (appState.current.match(/inactive|background/) && next === 'active') {
         flushPendingTrips().catch(() => {});
+        maybeAutoShutdownStale().catch(() => {});
+        flushPendingGpsTrips().catch(() => {});
+        if (useAuthStore.getState().token) sendDeviceHeartbeat(); // giữ last_seen_at tươi -> is_online đúng
       }
       appState.current = next;
     });

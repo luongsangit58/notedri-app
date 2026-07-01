@@ -3,6 +3,7 @@ import {
   View, Text, ScrollView, ActivityIndicator, TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AppBgPattern from '../../components/AppBgPattern';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
@@ -113,6 +114,7 @@ export default function GarageGuideScreen() {
   if (isLoading) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }} edges={['bottom']}>
+        <AppBgPattern />
         <ActivityIndicator color={colors.primary} size="large" />
       </SafeAreaView>
     );
@@ -121,6 +123,7 @@ export default function GarageGuideScreen() {
   if (isError) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', padding: 24 }} edges={['bottom']}>
+        <AppBgPattern />
         <Text style={{ color: colors.error, fontWeight: '700', marginBottom: 12 }}>{t('common.error_load')}</Text>
         <TouchableOpacity onPress={() => refetch()}
           style={{ backgroundColor: colors.primary, borderRadius: 10, paddingHorizontal: 24, paddingVertical: 10 }}>
@@ -132,6 +135,7 @@ export default function GarageGuideScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom']}>
+      <AppBgPattern />
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
         {/* Subtitle */}
         <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 16, lineHeight: 18 }}>

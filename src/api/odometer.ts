@@ -2,7 +2,7 @@ import client from './client';
 
 export const odometerApi = {
   list: (vehicleId: number, page = 1) =>
-    client.get(`/vehicles/${vehicleId}/odometer`, { params: { page } }),
+    client.get('/odometer', { params: { vehicle: vehicleId, page } }),
   create: (vehicleId: number, data: any) =>
     client.post(`/vehicles/${vehicleId}/odometer`, data),
   get: (id: number) =>

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator,
 } from 'react-native';
@@ -7,11 +7,13 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/vi';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import * as Notifications from 'expo-notifications';
 import { useNotifications, useMarkAllRead, useMarkRead } from '../../hooks/useNotifications';
 import { useColors } from '../../utils/theme';
 import { navigateFromUrl } from '../../utils/navigation';
 import { useT } from '../../i18n';
+import AppBgPattern from '../../components/AppBgPattern';
 
 dayjs.extend(relativeTime);
 dayjs.locale('vi');
@@ -149,12 +151,18 @@ export default function NotificationsScreen() {
 
   const notifications: NotificationItem[] = data?.data ?? [];
 
+  useFocusEffect(useCallback(() => {
+    Notifications.setBadgeCountAsync(0).catch(() => {});
+    Notifications.dismissAllNotificationsAsync().catch(() => {});
+  }, []));
+
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
+      <AppBgPattern />
       <View style={styles.header}>
         <Text style={styles.headerTitle}>{t('notifications.title')}</Text>
         <TouchableOpacity
-          onPress={() => markAllRead()}
+          onPress={() => { markAllRead(); Notifications.setBadgeCountAsync(0).catch(() => {}); }}
           disabled={isMarking}
           style={styles.markAllBtn}
         >

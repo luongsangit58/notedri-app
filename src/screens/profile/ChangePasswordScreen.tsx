@@ -10,6 +10,7 @@ import { useMutation } from '@tanstack/react-query';
 import { profileApi } from '../../api/profile';
 import { useColors } from '../../utils/theme';
 import { useT } from '../../i18n';
+import AppBgPattern from '../../components/AppBgPattern';
 
 type FieldErrors = Record<string, string[]>;
 
@@ -103,6 +104,7 @@ export default function ChangePasswordScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom']}>
+      <AppBgPattern />
       <ScrollView contentContainerStyle={{ padding: 20 }} keyboardShouldPersistTaps="handled">
         <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 24, lineHeight: 18 }}>
           {t('change_password.hint')}

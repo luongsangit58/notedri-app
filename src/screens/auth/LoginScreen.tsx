@@ -42,7 +42,7 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
       const userData = me.data?.data ?? me.data;
       await useAuthStore.getState().setSession(token, userData);
     } catch (e: any) {
-      Alert.alert(t('common.error'), e?.message ?? 'Đăng nhập Google thất bại');
+      Alert.alert(t('common.error'), e?.message ?? t('auth.login_google_failed'));
     }
   };
 
@@ -58,7 +58,7 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
           {t('auth.app_tagline')}
         </Text>
         <Text style={{ color: C.primary, fontSize: 13, fontStyle: 'italic', marginTop: 4 }}>
-          "Quản lý chi phí, tối ưu vận hành"
+          {t('auth.slogan')}
         </Text>
       </View>
 

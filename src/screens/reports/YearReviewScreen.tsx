@@ -5,6 +5,7 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import { useRoute } from '@react-navigation/native';
 import { formatVND } from '../../utils/format';
 import { useT } from '../../i18n';
+import AppBgPattern from '../../components/AppBgPattern';
 
 /* Dark navy card matching web design */
 const NAVY = '#0b1220';
@@ -16,7 +17,8 @@ const WHITE = '#e8eef9';
 function fmt(n: number | string | null | undefined): string {
   const v = Number(n ?? 0);
   if (isNaN(v)) return '—';
-  return v.toLocaleString('vi-VN');
+  // Hermes không hỗ trợ vi-VN toLocaleString đáng tin -> tách nghìn thủ công (đồng bộ format.ts).
+  return Math.round(v).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 }
 function fmtLit(n: number | null | undefined): string {
   if (n == null) return '—';
@@ -54,6 +56,7 @@ export default function YearReviewScreen() {
   if (!hasData) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: NAVY, justifyContent: 'center', alignItems: 'center', padding: 24 }} edges={['bottom']}>
+        <AppBgPattern />
         <FontAwesome5 name="calendar-alt" size={48} color={SLATE} />
         <Text style={{ color: SLATE, fontSize: 15, marginTop: 12, textAlign: 'center' }}>
           {t('year_review.no_data')}
@@ -66,6 +69,7 @@ export default function YearReviewScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: NAVY }} edges={['bottom']}>
+      <AppBgPattern />
       <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 40 }}>
 
         {/* Header brand */}
@@ -99,14 +103,14 @@ export default function YearReviewScreen() {
             <Tile
               label={t('year_review.fuel_cost')}
               value={formatVND(fuelCost)}
-              sub={liters != null ? fmtLit(liters) + (fillCount != null ? ` · ${fillCount} lần` : '') : undefined}
+              sub={liters != null ? fmtLit(liters) + (fillCount != null ? ` · ${t('reports.times_count', { count: fillCount })}` : '') : undefined}
             />
           )}
           {serviceCost != null && (
             <Tile
               label={t('year_review.service_cost')}
               value={formatVND(serviceCost)}
-              sub={serviceCount != null ? `${serviceCount} lần` : undefined}
+              sub={serviceCount != null ? t('reports.times_count', { count: serviceCount }) : undefined}
             />
           )}
         </View>
