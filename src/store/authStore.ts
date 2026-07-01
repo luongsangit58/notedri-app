@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import { authApi } from '../api/auth';
 import { storage } from '../utils/storage';
 import { registerPushToken } from '../utils/pushNotifications';
+import { sendDeviceHeartbeat } from '../api/devices';
+import { useI18nStore } from '../i18n';
 
 interface User {
   id: number;
@@ -42,6 +44,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       if (token && userStr) {
         const user = JSON.parse(userStr);
         set({ token, user, isLoading: false });
+        // Tạo/cập nhật device session cho user đã đăng nhập sẵn (heartbeat upsert).
+        sendDeviceHeartbeat();
         // Background refresh so plan/limit changes on the server are picked up
         authApi.me().then(res => {
           const fresh = res.data?.data ?? res.data;
@@ -67,8 +71,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await storage.setUser(JSON.stringify(user));
       set({ token, user, isLoading: false });
       registerPushToken();
+      sendDeviceHeartbeat();
     } catch (error: any) {
-      const message = error.response?.data?.message ?? 'Đăng nhập thất bại';
+      const message = error.response?.data?.message ?? useI18nStore.getState().t('auth.login_failed');
       set({ isLoading: false, error: message });
       throw error;
     }
@@ -83,8 +88,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await storage.setUser(JSON.stringify(user));
       set({ token, user, isLoading: false });
       registerPushToken();
+      sendDeviceHeartbeat();
     } catch (error: any) {
-      const message = error.response?.data?.message ?? 'Đăng nhập Google thất bại';
+      const message = error.response?.data?.message ?? useI18nStore.getState().t('auth.google_login_failed');
       set({ isLoading: false, error: message });
       throw error;
     }

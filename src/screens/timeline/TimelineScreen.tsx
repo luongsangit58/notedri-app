@@ -4,26 +4,25 @@ import {
   TouchableOpacity, ScrollView, StyleSheet,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AppBgPattern from '../../components/AppBgPattern';
 import { useNavigation } from '@react-navigation/native';
 import { useTimeline } from '../../hooks/useTimeline';
 import { useVehicles } from '../../hooks/useVehicles';
 import TimelineItem from '../../components/TimelineItem';
-import LoadingView from '../../components/LoadingView';
 import ErrorView from '../../components/ErrorView';
 import { useColors } from '../../utils/theme';
 import { useT } from '../../i18n';
 
 type TypeFilter = 'all' | 'refuel' | 'service';
 
-const TYPE_CHIPS: { key: TypeFilter; label: string }[] = [
-  { key: 'all', label: 'Tất cả' },
-  { key: 'refuel', label: 'Xăng' },
-  { key: 'service', label: 'Bảo dưỡng' },
-];
-
 export default function TimelineScreen() {
   const colors = useColors();
   const t = useT();
+  const TYPE_CHIPS: { key: TypeFilter; label: string }[] = [
+    { key: 'all', label: t('common.all') },
+    { key: 'refuel', label: t('timeline.filter_refuel') },
+    { key: 'service', label: t('timeline.filter_service') },
+  ];
   const styles = StyleSheet.create({
     filterHeader: {
       marginBottom: 8,
@@ -85,24 +84,20 @@ export default function TimelineScreen() {
     fetchNextPage,
     hasNextPage,
     isFetching,
-  } = useTimeline(selectedVehicleId);
+  } = useTimeline(selectedVehicleId, typeFilter === 'all' ? undefined : typeFilter);
 
-  const allItems = data?.pages.flatMap((p: any) => p.data ?? p) ?? [];
-
-  const filteredItems = useMemo(() => {
-    if (typeFilter === 'all') return allItems;
-    return allItems.filter((item: any) => item.type === typeFilter);
-  }, [allItems, typeFilter]);
+  // Lọc đã làm server-side (theo type) nên phân trang đúng - không lọc lại ở client
+  const filteredItems = data?.pages.flatMap((p: any) => p.data ?? p) ?? [];
 
   const handleEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) fetchNextPage();
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  if (isLoading) return <LoadingView />;
   if (isError) return <ErrorView message={t('timeline.load_error')} onRetry={refetch} />;
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom']}>
+      <AppBgPattern />
       <FlatList
         data={filteredItems}
         keyExtractor={(item: any, index) => item.id ? `${item.type}-${item.id}` : `timeline-${index}`}
@@ -180,9 +175,11 @@ export default function TimelineScreen() {
           </View>
         }
         ListEmptyComponent={
-          <View style={{ alignItems: 'center', marginTop: 48 }}>
-            <Text style={{ color: colors.textSecondary }}>Chưa có sự kiện nào</Text>
-          </View>
+          isLoading
+            ? <ActivityIndicator color={colors.primary} style={{ marginTop: 48 }} />
+            : <View style={{ alignItems: 'center', marginTop: 48 }}>
+                <Text style={{ color: colors.textSecondary }}>{t('timeline.empty')}</Text>
+              </View>
         }
         ListFooterComponent={
           isFetchingNextPage ? (

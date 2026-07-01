@@ -239,7 +239,7 @@ export default function NearbyStationsScreen() {
       setStations(list);
       setScreenState('success');
     } catch (err: any) {
-      const msg = err?.response?.data?.message ?? err?.message ?? 'Không thể tải danh sách trạm';
+      const msg = err?.response?.data?.message ?? err?.message ?? t('nearby_stations.load_failed');
       setErrorMsg(msg);
       setScreenState('error');
     }
@@ -354,7 +354,7 @@ export default function NearbyStationsScreen() {
               onPress={onSelect}
               style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: colors.border }}>
               <FontAwesome5 name="check" size={13} color={colors.text} solid />
-              <Text style={{ color: colors.text, fontSize: 13, fontWeight: '600' }}>Chọn</Text>
+              <Text style={{ color: colors.text, fontSize: 13, fontWeight: '600' }}>{t('nearby_stations.select')}</Text>
             </TouchableOpacity>
           )}
         </View>

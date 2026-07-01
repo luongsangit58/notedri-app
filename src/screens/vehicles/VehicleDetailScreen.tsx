@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, RefreshControl, Switch } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, RefreshControl, Switch, ImageBackground } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
@@ -7,7 +7,10 @@ import { useVehicle, useVehicleHealth, useVehicleReminders, useToggleVehicleRest
 import { useObdDtcEvents } from '../../hooks/useObd';
 import LoadingView from '../../components/LoadingView';
 import ErrorView from '../../components/ErrorView';
+import AppBgPattern from '../../components/AppBgPattern';
 import { useColors } from '../../utils/theme';
+import { contentWide } from '../../utils/layout';
+import { flattenReminders } from '../../utils/reminders';
 import { formatKm } from '../../utils/format';
 import { useAuthStore } from '../../store/authStore';
 import { useT } from '../../i18n';
@@ -261,78 +264,94 @@ export default function VehicleDetailScreen() {
     : scoreTotal >= 50 ? t('vehicles.score_medium')
     : t('vehicles.score_warn');
 
-  const reminders = remindersData?.data ?? remindersData ?? [];
+  const reminders = flattenReminders(remindersData);
   const activeDtc: any[] = dtcData?.data ?? [];
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom']}>
+      <AppBgPattern />
       <ScrollView
-        contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
+        contentContainerStyle={[{ padding: 16, paddingBottom: 32 }, contentWide]}
         refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={colors.primary} />}>
 
-        {/* Thông tin xe */}
-        <View style={{ backgroundColor: colors.surface, borderRadius: 14, padding: 16, marginBottom: 12 }}>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: colors.text, fontSize: 20, fontWeight: '800' }}>{v?.ten ?? v?.name}</Text>
-              {(v?.bien_so ?? v?.license_plate) ? (
-                <Text style={{ color: colors.textSecondary, marginTop: 4, fontSize: 14 }}>
-                  {v?.bien_so ?? v?.license_plate}
-                </Text>
-              ) : null}
-              {(v?.odo_hien_tai ?? v?.current_odometer) != null && (
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
-                  <FontAwesome5 name="road" size={14} color={colors.primary} solid />
-                  <Text style={{ color: colors.primary, marginLeft: 6, fontWeight: '700', fontSize: 16 }}>
-                    {formatKm(v?.odo_hien_tai ?? v?.current_odometer)}
+        {/* Thông tin xe — ảnh làm background nếu có */}
+        <ImageBackground
+          source={v?.anh_url ? { uri: v.anh_url } : undefined}
+          style={{ borderRadius: 14, marginBottom: 12, overflow: 'hidden', backgroundColor: colors.surface }}
+          imageStyle={{ opacity: 0.2 }}
+          resizeMode="cover">
+          <View style={{ padding: 16 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: colors.text, fontSize: 20, fontWeight: '800' }}>{v?.ten ?? v?.name}</Text>
+                {(v?.bien_so ?? v?.license_plate) ? (
+                  <Text style={{ color: colors.textSecondary, marginTop: 4, fontSize: 14 }}>
+                    {v?.bien_so ?? v?.license_plate}
                   </Text>
+                ) : null}
+                {(v?.odo_hien_tai ?? v?.current_odometer) != null && (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
+                    <FontAwesome5 name="road" size={14} color={colors.primary} solid />
+                    <Text style={{ color: colors.primary, marginLeft: 6, fontWeight: '700', fontSize: 16 }}>
+                      {formatKm(v?.odo_hien_tai ?? v?.current_odometer)}
+                    </Text>
+                  </View>
+                )}
+                {(v?.make || v?.model || v?.nam) && (
+                  <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 6 }}>
+                    {[v?.make, v?.model, v?.nam].filter(Boolean).join(' · ')}
+                  </Text>
+                )}
+                {(v?.fuel_type || v?.tank_capacity_l || v?.consumption_official) && (
+                  <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>
+                    {[
+                      v?.fuel_type,
+                      v?.tank_capacity_l ? t('vehicle_detail.tank_short', { size: v.tank_capacity_l }) : null,
+                      v?.consumption_official ? t('vehicle_detail.consumption_short', { value: v.consumption_official }) : null,
+                    ].filter(Boolean).join(' · ')}
+                  </Text>
+                )}
+              </View>
+              {scoreTotal != null && (
+                <View style={{ alignItems: 'center', marginLeft: 16 }}>
+                  <Text style={{ color: badgeColor, fontSize: 36, fontWeight: '800' }}>{scoreTotal}</Text>
+                  <Text style={{ color: badgeColor, fontSize: 12 }}>{badgeLabel}</Text>
                 </View>
               )}
-              {/* Specs row */}
-              {(v?.make || v?.model || v?.nam) && (
-                <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 6 }}>
-                  {[v?.make, v?.model, v?.nam].filter(Boolean).join(' · ')}
-                </Text>
-              )}
-              {(v?.fuel_type || v?.tank_capacity_l || v?.consumption_official) && (
-                <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>
-                  {[
-                    v?.fuel_type,
-                    v?.tank_capacity_l ? `Bình ${v.tank_capacity_l}L` : null,
-                    v?.consumption_official ? `NSX ${v.consumption_official}L/100km` : null,
-                  ].filter(Boolean).join(' · ')}
-                </Text>
-              )}
             </View>
-            {scoreTotal != null && (
-              <View style={{ alignItems: 'center', marginLeft: 16 }}>
-                <Text style={{ color: badgeColor, fontSize: 36, fontWeight: '800' }}>{scoreTotal}</Text>
-                <Text style={{ color: badgeColor, fontSize: 12 }}>{badgeLabel}</Text>
-              </View>
-            )}
           </View>
-        </View>
+        </ImageBackground>
 
-        {/* Actions row */}
-        <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
-          <TouchableOpacity
-            onPress={() => navigation.navigate('EditVehicle', { vehicleId })}
-            style={{ flex: 1, backgroundColor: colors.surface, padding: 12, borderRadius: 10, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6 }}>
-            <FontAwesome5 name="pen" size={13} color={colors.text} solid />
-            <Text style={{ color: colors.text, fontWeight: '600', fontSize: 13 }}>{t('vehicles.edit_label')}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => navigation.navigate('Reminders', { vehicleId })}
-            style={{ flex: 1, backgroundColor: colors.surface, padding: 12, borderRadius: 10, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6 }}>
-            <FontAwesome5 name="bell" size={13} color={colors.text} solid />
-            <Text style={{ color: colors.text, fontWeight: '600', fontSize: 13 }}>{t('vehicles.detail_reminders')}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => navigation.navigate('AddService')}
-            style={{ flex: 1, backgroundColor: colors.surface, padding: 12, borderRadius: 10, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6 }}>
-            <FontAwesome5 name="wrench" size={13} color={colors.text} solid />
-            <Text style={{ color: colors.text, fontWeight: '600', fontSize: 13 }}>{t('vehicles.detail_service')}</Text>
-          </TouchableOpacity>
+        {/* Actions row 2x2 */}
+        <View style={{ gap: 8, marginBottom: 8 }}>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('EditVehicle', { vehicleId })}
+              style={{ flex: 1, backgroundColor: colors.surface, padding: 12, borderRadius: 10, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6 }}>
+              <FontAwesome5 name="pen" size={13} color={colors.text} solid />
+              <Text style={{ color: colors.text, fontWeight: '600', fontSize: 13 }}>{t('vehicles.edit_label')}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('Dossier', { vehicleId })}
+              style={{ flex: 1, backgroundColor: colors.surface, padding: 12, borderRadius: 10, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6 }}>
+              <FontAwesome5 name="book" size={13} color={colors.text} solid />
+              <Text style={{ color: colors.text, fontWeight: '600', fontSize: 13 }}>{t('vehicles.notebook_label')}</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('Reminders', { vehicleId })}
+              style={{ flex: 1, backgroundColor: colors.surface, padding: 12, borderRadius: 10, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6 }}>
+              <FontAwesome5 name="bell" size={13} color={colors.text} solid />
+              <Text style={{ color: colors.text, fontWeight: '600', fontSize: 13 }}>{t('vehicles.detail_reminders')}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('AddService')}
+              style={{ flex: 1, backgroundColor: colors.surface, padding: 12, borderRadius: 10, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6 }}>
+              <FontAwesome5 name="wrench" size={13} color={colors.text} solid />
+              <Text style={{ color: colors.text, fontWeight: '600', fontSize: 13 }}>{t('vehicles.detail_service')}</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Nhanh */}
@@ -386,58 +405,34 @@ export default function VehicleDetailScreen() {
           />
         </TouchableOpacity>
 
-        {/* OBD - Premium feature */}
+        {/* GPS Hành trình - Free feature */}
         <TouchableOpacity
-          onPress={() => {
-            navigation.navigate('OBDSetup', {
+          onPress={() =>
+            navigation.navigate('GpsTrips', {
               vehicleId,
               vehicleName: v?.ten ?? v?.name ?? '',
-              consumptionOfficial: v?.consumption_official ?? null,
-            });
-          }}
+            })
+          }
           style={{
             flexDirection: 'row', alignItems: 'center', gap: 12,
             backgroundColor: colors.surface, borderRadius: 12, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: colors.border,
-            opacity: isPremium ? 1 : 0.85,
           }}>
           <View style={{
             width: 40, height: 40, borderRadius: 20,
             backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center',
           }}>
-            <FontAwesome5 name={isPremium ? 'plug' : 'lock'} size={16} color={colors.primary} solid />
+            <FontAwesome5 name="route" size={16} color={colors.primary} solid />
           </View>
           <View style={{ flex: 1 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14 }}>{t('vehicle_detail.obd_title')}</Text>
-              {!isPremium && (
-                <View style={{
-                  backgroundColor: colors.primary, borderRadius: 4,
-                  paddingHorizontal: 5, paddingVertical: 1,
-                }}>
-                  <Text style={{ color: colors.primaryText, fontSize: 9, fontWeight: '800' }}>PREMIUM</Text>
-                </View>
-              )}
-            </View>
+            <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14 }}>{t('vehicle_detail.gps_trips_title')}</Text>
             <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 1 }}>
-              {!isPremium
-                ? t('vehicle_detail.obd_premium_desc')
-                : activeDtc.length > 0
-                  ? t('vehicle_detail.obd_dtc_desc', { n: activeDtc.length })
-                  : t('vehicle_detail.obd_connected_desc')}
+              {t('vehicle_detail.gps_trips_desc')}
             </Text>
           </View>
-          {isPremium && activeDtc.length > 0 && (
-            <View style={{
-              backgroundColor: colors.error, borderRadius: 10,
-              paddingHorizontal: 8, paddingVertical: 2,
-            }}>
-              <Text style={{ color: colors.primaryText, fontSize: 12, fontWeight: '700' }}>
-                {activeDtc.length}
-              </Text>
-            </View>
-          )}
-          <FontAwesome5 name={isPremium ? 'chevron-right' : 'arrow-right'} size={13} color={colors.textSecondary} />
+          <FontAwesome5 name="chevron-right" size={13} color={colors.textSecondary} />
         </TouchableOpacity>
+
+        {/* OBD - hidden until feature is ready */}
 
         {/* Sức khoẻ xe — breakdown card */}
         {healthData != null && (
@@ -463,7 +458,12 @@ export default function VehicleDetailScreen() {
               const days = r.remaining_days ?? r.days_remaining;
               const urgentColor = days != null && days <= 30 ? colors.error : days != null && days <= 90 ? colors.warning : colors.textSecondary;
               return (
-                <View key={r.id ?? i} style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8, alignItems: 'center' }}>
+                <TouchableOpacity
+                  key={r.id ?? i}
+                  activeOpacity={0.6}
+                  disabled={r.id == null}
+                  onPress={() => r.id != null && navigation.navigate('EditReminder', { reminderId: r.id, vehicleId })}
+                  style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8, alignItems: 'center' }}>
                   <Text style={{ color: colors.text, flex: 1, fontSize: 13 }}>{r.hang_muc ?? r.service_type ?? r.title}</Text>
                   {days != null ? (
                     <Text style={{ color: urgentColor, fontSize: 12, fontWeight: '700' }}>
@@ -472,7 +472,7 @@ export default function VehicleDetailScreen() {
                   ) : r.due_date ? (
                     <Text style={{ color: colors.textSecondary, fontSize: 12 }}>{dayjs(r.due_date).format('DD/MM/YYYY')}</Text>
                   ) : null}
-                </View>
+                </TouchableOpacity>
               );
             })}
           </View>

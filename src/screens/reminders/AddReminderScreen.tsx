@@ -4,6 +4,7 @@ import {
   KeyboardAvoidingView, Platform, Alert, ActivityIndicator, Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AppBgPattern from '../../components/AppBgPattern';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useCreateReminder } from '../../hooks/useReminders';
 import { useVehicles } from '../../hooks/useVehicles';
@@ -71,9 +72,9 @@ export default function AddReminderScreen() {
   ];
 
   const CHE_DO_OPTIONS: { value: CheDo; label: string; desc: string }[] = [
-    { value: 'chu_ky', label: t('reminders.mode_chu_ky'), desc: 'Theo số km hoặc tháng - phù hợp bảo dưỡng định kỳ' },
-    { value: 'ngay_co_dinh', label: t('reminders.mode_ngay_co_dinh'), desc: 'Hẹn một ngày cụ thể và gia hạn khi hoàn tất' },
-    { value: 'mot_lan', label: t('reminders.mode_mot_lan'), desc: 'Việc làm một lần, tự động tắt sau khi hoàn tất' },
+    { value: 'chu_ky', label: t('reminders.mode_chu_ky'), desc: t('add_reminder.mode_chu_ky_desc') },
+    { value: 'ngay_co_dinh', label: t('reminders.mode_ngay_co_dinh'), desc: t('add_reminder.mode_ngay_co_dinh_desc') },
+    { value: 'mot_lan', label: t('reminders.mode_mot_lan'), desc: t('add_reminder.mode_mot_lan_desc') },
   ];
 
   const handleSubmit = () => {
@@ -112,6 +113,7 @@ export default function AddReminderScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom']}>
+      <AppBgPattern />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
 
         {/* Header */}
@@ -169,7 +171,7 @@ export default function AddReminderScreen() {
           />
 
           {/* Loại */}
-          <FieldLabel>Loại *</FieldLabel>
+          <FieldLabel>{t('reminders.type_label')}</FieldLabel>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 4 }}>
             {LOAI_OPTIONS.map((opt) => (
               <TouchableOpacity
@@ -194,7 +196,7 @@ export default function AddReminderScreen() {
           </ScrollView>
 
           {/* Chế độ */}
-          <FieldLabel>Chế độ *</FieldLabel>
+          <FieldLabel>{t('reminders.mode_label')}</FieldLabel>
           <View style={{ gap: 8, marginBottom: 4 }}>
             {CHE_DO_OPTIONS.map((opt) => (
               <TouchableOpacity
@@ -240,7 +242,7 @@ export default function AddReminderScreen() {
               <TextInput
                 value={interval_km}
                 onChangeText={setIntervalKm}
-                placeholder="VD: 5000"
+                placeholder={t('reminders.eg_5000')}
                 placeholderTextColor={colors.textSecondary}
                 keyboardType="numeric"
                 style={inputStyle}
@@ -250,23 +252,23 @@ export default function AddReminderScreen() {
               <TextInput
                 value={interval_thang}
                 onChangeText={setIntervalThang}
-                placeholder="VD: 6"
+                placeholder={t('reminders.eg_6')}
                 placeholderTextColor={colors.textSecondary}
                 keyboardType="numeric"
                 style={inputStyle}
               />
 
-              <FieldLabel>ODO lần làm gần nhất</FieldLabel>
+              <FieldLabel>{t('reminders.last_done_odo_label')}</FieldLabel>
               <TextInput
                 value={last_done_odo}
                 onChangeText={setLastDoneOdo}
-                placeholder="VD: 45000"
+                placeholder={t('reminders.eg_45000')}
                 placeholderTextColor={colors.textSecondary}
                 keyboardType="numeric"
                 style={inputStyle}
               />
 
-              <FieldLabel>Ngày làm gần nhất (YYYY-MM-DD)</FieldLabel>
+              <FieldLabel>{t('reminders.last_done_date_label')}</FieldLabel>
               <TextInput
                 value={last_done_date}
                 onChangeText={setLastDoneDate}
@@ -292,11 +294,11 @@ export default function AddReminderScreen() {
           )}
 
           {/* Ghi chú */}
-          <FieldLabel>Ghi chú</FieldLabel>
+          <FieldLabel>{t('common.note')}</FieldLabel>
           <TextInput
             value={ghi_chu}
             onChangeText={setGhiChu}
-            placeholder="Ghi chú thêm..."
+            placeholder={t('refuels.note_placeholder')}
             placeholderTextColor={colors.textSecondary}
             multiline
             style={[inputStyle, { minHeight: 80, textAlignVertical: 'top' }]}

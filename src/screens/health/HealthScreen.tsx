@@ -4,13 +4,14 @@ import {
 } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AppBgPattern from '../../components/AppBgPattern';
 import { useNavigation } from '@react-navigation/native';
 import { useQueries } from '@tanstack/react-query';
 import { useVehicles } from '../../hooks/useVehicles';
 import { vehiclesApi } from '../../api/vehicles';
 import client from '../../api/client';
 import { useColors } from '../../utils/theme';
-import { useT } from '../../i18n';
+import { useT, useI18nStore } from '../../i18n';
 
 /* ─── types ─── */
 type OrganStatus = 'urgent' | 'warn' | 'info' | 'ok' | 'na';
@@ -58,17 +59,19 @@ function scoreColor(score: number): string {
 }
 
 function scoreBand(score: number): string {
-  if (score >= 85) return 'Xuất sắc';
-  if (score >= 70) return 'Tốt';
-  if (score >= 55) return 'Cần chú ý';
-  if (score >= 40) return 'Kém';
-  return 'Cần kiểm tra';
+  const t = useI18nStore.getState().t;
+  if (score >= 85) return t('dashboard.health_band_excellent');
+  if (score >= 70) return t('dashboard.health_band_good');
+  if (score >= 55) return t('dashboard.health_band_warn');
+  if (score >= 40) return t('dashboard.health_band_poor');
+  return t('health.band_check_needed');
 }
 
 function pillarQualLabel(pct: number): string {
-  if (pct >= 80) return 'Tốt';
-  if (pct >= 50) return 'Khá';
-  return 'Cần chú ý';
+  const t = useI18nStore.getState().t;
+  if (pct >= 80) return t('dashboard.health_band_good');
+  if (pct >= 50) return t('health.pillar_fair');
+  return t('dashboard.health_band_warn');
 }
 
 function organStatusColor(status: OrganStatus): string {
@@ -114,8 +117,22 @@ function PillarBar({ pillar }: { pillar: Pillar }) {
   );
 }
 
+/* Backend trả cta = {label, url} (web route). App điều hướng theo organ.key. */
+function ctaScreenForKey(key?: string): string {
+  if (key === 'tieu_thu') return 'AddRefuel';
+  if (key === 'chi_phi') return 'Overview';
+  return 'Reminders'; // các organ nhắc nhở (bao_duong, giay_to, dang_kiem, bao_hiem...)
+}
+function ctaLabelOf(organ: any, t: any): string {
+  if (organ?.cta && typeof organ.cta === 'object' && organ.cta.label) return organ.cta.label;
+  if (organ?.cta === 'AddService') return t('health.cta_add_service');
+  if (organ?.cta === 'AddReminder') return t('health.cta_add_reminder');
+  if (organ?.cta === 'AddOdometer') return t('health.cta_update_odo');
+  return t('health.cta_handle');
+}
+
 /* ─── OrganRow ─── */
-function OrganRow({ organ, onCta }: { organ: Organ & { cta?: string }; onCta?: (screen: string) => void }) {
+function OrganRow({ organ, onCta }: { organ: Organ & { cta?: any }; onCta?: (screen: string) => void }) {
   const colors = useColors();
   const t = useT();
   if (organ.status === 'na') return null;
@@ -140,17 +157,14 @@ function OrganRow({ organ, onCta }: { organ: Organ & { cta?: string }; onCta?: (
       )}
       {organ.cta && (organ.status === 'urgent' || organ.status === 'warn') && (
         <TouchableOpacity
-          onPress={() => onCta && onCta(organ.cta!)}
+          onPress={() => onCta && onCta(ctaScreenForKey(organ.key))}
           style={{
             marginTop: 6, alignSelf: 'flex-start',
             backgroundColor: clr + '22', borderRadius: 6,
             paddingHorizontal: 10, paddingVertical: 4,
           }}>
           <Text style={{ color: clr, fontSize: 11, fontWeight: '700' }}>
-            {organ.cta === 'AddService' ? t('health.cta_add_service')
-              : organ.cta === 'AddReminder' ? t('health.cta_add_reminder')
-              : organ.cta === 'AddOdometer' ? t('health.cta_update_odo')
-              : t('health.cta_handle')}
+            {ctaLabelOf(organ, t)}
           </Text>
         </TouchableOpacity>
       )}
@@ -176,9 +190,9 @@ function ScoreTrendChart({ points }: { points: TrendPoint[] }) {
     <View style={{ marginTop: 12 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
         <FontAwesome5 name="chart-line" size={11} color={colors.textSecondary} />
-        <Text style={{ color: colors.textSecondary, fontSize: 11 }}>Xu hướng điểm sức khoẻ</Text>
+        <Text style={{ color: colors.textSecondary, fontSize: 11 }}>{t('health.trend_title')}</Text>
         <Text style={{ color: scoreColor(latest.total), fontWeight: '700', fontSize: 11, marginLeft: 'auto' }}>
-          {latest.total} hiện tại
+          {latest.total} {t('health.current_label')}
         </Text>
       </View>
       <View style={{ flexDirection: 'row', alignItems: 'flex-end', height: CHART_H + 12 }}>
@@ -221,7 +235,8 @@ interface HealthCardProps {
 
 function HealthCard({ vehicle, health, loading, onAddReminder, onCta, history }: HealthCardProps) {
   const colors = useColors();
-  const name = vehicle.ten ?? vehicle.name ?? 'Xe';
+  const t = useT();
+  const name = vehicle.ten ?? vehicle.name ?? t('common.vehicle');
   const plate = vehicle.bien_so ?? vehicle.license_plate ?? '';
 
   const scoreData = health?.score;
@@ -275,15 +290,15 @@ function HealthCard({ vehicle, health, loading, onAddReminder, onCta, history }:
           {scoreData?.confidence && scoreData.confidence !== 'high' && (
             <View style={{ backgroundColor: colors.border, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2 }}>
               <Text style={{ color: colors.textSecondary, fontSize: 11 }}>
-                {scoreData.confidence === 'medium' ? 'Độ tin cậy TB'
-                  : scoreData.confidence === 'low' ? 'Độ tin cậy thấp'
-                  : 'Ít dữ liệu'}
+                {scoreData.confidence === 'medium' ? t('health.confidence_medium')
+                  : scoreData.confidence === 'low' ? t('health.confidence_low')
+                  : t('health.confidence_minimal')}
               </Text>
             </View>
           )}
           {scoreData?.critical && (
             <View style={{ backgroundColor: '#F4433622', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2 }}>
-              <Text style={{ color: '#F44336', fontSize: 11, fontWeight: '700' }}>Rủi ro cao</Text>
+              <Text style={{ color: '#F44336', fontSize: 11, fontWeight: '700' }}>{t('health.high_risk')}</Text>
             </View>
           )}
         </View>
@@ -311,7 +326,7 @@ function HealthCard({ vehicle, health, loading, onAddReminder, onCta, history }:
       {/* No health data */}
       {!loading && total == null && organs.length === 0 && (
         <Text style={{ color: colors.textSecondary, fontSize: 13 }}>
-          Chưa có dữ liệu sức khoẻ. Hãy thêm lịch sử bảo dưỡng để xem.
+          {t('health.no_health_data')}
         </Text>
       )}
 
@@ -321,13 +336,13 @@ function HealthCard({ vehicle, health, loading, onAddReminder, onCta, history }:
           <View style={{ height: 1, backgroundColor: colors.border, marginBottom: 10 }} />
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
             <FontAwesome5 name="chart-line" size={12} color={colors.primary} solid />
-            <Text style={{ color: colors.text, fontWeight: '700', fontSize: 13 }}>Cách tăng điểm</Text>
+            <Text style={{ color: colors.text, fontWeight: '700', fontSize: 13 }}>{t('health.improve_score_tip')}</Text>
           </View>
           {organs.filter(o => o.status === 'urgent' || o.status === 'warn').slice(0, 3).map(o => (
             <TouchableOpacity
               key={o.key}
-              onPress={() => onCta && o.cta && onCta((o as any).cta)}
-              activeOpacity={(o as any).cta ? 0.7 : 1}
+              onPress={() => onCta && onCta(ctaScreenForKey(o.key))}
+              activeOpacity={0.7}
               style={{
                 flexDirection: 'row', alignItems: 'center', gap: 8,
                 backgroundColor: colors.background, borderRadius: 8,
@@ -363,7 +378,7 @@ function HealthCard({ vehicle, health, loading, onAddReminder, onCta, history }:
             paddingHorizontal: 12, paddingVertical: 6,
           }}>
           <Text style={{ color: colors.warning, fontWeight: '700', fontSize: 13 }}>
-            → Thêm lời nhắc
+            {t('health.add_reminder_arrow')}
           </Text>
         </TouchableOpacity>
       )}
@@ -382,6 +397,7 @@ function HealthCard({ vehicle, health, loading, onAddReminder, onCta, history }:
 /* ─── Main screen ─── */
 export default function HealthScreen() {
   const colors = useColors();
+  const t = useT();
   const navigation = useNavigation<any>();
 
   const { data: vehiclesRaw, isLoading: vehiclesLoading, isError: vehiclesError, refetch: refetchVehicles } = useVehicles();
@@ -422,8 +438,9 @@ export default function HealthScreen() {
   if (vehiclesLoading) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}>
+        <AppBgPattern />
         <ActivityIndicator color={colors.primary} size="large" />
-        <Text style={{ color: colors.textSecondary, marginTop: 12 }}>Đang tải dữ liệu xe...</Text>
+        <Text style={{ color: colors.textSecondary, marginTop: 12 }}>{t('health.loading')}</Text>
       </SafeAreaView>
     );
   }
@@ -431,11 +448,12 @@ export default function HealthScreen() {
   if (vehiclesError) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
-        <Text style={{ color: colors.error, fontSize: 16, fontWeight: '700', marginBottom: 8 }}>Không tải được dữ liệu</Text>
+        <AppBgPattern />
+        <Text style={{ color: colors.error, fontSize: 16, fontWeight: '700', marginBottom: 8 }}>{t('common.error_load')}</Text>
         <TouchableOpacity
           onPress={() => refetchVehicles()}
           style={{ backgroundColor: colors.primary, borderRadius: 10, paddingHorizontal: 24, paddingVertical: 10, marginTop: 12 }}>
-          <Text style={{ color: colors.primaryText, fontWeight: '700' }}>Thử lại</Text>
+          <Text style={{ color: colors.primaryText, fontWeight: '700' }}>{t('common.retry')}</Text>
         </TouchableOpacity>
       </SafeAreaView>
     );
@@ -444,10 +462,11 @@ export default function HealthScreen() {
   if (vehicles.length === 0) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+        <AppBgPattern />
         <FontAwesome5 name="car-side" size={48} color={colors.textSecondary} solid style={{ marginBottom: 12 }} />
-        <Text style={{ color: colors.text, fontSize: 16, fontWeight: '700', marginBottom: 6 }}>Chưa có xe nào</Text>
+        <Text style={{ color: colors.text, fontSize: 16, fontWeight: '700', marginBottom: 6 }}>{t('health.no_vehicles')}</Text>
         <Text style={{ color: colors.textSecondary, fontSize: 13, textAlign: 'center' }}>
-          Thêm xe vào NoteDri để xem sức khoẻ xe.
+          {t('health.no_vehicles_subtitle')}
         </Text>
       </SafeAreaView>
     );
@@ -455,13 +474,14 @@ export default function HealthScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom']}>
+      <AppBgPattern />
       <ScrollView
         contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
         refreshControl={
           <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor={colors.primary} />
         }>
         <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 16 }}>
-          Kiểm tra sức khoẻ {vehicles.length} xe của bạn
+          {t('health.check_subtitle', { count: vehicles.length })}
         </Text>
         {vehicles.map((v, idx) => {
           const q = healthQueries[idx];

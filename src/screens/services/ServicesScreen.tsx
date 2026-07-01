@@ -5,25 +5,27 @@ import {
   TextInput, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AppBgPattern from '../../components/AppBgPattern';
 import { useNavigation } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useServices } from '../../hooks/useServices';
 import { useVehicles } from '../../hooks/useVehicles';
 import { useColors } from '../../utils/theme';
+import { contentWide } from '../../utils/layout';
 import { formatVND } from '../../utils/format';
 import { useT } from '../../i18n';
 
-const LOAI_LABELS: Record<string, string> = {
-  bao_duong: 'Bảo dưỡng',
-  sua_chua: 'Sửa chữa',
-  lop: 'Lốp',
-  bao_hiem: 'Bảo hiểm',
-  dang_kiem: 'Đăng kiểm',
-  phat_nguoi: 'Phạt nguội',
-  phi_gui_xe: 'Phí gửi xe',
-  phi_cau_duong: 'Phí cầu đường',
-  rua_xe: 'Rửa xe',
-  khac: 'Khác',
+const LOAI_KEYS: Record<string, string> = {
+  bao_duong: 'services.type_bao_duong',
+  sua_chua: 'services.type_sua_chua',
+  lop: 'services.type_lop',
+  bao_hiem: 'reminders.type_bao_hiem',
+  dang_kiem: 'reminders.type_dang_kiem',
+  phat_nguoi: 'services.type_phat_nguoi',
+  phi_gui_xe: 'services.type_phi_gui_xe',
+  phi_cau_duong: 'services.type_phi_cau_duong',
+  rua_xe: 'services.type_rua_xe',
+  khac: 'reminders.type_khac',
 };
 
 const ALL_CHIP = 'tat_ca';
@@ -49,6 +51,7 @@ interface ServiceItem {
 
 function ServiceCard({ item, onPress }: { item: ServiceItem; onPress?: () => void }) {
   const colors = useColors();
+  const t = useT();
   const styles = StyleSheet.create({
     card: {
       backgroundColor: colors.surface,
@@ -71,7 +74,7 @@ function ServiceCard({ item, onPress }: { item: ServiceItem; onPress?: () => voi
     noiLam: { color: colors.textSecondary, fontSize: 12, marginTop: 0 },
   });
 
-  const loaiLabel = LOAI_LABELS[item.loai] ?? item.loai;
+  const loaiLabel = LOAI_KEYS[item.loai] ? t(LOAI_KEYS[item.loai] as any) : item.loai;
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={onPress ? 0.7 : 1}>
       <View style={styles.cardHeader}>
@@ -159,7 +162,7 @@ export default function ServicesScreen() {
   const totalCost: number = firstPageMeta?.total_cost ?? 0;
   const countWithCost: number = firstPageMeta?.count_with_cost ?? 0;
 
-  const chipKeys = [ALL_CHIP, ...Object.keys(LOAI_LABELS)];
+  const chipKeys = [ALL_CHIP, ...Object.keys(LOAI_KEYS)];
 
   const styles = StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background },
@@ -191,6 +194,7 @@ export default function ServicesScreen() {
   if (isLoading && allItems.length === 0) {
     return (
       <SafeAreaView style={styles.center} edges={['bottom']}>
+        <AppBgPattern />
         <ActivityIndicator color={colors.primary} size="large" />
       </SafeAreaView>
     );
@@ -198,10 +202,11 @@ export default function ServicesScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
+      <AppBgPattern />
       <FlatList
         data={filteredItems}
         keyExtractor={(item) => String(item.id)}
-        contentContainerStyle={filteredItems.length === 0 ? styles.emptyContainer : styles.listContent}
+        contentContainerStyle={[filteredItems.length === 0 ? styles.emptyContainer : styles.listContent, contentWide]}
         refreshControl={
           <RefreshControl
             refreshing={isFetching && !isFetchingNextPage}
@@ -223,9 +228,9 @@ export default function ServicesScreen() {
               }}>
               <FontAwesome5 name="suitcase" size={14} color={colors.primary} solid />
               <View style={{ flex: 1 }}>
-                <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 13 }}>Bỏ túi đi garage</Text>
+                <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 13 }}>{t('garage_guide.title')}</Text>
                 <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 1 }}>
-                  Danh sách câu hỏi nên hỏi kỹ thuật viên
+                  {t('services.garage_desc')}
                 </Text>
               </View>
               <FontAwesome5 name="chevron-right" size={11} color={colors.primary} />
@@ -235,13 +240,13 @@ export default function ServicesScreen() {
             {totalCost > 0 && (
               <View style={{ flexDirection: 'row', gap: 8, paddingBottom: 12 }}>
                 <View style={{ flex: 1, backgroundColor: colors.surface, borderRadius: 10, padding: 10, alignItems: 'center' }}>
-                  <Text style={{ color: colors.textSecondary, fontSize: 10 }}>Tổng chi phí</Text>
+                  <Text style={{ color: colors.textSecondary, fontSize: 10 }}>{t('services.total_cost')}</Text>
                   <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 14, marginTop: 2 }}>
                     {formatVND(totalCost)}
                   </Text>
                 </View>
                 <View style={{ flex: 1, backgroundColor: colors.surface, borderRadius: 10, padding: 10, alignItems: 'center' }}>
-                  <Text style={{ color: colors.textSecondary, fontSize: 10 }}>Lần có chi phí</Text>
+                  <Text style={{ color: colors.textSecondary, fontSize: 10 }}>{t('services.paid_count')}</Text>
                   <Text style={{ color: colors.text, fontWeight: '700', fontSize: 16, marginTop: 2 }}>{countWithCost}</Text>
                 </View>
               </View>
@@ -270,7 +275,7 @@ export default function ServicesScreen() {
             {/* Search */}
             <TextInput
               style={styles.searchInput}
-              placeholder="Tìm kiếm bảo dưỡng..."
+              placeholder={t('services.search_placeholder')}
               placeholderTextColor={colors.textSecondary}
               value={searchText}
               onChangeText={setSearchText}
@@ -289,7 +294,7 @@ export default function ServicesScreen() {
                     onPress={() => setSelectedLoai(key)}
                     style={[styles.chip, active && styles.chipActive]}>
                     <Text style={[styles.chipText, active && styles.chipTextActive]}>
-                      {key === ALL_CHIP ? 'Tất cả' : LOAI_LABELS[key]}
+                      {key === ALL_CHIP ? t('common.all') : t(LOAI_KEYS[key] as any)}
                     </Text>
                   </TouchableOpacity>
                 );
@@ -301,10 +306,10 @@ export default function ServicesScreen() {
           <View style={styles.emptyState}>
             <FontAwesome5 name="wrench" size={48} color={colors.textSecondary} solid />
             <Text style={{ color: colors.text, fontSize: 16, fontWeight: '600', marginTop: 12, marginBottom: 6 }}>
-              {searchText || selectedLoai !== ALL_CHIP ? 'Không có kết quả' : 'Chưa có lịch sử bảo dưỡng'}
+              {searchText || selectedLoai !== ALL_CHIP ? t('services.no_results') : t('services.empty')}
             </Text>
             {!searchText && selectedLoai === ALL_CHIP && (
-              <Text style={{ color: colors.textSecondary, fontSize: 13 }}>Nhấn + để thêm</Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 13 }}>{t('services.press_plus_add')}</Text>
             )}
           </View>
         }

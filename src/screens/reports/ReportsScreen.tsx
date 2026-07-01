@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AppBgPattern from '../../components/AppBgPattern';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
@@ -254,15 +255,16 @@ function ReportContent({
     queryFn: () =>
       client
         .get(`/vehicles/${vehicleId}/report`, { params: { nam: selectedYear } })
-        .then((r) => {
-          const d = r.data?.data ?? r.data;
-          if (Array.isArray(d?.years) && d.years.length > 0) {
-            onYearsLoaded(d.years.map(Number));
-          }
-          return d;
-        }),
+        .then((r) => r.data?.data ?? r.data),
     enabled: !!vehicleId,
   });
+
+  // Side effect tách riêng - không gọi setState bên trong queryFn
+  useEffect(() => {
+    if (data && Array.isArray(data.years) && data.years.length > 0) {
+      onYearsLoaded(data.years.map(Number));
+    }
+  }, [data]);
 
   if (isLoading) return <LoadingView />;
   if (isError)
@@ -335,13 +337,19 @@ function ReportContent({
     data.all_time?.tong_lit ??
     null;
 
-  /* ── resolve avg consumption ── */
-  const avgConsumption =
+  /* ── resolve avg consumption ──
+     CHÚ Ý: KHÔNG fallback vào data.consumption — đó là MẢNG điểm tiêu hao
+     (consumptionPoints), không phải số. Number(mảng) -> NaN/0 gây hiện "NaN L/100km". */
+  const avgConsumptionRaw =
     data.avg_consumption ??
     data.tieu_hao_trung_binh ??
     data.overall_consumption?.l100 ??
-    data.consumption ??
     null;
+  const avgConsumptionNum = Number(avgConsumptionRaw);
+  const avgConsumption =
+    avgConsumptionRaw != null && Number.isFinite(avgConsumptionNum) && avgConsumptionNum > 0
+      ? avgConsumptionNum
+      : null;
 
   /* ── year review derived totals ── */
   const yrKm = yr?.km ?? null;
@@ -477,7 +485,7 @@ function ReportContent({
 
       {/* ── year review card ── */}
       {yr != null && (
-        <SectionCard title={t('reports.year_review_link') + ` ${selectedYear}`}>
+        <SectionCard title={t('reports.year_review_link', { year: selectedYear })}>
           {yrKm != null && (
             <CardRow index={0} label={t('year_review.total_km')} value={fmtNum(yrKm, 'km')} />
           )}
@@ -493,7 +501,7 @@ function ReportContent({
             <CardRow
               index={[yrKm, yrCost].filter(Boolean).length}
               label={t('reports.refuel_label')}
-              value={fmtNum(yrRefuels, 'lần')}
+              value={t('reports.times_count', { count: fmtNum(yrRefuels) })}
             />
           )}
           {yr?.service_cost != null && yr.service_cost > 0 && (
@@ -512,7 +520,7 @@ function ReportContent({
             }}>
             <FontAwesome5 name="magic" size={12} color={colors.primary} solid />
             <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '700' }}>
-              {t('reports.year_review_link')} {selectedYear}
+              {t('reports.year_review_link', { year: selectedYear })}
             </Text>
           </TouchableOpacity>
         </SectionCard>
@@ -624,7 +632,7 @@ function ReportContent({
               s.tong_tien ?? s.total_amount ?? s.amount ?? null;
             const sub =
               count != null
-                ? `${fmtNum(count)} lần${amount != null ? ` · ${fmtVnd(amount)}` : ''}`
+                ? `${t('reports.times_count', { count: fmtNum(count) })}${amount != null ? ` · ${fmtVnd(amount)}` : ''}`
                 : amount != null
                 ? fmtVnd(amount)
                 : '—';
@@ -732,7 +740,8 @@ export default function ReportsScreen() {
   const navigation = useNavigation<any>();
   const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(null);
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
-  const [availableYears, setAvailableYears] = useState<number[]>([]);
+  // Khởi tạo với năm hiện tại để YearChips hiển thị ngay, không giật khi data về
+  const [availableYears, setAvailableYears] = useState<number[]>([new Date().getFullYear()]);
 
   const { data: vehiclesRaw, isLoading: loadingVehicles } = useVehicles();
   const vehicles: any[] = Array.isArray(vehiclesRaw?.data)
@@ -756,6 +765,7 @@ export default function ReportsScreen() {
     <SafeAreaView
       style={{ flex: 1, backgroundColor: colors.background }}
       edges={['bottom']}>
+      <AppBgPattern />
       {/* header */}
       <View
         style={{
@@ -771,16 +781,23 @@ export default function ReportsScreen() {
         </Text>
       </View>
 
-      {/* vehicle chips */}
+      {/* vehicle + year chips — luôn chiếm chiều cao cố định, không gây layout shift */}
       {vehicles.length > 0 ? (
-        <VehicleChips
-          vehicles={vehicles}
-          selectedId={effectiveId}
-          onSelect={(id) => {
-            setSelectedVehicleId(id);
-            setAvailableYears([]);
-          }}
-        />
+        <View>
+          <VehicleChips
+            vehicles={vehicles}
+            selectedId={effectiveId}
+            onSelect={(id) => {
+              setSelectedVehicleId(id);
+              setAvailableYears([new Date().getFullYear()]);
+            }}
+          />
+          <YearChips
+            years={availableYears}
+            selectedYear={selectedYear}
+            onSelect={setSelectedYear}
+          />
+        </View>
       ) : (
         <View
           style={{
@@ -793,15 +810,6 @@ export default function ReportsScreen() {
             {t('reports.no_vehicle')}
           </Text>
         </View>
-      )}
-
-      {/* year chips — shown when years are available */}
-      {availableYears.length > 0 && (
-        <YearChips
-          years={availableYears}
-          selectedYear={selectedYear}
-          onSelect={setSelectedYear}
-        />
       )}
 
       {/* report body */}

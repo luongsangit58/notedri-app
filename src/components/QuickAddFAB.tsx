@@ -3,9 +3,11 @@ import { View, Text, TouchableOpacity, Modal, Pressable } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useColors } from '../utils/theme';
+import { useT } from '../i18n';
 
 export default function QuickAddFAB() {
   const colors = useColors();
+  const t = useT();
   const [open, setOpen] = useState(false);
   const navigation = useNavigation<any>();
 
@@ -46,14 +48,14 @@ export default function QuickAddFAB() {
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
         <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' }} onPress={() => setOpen(false)}>
           <Pressable style={{ backgroundColor: colors.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24 }}>
-            <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 16, textAlign: 'center' }}>Thêm nhanh</Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 16, textAlign: 'center' }}>{t('quick_add.title')}</Text>
             <TouchableOpacity
               onPress={handleRefuel}
               style={{ flexDirection: 'row', alignItems: 'center', padding: 16, backgroundColor: colors.card, borderRadius: 12, marginBottom: 10 }}>
               <View style={{ width: 32, alignItems: 'center', marginRight: 12 }}>
                 <FontAwesome5 name="gas-pump" size={20} color={colors.primary} solid />
               </View>
-              <Text style={{ color: colors.text, fontSize: 16, fontWeight: '600' }}>Đổ xăng</Text>
+              <Text style={{ color: colors.text, fontSize: 16, fontWeight: '600' }}>{t('quick_add.refuel')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={handleOdometer}
@@ -61,7 +63,7 @@ export default function QuickAddFAB() {
               <View style={{ width: 32, alignItems: 'center', marginRight: 12 }}>
                 <FontAwesome5 name="road" size={20} color={colors.primary} solid />
               </View>
-              <Text style={{ color: colors.text, fontSize: 16, fontWeight: '600' }}>Cập nhật ODO</Text>
+              <Text style={{ color: colors.text, fontSize: 16, fontWeight: '600' }}>{t('quick_add.odo')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => { setOpen(false); navigation.navigate('AddService' as never); }}
@@ -69,7 +71,7 @@ export default function QuickAddFAB() {
               <View style={{ width: 32, alignItems: 'center', marginRight: 12 }}>
                 <FontAwesome5 name="wrench" size={20} color={colors.primary} solid />
               </View>
-              <Text style={{ color: colors.text, fontSize: 16, fontWeight: '600' }}>Bảo dưỡng mới</Text>
+              <Text style={{ color: colors.text, fontSize: 16, fontWeight: '600' }}>{t('quick_add.service')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => { setOpen(false); navigation.navigate('AddReminder' as never); }}
@@ -77,10 +79,10 @@ export default function QuickAddFAB() {
               <View style={{ width: 32, alignItems: 'center', marginRight: 12 }}>
                 <FontAwesome5 name="bell" size={20} color={colors.primary} solid />
               </View>
-              <Text style={{ color: colors.text, fontSize: 16, fontWeight: '600' }}>Thêm nhắc nhở</Text>
+              <Text style={{ color: colors.text, fontSize: 16, fontWeight: '600' }}>{t('quick_add.reminder')}</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => setOpen(false)} style={{ marginTop: 16, alignItems: 'center' }}>
-              <Text style={{ color: colors.textSecondary }}>Huỷ</Text>
+              <Text style={{ color: colors.textSecondary }}>{t('common.cancel')}</Text>
             </TouchableOpacity>
           </Pressable>
         </Pressable>

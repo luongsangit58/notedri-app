@@ -4,6 +4,7 @@ import {
   Modal, FlatList, Pressable, Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AppBgPattern from '../../components/AppBgPattern';
 import { useNavigation } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
 import { FontAwesome5 } from '@expo/vector-icons';
@@ -13,6 +14,7 @@ import LoadingView from '../../components/LoadingView';
 import ErrorView from '../../components/ErrorView';
 import QuickAddFAB from '../../components/QuickAddFAB';
 import { useColors } from '../../utils/theme';
+import { contentWide } from '../../utils/layout';
 import { formatVND, formatKm } from '../../utils/format';
 import { navigateFromCta } from '../../utils/navigation';
 import { useAuthStore } from '../../store/authStore';
@@ -20,6 +22,7 @@ import client from '../../api/client';
 import dayjs from 'dayjs';
 import 'dayjs/locale/vi';
 import { useT } from '../../i18n';
+import { flattenReminders, reminderIsUrgent } from '../../utils/reminders';
 
 /* ─── FA6 class → FA5 icon name ─── */
 const FA_MAP: Record<string, string> = {
@@ -191,9 +194,9 @@ export default function DashboardScreen() {
   const fuelBoard: any[] = Array.isArray(d.fuel_board) ? d.fuel_board : [];
   const odaStaleDays: number | null = d.odo_stale_days ?? null;
 
-  const allReminders: any[] = Array.isArray(remindersRaw?.data) ? remindersRaw.data : [];
+  const allReminders: any[] = flattenReminders(remindersRaw);
   const remindersDue = allReminders
-    .filter((r: any) => r.is_active && (r.status === 'overdue' || r.status === 'danger' || r.status === 'warning'))
+    .filter((r: any) => r.is_active && reminderIsUrgent(r.status))
     .slice(0, 3);
   const remindersLoaded = !!remindersRaw;
 
@@ -216,9 +219,10 @@ export default function DashboardScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'bottom']}>
+      <AppBgPattern />
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ paddingBottom: 100 }}
+        contentContainerStyle={[{ paddingBottom: 100 }, contentWide]}
         refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor="#fff" />}>
 
         {/* ── Amber header banner ── */}
@@ -321,7 +325,7 @@ export default function DashboardScreen() {
             </View>
             <View>
               <Text style={{ color: colors.primaryText, fontWeight: '800', fontSize: 16 }}>{t('dashboard.add_refuel')}</Text>
-              <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, marginTop: 2 }}>Ghi nhanh, tự động tính toán</Text>
+              <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12, marginTop: 2 }}>{t('dashboard.add_refuel_hint')}</Text>
             </View>
           </View>
           <Text style={{ color: '#fff', fontSize: 22 }}>→</Text>
@@ -428,7 +432,7 @@ export default function DashboardScreen() {
             {remindersDue.length > 0 && (
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
                 {remindersDue.map((r: any, i: number) => {
-                  const rColor = r.status === 'overdue' || r.status === 'danger' ? colors.error : colors.warning;
+                  const rColor = r.status === 'qua_han' ? colors.error : colors.warning;
                   return (
                     <View key={i} style={{
                       backgroundColor: rColor + '22', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4,
@@ -451,7 +455,7 @@ export default function DashboardScreen() {
             )}
             {remindersDue.length === 0 && allReminders.length === 0 && (
               <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 4 }}>
-                Chưa có lời nhắc - nhấn để thêm
+                {t('dashboard.no_reminders_tap')}
               </Text>
             )}
           </TouchableOpacity>
@@ -493,7 +497,7 @@ export default function DashboardScreen() {
                         backgroundColor: colors.primary + '22', borderRadius: 8,
                         paddingHorizontal: 12, paddingVertical: 5,
                       }}>
-                      <Text style={{ color: colors.primary, fontSize: 12, fontWeight: '700' }}>{s.cta.label ?? 'Xem'} →</Text>
+                      <Text style={{ color: colors.primary, fontSize: 12, fontWeight: '700' }}>{s.cta.label ?? t('dashboard.view_cta')} →</Text>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -522,7 +526,7 @@ export default function DashboardScreen() {
                 {t('dashboard.odo_not_updated', { days: odaStaleDays })}
               </Text>
               <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 2 }}>
-                Nhấn để nhập số ODO mới - giúp tính chính xác hơn
+                {t('dashboard.odo_update_hint')}
               </Text>
             </View>
             <FontAwesome5 name="chevron-right" size={12} color={colors.warning} />
@@ -546,7 +550,7 @@ export default function DashboardScreen() {
                 </View>
               )}
               <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 2 }}>
-                {thisMonth.so_lan} lần · {Number(thisMonth.tong_lit ?? 0).toFixed(1)} L
+                {t('dashboard.fills_liters', { count: thisMonth.so_lan, liters: Number(thisMonth.tong_lit ?? 0).toFixed(1) })}
               </Text>
             </View>
 
@@ -565,7 +569,7 @@ export default function DashboardScreen() {
                   {formatVND(Number(allTime?.tong_tien ?? 0))}
                 </Text>
                 <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 2 }}>
-                  {allTime?.so_lan ?? 0} lần đổ
+                  {t('dashboard.total_fills', { count: allTime?.so_lan ?? 0 })}
                 </Text>
               </View>
             </View>
@@ -581,17 +585,17 @@ export default function DashboardScreen() {
                 {t('dashboard.prediction_title')}
                 {prediction.samples > 0 && (
                   <Text style={{ color: colors.textSecondary, fontWeight: '400', fontSize: 12 }}>
-                    {' '}(trung bình {prediction.samples} lần gần nhất)
+                    {' '}{t('dashboard.prediction_samples', { count: prediction.samples })}
                   </Text>
                 )}
               </Text>
             </View>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
               {[
-                { label: 'Dự kiến vào', value: prediction.next_date ? dayjs(prediction.next_date).format('DD/MM/YYYY') : null, sub: prediction.days_left != null ? `còn ~${prediction.days_left} ngày` : null },
-                { label: 'Quanh mốc ODO', value: prediction.next_odo ? `~${formatKm(prediction.next_odo)}` : null },
-                { label: 'Lượng dự kiến', value: prediction.liters ? `~${prediction.liters} L` : null },
-                { label: 'Chi phí dự kiến', value: prediction.cost ? `~${formatVND(prediction.cost)}` : null },
+                { label: t('dashboard.pred_expected_date'), value: prediction.next_date ? dayjs(prediction.next_date).format('DD/MM/YYYY') : null, sub: prediction.days_left != null ? t('dashboard.pred_days_left', { days: prediction.days_left }) : null },
+                { label: t('dashboard.pred_around_odo'), value: prediction.next_odo ? `~${formatKm(prediction.next_odo)}` : null },
+                { label: t('dashboard.pred_expected_liters'), value: prediction.liters ? `~${prediction.liters} L` : null },
+                { label: t('dashboard.pred_expected_cost'), value: prediction.cost ? `~${formatVND(prediction.cost)}` : null },
               ].filter(x => x.value).map((x, i) => (
                 <View key={i} style={{ width: '50%', paddingRight: i % 2 === 0 ? 8 : 0, marginBottom: 10 }}>
                   <Label>{x.label}</Label>
@@ -639,7 +643,7 @@ export default function DashboardScreen() {
                 || (item.remaining_km != null && item.remaining_km <= 500) ? colors.warning : colors.textSecondary;
               const remaining = item.remaining_days != null
                 ? t('dashboard.days_remaining', { days: item.remaining_days })
-                : item.remaining_km != null ? `còn ${formatKm(item.remaining_km)}` : '';
+                : item.remaining_km != null ? t('dashboard.km_remaining', { km: formatKm(item.remaining_km) }) : '';
               return (
                 <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                   <View style={{ flex: 1 }}>
@@ -666,10 +670,15 @@ export default function DashboardScreen() {
               </TouchableOpacity>
             </View>
             {recent.slice(0, 5).map((r: any, i: number) => (
-              <View key={r.id ?? i} style={{
-                paddingVertical: 8,
-                borderTopWidth: i > 0 ? 1 : 0, borderTopColor: colors.border,
-              }}>
+              <TouchableOpacity
+                key={r.id ?? i}
+                activeOpacity={0.6}
+                disabled={r.id == null}
+                onPress={() => r.id != null && nav.navigate('EditRefuel', { refuelId: r.id })}
+                style={{
+                  paddingVertical: 8,
+                  borderTopWidth: i > 0 ? 1 : 0, borderTopColor: colors.border,
+                }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <Text style={{ color: colors.textSecondary, fontSize: 12, width: 38 }}>{dayjs(r.ngay).format('DD/MM')}</Text>
                   <Text style={{ color: colors.text, fontWeight: '600', fontSize: 13, flex: 1 }} numberOfLines={1}>
@@ -686,7 +695,7 @@ export default function DashboardScreen() {
                     </Text>
                   </View>
                 ) : null}
-              </View>
+              </TouchableOpacity>
             ))}
           </View>
         )}
@@ -698,7 +707,7 @@ export default function DashboardScreen() {
               <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
                 <FontAwesome5 name="coins" size={14} color={colors.primary} solid />
                 <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14, marginLeft: 6 }}>
-                  Giá xăng · {fuelBoard[0]?.ngay ? dayjs(fuelBoard[0].ngay).format('DD/MM') : ''} · Petrolimex
+                  {t('dashboard.fuel_price_label')} · {fuelBoard[0]?.ngay ? dayjs(fuelBoard[0].ngay).format('DD/MM') : ''} · Petrolimex
                 </Text>
               </View>
               <TouchableOpacity onPress={() => nav.navigate('Reports')}>

@@ -4,14 +4,18 @@ import {
   KeyboardAvoidingView, Platform, Alert, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AppBgPattern from '../../components/AppBgPattern';
 import { useNavigation } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import dayjs from 'dayjs';
 import { useVehicles } from '../../hooks/useVehicles';
 import { useCreateOdometer } from '../../hooks/useOdometer';
+import { isTrackingActive } from '../../services/gps/GpsTripTracker';
 import OcrCamera from '../../components/OcrCamera';
 import VoiceButton from '../../components/VoiceButton';
+import DatePickerField from '../../components/DatePickerField';
 import { useColors } from '../../utils/theme';
+import { contentWide } from '../../utils/layout';
 import { formatKm } from '../../utils/format';
 import { useT } from '../../i18n';
 
@@ -41,10 +45,15 @@ export default function AddOdometerScreen() {
   const [ngay, setNgay] = useState(dayjs().format('YYYY-MM-DD'));
   const [ghiChu, setGhiChu] = useState('');
   const [ocrOpen, setOcrOpen] = useState(false);
+  const [tracking, setTracking] = useState(false); // đang ghi hành trình GPS?
 
   useEffect(() => {
     if (!vehicleId && defaultVehicle) setVehicleId(defaultVehicle.id);
   }, [vehicles]);
+
+  useEffect(() => {
+    isTrackingActive().then(setTracking).catch(() => {});
+  }, []);
 
   const handleOcrResult = (text: string) => {
     const num = text.replace(/[^0-9]/g, '');
@@ -53,8 +62,25 @@ export default function AddOdometerScreen() {
   };
 
   const handleSubmit = async () => {
-    if (!vehicleId) { Alert.alert(t('common.error'), 'Vui lòng chọn xe'); return; }
-    if (!odo) { Alert.alert(t('common.error'), 'Vui lòng nhập số ODO'); return; }
+    if (!vehicleId) { Alert.alert(t('common.error'), t('common.select_vehicle_required')); return; }
+    if (!odo) { Alert.alert(t('common.error'), t('odometer.value_required')); return; }
+    // Đang ghi hành trình -> cảnh báo cộng trùng, cho chọn tiếp tục.
+    if (tracking) {
+      Alert.alert(
+        t('odometer.tracking_warn_title'),
+        t('odometer.tracking_warn_body'),
+        [
+          { text: t('common.cancel'), style: 'cancel' },
+          { text: t('odometer.tracking_warn_continue'), style: 'destructive', onPress: () => doSave() },
+        ],
+      );
+      return;
+    }
+    doSave();
+  };
+
+  const doSave = async () => {
+    if (!vehicleId) return;
     try {
       const res = await createOdometer.mutateAsync({
         vehicleId,
@@ -62,14 +88,14 @@ export default function AddOdometerScreen() {
       });
       const warning = (res as any)?.meta?.warning;
       if (warning) {
-        Alert.alert('Lưu ý', warning, [{ text: 'OK', onPress: () => navigation.goBack() }]);
+        Alert.alert(t('common.warning'), warning, [{ text: 'OK', onPress: () => navigation.goBack() }]);
       } else {
         navigation.goBack();
       }
     } catch (err: any) {
       const errs = err.response?.data?.errors;
       const detail = errs ? Object.values(errs).flat().join('\n') : null;
-      Alert.alert(t('common.error'), detail ?? err.response?.data?.message ?? 'Không lưu được');
+      Alert.alert(t('common.error'), detail ?? err.response?.data?.message ?? t('common.save_failed'));
     }
   };
 
@@ -77,8 +103,23 @@ export default function AddOdometerScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom']}>
+      <AppBgPattern />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView contentContainerStyle={{ padding: 16 }}>
+        <ScrollView contentContainerStyle={[{ padding: 16 }, contentWide]}>
+
+          {/* Cảnh báo đang ghi hành trình -> nhập ODO có thể cộng trùng */}
+          {tracking && (
+            <View style={{
+              flexDirection: 'row', gap: 10, alignItems: 'flex-start',
+              backgroundColor: colors.warning + '18', borderRadius: 10, padding: 12, marginBottom: 14,
+              borderWidth: 1, borderColor: colors.warning + '55',
+            }}>
+              <FontAwesome5 name="exclamation-triangle" size={15} color={colors.warning} solid style={{ marginTop: 1 }} />
+              <Text style={{ color: colors.text, fontSize: 12.5, flex: 1, lineHeight: 18 }}>
+                {t('odometer.tracking_warn_body')}
+              </Text>
+            </View>
+          )}
 
           {/* Vehicle chips */}
           {vehicles.length > 1 && (
@@ -133,24 +174,20 @@ export default function AddOdometerScreen() {
           <VoiceButton
             label={t('odometer.voice_label')}
             hint={t('odometer.voice_hint')}
-            onResult={(value) => setOdo(value)}
+            onResult={(value) => { if (value) setOdo(value); }}
             compact={false}
           />
 
           <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 6 }}>{t('common.date')}</Text>
-          <TextInput
-            value={ngay}
-            onChangeText={setNgay}
-            placeholder="YYYY-MM-DD"
-            placeholderTextColor={colors.textSecondary}
-            style={[input, { marginBottom: 16 }]}
-          />
+          <View style={{ marginBottom: 16 }}>
+            <DatePickerField value={ngay} onChange={setNgay} />
+          </View>
 
           <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 6 }}>{t('common.note')}</Text>
           <TextInput
             value={ghiChu}
             onChangeText={setGhiChu}
-            placeholder="VD: Sau chuyến đi Đà Lạt..."
+            placeholder={t('odometer.note_placeholder')}
             placeholderTextColor={colors.textSecondary}
             style={[input, { marginBottom: 24 }]}
           />

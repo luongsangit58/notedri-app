@@ -4,11 +4,13 @@ import {
   KeyboardAvoidingView, Platform, Alert, ActivityIndicator, StyleSheet,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AppBgPattern from '../../components/AppBgPattern';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { odometerApi } from '../../api/odometer';
 import { useUpdateOdometer, useDeleteOdometer } from '../../hooks/useOdometer';
 import { useColors } from '../../utils/theme';
 import { useT } from '../../i18n';
+import DatePickerField from '../../components/DatePickerField';
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
   const colors = useColors();
@@ -131,7 +133,7 @@ export default function EditOdometerScreen() {
       .then((r) => {
         const data = r.data?.data ?? r.data;
         setOdo(data?.odometer != null ? String(data.odometer) : '');
-        setNgay(data?.ngay ?? '');
+        setNgay(data?.ngay ? String(data.ngay).slice(0, 10) : '');
         setGhiChu(data?.ghi_chu ?? '');
         setLoading(false);
       })
@@ -140,11 +142,11 @@ export default function EditOdometerScreen() {
 
   const handleUpdate = async () => {
     if (!odo) {
-      Alert.alert(t('common.error'), 'Vui lòng nhập số ODO');
+      Alert.alert(t('common.error'), t('odometer.value_required'));
       return;
     }
     if (!ngay) {
-      Alert.alert(t('common.error'), 'Vui lòng nhập ngày');
+      Alert.alert(t('common.error'), t('odometer.date_required_msg'));
       return;
     }
     setUpdating(true);
@@ -161,7 +163,7 @@ export default function EditOdometerScreen() {
     } catch (err: any) {
       const errs = err?.response?.data?.errors;
       const detail = errs ? Object.values(errs).flat().join('\n') : null;
-      Alert.alert(t('common.error'), detail ?? err?.response?.data?.message ?? 'Không cập nhật được');
+      Alert.alert(t('common.error'), detail ?? err?.response?.data?.message ?? t('odometer.update_failed'));
     } finally {
       setUpdating(false);
     }
@@ -180,7 +182,7 @@ export default function EditOdometerScreen() {
             deleteOdometer.mutate(odometerReadingId, {
               onSuccess: () => navigation.goBack(),
               onError: (e: any) =>
-                Alert.alert(t('common.error'), e?.response?.data?.message ?? 'Không xoá được'),
+                Alert.alert(t('common.error'), e?.response?.data?.message ?? t('odometer.delete_failed')),
             });
           },
         },
@@ -191,6 +193,7 @@ export default function EditOdometerScreen() {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
+        <AppBgPattern />
         <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
@@ -200,6 +203,7 @@ export default function EditOdometerScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
+      <AppBgPattern />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.scrollContent}>
 
@@ -224,20 +228,14 @@ export default function EditOdometerScreen() {
 
           {/* Ngay field */}
           <FieldLabel>{t('odometer.date_required')}</FieldLabel>
-          <TextInput
-            value={ngay}
-            onChangeText={setNgay}
-            placeholder="YYYY-MM-DD"
-            placeholderTextColor={colors.textSecondary}
-            style={styles.input}
-          />
+          <DatePickerField value={ngay} onChange={setNgay} />
 
           {/* Ghi chu field */}
           <FieldLabel>{t('common.note')}</FieldLabel>
           <TextInput
             value={ghiChu}
             onChangeText={setGhiChu}
-            placeholder="Ghi chú thêm..."
+            placeholder={t('odometer.note_placeholder')}
             placeholderTextColor={colors.textSecondary}
             multiline
             style={[styles.input, styles.inputMultiline]}

@@ -9,6 +9,7 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { vehiclesApi } from '../../api/vehicles';
 import { servicesApi } from '../../api/services';
+import AppBgPattern from '../../components/AppBgPattern';
 import { useColors } from '../../utils/theme';
 import { formatVND, formatKm } from '../../utils/format';
 import dayjs from 'dayjs';
@@ -231,6 +232,7 @@ export default function DossierScreen() {
   if (loading) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}>
+        <AppBgPattern />
         <ActivityIndicator color={colors.primary} size="large" />
         <Text style={{ color: colors.textSecondary, marginTop: 12 }}>{t('dossier.loading')}</Text>
       </SafeAreaView>
@@ -240,6 +242,7 @@ export default function DossierScreen() {
   if (error || !vehicle) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+        <AppBgPattern />
         <Text style={{ color: colors.error, fontSize: 16, fontWeight: '700', marginBottom: 8 }}>{t('dossier.error_title')}</Text>
         <Text style={{ color: colors.textSecondary, textAlign: 'center' }}>{error}</Text>
         <TouchableOpacity
@@ -262,6 +265,7 @@ export default function DossierScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+      <AppBgPattern />
       {/* Header */}
       <View style={{
         flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -314,7 +318,7 @@ export default function DossierScreen() {
                     <FontAwesome5 name="gas-pump" size={12} color={colors.textSecondary} solid />
                     <Text style={{ color: colors.textSecondary, fontSize: 13 }}>
                       {vehicle.fuel_type}
-                      {vehicle.tank_capacity_l ? ` · ${t('dossier.tank_label')} ${vehicle.tank_capacity_l}L` : ''}
+                      {vehicle.tank_capacity_l ? ` · ${t('dossier.tank_label', { size: vehicle.tank_capacity_l })}` : ''}
                     </Text>
                   </View>
                 ) : null}
@@ -322,7 +326,7 @@ export default function DossierScreen() {
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                     <FontAwesome5 name="chart-bar" size={12} color={colors.textSecondary} solid />
                     <Text style={{ color: colors.textSecondary, fontSize: 13 }}>
-                      {t('dossier.consumption_official_label')}: {vehicle.consumption_official} L/100km
+                      {t('dossier.consumption_official_label', { value: vehicle.consumption_official })}
                     </Text>
                   </View>
                 ) : null}
@@ -330,7 +334,7 @@ export default function DossierScreen() {
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                     <FontAwesome5 name="calendar-alt" size={12} color={colors.textSecondary} solid />
                     <Text style={{ color: colors.textSecondary, fontSize: 13 }}>
-                      {t('dossier.purchase_date_label')}: {dayjs(vehicle.ngay_mua).format('DD/MM/YYYY')}
+                      {t('dossier.purchase_date_label', { date: dayjs(vehicle.ngay_mua).format('DD/MM/YYYY') })}
                     </Text>
                   </View>
                 ) : null}
@@ -409,8 +413,11 @@ export default function DossierScreen() {
               const odoVal = serviceOdo(svc);
               const type = serviceType(svc);
               return (
-                <View
+                <TouchableOpacity
                   key={svc.id ?? idx}
+                  activeOpacity={0.6}
+                  disabled={svc.id == null}
+                  onPress={() => svc.id != null && navigation.navigate('EditService', { serviceId: svc.id })}
                   style={{
                     paddingVertical: 10,
                     borderTopWidth: idx > 0 ? 1 : 0,
@@ -436,7 +443,7 @@ export default function DossierScreen() {
                       </Text>
                     </View>
                   )}
-                </View>
+                </TouchableOpacity>
               );
             })
           )}

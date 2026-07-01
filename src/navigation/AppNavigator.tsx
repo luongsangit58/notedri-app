@@ -7,7 +7,9 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import { useT } from '../i18n';
 
 import DashboardScreen from '../screens/dashboard/DashboardScreen';
-import TimelineScreen from '../screens/timeline/TimelineScreen';
+import HomeScreen from '../screens/home/HomeScreen';
+import CustomTabBar from './CustomTabBar';
+import AchievementsScreen from '../screens/achievements/AchievementsScreen';
 import ServicesScreen from '../screens/services/ServicesScreen';
 import AddServiceScreen from '../screens/services/AddServiceScreen';
 import VehiclesScreen from '../screens/vehicles/VehiclesScreen';
@@ -22,8 +24,9 @@ import AddOdometerScreen from '../screens/odometer/AddOdometerScreen';
 import EditOdometerScreen from '../screens/odometer/EditOdometerScreen';
 import NotificationsScreen from '../screens/notifications/NotificationsScreen';
 import ReportsScreen from '../screens/reports/ReportsScreen';
-import RemindersScreen from '../screens/reminders/RemindersScreen';
 import AddReminderScreen from '../screens/reminders/AddReminderScreen';
+import ThongKeScreen from '../screens/stats/ThongKeScreen';
+import QuanLyScreen from '../screens/management/QuanLyScreen';
 import EditRefuelScreen from '../screens/refuels/EditRefuelScreen';
 import NearbyStationsScreen from '../screens/refuels/NearbyStationsScreen';
 import RefuelsListScreen from '../screens/refuels/RefuelsListScreen';
@@ -37,12 +40,15 @@ import YearReviewScreen from '../screens/reports/YearReviewScreen';
 import FuelPricesScreen from '../screens/refuels/FuelPricesScreen';
 import FeedbackScreen from '../screens/profile/FeedbackScreen';
 import PremiumScreen from '../screens/profile/PremiumScreen';
+import PaymentHistoryScreen from '../screens/profile/PaymentHistoryScreen';
 import AboutScreen from '../screens/profile/AboutScreen';
 import NotificationSettingsScreen from '../screens/profile/NotificationSettingsScreen';
 import ExportDataScreen from '../screens/profile/ExportDataScreen';
 import OBDSetupScreen from '../screens/obd/OBDSetupScreen';
 import OBDDashboardScreen from '../screens/obd/OBDDashboardScreen';
 import OBDTripsScreen from '../screens/obd/OBDTripsScreen';
+import GpsTripsScreen from '../screens/trips/GpsTripsScreen';
+import DevicesScreen from '../screens/profile/DevicesScreen';
 
 const Tab = createBottomTabNavigator();
 const RootStack = createStackNavigator();
@@ -94,30 +100,22 @@ function ThemedTabNavigator() {
   const colors = useColors();
   const t = useT();
   const VehiclesStackColored = () => <VehiclesStack colors={colors} />;
-  const ServicesStackColored = () => <ServicesStack colors={colors} />;
   return (
     <Tab.Navigator
+      tabBar={(props) => <CustomTabBar {...props} />}
       screenOptions={{
-        tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.border },
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.textSecondary,
         headerStyle: { backgroundColor: colors.surface },
         headerTintColor: colors.text,
       }}>
       <Tab.Screen
         name="Dashboard"
-        component={DashboardScreen}
+        component={HomeScreen}
         options={{ headerShown: false, title: t('nav.tab_dashboard'), tabBarIcon: ({ color, size }) => <FontAwesome5 name="home" size={size - 2} color={color} solid /> }}
       />
       <Tab.Screen
-        name="Timeline"
-        component={TimelineScreen}
-        options={{ title: t('nav.tab_timeline'), tabBarIcon: ({ color, size }) => <FontAwesome5 name="history" size={size - 2} color={color} solid /> }}
-      />
-      <Tab.Screen
-        name="Services"
-        component={ServicesStackColored}
-        options={{ title: t('nav.tab_services'), headerShown: false, tabBarIcon: ({ color, size }) => <FontAwesome5 name="wrench" size={size - 2} color={color} solid /> }}
+        name="ThongKe"
+        component={ThongKeScreen}
+        options={{ headerShown: false, title: t('nav.tab_stats'), tabBarIcon: ({ color, size }) => <FontAwesome5 name="chart-line" size={size - 2} color={color} solid /> }}
       />
       <Tab.Screen
         name="Vehicles"
@@ -125,9 +123,9 @@ function ThemedTabNavigator() {
         options={{ title: t('nav.tab_vehicles'), headerShown: false, tabBarIcon: ({ color, size }) => <FontAwesome5 name="car-side" size={size - 2} color={color} solid /> }}
       />
       <Tab.Screen
-        name="Profile"
-        component={ProfileScreen}
-        options={{ title: t('nav.tab_profile'), tabBarIcon: ({ color, size }) => <FontAwesome5 name="user-circle" size={size - 2} color={color} solid /> }}
+        name="QuanLy"
+        component={QuanLyScreen}
+        options={{ headerShown: false, title: t('nav.tab_manage'), tabBarIcon: ({ color, size }) => <FontAwesome5 name="heartbeat" size={size - 2} color={color} solid /> }}
       />
     </Tab.Navigator>
   );
@@ -162,15 +160,17 @@ export default function AppNavigator() {
       <RootStack.Screen name="EditVehicle" component={EditVehicleScreen}
         options={{ headerShown: true, ...headerOpts, title: t('common.edit') }} />
 
-      {/* Profile */}
+      {/* Profile (no longer a tab - accessible via avatar in HomeScreen header) */}
+      <RootStack.Screen name="Profile" component={ProfileScreen}
+        options={{ headerShown: true, ...headerOpts, title: t('nav.tab_profile') }} />
       <RootStack.Screen name="EditProfile" component={EditProfileScreen}
         options={{ headerShown: true, ...headerOpts, title: t('profile.edit') }} />
       <RootStack.Screen name="ChangePassword" component={ChangePasswordScreen}
         options={{ headerShown: true, ...headerOpts, title: t('change_password.title') }} />
+      <RootStack.Screen name="Devices" component={DevicesScreen}
+        options={{ headerShown: false }} />
 
-      {/* Reminders */}
-      <RootStack.Screen name="Reminders" component={RemindersScreen}
-        options={{ headerShown: true, ...headerOpts, title: t('reminders.title') }} />
+      {/* Reminders detail flows (tab is the entry; AddReminder/EditReminder are modals) */}
       <RootStack.Screen name="AddReminder" component={AddReminderScreen}
         options={{ headerShown: false }} />
       <RootStack.Screen name="EditReminder" component={EditReminderScreen}
@@ -246,6 +246,33 @@ export default function AppNavigator() {
           headerTitleStyle: { fontWeight: '800', color: '#F59E0B' },
           title: t('premium.title'),
         }} />
+
+      {/* Payment history */}
+      <RootStack.Screen name="PaymentHistory" component={PaymentHistoryScreen}
+        options={{
+          headerShown: true,
+          headerStyle: { backgroundColor: '#1C1207' },
+          headerTintColor: '#F59E0B',
+          headerTitleStyle: { fontWeight: '800', color: '#F59E0B' },
+          title: t('payment.history_title'),
+        }} />
+
+      {/* Overview (former Dashboard - dense aggregated stats) */}
+      <RootStack.Screen name="Overview" component={DashboardScreen}
+        options={{ headerShown: true, ...headerOpts, title: t('nav.tab_dashboard') }} />
+
+      {/* Services list + Garage guide (moved out of tab bar) */}
+      <RootStack.Screen name="Services" options={{ headerShown: false }}>
+        {() => <ServicesStack colors={colors} />}
+      </RootStack.Screen>
+
+      {/* Thành tích / huy hiệu */}
+      <RootStack.Screen name="Achievements" component={AchievementsScreen}
+        options={{ headerShown: false }} />
+
+      {/* GPS Trips */}
+      <RootStack.Screen name="GpsTrips" component={GpsTripsScreen}
+        options={{ headerShown: false }} />
 
       {/* OBD */}
       <RootStack.Screen name="OBDSetup" component={OBDSetupScreen}

@@ -4,11 +4,13 @@ import {
   KeyboardAvoidingView, Platform, Alert, ActivityIndicator, Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AppBgPattern from '../../components/AppBgPattern';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { remindersApi } from '../../api/reminders';
 import { useQueryClient } from '@tanstack/react-query';
 import { useColors } from '../../utils/theme';
 import { useT } from '../../i18n';
+import { flattenReminders } from '../../utils/reminders';
 
 type Loai = 'bao_duong' | 'dang_kiem' | 'bao_hiem' | 'giay_to' | 'khac';
 type CheDo = 'chu_ky' | 'ngay_co_dinh' | 'mot_lan';
@@ -70,7 +72,7 @@ export default function EditReminderScreen() {
   useEffect(() => {
     remindersApi.list(vehicleId)
       .then(r => {
-        const list: any[] = r.data?.data ?? r.data ?? [];
+        const list = flattenReminders(r.data);
         const found = list.find((item: any) => item.id === reminderId);
         if (!found) {
           Alert.alert(t('common.error'), t('reminders.error_not_found'));
@@ -155,6 +157,7 @@ export default function EditReminderScreen() {
   if (loading) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}>
+        <AppBgPattern />
         <ActivityIndicator size="large" color={colors.primary} />
       </SafeAreaView>
     );
@@ -162,6 +165,7 @@ export default function EditReminderScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom']}>
+      <AppBgPattern />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
 
         {/* Header */}
@@ -195,7 +199,7 @@ export default function EditReminderScreen() {
           />
 
           {/* Loại */}
-          <FieldLabel>Loại *</FieldLabel>
+          <FieldLabel>{t('reminders.type_label')}</FieldLabel>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 4 }}>
             {LOAI_OPTIONS.map((opt) => (
               <TouchableOpacity
@@ -220,7 +224,7 @@ export default function EditReminderScreen() {
           </ScrollView>
 
           {/* Chế độ */}
-          <FieldLabel>Chế độ *</FieldLabel>
+          <FieldLabel>{t('reminders.mode_label')}</FieldLabel>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 4 }}>
             {CHE_DO_OPTIONS.map((opt) => (
               <TouchableOpacity
@@ -251,7 +255,7 @@ export default function EditReminderScreen() {
               <TextInput
                 value={interval_km}
                 onChangeText={setIntervalKm}
-                placeholder="VD: 5000"
+                placeholder={t('reminders.eg_5000')}
                 placeholderTextColor={colors.textSecondary}
                 keyboardType="numeric"
                 style={inputStyle}
@@ -261,23 +265,23 @@ export default function EditReminderScreen() {
               <TextInput
                 value={interval_thang}
                 onChangeText={setIntervalThang}
-                placeholder="VD: 6"
+                placeholder={t('reminders.eg_6')}
                 placeholderTextColor={colors.textSecondary}
                 keyboardType="numeric"
                 style={inputStyle}
               />
 
-              <FieldLabel>ODO lần làm gần nhất</FieldLabel>
+              <FieldLabel>{t('reminders.last_done_odo_label')}</FieldLabel>
               <TextInput
                 value={last_done_odo}
                 onChangeText={setLastDoneOdo}
-                placeholder="VD: 45000"
+                placeholder={t('reminders.eg_45000')}
                 placeholderTextColor={colors.textSecondary}
                 keyboardType="numeric"
                 style={inputStyle}
               />
 
-              <FieldLabel>Ngày làm gần nhất (YYYY-MM-DD)</FieldLabel>
+              <FieldLabel>{t('reminders.last_done_date_label')}</FieldLabel>
               <TextInput
                 value={last_done_date}
                 onChangeText={setLastDoneDate}
@@ -303,18 +307,18 @@ export default function EditReminderScreen() {
           )}
 
           {/* Ghi chú */}
-          <FieldLabel>Ghi chú</FieldLabel>
+          <FieldLabel>{t('common.note')}</FieldLabel>
           <TextInput
             value={ghi_chu}
             onChangeText={setGhiChu}
-            placeholder="Ghi chú thêm..."
+            placeholder={t('reminders.note_placeholder')}
             placeholderTextColor={colors.textSecondary}
             multiline
             style={[inputStyle, { minHeight: 80, textAlignVertical: 'top' }]}
           />
 
           {/* Email nhắc */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, backgroundColor: colors.surface, borderRadius: 12, padding: 14 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16, marginBottom: 16, backgroundColor: colors.surface, borderRadius: 12, padding: 14 }}>
             <View style={{ flex: 1, marginRight: 12 }}>
               <Text style={{ color: colors.text, fontWeight: '600', fontSize: 14 }}>{t('reminders.email_reminder_label')}</Text>
               <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>{t('reminders.email_reminder_desc')}</Text>

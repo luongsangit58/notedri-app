@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   FlatList,
   KeyboardAvoidingView,
@@ -14,17 +15,19 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AppBgPattern from '../../components/AppBgPattern';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
-import { useReminders, useDeleteReminder, useDoneReminder } from '../../hooks/useReminders';
+import { useReminders, useDeleteReminder, useDoneReminder, useSeedReminders, useConfirmAllReminders } from '../../hooks/useReminders';
 import { useVehicles } from '../../hooks/useVehicles';
-import LoadingView from '../../components/LoadingView';
 import ErrorView from '../../components/ErrorView';
 import { useColors } from '../../utils/theme';
+import { contentWide } from '../../utils/layout';
 import { useT } from '../../i18n';
 
 type LoaiKey = 'bao_duong' | 'dang_kiem' | 'bao_hiem' | 'giay_to' | 'khac';
-type StatusKey = 'ok' | 'warning' | 'danger' | 'overdue';
+// Backend ReminderService trả các status này
+type StatusKey = 'ok' | 'sap_toi' | 'toi_han' | 'qua_han' | 'chua_du_lieu';
 
 function formatShortDate(s: string): string {
   const d = new Date(s);
@@ -49,6 +52,7 @@ interface Reminder {
   is_active: boolean;
   remaining_days?: number | null;
   remaining_km?: number | null;
+  cho_xac_nhan?: boolean | number | null;
   status: StatusKey;
 }
 
@@ -65,12 +69,6 @@ function ReminderCard({
 }) {
   const t = useT();
   const colors = useColors();
-  const STATUS_COLORS: Record<StatusKey, string> = {
-    ok: colors.success,
-    warning: colors.warning,
-    danger: colors.error,
-    overdue: colors.error,
-  };
   const styles = StyleSheet.create({
     card: {
       backgroundColor: colors.surface,
@@ -167,7 +165,13 @@ function ReminderCard({
       fontWeight: '600',
     },
   });
-  const statusColor = STATUS_COLORS[item.status] ?? colors.textSecondary;
+  // Backend trả status: ok|sap_toi|toi_han|qua_han|chua_du_lieu
+  const statusColor =
+    item.status === 'qua_han' ? colors.error
+    : item.status === 'toi_han' ? colors.error
+    : item.status === 'sap_toi' ? colors.warning
+    : item.status === 'ok' ? colors.success
+    : colors.textSecondary;
 
   const loaiLabel = (() => {
     switch (item.loai) {
@@ -190,7 +194,7 @@ function ReminderCard({
   const handleDelete = () => {
     Alert.alert(
       t('reminders.delete_confirm_title'),
-      t('reminders.delete_confirm_message'),
+      t('reminders.delete_confirm_message', { name: item.hang_muc ?? loaiLabel }),
       [
         { text: t('common.cancel'), style: 'cancel' },
         { text: t('common.delete'), style: 'destructive', onPress: () => onDelete(item.id) },
@@ -202,18 +206,18 @@ function ReminderCard({
     const parts: string[] = [];
     if (item.remaining_days != null) {
       if (item.remaining_days < 0) {
-        parts.push(`Quá hạn ${Math.abs(item.remaining_days)} ngày`);
+        parts.push(t('reminders.overdue_days', { n: Math.abs(item.remaining_days) }));
       } else if (item.remaining_days === 0) {
-        parts.push('Hôm nay');
+        parts.push(t('reminders.today'));
       } else {
-        parts.push(`Còn ${item.remaining_days} ngày`);
+        parts.push(t('reminders.remaining_days', { n: item.remaining_days }));
       }
     }
     if (item.remaining_km != null) {
       if (item.remaining_km < 0) {
-        parts.push(`Quá ${Math.abs(item.remaining_km).toLocaleString()} km`);
+        parts.push(t('reminders.over_km', { n: Math.abs(item.remaining_km).toLocaleString() }));
       } else {
-        parts.push(`Còn ${item.remaining_km.toLocaleString()} km`);
+        parts.push(t('reminders.remaining_km', { n: item.remaining_km.toLocaleString() }));
       }
     }
     return parts.join(' · ') || null;
@@ -265,24 +269,28 @@ function ReminderCard({
         <View style={styles.detailSection}>
           {item.interval_km != null && (
             <Text style={styles.detailText}>
-              {'Mỗi '}{item.interval_km.toLocaleString()}{'km'}{item.interval_thang != null ? ` / ${item.interval_thang} tháng` : ''}
+              {item.interval_thang != null
+                ? t('reminders.every_km_month', { km: item.interval_km.toLocaleString(), m: item.interval_thang })
+                : t('reminders.every_km', { km: item.interval_km.toLocaleString() })}
             </Text>
           )}
           {item.last_done_date != null && (
             <Text style={styles.detailText}>
-              {'Lần cuối: '}{formatShortDate(item.last_done_date)}{item.last_done_odo != null ? ` · ODO ${item.last_done_odo.toLocaleString()}km` : ''}
+              {item.last_done_odo != null
+                ? t('reminders.last_done_odo', { date: formatShortDate(item.last_done_date), odo: item.last_done_odo.toLocaleString() })
+                : t('reminders.last_done', { date: formatShortDate(item.last_done_date) })}
             </Text>
           )}
         </View>
       )}
       {item.che_do === 'ngay_co_dinh' && item.due_date != null && (
         <View style={styles.detailSection}>
-          <Text style={styles.detailText}>{'Hạn: '}{formatShortDate(item.due_date)}</Text>
+          <Text style={styles.detailText}>{t('reminders.due_prefix', { date: formatShortDate(item.due_date) })}</Text>
         </View>
       )}
       {item.che_do === 'mot_lan' && item.due_date != null && (
         <View style={styles.detailSection}>
-          <Text style={styles.detailText}>{'Ngày: '}{formatShortDate(item.due_date)}</Text>
+          <Text style={styles.detailText}>{t('reminders.date_prefix', { date: formatShortDate(item.due_date) })}</Text>
         </View>
       )}
 
@@ -297,7 +305,7 @@ function ReminderCard({
       ) : null}
 
       {/* Why explanation for urgent/warning reminders */}
-      {item.why && (item.status === 'danger' || item.status === 'warning' || item.status === 'overdue') ? (
+      {item.why && (item.status === 'qua_han' || item.status === 'toi_han' || item.status === 'sap_toi') ? (
         <View style={{
           backgroundColor: statusColor + '11', borderRadius: 6,
           padding: 8, marginBottom: 8, borderLeftWidth: 2, borderLeftColor: statusColor,
@@ -434,15 +442,44 @@ export default function RemindersScreen() {
   const { data: remindersData, isLoading, isError, refetch, isFetching } = useReminders(resolvedVehicleId);
   const deleteReminder = useDeleteReminder();
   const doneReminder = useDoneReminder();
+  const seedReminders = useSeedReminders();
+  const confirmAllReminders = useConfirmAllReminders();
 
   const vehicles: any[] = vehicles0;
   const vehicle = vehicles.find((v: any) => v.id === resolvedVehicleId);
-  const vehicleName = vehicle?.ten_xe ?? vehicle?.ten ?? vehicle?.name ?? `Xe #${resolvedVehicleId}`;
+  const vehicleName = vehicle?.ten_xe ?? vehicle?.ten ?? vehicle?.name ?? t('home.vehicle_fallback', { id: resolvedVehicleId });
 
-  const reminders: Reminder[] = remindersData?.data ?? remindersData ?? [];
+  // Backend trả mỗi item dạng { reminder: {...}, eval: {...} } (lồng nhau).
+  // Card đọc field phẳng (item.hang_muc, item.remaining_days...) nên phải gộp lại.
+  const rawReminders: any[] = remindersData?.data ?? remindersData ?? [];
+  const reminders: Reminder[] = rawReminders.map((x: any) =>
+    x && x.reminder ? { ...x.reminder, ...x.eval } : x,
+  );
   const reminderMeta = remindersData?.meta ?? null;
   const suggestions: any[] = reminderMeta?.suggestions ?? [];
   const canAdd: boolean = reminderMeta?.can_add_reminder ?? true;
+  // Mốc "tạm tính" (seed tự tạo) đang chờ user xác nhận trước khi app nhắc.
+  const pendingConfirmCount = reminders.filter(
+    (r) => r.cho_xac_nhan === true || r.cho_xac_nhan === 1,
+  ).length;
+
+  const handleSeed = () => {
+    if (!resolvedVehicleId || seedReminders.isPending) return;
+    seedReminders.mutate(resolvedVehicleId, {
+      onSuccess: (res: any) => {
+        const n = res?.data?.created ?? 0;
+        Alert.alert(t('reminders.seed_done_title'), t('reminders.seed_done_msg', { n }));
+      },
+      onError: () => Alert.alert(t('common.error'), t('reminders.error_load_failed')),
+    });
+  };
+
+  const handleConfirmAll = () => {
+    if (!resolvedVehicleId || confirmAllReminders.isPending) return;
+    confirmAllReminders.mutate(resolvedVehicleId, {
+      onError: () => Alert.alert(t('common.error'), t('reminders.error_load_failed')),
+    });
+  };
 
   const [doneModalId, setDoneModalId] = useState<number | null>(null);
   const [doneCheDo, setDoneCheDo] = useState<Reminder['che_do']>('chu_ky');
@@ -476,25 +513,78 @@ export default function RemindersScreen() {
     navigation.navigate('EditReminder', { reminderId, vehicleId: resolvedVehicleId });
   };
 
-  if (isLoading) return <LoadingView />;
   if (isError) return <ErrorView message={t('reminders.error_load_failed')} onRetry={refetch} />;
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
+      <AppBgPattern />
       <FlatList
         data={reminders}
         keyExtractor={(item) => String(item.id)}
         renderItem={({ item }) => (
           <ReminderCard item={item} onDone={(id, che_do) => openDoneModal(id, che_do)} onDelete={handleDelete} onEdit={handleEdit} />
         )}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[styles.listContent, contentWide]}
         refreshControl={
           <RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={colors.primary} />
         }
+        ListHeaderComponent={
+          pendingConfirmCount > 0 ? (
+            <View style={{
+              backgroundColor: colors.warning + '18', borderRadius: 12, padding: 14, marginBottom: 12,
+              borderWidth: 1, borderColor: colors.warning + '55',
+            }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                <FontAwesome5 name="info-circle" size={14} color={colors.warning} solid />
+                <Text style={{ color: colors.text, fontSize: 14, fontWeight: '700', flex: 1 }}>
+                  {t('reminders.confirm_all_title', { n: pendingConfirmCount })}
+                </Text>
+              </View>
+              <Text style={{ color: colors.textSecondary, fontSize: 12, marginBottom: 10 }}>
+                {t('reminders.confirm_all_desc')}
+              </Text>
+              <TouchableOpacity
+                onPress={handleConfirmAll}
+                disabled={confirmAllReminders.isPending}
+                style={{
+                  flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+                  backgroundColor: colors.primary, borderRadius: 8, paddingVertical: 9,
+                  opacity: confirmAllReminders.isPending ? 0.6 : 1,
+                }}>
+                <FontAwesome5 name="check-double" size={13} color={colors.primaryText} solid />
+                <Text style={{ color: colors.primaryText, fontSize: 13, fontWeight: '700' }}>
+                  {t('reminders.confirm_all_button')}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ) : null
+        }
         ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>{t('reminders.empty')}</Text>
-          </View>
+          isLoading
+            ? <ActivityIndicator color={colors.primary} style={{ marginTop: 48 }} />
+            : <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>{t('reminders.empty')}</Text>
+                {resolvedVehicleId ? (
+                  <TouchableOpacity
+                    onPress={handleSeed}
+                    disabled={seedReminders.isPending}
+                    style={{
+                      flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 16,
+                      backgroundColor: colors.primary, borderRadius: 10, paddingHorizontal: 18, paddingVertical: 11,
+                      opacity: seedReminders.isPending ? 0.6 : 1,
+                    }}>
+                    {seedReminders.isPending
+                      ? <ActivityIndicator size="small" color={colors.primaryText} />
+                      : <FontAwesome5 name="magic" size={14} color={colors.primaryText} solid />}
+                    <Text style={{ color: colors.primaryText, fontSize: 14, fontWeight: '700' }}>
+                      {t('reminders.seed_default_button')}
+                    </Text>
+                  </TouchableOpacity>
+                ) : null}
+                <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 10, textAlign: 'center', paddingHorizontal: 32 }}>
+                  {t('reminders.seed_default_hint')}
+                </Text>
+              </View>
         }
         ListFooterComponent={
           suggestions.length > 0 ? (
@@ -549,12 +639,12 @@ export default function RemindersScreen() {
               </Text>
               <Text style={styles.modalSub}>
                 {doneCheDo === 'ngay_co_dinh'
-                  ? 'Nhập ngày gia hạn mới'
-                  : 'Ghi lại thông tin để tính lần nhắc tiếp theo'}
+                  ? t('reminders.renew_sub')
+                  : t('reminders.complete_sub')}
               </Text>
               {doneCheDo !== 'ngay_co_dinh' && (
                 <>
-                  <Text style={styles.modalLabel}>Ngày đã làm</Text>
+                  <Text style={styles.modalLabel}>{t('reminders.done_date_label')}</Text>
                   <TextInput
                     style={[styles.modalInput, { marginBottom: 12 }]}
                     placeholder="YYYY-MM-DD"
@@ -567,7 +657,7 @@ export default function RemindersScreen() {
                   <TextInput
                     style={styles.modalInput}
                     keyboardType="numeric"
-                    placeholder="Bỏ qua nếu không biết"
+                    placeholder={t('reminders.odo_skip_placeholder')}
                     placeholderTextColor={colors.textSecondary}
                     value={doneOdo}
                     onChangeText={setDoneOdo}
@@ -577,7 +667,7 @@ export default function RemindersScreen() {
               )}
               {doneCheDo === 'ngay_co_dinh' && (
                 <>
-                  <Text style={styles.modalLabel}>Ngày hạn mới (YYYY-MM-DD)</Text>
+                  <Text style={styles.modalLabel}>{t('reminders.new_due_date_label')}</Text>
                   <TextInput
                     style={styles.modalInput}
                     placeholder="2026-12-31"

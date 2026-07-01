@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, Modal, ScrollView } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useColors } from '../utils/theme';
+import { useT } from '../i18n';
 
 interface Props {
   label?: string;
@@ -44,7 +45,11 @@ function parseDateStr(str: string): [number, number, number] {
   return [now.getFullYear(), now.getMonth() + 1, now.getDate()];
 }
 
-const MONTHS = ['Th.1','Th.2','Th.3','Th.4','Th.5','Th.6','Th.7','Th.8','Th.9','Th.10','Th.11','Th.12'];
+const MONTH_KEYS = [
+  'date_picker.month_1','date_picker.month_2','date_picker.month_3','date_picker.month_4',
+  'date_picker.month_5','date_picker.month_6','date_picker.month_7','date_picker.month_8',
+  'date_picker.month_9','date_picker.month_10','date_picker.month_11','date_picker.month_12',
+];
 
 const ITEM_H = 44;
 const VISIBLE = 5;
@@ -120,6 +125,8 @@ const DAYS_MAX = Array.from({ length: 31 }, (_, i) => i + 1);
 
 export default function DatePickerField({ label, value, onChange, style }: Props) {
   const colors = useColors();
+  const t = useT();
+  const MONTHS = MONTH_KEYS.map((k) => t(k as any));
   const [show, setShow] = useState(false);
 
   const [initY, initM, initD] = parseDateStr(value);
@@ -191,11 +198,11 @@ export default function DatePickerField({ label, value, onChange, style }: Props
             borderBottomWidth: 1, borderColor: colors.border,
           }}>
             <TouchableOpacity onPress={() => setShow(false)}>
-              <Text style={{ color: colors.textSecondary, fontSize: 15 }}>Huỷ</Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 15 }}>{t('common.cancel')}</Text>
             </TouchableOpacity>
-            <Text style={{ color: colors.text, fontWeight: '700', fontSize: 16 }}>Chọn ngày</Text>
+            <Text style={{ color: colors.text, fontWeight: '700', fontSize: 16 }}>{t('date_picker.title')}</Text>
             <TouchableOpacity onPress={handleConfirm}>
-              <Text style={{ color: colors.primary, fontSize: 15, fontWeight: '700' }}>Xong</Text>
+              <Text style={{ color: colors.primary, fontSize: 15, fontWeight: '700' }}>{t('date_picker.done')}</Text>
             </TouchableOpacity>
           </View>
 
@@ -208,7 +215,7 @@ export default function DatePickerField({ label, value, onChange, style }: Props
                 onChange={(i) => setDay(i + 1)}
                 width={60}
               />
-              <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 4 }}>Ngày</Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 4 }}>{t('date_picker.day')}</Text>
             </View>
 
             <View style={{ alignItems: 'center' }}>
@@ -218,7 +225,7 @@ export default function DatePickerField({ label, value, onChange, style }: Props
                 onChange={(i) => setMonth(i + 1)}
                 width={72}
               />
-              <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 4 }}>Tháng</Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 4 }}>{t('date_picker.month')}</Text>
             </View>
 
             <View style={{ alignItems: 'center' }}>
@@ -228,7 +235,7 @@ export default function DatePickerField({ label, value, onChange, style }: Props
                 onChange={(i) => setYear(YEARS[i])}
                 width={72}
               />
-              <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 4 }}>Năm</Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 4 }}>{t('date_picker.year')}</Text>
             </View>
           </View>
         </View>

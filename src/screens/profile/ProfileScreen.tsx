@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, Alert, ScrollView, Modal, TextInput, ActivityIndicator, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AppBgPattern from '../../components/AppBgPattern';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useMutation } from '@tanstack/react-query';
@@ -47,7 +48,7 @@ export default function ProfileScreen() {
     onError: (err: any) => {
       const msg = err?.response?.data?.errors?.password?.[0]
         ?? err?.response?.data?.message
-        ?? 'Có lỗi xảy ra.';
+        ?? t('common.error_occurred');
       setDeleteError(msg);
     },
   });
@@ -62,10 +63,10 @@ export default function ProfileScreen() {
   const handleDeletePress = () => {
     Alert.alert(
       t('auth.delete_account'),
-      'Toàn bộ dữ liệu xe, lịch sử và lời nhắc sẽ bị xoá vĩnh viễn. Không thể khôi phục.',
+      t('profile.delete_account_warning'),
       [
         { text: t('common.cancel'), style: 'cancel' },
-        { text: 'Tiếp tục', style: 'destructive', onPress: () => { setDeletePassword(''); setDeleteError(''); setDeleteModalVisible(true); } },
+        { text: t('common.continue'), style: 'destructive', onPress: () => { setDeletePassword(''); setDeleteError(''); setDeleteModalVisible(true); } },
       ],
     );
   };
@@ -74,6 +75,7 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom']}>
+      <AppBgPattern />
       <ScrollView>
         {/* Avatar */}
         <View style={{ alignItems: 'center', paddingVertical: 32 }}>
@@ -120,7 +122,7 @@ export default function ProfileScreen() {
           )}
           {user?.vehicle_limit != null && (
             <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 6 }}>
-              Giới hạn xe: {user.vehicle_limit} xe
+              {t('profile.vehicle_limit', { n: user.vehicle_limit })}
             </Text>
           )}
         </View>
@@ -138,6 +140,11 @@ export default function ProfileScreen() {
             onPress={() => navigation.navigate('ChangePassword')}
           />
           <MenuItem
+            icon={<FontAwesome5 name="mobile-alt" size={16} color={colors.textSecondary} solid />}
+            label={t('devices.title')}
+            onPress={() => navigation.navigate('Devices')}
+          />
+          <MenuItem
             icon={<FontAwesome5 name="bell" size={16} color={colors.textSecondary} solid />}
             label={t('profile.notifications')}
             onPress={() => navigation.navigate('Notifications')}
@@ -151,6 +158,11 @@ export default function ProfileScreen() {
             icon={<FontAwesome5 name="chart-bar" size={16} color={colors.textSecondary} solid />}
             label={t('profile.reports')}
             onPress={() => navigation.navigate('Reports')}
+          />
+          <MenuItem
+            icon={<FontAwesome5 name="medal" size={16} color="#F59E0B" solid />}
+            label={t('profile.achievements')}
+            onPress={() => navigation.navigate('Achievements')}
           />
           <MenuItem
             icon={<FontAwesome5 name="crown" size={16} color="#F59E0B" solid />}
@@ -193,7 +205,7 @@ export default function ProfileScreen() {
           />
           <MenuItem
             icon={<FontAwesome5 name="language" size={16} color={colors.textSecondary} solid />}
-            label="Ngôn ngữ / Language"
+            label={t('profile.language')}
             onPress={() => setLang(lang === 'vi' ? 'en' : 'vi')}
             right={
               <View style={{
@@ -238,13 +250,13 @@ export default function ProfileScreen() {
               {t('auth.delete_account')}
             </Text>
             <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 20, lineHeight: 18 }}>
-              Nhập mật khẩu để xác nhận. Hành động này không thể hoàn tác.
+              {t('profile.delete_account_password_prompt')}
             </Text>
             <TextInput
               value={deletePassword}
               onChangeText={v => { setDeletePassword(v); setDeleteError(''); }}
               secureTextEntry
-              placeholder="Mật khẩu của bạn"
+              placeholder={t('profile.your_password')}
               placeholderTextColor={colors.textSecondary}
               style={{
                 backgroundColor: colors.background, color: colors.text,
@@ -265,11 +277,11 @@ export default function ProfileScreen() {
               }}>
               {isDeleting
                 ? <ActivityIndicator color="#fff" />
-                : <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Xoá tài khoản vĩnh viễn</Text>
+                : <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>{t('profile.delete_account_confirm_button')}</Text>
               }
             </TouchableOpacity>
             <TouchableOpacity onPress={() => setDeleteModalVisible(false)} style={{ marginTop: 12, alignItems: 'center' }}>
-              <Text style={{ color: colors.textSecondary }}>Huỷ</Text>
+              <Text style={{ color: colors.textSecondary }}>{t('common.cancel')}</Text>
             </TouchableOpacity>
           </View>
         </View>

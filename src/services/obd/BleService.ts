@@ -1,5 +1,6 @@
 import { BleManager, Device, State, Characteristic } from 'react-native-ble-plx';
 import { Platform, PermissionsAndroid } from 'react-native';
+import { useI18nStore } from '../../i18n';
 
 const OBD_SERVICE_UUID = '0000fff0-0000-1000-8000-00805f9b34fb';
 const OBD_WRITE_UUID = '0000fff2-0000-1000-8000-00805f9b34fb';
@@ -61,7 +62,7 @@ class BleService {
           resolve();
         } else if (state === State.PoweredOff || state === State.Unsupported) {
           subscription.remove();
-          reject(new Error('Bluetooth không khả dụng'));
+          reject(new Error(useI18nStore.getState().t('obd.bluetooth_unavailable')));
         }
       }, true);
     });
@@ -187,7 +188,7 @@ class BleService {
 
   private _sendCommandInternal(command: string, timeoutMs: number): Promise<string> {
     if (!this.connectedDevice) {
-      return Promise.reject(new Error('Chưa kết nối thiết bị OBD'));
+      return Promise.reject(new Error(useI18nStore.getState().t('obd.not_connected')));
     }
 
     const device = this.connectedDevice;

@@ -18,7 +18,7 @@ import AppBgPattern from '../../components/AppBgPattern';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useColors } from '../../utils/theme';
-import { useT } from '../../i18n';
+import { useT, useI18nStore } from '../../i18n';
 import { useGpsTripState, useGpsTrips } from '../../hooks/useGpsTrip';
 import { useVehicles } from '../../hooks/useVehicles';
 import { GpsTripRecord, gpsTripsApi } from '../../api/gpsTrips';
@@ -32,30 +32,33 @@ async function maybeShowBatteryTip() {
   try {
     if (await AsyncStorage.getItem('gps_battery_tip_shown')) return;
     await AsyncStorage.setItem('gps_battery_tip_shown', '1');
+    const t = useI18nStore.getState().t;
     Alert.alert(
-      'Mẹo ghi nền ổn định',
-      'Một số máy (Xiaomi, Oppo, Samsung...) tự tắt app nền để tiết kiệm pin, làm gián đoạn ghi hành trình. Hãy tắt tối ưu pin cho NoteDri.',
+      t('gps_trips.battery_tip_title'),
+      t('gps_trips.battery_tip_body'),
       [
-        { text: 'Để sau', style: 'cancel' },
-        { text: 'Mở cài đặt pin', onPress: () => openBatterySettings() },
+        { text: t('gps_trips.later'), style: 'cancel' },
+        { text: t('gps_trips.open_battery_settings'), onPress: () => openBatterySettings() },
       ],
     );
   } catch { /* ignore */ }
 }
 
 function formatDuration(seconds: number): string {
+  const t = useI18nStore.getState().t;
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
-  if (h > 0) return `${h}g ${m}p`;
-  return `${m} phút`;
+  if (h > 0) return t('gps_trips.duration_long', { h, m });
+  return t('gps_trips.duration', { min: m });
 }
 
 function timeAgo(ts: number | null): string {
-  if (!ts) return 'chưa có';
+  const t = useI18nStore.getState().t;
+  if (!ts) return t('gps_trips.time_none');
   const sec = Math.max(0, Math.round((Date.now() - ts) / 1000));
-  if (sec < 60) return `${sec} giây trước`;
+  if (sec < 60) return t('gps_trips.seconds_ago', { sec });
   const min = Math.floor(sec / 60);
-  return `${min} phút trước`;
+  return t('gps_trips.minutes_ago', { min });
 }
 
 function StatusBadge({ status, tracking, paused }: { status: string; tracking: boolean; paused?: boolean }) {
@@ -67,13 +70,13 @@ function StatusBadge({ status, tracking, paused }: { status: string; tracking: b
   const isArmedIdle = tracking && status === 'idle';
 
   const label = paused
-    ? 'Đã tạm dừng'
+    ? t('gps_trips.status_paused')
     : isActive
     ? t('gps_trips.status_active')
     : isWaiting
     ? t('gps_trips.status_waiting')
     : isArmedIdle
-    ? 'Đang theo dõi · chờ di chuyển'
+    ? t('gps_trips.status_armed_idle')
     : t('gps_trips.status_idle');
 
   const color = paused ? colors.warning
@@ -106,6 +109,7 @@ function CheckRow({ ok, label, fixLabel, onFix, advisory }: {
   ok: boolean; label: string; fixLabel?: string; onFix?: () => void; advisory?: boolean;
 }) {
   const colors = useColors();
+  const t = useT();
   const color = ok ? colors.success : advisory ? colors.warning : colors.error;
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 5 }}>
@@ -113,7 +117,7 @@ function CheckRow({ ok, label, fixLabel, onFix, advisory }: {
       <Text style={{ color: colors.text, fontSize: 12.5, flex: 1 }}>{label}</Text>
       {!ok && onFix && (
         <TouchableOpacity onPress={onFix} style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6, borderWidth: 1, borderColor: color }}>
-          <Text style={{ color, fontSize: 12, fontWeight: '600' }}>{fixLabel ?? 'Sửa'}</Text>
+          <Text style={{ color, fontSize: 12, fontWeight: '600' }}>{fixLabel ?? t('common.edit')}</Text>
         </TouchableOpacity>
       )}
     </View>
@@ -122,6 +126,7 @@ function CheckRow({ ok, label, fixLabel, onFix, advisory }: {
 
 function ReadinessChecklist({ r }: { r: { foreground: boolean; background: boolean; locationEnabled: boolean } }) {
   const colors = useColors();
+  const t = useT();
   // Đủ điều kiện ghi tốt nhất = quyền vị trí + định vị bật + quyền nền
   const allGood = r.foreground && r.locationEnabled && r.background;
 
@@ -129,18 +134,18 @@ function ReadinessChecklist({ r }: { r: { foreground: boolean; background: boole
     return (
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12 }}>
         <FontAwesome5 name="check-circle" size={13} color={colors.success} solid />
-        <Text style={{ color: colors.success, fontSize: 12.5, fontWeight: '600' }}>Sẵn sàng ghi hành trình tốt nhất</Text>
+        <Text style={{ color: colors.success, fontSize: 12.5, fontWeight: '600' }}>{t('gps_trips.ready_best')}</Text>
       </View>
     );
   }
 
   return (
     <View style={{ marginTop: 12, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 10 }}>
-      <Text style={{ color: colors.textSecondary, fontSize: 11, fontWeight: '700', letterSpacing: 0.5, marginBottom: 4 }}>QUYỀN TRUY CẬP</Text>
-      <CheckRow ok={r.foreground} label="Quyền vị trí" fixLabel="Cấp" onFix={() => Linking.openSettings()} />
-      <CheckRow ok={r.locationEnabled} label="Định vị thiết bị đang bật" fixLabel="Bật" onFix={() => openLocationSettings()} />
-      <CheckRow ok={r.background} advisory label='Quyền "Luôn cho phép" (ghi nền)' fixLabel="Cấp" onFix={() => Linking.openSettings()} />
-      <CheckRow ok={false} advisory label="Tắt tối ưu pin (ghi nền ổn định)" fixLabel="Mở" onFix={() => openBatterySettings()} />
+      <Text style={{ color: colors.textSecondary, fontSize: 11, fontWeight: '700', letterSpacing: 0.5, marginBottom: 4 }}>{t('gps_trips.permissions_header')}</Text>
+      <CheckRow ok={r.foreground} label={t('gps_trips.check_location_perm')} fixLabel={t('gps_trips.grant')} onFix={() => Linking.openSettings()} />
+      <CheckRow ok={r.locationEnabled} label={t('gps_trips.check_location_enabled')} fixLabel={t('gps_trips.turn_on')} onFix={() => openLocationSettings()} />
+      <CheckRow ok={r.background} advisory label={t('gps_trips.check_always_allow')} fixLabel={t('gps_trips.grant')} onFix={() => Linking.openSettings()} />
+      <CheckRow ok={false} advisory label={t('gps_trips.check_battery_opt')} fixLabel={t('gps_trips.open')} onFix={() => openBatterySettings()} />
     </View>
   );
 }
@@ -157,6 +162,7 @@ function InterruptedTripBanner({
   onDiscard: () => void;
 }) {
   const colors = useColors();
+  const t = useT();
   const minAgo = info.timeSinceInterruptMin;
   const canSave = info.distanceKm >= 0.3;
 
@@ -168,15 +174,17 @@ function InterruptedTripBanner({
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
         <FontAwesome5 name="exclamation-triangle" size={14} color="#F97316" solid />
         <Text style={{ color: '#F97316', fontWeight: '700', fontSize: 14 }}>
-          Hành trình bị gián đoạn
+          {t('gps_trips.interrupted_title')}
         </Text>
       </View>
       <Text style={{ color: colors.text, fontSize: 13, marginBottom: 4 }}>
-        App bị tắt {minAgo > 0 ? `${minAgo} phút trước` : 'vừa rồi'} khi đang ghi hành trình.
+        {minAgo > 0
+          ? t('gps_trips.interrupted_body_ago', { min: minAgo })
+          : t('gps_trips.interrupted_body_now')}
       </Text>
       {info.distanceKm > 0 && (
         <Text style={{ color: colors.textSecondary, fontSize: 12, marginBottom: 10 }}>
-          Đã ghi: {info.distanceKm.toFixed(1)} km
+          {t('gps_trips.interrupted_recorded', { km: info.distanceKm.toFixed(1) })}
         </Text>
       )}
       <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -184,21 +192,21 @@ function InterruptedTripBanner({
           <TouchableOpacity
             onPress={onResume}
             style={{ flex: 1, backgroundColor: colors.primary, borderRadius: 8, paddingVertical: 9, alignItems: 'center' }}>
-            <Text style={{ color: colors.primaryText, fontWeight: '700', fontSize: 13 }}>Tiếp tục</Text>
+            <Text style={{ color: colors.primaryText, fontWeight: '700', fontSize: 13 }}>{t('gps_trips.resume')}</Text>
           </TouchableOpacity>
         )}
         {canSave && (
           <TouchableOpacity
             onPress={onSave}
             style={{ flex: 1, backgroundColor: colors.success, borderRadius: 8, paddingVertical: 9, alignItems: 'center' }}>
-            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Lưu lại</Text>
+            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>{t('gps_trips.save_trip')}</Text>
           </TouchableOpacity>
         )}
         <TouchableOpacity
           onPress={onDiscard}
           style={{ flex: info.canResume || canSave ? 0 : 1, backgroundColor: colors.surface, borderRadius: 8, paddingVertical: 9, paddingHorizontal: 14, alignItems: 'center', borderWidth: 1, borderColor: colors.border }}>
           <Text style={{ color: colors.textSecondary, fontWeight: '600', fontSize: 13 }}>
-            {canSave ? 'Bỏ' : 'Xoá'}
+            {canSave ? t('gps_trips.discard') : t('common.delete')}
           </Text>
         </TouchableOpacity>
       </View>
@@ -240,21 +248,21 @@ function ActiveTripCard({ vehicleId }: { vehicleId: number }) {
       const recordable = await checkRecordable();
       if (recordable) {
         // Đang có hành trình ghi được -> hỏi lưu hay bỏ
-        Alert.alert('Kết thúc hành trình?', 'Bạn muốn lưu lại hành trình vừa ghi?', [
-          { text: 'Tiếp tục ghi', style: 'cancel' },
-          { text: 'Bỏ, không lưu', style: 'destructive', onPress: () => stop(false) },
-          { text: 'Lưu', onPress: () => stop(true) },
+        Alert.alert(t('gps_trips.end_trip_title'), t('gps_trips.end_trip_body'), [
+          { text: t('gps_trips.keep_recording'), style: 'cancel' },
+          { text: t('gps_trips.discard_no_save'), style: 'destructive', onPress: () => stop(false) },
+          { text: t('common.save'), onPress: () => stop(true) },
         ]);
       } else {
         // Chỉ đang theo dõi, chưa vào chuyến -> tắt luôn
-        Alert.alert('Tắt theo dõi?', 'GPS sẽ ngừng. Bật lại khi cần.', [
-          { text: 'Huỷ', style: 'cancel' },
-          { text: 'Tắt', style: 'destructive', onPress: () => stop(true) },
+        Alert.alert(t('gps_trips.stop_tracking_title'), t('gps_trips.stop_tracking_body'), [
+          { text: t('common.cancel'), style: 'cancel' },
+          { text: t('gps_trips.turn_off'), style: 'destructive', onPress: () => stop(true) },
         ]);
       }
     } else {
       if (!vehicleId) {
-        Alert.alert('Thông báo', t('gps_trips.no_vehicle'));
+        Alert.alert(t('common.notice'), t('gps_trips.no_vehicle'));
         return;
       }
       try {
@@ -264,48 +272,48 @@ function ActiveTripCard({ vehicleId }: { vehicleId: number }) {
           if (!result.backgroundGranted) {
             // Started, but only works while app is open. Nudge to enable "Always".
             Alert.alert(
-              'Đã bật theo dõi',
-              'Hành trình đang được ghi. Để ghi cả khi tắt màn hình, hãy cấp quyền vị trí "Luôn cho phép" trong Cài đặt.',
+              t('gps_trips.tracking_on_title'),
+              t('gps_trips.tracking_on_body'),
               [
-                { text: 'Để sau', style: 'cancel' },
-                { text: 'Mở cài đặt', onPress: () => Linking.openSettings() },
+                { text: t('gps_trips.later'), style: 'cancel' },
+                { text: t('gps_trips.open_settings'), onPress: () => Linking.openSettings() },
               ],
             );
           }
         } else if (result.reason === 'vehicle_locked') {
           Alert.alert(
-            'Xe đang được theo dõi',
-            'Xe này đang được ghi hành trình trên một thiết bị khác. Tắt theo dõi ở thiết bị đó trước.',
-            [{ text: 'OK', style: 'cancel' }],
+            t('gps_trips.vehicle_locked_title'),
+            t('gps_trips.vehicle_locked_body'),
+            [{ text: t('common.ok'), style: 'cancel' }],
           );
         } else if (result.reason === 'location_off') {
           Alert.alert(
-            'Định vị đang tắt',
-            'Hãy bật Định vị (GPS) trên điện thoại để ghi hành trình.',
+            t('gps_trips.location_off_title'),
+            t('gps_trips.location_off_body'),
             [
-              { text: 'Đóng', style: 'cancel' },
-              { text: 'Mở cài đặt định vị', onPress: () => openLocationSettings() },
+              { text: t('common.close'), style: 'cancel' },
+              { text: t('gps_trips.open_location_settings'), onPress: () => openLocationSettings() },
             ],
           );
         } else if (result.reason === 'background_denied') {
           Alert.alert(
-            'Cần quyền "Luôn cho phép"',
-            'Không bật được theo dõi nền. Vào Cài đặt > Quyền > Vị trí và chọn "Luôn cho phép" (Allow all the time), rồi bật lại.',
+            t('gps_trips.background_denied_title'),
+            t('gps_trips.background_denied_body'),
             [
-              { text: 'Đóng', style: 'cancel' },
-              { text: 'Mở cài đặt', onPress: () => Linking.openSettings() },
+              { text: t('common.close'), style: 'cancel' },
+              { text: t('gps_trips.open_settings'), onPress: () => Linking.openSettings() },
             ],
           );
         } else if (result.reason === 'foreground_denied') {
-          Alert.alert('Cần quyền vị trí', t('gps_trips.perm_denied'), [
-            { text: 'Đóng', style: 'cancel' },
-            { text: 'Mở cài đặt', onPress: () => Linking.openSettings() },
+          Alert.alert(t('gps_trips.location_perm_title'), t('gps_trips.perm_denied'), [
+            { text: t('common.close'), style: 'cancel' },
+            { text: t('gps_trips.open_settings'), onPress: () => Linking.openSettings() },
           ]);
         } else {
-          Alert.alert('Không bật được theo dõi', `Lỗi: ${result.error ?? 'không rõ'}. Thử lại hoặc khởi động lại app.`);
+          Alert.alert(t('gps_trips.enable_failed_title'), t('gps_trips.enable_failed_body', { error: result.error ?? t('gps_trips.unknown') }));
         }
       } catch (e: any) {
-        Alert.alert('Không bật được theo dõi', e?.message ?? 'Lỗi không xác định. Thử lại.');
+        Alert.alert(t('gps_trips.enable_failed_title'), e?.message ?? t('gps_trips.enable_failed_generic'));
       }
     }
   }, [isRunning, vehicleId, startTracking, stop, checkRecordable, t]);
@@ -320,14 +328,14 @@ function ActiveTripCard({ vehicleId }: { vehicleId: number }) {
     const result = await resumeInterrupted();
     if (!result.ok) {
       if (result.reason === 'vehicle_locked') {
-        Alert.alert('Xe đang được theo dõi', 'Xe này đang được ghi hành trình trên một thiết bị khác.', [{ text: 'OK' }]);
+        Alert.alert(t('gps_trips.vehicle_locked_title'), t('gps_trips.vehicle_locked_short'), [{ text: t('common.ok') }]);
       } else if (result.reason === 'foreground_denied' || result.reason === 'background_denied') {
-        Alert.alert('Cần quyền vị trí', 'Hãy cấp quyền vị trí để tiếp tục hành trình.', [
-          { text: 'Đóng', style: 'cancel' },
-          { text: 'Cài đặt', onPress: () => { const { Linking } = require('react-native'); Linking.openSettings(); } },
+        Alert.alert(t('gps_trips.location_perm_title'), t('gps_trips.resume_perm_body'), [
+          { text: t('common.close'), style: 'cancel' },
+          { text: t('gps_trips.settings'), onPress: () => { const { Linking } = require('react-native'); Linking.openSettings(); } },
         ]);
       } else {
-        Alert.alert('Không thể tiếp tục', 'Hãy thử bắt đầu hành trình mới.', [{ text: 'OK' }]);
+        Alert.alert(t('gps_trips.resume_failed_title'), t('gps_trips.resume_failed_body'), [{ text: t('common.ok') }]);
       }
     }
   }, [resumeInterrupted]);
@@ -340,11 +348,11 @@ function ActiveTripCard({ vehicleId }: { vehicleId: number }) {
           onResume={handleResume}
           onSave={saveInterrupted}
           onDiscard={() => Alert.alert(
-            'Bỏ hành trình?',
-            'Dữ liệu hành trình này sẽ bị xoá và không thể khôi phục.',
+            t('gps_trips.discard_trip_title'),
+            t('gps_trips.discard_trip_body'),
             [
-              { text: 'Huỷ', style: 'cancel' },
-              { text: 'Xoá', style: 'destructive', onPress: discardInterrupted },
+              { text: t('common.cancel'), style: 'cancel' },
+              { text: t('common.delete'), style: 'destructive', onPress: discardInterrupted },
             ],
           )}
         />
@@ -357,7 +365,7 @@ function ActiveTripCard({ vehicleId }: { vehicleId: number }) {
               onPress={handlePauseResume}
               style={[styles.toggleBtn, { backgroundColor: paused ? colors.success : colors.warning }]}>
               <FontAwesome5 name={paused ? 'play' : 'pause'} size={12} color="#fff" solid />
-              <Text style={styles.toggleBtnText}>{paused ? 'Tiếp tục' : 'Tạm dừng'}</Text>
+              <Text style={styles.toggleBtnText}>{paused ? t('gps_trips.resume') : t('gps_trips.pause')}</Text>
             </TouchableOpacity>
           )}
           <TouchableOpacity
@@ -376,7 +384,7 @@ function ActiveTripCard({ vehicleId }: { vehicleId: number }) {
         <View style={[styles.warnBox, { borderColor: colors.warning, marginTop: 12 }]}>
           <FontAwesome5 name="pause-circle" size={12} color={colors.warning} solid />
           <Text style={[styles.warnText, { color: colors.warning }]}>
-            Đã tạm dừng - không tính quãng đường.
+            {t('gps_trips.paused_notice')}
           </Text>
         </View>
       )}
@@ -389,7 +397,7 @@ function ActiveTripCard({ vehicleId }: { vehicleId: number }) {
         <TouchableOpacity onPress={() => Linking.openSettings()} style={[styles.warnBox, { borderColor: colors.warning }]}>
           <FontAwesome5 name="exclamation-triangle" size={11} color={colors.warning} solid />
           <Text style={[styles.warnText, { color: colors.warning }]}>
-            Chỉ ghi khi app mở. Bấm để cấp "Luôn cho phép".
+            {t('gps_trips.foreground_only_warn')}
           </Text>
         </TouchableOpacity>
       )}
@@ -399,18 +407,18 @@ function ActiveTripCard({ vehicleId }: { vehicleId: number }) {
         <View style={styles.diagBox}>
           <DiagRow
             icon="satellite-dish"
-            label="Tín hiệu GPS"
-            value={lastTs ? timeAgo(lastTs) : 'đang chờ...'}
+            label={t('gps_trips.diag_gps_signal')}
+            value={lastTs ? timeAgo(lastTs) : t('gps_trips.waiting_short')}
             valueColor={lastTs && Date.now() - lastTs < 15000 ? colors.success : colors.warning}
           />
           <DiagRow
             icon="crosshairs"
-            label="Độ chính xác"
-            value={accuracy != null ? `${Math.round(accuracy)} m${accuracy > 50 ? ' (yếu)' : accuracy > 20 ? ' (khá)' : ' (tốt)'}` : '-'}
+            label={t('gps_trips.diag_accuracy')}
+            value={accuracy != null ? `${Math.round(accuracy)} m${accuracy > 50 ? ` (${t('gps_trips.accuracy_weak')})` : accuracy > 20 ? ` (${t('gps_trips.accuracy_fair')})` : ` (${t('gps_trips.accuracy_good')})`}` : '-'}
             valueColor={accuracy == null ? undefined : accuracy > 50 ? colors.error : accuracy > 20 ? colors.warning : colors.success}
           />
-          <DiagRow icon="tachometer-alt" label="Tốc độ" value={`${lastSpeed} km/h`} />
-          <DiagRow icon="map-pin" label="Điểm GPS" value={`${pointCount}`} />
+          <DiagRow icon="tachometer-alt" label={t('gps_trips.diag_speed')} value={`${lastSpeed} km/h`} />
+          <DiagRow icon="map-pin" label={t('gps_trips.diag_points')} value={`${pointCount}`} />
         </View>
       )}
 
@@ -422,19 +430,19 @@ function ActiveTripCard({ vehicleId }: { vehicleId: number }) {
           </View>
           <View style={styles.liveStat}>
             <FontAwesome5 name="flag-checkered" size={14} color={colors.primary} solid />
-            <Text style={[styles.liveStatVal, { color: colors.text }]}>tối đa {Math.round(maxSpeed)} km/h</Text>
+            <Text style={[styles.liveStatVal, { color: colors.text }]}>{t('gps_trips.live_max_speed', { spd: Math.round(maxSpeed) })}</Text>
           </View>
         </View>
       )}
 
       {isRunning && status === 'idle' && (
         <Text style={[styles.hintText, { color: colors.textSecondary }]}>
-          Đang chờ bạn lái xe. Hành trình sẽ tự ghi khi xe chạy &gt; 5 km/h - bạn không cần làm gì thêm.
+          {t('gps_trips.hint_waiting_drive')}
         </Text>
       )}
       {isRunning && status === 'waiting_start' && (
         <Text style={[styles.hintText, { color: colors.textSecondary }]}>
-          Đã phát hiện di chuyển - giữ tốc độ &gt; 5 km/h thêm vài giây để bắt đầu ghi...
+          {t('gps_trips.hint_movement_detected')}
         </Text>
       )}
 
@@ -453,6 +461,7 @@ function TripRow({ trip, expanded, onToggle, onDelete, onEditNote }: {
   onDelete: (t: GpsTripRecord) => void; onEditNote: (t: GpsTripRecord) => void;
 }) {
   const colors = useColors();
+  const t = useT();
   // Backend decimals can serialize as string or null - coerce defensively
   const distanceKm = Number(trip.distance_km ?? 0);
   const avgSpeed = trip.avg_speed_kmh != null ? Number(trip.avg_speed_kmh) : null;
@@ -471,7 +480,7 @@ function TripRow({ trip, expanded, onToggle, onDelete, onEditNote }: {
             <Text style={[styles.rowDistance, { color: colors.text }]}>{distanceKm.toFixed(1)} km</Text>
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <Text style={{ color: colors.primary, fontSize: 12 }}>{expanded ? 'Thu gọn' : 'Chi tiết'}</Text>
+            <Text style={{ color: colors.primary, fontSize: 12 }}>{expanded ? t('gps_trips.collapse') : t('gps_trips.details')}</Text>
             <FontAwesome5 name={expanded ? 'chevron-up' : 'chevron-down'} size={13} color={colors.primary} solid />
           </View>
         </View>
@@ -503,9 +512,9 @@ function TripRow({ trip, expanded, onToggle, onDelete, onEditNote }: {
         ) : null}
         <View style={styles.rowChips}>
           {durationSec > 0 && <Chip icon="clock" label={formatDuration(durationSec)} />}
-          {avgSpeed !== null && <Chip icon="tachometer-alt" label={`TB ${avgSpeed} km/h`} />}
-          {maxSpeed !== null && <Chip icon="flag-checkered" label={`Max ${maxSpeed} km/h`} />}
-          {points.length > 0 && <Chip icon="map-marker-alt" label={`${points.length} điểm`} />}
+          {avgSpeed !== null && <Chip icon="tachometer-alt" label={t('gps_trips.avg_speed', { spd: avgSpeed })} />}
+          {maxSpeed !== null && <Chip icon="flag-checkered" label={t('gps_trips.max_speed', { spd: maxSpeed })} />}
+          {points.length > 0 && <Chip icon="map-marker-alt" label={t('gps_trips.chip_points', { n: points.length })} />}
         </View>
       </TouchableOpacity>
 
@@ -519,13 +528,13 @@ function TripRow({ trip, expanded, onToggle, onDelete, onEditNote }: {
               onPress={() => onEditNote(trip)}
               style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 9, borderRadius: 8, borderWidth: 1, borderColor: colors.border }}>
               <FontAwesome5 name="pen" size={12} color={colors.text} solid />
-              <Text style={{ color: colors.text, fontSize: 13, fontWeight: '600' }}>{trip.ghi_chu ? 'Sửa ghi chú' : 'Thêm ghi chú'}</Text>
+              <Text style={{ color: colors.text, fontSize: 13, fontWeight: '600' }}>{trip.ghi_chu ? t('gps_trips.edit_note') : t('gps_trips.add_note')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => onDelete(trip)}
               style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 9, borderRadius: 8, borderWidth: 1, borderColor: colors.error }}>
               <FontAwesome5 name="trash" size={12} color={colors.error} solid />
-              <Text style={{ color: colors.error, fontSize: 13, fontWeight: '600' }}>Xoá</Text>
+              <Text style={{ color: colors.error, fontSize: 13, fontWeight: '600' }}>{t('common.delete')}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -555,11 +564,11 @@ export default function GpsTripsScreen() {
   const defaultVehicle = vehicles.find((v) => v.is_default) ?? vehicles[0];
 
   const vehicleId: number = route.params?.vehicleId ?? defaultVehicle?.id ?? 0;
-  const vehicleName: string = route.params?.vehicleName
-    ?? defaultVehicle?.ten ?? defaultVehicle?.name ?? 'Xe';
-
   const colors = useColors();
   const t = useT();
+
+  const vehicleName: string = route.params?.vehicleName
+    ?? defaultVehicle?.ten ?? defaultVehicle?.name ?? t('common.vehicle');
 
   const { data, isLoading, refetch, isFetching } = useGpsTrips(vehicleId);
   const trips: GpsTripRecord[] = data?.data ?? [];
@@ -573,17 +582,17 @@ export default function GpsTripsScreen() {
   }, [refetch]);
 
   const handleDelete = useCallback((trip: GpsTripRecord) => {
-    Alert.alert('Xoá hành trình?', `Hành trình ${Number(trip.distance_km ?? 0).toFixed(1)} km ngày ${dayjs(trip.started_at).format('DD/MM')} sẽ bị xoá vĩnh viễn.`, [
-      { text: 'Huỷ', style: 'cancel' },
+    Alert.alert(t('gps_trips.delete_trip_title'), t('gps_trips.delete_trip_body', { km: Number(trip.distance_km ?? 0).toFixed(1), date: dayjs(trip.started_at).format('DD/MM') }), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Xoá', style: 'destructive',
+        text: t('common.delete'), style: 'destructive',
         onPress: async () => {
           try { await gpsTripsApi.remove(trip.id); await refetch(); }
-          catch { Alert.alert('Lỗi', 'Không xoá được. Thử lại.'); }
+          catch { Alert.alert(t('common.error'), t('gps_trips.delete_failed')); }
         },
       },
     ]);
-  }, [refetch]);
+  }, [refetch, t]);
 
   const openNote = useCallback((trip: GpsTripRecord) => {
     setNoteTrip(trip);
@@ -598,11 +607,11 @@ export default function GpsTripsScreen() {
       await refetch();
       setNoteTrip(null);
     } catch {
-      Alert.alert('Lỗi', 'Không lưu được ghi chú. Thử lại.');
+      Alert.alert(t('common.error'), t('gps_trips.note_save_failed'));
     } finally {
       setBusy(false);
     }
-  }, [noteTrip, noteText, refetch]);
+  }, [noteTrip, noteText, refetch, t]);
 
   return (
     <SafeAreaView style={[styles.root, { backgroundColor: colors.background }]} edges={['top']}>
@@ -650,21 +659,21 @@ export default function GpsTripsScreen() {
       <Modal visible={noteTrip !== null} transparent animationType="fade" onRequestClose={() => setNoteTrip(null)}>
         <Pressable style={{ flex: 1, backgroundColor: '#0008', justifyContent: 'center', padding: 28 }} onPress={() => setNoteTrip(null)}>
           <Pressable style={{ backgroundColor: colors.surface, borderRadius: 16, padding: 20 }}>
-            <Text style={{ color: colors.text, fontSize: 16, fontWeight: '700', marginBottom: 12 }}>Ghi chú hành trình</Text>
+            <Text style={{ color: colors.text, fontSize: 16, fontWeight: '700', marginBottom: 12 }}>{t('gps_trips.trip_note')}</Text>
             <TextInput
               value={noteText}
               onChangeText={setNoteText}
-              placeholder="Vd: Đi làm, về quê, chở khách..."
+              placeholder={t('gps_trips.note_placeholder')}
               placeholderTextColor={colors.textSecondary}
               maxLength={255}
               style={{ backgroundColor: colors.background, color: colors.text, borderRadius: 10, padding: 12, minHeight: 48 }}
             />
             <View style={{ flexDirection: 'row', gap: 10, marginTop: 16 }}>
               <TouchableOpacity onPress={() => setNoteTrip(null)} style={{ flex: 1, alignItems: 'center', paddingVertical: 11, borderRadius: 10, borderWidth: 1, borderColor: colors.border }}>
-                <Text style={{ color: colors.textSecondary, fontWeight: '600' }}>Huỷ</Text>
+                <Text style={{ color: colors.textSecondary, fontWeight: '600' }}>{t('common.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={saveNote} disabled={busy} style={{ flex: 1, alignItems: 'center', paddingVertical: 11, borderRadius: 10, backgroundColor: colors.primary }}>
-                <Text style={{ color: colors.primaryText, fontWeight: '700' }}>{busy ? 'Đang lưu...' : 'Lưu'}</Text>
+                <Text style={{ color: colors.primaryText, fontWeight: '700' }}>{busy ? t('gps_trips.saving') : t('common.save')}</Text>
               </TouchableOpacity>
             </View>
           </Pressable>

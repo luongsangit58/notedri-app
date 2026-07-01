@@ -8,15 +8,20 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { FontAwesome5 } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { useVehicle, useUpdateVehicle, useDeleteVehicle } from '../../hooks/useVehicles';
 import { useFuelTypes } from '../../hooks/useFuelTypes';
 import LoadingView from '../../components/LoadingView';
 import ErrorView from '../../components/ErrorView';
+import AppBgPattern from '../../components/AppBgPattern';
 import { useColors } from '../../utils/theme';
 import { useT } from '../../i18n';
+import type { VehiclePhoto } from '../../api/vehicles';
 
 export default function EditVehicleScreen() {
   const colors = useColors();
@@ -63,6 +68,9 @@ export default function EditVehicleScreen() {
   const [is_default, setIsDefault] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
   const [initialized, setInitialized] = useState(false);
+  const [photo, setPhoto] = useState<VehiclePhoto | null>(null);
+  const [existingPhotoUrl, setExistingPhotoUrl] = useState<string | null>(null);
+  const [removeExistingPhoto, setRemoveExistingPhoto] = useState(false);
 
   useEffect(() => {
     if (vehicleData && !initialized) {
@@ -77,9 +85,29 @@ export default function EditVehicleScreen() {
       setTankCapacity(v?.tank_capacity_l != null ? String(v.tank_capacity_l) : '');
       setConsumptionOfficial(v?.consumption_official != null ? String(v.consumption_official) : '');
       setIsDefault(v?.is_default ?? false);
+      setExistingPhotoUrl(v?.anh_url ?? null);
       setInitialized(true);
     }
   }, [vehicleData, initialized]);
+
+  const pickPhoto = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert(t('common.error'), t('add_vehicle.photo_permission'));
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.7,
+    });
+    if (!result.canceled && result.assets[0]) {
+      const asset = result.assets[0];
+      setPhoto({ uri: asset.uri, type: asset.mimeType ?? 'image/jpeg', name: 'vehicle.jpg' });
+      setRemoveExistingPhoto(false);
+    }
+  };
 
   const handleSubmit = async () => {
     if (!ten.trim()) {
@@ -102,8 +130,12 @@ export default function EditVehicleScreen() {
       consumption_official: consumption_official.trim() ? parseFloat(consumption_official.trim()) : null,
     };
 
+    if (removeExistingPhoto && !photo) {
+      payload.anh_xoa = true;
+    }
+
     try {
-      await updateVehicle.mutateAsync({ id: vehicleId, data: payload });
+      await updateVehicle.mutateAsync({ id: vehicleId, data: payload, photo: photo ?? undefined });
       navigation.goBack();
     } catch (err: any) {
       const msg =
@@ -147,6 +179,7 @@ export default function EditVehicleScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom']}>
+      <AppBgPattern />
       <ScrollView
         contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
         keyboardShouldPersistTaps="handled">
@@ -266,7 +299,7 @@ export default function EditVehicleScreen() {
         <Text style={labelStyle}>{t('vehicles.tank_capacity_label')}</Text>
         <TextInput
           style={inputStyle}
-          placeholder="VD: 40"
+          placeholder={t('add_vehicle.tank_placeholder')}
           placeholderTextColor={colors.textSecondary}
           value={tank_capacity_l}
           onChangeText={setTankCapacity}
@@ -277,13 +310,51 @@ export default function EditVehicleScreen() {
         <Text style={labelStyle}>{t('vehicles.consumption_official_label')}</Text>
         <TextInput
           style={inputStyle}
-          placeholder="VD: 6.5"
+          placeholder={t('add_vehicle.consumption_placeholder')}
           placeholderTextColor={colors.textSecondary}
           value={consumption_official}
           onChangeText={setConsumptionOfficial}
           keyboardType="numeric"
           returnKeyType="done"
         />
+
+        <View style={{ marginBottom: 16 }}>
+          <Text style={labelStyle}>{t('add_vehicle.photo_label')}</Text>
+          <TouchableOpacity
+            onPress={pickPhoto}
+            style={{
+              backgroundColor: colors.surface,
+              borderRadius: 10,
+              borderWidth: 1,
+              borderColor: colors.border,
+              borderStyle: 'dashed',
+              height: 120,
+              alignItems: 'center',
+              justifyContent: 'center',
+              overflow: 'hidden',
+            }}>
+            {photo ? (
+              <Image source={{ uri: photo.uri }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+            ) : existingPhotoUrl && !removeExistingPhoto ? (
+              <Image source={{ uri: existingPhotoUrl }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+            ) : (
+              <View style={{ alignItems: 'center', gap: 6 }}>
+                <FontAwesome5 name="camera" size={24} color={colors.textSecondary} />
+                <Text style={{ color: colors.textSecondary, fontSize: 13 }}>{t('add_vehicle.pick_photo')}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+          {(photo || (existingPhotoUrl && !removeExistingPhoto)) && (
+            <TouchableOpacity
+              onPress={() => {
+                setPhoto(null);
+                if (existingPhotoUrl) setRemoveExistingPhoto(true);
+              }}
+              style={{ marginTop: 6, alignSelf: 'flex-end' }}>
+              <Text style={{ color: colors.error, fontSize: 12 }}>{t('add_vehicle.remove_photo')}</Text>
+            </TouchableOpacity>
+          )}
+        </View>
 
         <View style={{
           flexDirection: 'row',

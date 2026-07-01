@@ -1,13 +1,15 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import {
   View, Text, TouchableOpacity, Modal, TextInput,
-  Image, ActivityIndicator,
+  Image, ActivityIndicator, Alert, Linking,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
+import { CameraView, useCameraPermissions } from 'expo-camera';
 import TextRecognition from '@react-native-ml-kit/text-recognition';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useColors } from '../utils/theme';
+import { useT } from '../i18n';
 
 export type OcrMode = 'odo' | 'receipt';
 
@@ -80,29 +82,141 @@ function extractReceiptData(blocks: { text: string }[]): ReceiptData {
   return { tongTien, soLit };
 }
 
-type Step = 'pick' | 'processing' | 'confirm';
+type Step = 'pick' | 'live' | 'processing' | 'confirm';
 type OcrStatus = 'found' | 'partial' | 'manual';
 
 export default function OcrCamera({ visible, onClose, onResult, onReceiptResult, mode = 'odo', hint }: Props) {
   const colors = useColors();
+  const t = useT();
   const [step, setStep] = useState<Step>('pick');
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [ocrValue, setOcrValue] = useState('');
   const [soLitValue, setSoLitValue] = useState('');
   const [ocrStatus, setOcrStatus] = useState<OcrStatus>('manual');
 
+  // Live scan
+  const [permission, requestPermission] = useCameraPermissions();
+  const [liveValue, setLiveValue] = useState('');
+  const [liveTimeout, setLiveTimeout] = useState(false);
+  const cameraRef = useRef<CameraView>(null);
+  const scanningRef = useRef(false);
+  const lastValueRef = useRef('');
+  const stableCountRef = useRef(0);
+
   const reset = () => {
+    scanningRef.current = false;
     setStep('pick');
     setImageUri(null);
     setOcrValue('');
     setSoLitValue('');
     setOcrStatus('manual');
+    setLiveValue('');
+    setLiveTimeout(false);
+    lastValueRef.current = '';
+    stableCountRef.current = 0;
   };
 
   const handleClose = () => {
     reset();
     onClose();
   };
+
+  const startLive = async () => {
+    if (!permission?.granted) {
+      const r = await requestPermission();
+      if (!r.granted) {
+        Alert.alert(
+          t('ocr.camera_perm_title'),
+          t('ocr.camera_perm_body'),
+          [
+            { text: t('ocr.close'), style: 'cancel' },
+            { text: t('ocr.open_settings'), onPress: () => Linking.openSettings() },
+          ],
+        );
+        return;
+      }
+    }
+    setLiveValue('');
+    setLiveTimeout(false);
+    lastValueRef.current = '';
+    stableCountRef.current = 0;
+    setStep('live');
+  };
+
+  // Live OCR loop: snap a low-res frame ~every cycle, recognize, show detected
+  // number live. Auto-locks when the same value is read twice in a row.
+  useEffect(() => {
+    if (step !== 'live') return;
+    scanningRef.current = true;
+    let cancelled = false;
+
+    const startedAt = Date.now();
+    const MAX_SCAN_MS = 45_000; // máy yếu/OCR khó: tự dừng, gợi ý chụp ảnh
+    let slowDevice = false;
+
+    const loop = async () => {
+      // small delay so the preview is ready before first shot
+      await new Promise((r) => setTimeout(r, 600));
+      while (scanningRef.current && !cancelled) {
+        // Quét quá lâu mà không khoá được -> dừng để khỏi nóng máy/hao pin
+        if (Date.now() - startedAt > MAX_SCAN_MS) {
+          scanningRef.current = false;
+          setLiveTimeout(true);
+          break;
+        }
+        try {
+          const cam = cameraRef.current;
+          if (cam) {
+            const t0 = Date.now();
+            const pic = await cam.takePictureAsync({ quality: 0.4, shutterSound: false });
+            if (!scanningRef.current || cancelled) break;
+            if (pic?.uri) {
+              const result = await TextRecognition.recognize(pic.uri);
+              const odo = extractOdo(result.blocks);
+              if (cancelled) break;
+              // Máy chậm (1 vòng > 1.5s) -> giãn nhịp để đỡ giật/nóng
+              if (Date.now() - t0 > 1500) slowDevice = true;
+              setLiveValue(odo);
+              if (odo && odo === lastValueRef.current) {
+                stableCountRef.current += 1;
+                if (stableCountRef.current >= 2) {
+                  // Stable read - lock it in
+                  scanningRef.current = false;
+                  setImageUri(pic.uri);
+                  setOcrValue(odo);
+                  setOcrStatus('found');
+                  setStep('confirm');
+                  break;
+                }
+              } else {
+                lastValueRef.current = odo;
+                stableCountRef.current = odo ? 1 : 0;
+              }
+            }
+          }
+        } catch {
+          /* transient frame error - keep scanning */
+        }
+        await new Promise((r) => setTimeout(r, slowDevice ? 700 : 250));
+      }
+    };
+    loop();
+
+    return () => { cancelled = true; scanningRef.current = false; };
+  }, [step]);
+
+  const useLiveValue = () => {
+    scanningRef.current = false;
+    setOcrValue(liveValue);
+    setOcrStatus(liveValue ? 'found' : 'manual');
+    setStep('confirm');
+  };
+
+  // Safety: fully reset whenever the sheet is hidden, so re-opening starts clean
+  // (otherwise step stays 'live' and the camera loop won't re-arm -> frozen preview).
+  useEffect(() => {
+    if (!visible) reset();
+  }, [visible]);
 
   const pickImage = useCallback(async (useCamera: boolean) => {
     const picked = useCamera
@@ -171,30 +285,40 @@ export default function OcrCamera({ visible, onClose, onResult, onReceiptResult,
         <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24 }}>
 
           <Text style={{ color: colors.text, fontSize: 18, fontWeight: '600', marginBottom: 8 }}>
-            {hint ?? (mode === 'receipt' ? 'Chụp hoá đơn xăng' : 'Chụp đồng hồ xe')}
+            {hint ?? (mode === 'receipt' ? t('ocr.title_receipt') : t('ocr.title_odo'))}
           </Text>
 
           {step === 'pick' && (
             <>
               <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 8 }}>
                 {mode === 'receipt'
-                  ? 'Chụp toàn bộ hoá đơn - app tự đọc số lít và tổng tiền.'
-                  : 'Chụp gần, chỉ lấy vùng đồng hồ ODO - không cần cả tay lái.'}
+                  ? t('ocr.pick_desc_receipt')
+                  : t('ocr.pick_desc_odo')}
               </Text>
               {mode === 'odo' && (
                 <View style={{ backgroundColor: colors.background, borderRadius: 8, padding: 10, marginBottom: 12 }}>
                   <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
-                    {'Mẹo: Lại gần 20-30 cm, giữ tay thẳng. Số ODO càng to trên ảnh thì đọc càng chính xác.'}
+                    {t('ocr.tip_odo')}
                   </Text>
                 </View>
               )}
               <View style={{ gap: 12 }}>
+                {mode === 'odo' && (
+                  <TouchableOpacity
+                    onPress={startLive}
+                    style={{ backgroundColor: colors.primary, padding: 14, borderRadius: 10, alignItems: 'center' }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <FontAwesome5 name="bullseye" size={14} color="#fff" solid />
+                      <Text style={{ color: '#fff', fontWeight: '700' }}>{t('ocr.scan_live')}</Text>
+                    </View>
+                  </TouchableOpacity>
+                )}
                 <TouchableOpacity
                   onPress={() => pickImage(true)}
-                  style={{ backgroundColor: colors.primary, padding: 14, borderRadius: 10, alignItems: 'center' }}>
+                  style={{ backgroundColor: mode === 'odo' ? colors.card : colors.primary, padding: 14, borderRadius: 10, alignItems: 'center' }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <FontAwesome5 name="camera" size={14} color="#fff" solid />
-                    <Text style={{ color: '#fff', fontWeight: '600' }}>Chụp ảnh</Text>
+                    <FontAwesome5 name="camera" size={14} color={mode === 'odo' ? colors.text : '#fff'} solid />
+                    <Text style={{ color: mode === 'odo' ? colors.text : '#fff', fontWeight: '600' }}>{t('ocr.take_photo')}</Text>
                   </View>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -202,17 +326,66 @@ export default function OcrCamera({ visible, onClose, onResult, onReceiptResult,
                   style={{ backgroundColor: colors.card, padding: 14, borderRadius: 10, alignItems: 'center' }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                     <FontAwesome5 name="images" size={14} color={colors.text} solid />
-                    <Text style={{ color: colors.text, fontWeight: '600' }}>Chọn từ thư viện</Text>
+                    <Text style={{ color: colors.text, fontWeight: '600' }}>{t('ocr.pick_library')}</Text>
                   </View>
                 </TouchableOpacity>
               </View>
             </>
           )}
 
+          {step === 'live' && (
+            <View>
+              <View style={{ height: 280, borderRadius: 14, overflow: 'hidden', backgroundColor: '#000', marginBottom: 12 }}>
+                <CameraView ref={cameraRef} style={{ flex: 1 }} facing="back" animateShutter={false} />
+                {/* Khung canh + overlay số đang nhận */}
+                <View pointerEvents="none" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center', justifyContent: 'center' }}>
+                  <View style={{
+                    width: '78%', height: 70, borderWidth: 2, borderRadius: 8,
+                    borderColor: liveValue ? '#16A34A' : '#ffffffaa',
+                  }} />
+                </View>
+                <View pointerEvents="none" style={{ position: 'absolute', bottom: 0, left: 0, right: 0, paddingVertical: 10, alignItems: 'center', backgroundColor: '#00000088' }}>
+                  {liveValue ? (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <FontAwesome5 name="check-circle" size={16} color="#22c55e" solid />
+                      <Text style={{ color: '#fff', fontSize: 26, fontWeight: '800', letterSpacing: 2 }}>{liveValue}</Text>
+                    </View>
+                  ) : (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <ActivityIndicator size="small" color="#fff" />
+                      <Text style={{ color: '#fff', fontSize: 13 }}>{t('ocr.live_aim')}</Text>
+                    </View>
+                  )}
+                </View>
+              </View>
+
+              <Text style={{ color: liveTimeout ? colors.warning : colors.textSecondary, fontSize: 12, textAlign: 'center', marginBottom: 12 }}>
+                {liveTimeout
+                  ? t('ocr.live_timeout')
+                  : t('ocr.live_hint')}
+              </Text>
+
+              <TouchableOpacity
+                onPress={useLiveValue}
+                disabled={!liveValue}
+                style={{
+                  backgroundColor: liveValue ? colors.primary : colors.card,
+                  padding: 14, borderRadius: 10, alignItems: 'center', marginBottom: 8,
+                }}>
+                <Text style={{ color: liveValue ? '#fff' : colors.textSecondary, fontWeight: '700' }}>
+                  {liveValue ? t('ocr.use_value', { value: liveValue }) : t('ocr.no_value_yet')}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => { scanningRef.current = false; setStep('pick'); }} style={{ alignItems: 'center', padding: 8 }}>
+                <Text style={{ color: colors.textSecondary, fontSize: 13 }}>{t('ocr.back_to_photo')}</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
           {step === 'processing' && (
             <View style={{ alignItems: 'center', paddingVertical: 36, gap: 16 }}>
               <ActivityIndicator size="large" color={colors.primary} />
-              <Text style={{ color: colors.textSecondary }}>Đang đọc số từ ảnh...</Text>
+              <Text style={{ color: colors.textSecondary }}>{t('ocr.processing')}</Text>
             </View>
           )}
 
@@ -237,42 +410,42 @@ export default function OcrCamera({ visible, onClose, onResult, onReceiptResult,
                 />
                 <Text style={{ fontSize: 12, color: ocrStatus === 'found' ? '#16A34A' : ocrStatus === 'partial' ? '#F59000' : '#888' }}>
                   {ocrStatus === 'found'
-                    ? 'Đọc được từ ảnh - kiểm tra trước khi xác nhận'
+                    ? t('ocr.status_found')
                     : ocrStatus === 'partial'
-                    ? 'Đọc được một phần - vui lòng kiểm tra và bổ sung'
-                    : 'Không đọc được - vui lòng nhập thủ công'}
+                    ? t('ocr.status_partial')
+                    : t('ocr.status_manual')}
                 </Text>
               </View>
 
               {mode === 'receipt' ? (
                 <>
-                  <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 4 }}>Tổng tiền (đ)</Text>
+                  <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 4 }}>{t('ocr.label_total')}</Text>
                   <TextInput
                     value={ocrValue}
                     onChangeText={setOcrValue}
                     keyboardType="numeric"
-                    placeholder="Nhập nếu không đọc được..."
+                    placeholder={t('ocr.input_placeholder')}
                     placeholderTextColor={colors.textSecondary}
                     style={[inputStyle, { fontSize: 22, fontWeight: '700' }]}
                   />
-                  <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 4 }}>Số lít</Text>
+                  <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 4 }}>{t('ocr.label_liters')}</Text>
                   <TextInput
                     value={soLitValue}
                     onChangeText={setSoLitValue}
                     keyboardType="decimal-pad"
-                    placeholder="Nhập nếu không đọc được..."
+                    placeholder={t('ocr.input_placeholder')}
                     placeholderTextColor={colors.textSecondary}
                     style={[inputStyle, { fontSize: 22, fontWeight: '700', marginBottom: 16 }]}
                   />
                 </>
               ) : (
                 <>
-                  <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 4 }}>Số ODO (km)</Text>
+                  <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 4 }}>{t('ocr.label_odo')}</Text>
                   <TextInput
                     value={ocrValue}
                     onChangeText={setOcrValue}
                     keyboardType="numeric"
-                    placeholder="Nhập nếu không đọc được..."
+                    placeholder={t('ocr.input_placeholder')}
                     placeholderTextColor={colors.textSecondary}
                     style={[inputStyle, { fontSize: 28, fontWeight: '800', textAlign: 'center', letterSpacing: 2, marginBottom: 16 }]}
                   />
@@ -282,20 +455,20 @@ export default function OcrCamera({ visible, onClose, onResult, onReceiptResult,
               <TouchableOpacity
                 onPress={handleConfirm}
                 style={{ backgroundColor: colors.primary, padding: 14, borderRadius: 10, alignItems: 'center', marginBottom: 8 }}>
-                <Text style={{ color: '#fff', fontWeight: '600' }}>Xác nhận</Text>
+                <Text style={{ color: '#fff', fontWeight: '600' }}>{t('common.confirm')}</Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={() => setStep('pick')} style={{ alignItems: 'center', padding: 8 }}>
                 <Text style={{ color: colors.textSecondary, fontSize: 13 }}>
                   {ocrStatus === 'manual' && mode === 'odo'
-                    ? 'Chụp lại gần hơn (20-30 cm)'
-                    : 'Chụp lại'}
+                    ? t('ocr.retake_closer')
+                    : t('ocr.retake')}
                 </Text>
               </TouchableOpacity>
             </>
           )}
 
           <TouchableOpacity onPress={handleClose} style={{ marginTop: 4, alignItems: 'center', padding: 8 }}>
-            <Text style={{ color: colors.textSecondary }}>Huỷ</Text>
+            <Text style={{ color: colors.textSecondary }}>{t('common.cancel')}</Text>
           </TouchableOpacity>
 
         </View>

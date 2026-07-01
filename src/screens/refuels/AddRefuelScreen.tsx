@@ -1,21 +1,26 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
   KeyboardAvoidingView, Platform, Alert, ActivityIndicator, Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import AppBgPattern from '../../components/AppBgPattern';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
+import * as Location from 'expo-location';
 import dayjs from 'dayjs';
 import { useVehicles } from '../../hooks/useVehicles';
 import { useCreateRefuel } from '../../hooks/useRefuels';
 import { useFuelTypes } from '../../hooks/useFuelTypes';
 import OcrCamera, { ReceiptData } from '../../components/OcrCamera';
 import DatePickerField from '../../components/DatePickerField';
+import MoneyInput from '../../components/MoneyInput';
 import VoiceButton from '../../components/VoiceButton';
 import { useColors } from '../../utils/theme';
+import { contentWide } from '../../utils/layout';
 import { formatVND, formatKm } from '../../utils/format';
 import { useT } from '../../i18n';
+import { refuelsApi } from '../../api/refuels';
 
 function FieldLabel({ children }: any) {
   const colors = useColors();
@@ -34,6 +39,7 @@ export default function AddRefuelScreen() {
     fontSize: 16,
   };
   const navigation = useNavigation();
+  const route = useRoute<any>();
   const { data: vehiclesData } = useVehicles();
   const createRefuel = useCreateRefuel();
   const { data: fuelTypesRaw, isLoading: fuelTypesLoading } = useFuelTypes();
@@ -58,6 +64,22 @@ export default function AddRefuelScreen() {
   const [ghiChu, setGhiChu] = useState('');
   const [isFullTank, setIsFullTank] = useState(true);
   const [ocrTarget, setOcrTarget] = useState<'receipt' | 'odo' | null>(null);
+  const [priceInfo, setPriceInfo] = useState<{
+    gia: number | null; uoc_luong: boolean; ngung_ban: boolean; hieu_luc?: string;
+  } | null>(null);
+  const [stationsDropdown, setStationsDropdown] = useState<any[]>([]);
+  const [nearbyLoading, setNearbyLoading] = useState(false);
+  // Tracks the last price we auto-filled so we don't override user's manual edits
+  const autoFilledPriceRef = useRef<string>('');
+
+  // Nhận trạm xăng được chọn từ màn "Trạm xăng gần đây"
+  useEffect(() => {
+    const picked = route.params?.pickedStation;
+    if (picked) {
+      setCayXang(picked);
+      navigation.setParams({ pickedStation: undefined } as any);
+    }
+  }, [route.params?.pickedStation]);
   const [voiceFeedback, setVoiceFeedback] = useState<string | null>(null);
   const voiceFeedbackTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -71,53 +93,104 @@ export default function AddRefuelScreen() {
     return () => { if (voiceFeedbackTimer.current) clearTimeout(voiceFeedbackTimer.current); };
   }, []);
 
-  // Set default fuel type when fuel types load
+  // Set default fuel type when fuel types load; instant price fill from gia_hien_tai
   useEffect(() => {
     if (fuelTypes.length > 0 && fuelTypeId === null) {
       const first = fuelTypes[0];
       setFuelTypeId(first.id);
       if (giaLit === '' && first.gia_hien_tai != null) {
-        setGiaLit(String(Math.round(Number(first.gia_hien_tai))));
+        const p = String(Math.round(Number(first.gia_hien_tai)));
+        autoFilledPriceRef.current = p;
+        setGiaLit(p);
       }
     }
   }, [fuelTypes]);
 
-  // Auto-fill gia_lit from selected fuel type's gia_hien_tai
+  // Instant fill when fuel type changes (gia_hien_tai from cached data)
   useEffect(() => {
     if (fuelTypeId === null) return;
     const selected = fuelTypes.find((ft: any) => ft.id === fuelTypeId);
     if (selected?.gia_hien_tai != null) {
-      setGiaLit(prev => (prev === '' ? String(Math.round(Number(selected.gia_hien_tai))) : prev));
+      const p = String(Math.round(Number(selected.gia_hien_tai)));
+      setGiaLit(prev => {
+        if (prev === '' || prev === autoFilledPriceRef.current) {
+          autoFilledPriceRef.current = p;
+          return p;
+        }
+        return prev;
+      });
     }
+    setPriceInfo(null);
   }, [fuelTypeId]);
+
+  // Carry-forward price from server (more accurate, especially for past dates)
+  useEffect(() => {
+    if (fuelTypeId === null) return;
+    let cancelled = false;
+    refuelsApi.fuelPrice(fuelTypeId, ngay).then(res => {
+      if (cancelled) return;
+      const p = res.data;
+      setPriceInfo(p);
+      if (p.gia != null) {
+        const fetched = String(p.gia);
+        setGiaLit(prev => {
+          if (prev === '' || prev === autoFilledPriceRef.current) {
+            autoFilledPriceRef.current = fetched;
+            return fetched;
+          }
+          return prev;
+        });
+      }
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [fuelTypeId, ngay]);
 
   const selectedFuelType = fuelTypes.find((ft: any) => ft.id === fuelTypeId) ?? null;
   const marketPrice = selectedFuelType?.gia_hien_tai ?? null;
   const currentVehicle = vehicles.find((v: any) => v.id === vehicleId);
   const odoWarning = odometer && currentVehicle?.odo_hien_tai
     && parseInt(odometer) < currentVehicle.odo_hien_tai
-    ? `ODO thấp hơn lần trước (${formatKm(currentVehicle.odo_hien_tai)}), kiểm tra lại`
+    ? t('add_refuel.odo_lower_warning', { last: formatKm(currentVehicle.odo_hien_tai) })
     : null;
 
   const handleSmartVoice = (value: string, raw: string) => {
-    const num = parseFloat(value.replace(',', '.'));
+    if (voiceFeedbackTimer.current) clearTimeout(voiceFeedbackTimer.current);
+
+    // Không nhận ra số → thông báo lỗi rõ ràng
+    if (!value) {
+      setVoiceFeedback(t('add_refuel.voice_not_recognized'));
+      voiceFeedbackTimer.current = setTimeout(() => setVoiceFeedback(null), 3000);
+      return;
+    }
+
+    const num = parseFloat(value);
     const rawLower = raw.toLowerCase();
+
     let field: 'tongTien' | 'soLit';
-    // Keyword-based detection first
-    if (rawLower.match(/lít|lit|\bl\b/)) field = 'soLit';
-    else if (rawLower.match(/đồng|nghìn|triệu|ngàn/)) field = 'tongTien';
-    // Magnitude fallback: decimals or 1-200 range → liters, else → amount
-    else if (value.includes('.') || (num >= 1 && num <= 200)) field = 'soLit';
-    else field = 'tongTien';
+    // Từ khoá lít phải ưu tiên đầu tiên (không dùng \bl\b vì quá rộng)
+    if (rawLower.match(/\blít\b|\blit\b/)) {
+      field = 'soLit';
+    }
+    // Từ khoá tiền: bổ sung "tiền", "tổng", "trả", "chi phí"
+    else if (rawLower.match(/đồng|tiền|tổng|trả|chi phí|nghìn|ngàn|triệu|tỷ/)) {
+      field = 'tongTien';
+    }
+    // Fallback magnitude: số thực (thường là lít) hoặc 1-200 → soLit
+    else if (value.includes('.') || (num >= 1 && num <= 200)) {
+      field = 'soLit';
+    } else {
+      field = 'tongTien';
+    }
 
     if (field === 'tongTien') {
       handleTongTienChange(value);
-      setVoiceFeedback(`Tổng tiền: ${parseInt(value).toLocaleString('vi-VN')}đ`);
+      const disp = isNaN(parseInt(value)) ? value : parseInt(value).toLocaleString('vi-VN') + 'đ';
+      setVoiceFeedback(t('add_refuel.voice_total_amount', { value: disp }));
     } else {
       handleSoLitChange(value);
-      setVoiceFeedback(`Số lít: ${value} L`);
+      const liters = parseFloat(value);
+      setVoiceFeedback(t('add_refuel.voice_liters', { value: isNaN(liters) ? value : liters }));
     }
-    if (voiceFeedbackTimer.current) clearTimeout(voiceFeedbackTimer.current);
     voiceFeedbackTimer.current = setTimeout(() => setVoiceFeedback(null), 2500);
   };
 
@@ -146,14 +219,43 @@ export default function AddRefuelScreen() {
   };
 
   const handleGiaLitChange = (v: string) => {
+    autoFilledPriceRef.current = ''; // user manually edited - stop auto-updating
     setGiaLit(v);
     const g = parseFloat(v), s = parseFloat(soLit);
     if (g > 0 && s > 0) setTongTien(Math.round(g * s).toString());
   };
 
+  const handleFindNearbyInline = async () => {
+    try {
+      setNearbyLoading(true);
+      setStationsDropdown([]);
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(t('nearby_stations.permission_title'), t('add_refuel.location_permission_desc'));
+        return;
+      }
+      const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      const res = await refuelsApi.nearbyStations(loc.coords.latitude, loc.coords.longitude);
+      const stations: any[] = res.data?.stations ?? [];
+      if (stations.length === 0) {
+        Alert.alert(t('add_refuel.not_found_title'), t('add_refuel.no_stations_nearby'));
+      } else {
+        setStationsDropdown(stations.slice(0, 6));
+      }
+    } catch (err: any) {
+      if (err?.response?.status === 403) {
+        Alert.alert(t('add_refuel.premium_feature_title'), err?.response?.data?.message ?? t('add_refuel.nearby_premium_required'));
+      } else {
+        Alert.alert(t('common.error'), t('add_refuel.location_failed'));
+      }
+    } finally {
+      setNearbyLoading(false);
+    }
+  };
+
   const handleSubmit = async () => {
-    if (!vehicleId) { Alert.alert('Lỗi', 'Vui lòng chọn xe'); return; }
-    if (!tongTien && !soLit) { Alert.alert('Lỗi', 'Nhập ít nhất tổng tiền hoặc số lít'); return; }
+    if (!vehicleId) { Alert.alert(t('common.error'), t('common.select_vehicle_required')); return; }
+    if (!tongTien && !soLit) { Alert.alert(t('common.error'), t('refuels.error_amount_or_liters')); return; }
     try {
       await createRefuel.mutateAsync({
         vehicle_id: vehicleId,
@@ -170,22 +272,23 @@ export default function AddRefuelScreen() {
       });
       navigation.goBack();
     } catch (err: any) {
-      const msg = err.response?.data?.message ?? 'Không lưu được';
+      const msg = err.response?.data?.message ?? t('common.save_failed');
       const errs = err.response?.data?.errors;
       const detail = errs ? Object.values(errs).flat().join('\n') : null;
-      Alert.alert('Lỗi', detail ?? msg);
+      Alert.alert(t('common.error'), detail ?? msg);
     }
   };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom']}>
+      <AppBgPattern />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView contentContainerStyle={{ padding: 16 }}>
+        <ScrollView contentContainerStyle={[{ padding: 16 }, contentWide]}>
 
           {/* Vehicle chips */}
           {vehicles.length > 1 && (
             <>
-              <FieldLabel>Chọn xe</FieldLabel>
+              <FieldLabel>{t('common.select_vehicle')}</FieldLabel>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 14 }}>
                 {vehicles.map((v: any) => (
                   <TouchableOpacity
@@ -205,7 +308,7 @@ export default function AddRefuelScreen() {
           )}
 
           {/* Loại xăng */}
-          <FieldLabel>Loại nhiên liệu</FieldLabel>
+          <FieldLabel>{t('vehicles.fuel_type_label')}</FieldLabel>
           {fuelTypesLoading ? (
             <ActivityIndicator color={colors.primary} style={{ marginBottom: 14, alignSelf: 'flex-start' }} />
           ) : (
@@ -233,7 +336,7 @@ export default function AddRefuelScreen() {
                 alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6,
               }}>
               <FontAwesome5 name="camera" size={15} color={colors.primary} solid />
-              <Text style={{ color: colors.primary, fontWeight: '600', fontSize: 13 }}>Chụp hoá đơn</Text>
+              <Text style={{ color: colors.primary, fontWeight: '600', fontSize: 13 }}>{t('add_refuel.scan_receipt')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => (navigation as any).navigate('NearbyStations')}
@@ -242,7 +345,7 @@ export default function AddRefuelScreen() {
                 alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6,
               }}>
               <FontAwesome5 name="location-arrow" size={14} color={colors.primary} solid />
-              <Text style={{ color: colors.textSecondary, fontWeight: '600', fontSize: 13 }}>Cây xăng gần đây</Text>
+              <Text style={{ color: colors.textSecondary, fontWeight: '600', fontSize: 13 }}>{t('add_refuel.nearby_stations')}</Text>
             </TouchableOpacity>
           </View>
 
@@ -256,25 +359,24 @@ export default function AddRefuelScreen() {
             {voiceFeedback && (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8, paddingHorizontal: 4 }}>
                 <FontAwesome5 name="check-circle" size={12} color="#16A34A" solid />
-                <Text style={{ color: '#16A34A', fontSize: 13, fontWeight: '600' }}>Đã điền: {voiceFeedback}</Text>
+                <Text style={{ color: '#16A34A', fontSize: 13, fontWeight: '600' }}>{t('add_refuel.filled_prefix', { value: voiceFeedback })}</Text>
               </View>
             )}
           </View>
 
           {/* 3 ô tính tiền */}
-          <FieldLabel>Tổng tiền (đ) *</FieldLabel>
-          <TextInput
+          <FieldLabel>{t('refuels.total_amount_label')}</FieldLabel>
+          <MoneyInput
             value={tongTien}
             onChangeText={handleTongTienChange}
             placeholder="0"
             placeholderTextColor={colors.textSecondary}
-            keyboardType="numeric"
             style={[input, { fontSize: 18, fontWeight: '700', marginBottom: 4 }]}
           />
 
           <View style={{ flexDirection: 'row', gap: 8, marginBottom: 4 }}>
             <View style={{ flex: 1 }}>
-              <FieldLabel>Số lít</FieldLabel>
+              <FieldLabel>{t('refuels.liters_label')}</FieldLabel>
               <TextInput
                 value={soLit}
                 onChangeText={handleSoLitChange}
@@ -285,22 +387,32 @@ export default function AddRefuelScreen() {
               />
             </View>
             <View style={{ flex: 1 }}>
-              <FieldLabel>Giá/lít</FieldLabel>
-              <TextInput value={giaLit} onChangeText={handleGiaLitChange} placeholder="0" placeholderTextColor={colors.textSecondary} keyboardType="numeric" style={input} />
-              {marketPrice != null && (
-                <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 4 }}>
-                  Giá thị trường: {formatVND(marketPrice)}/lít
+              <FieldLabel>{t('refuels.price_per_liter_label')}</FieldLabel>
+              <MoneyInput value={giaLit} onChangeText={handleGiaLitChange} placeholder="0" placeholderTextColor={colors.textSecondary} style={input} />
+              {priceInfo?.ngung_ban && (
+                <Text style={{ color: colors.warning, fontSize: 11, marginTop: 3 }}>
+                  {t('add_refuel.fuel_discontinued')}
+                </Text>
+              )}
+              {priceInfo?.uoc_luong && priceInfo.gia != null && !priceInfo.ngung_ban && (
+                <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 3 }}>
+                  {priceInfo.hieu_luc ? t('add_refuel.reference_price_date', { date: priceInfo.hieu_luc }) : t('add_refuel.reference_price')}
+                </Text>
+              )}
+              {!priceInfo && marketPrice != null && (
+                <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 3 }}>
+                  {t('add_refuel.market_price', { price: formatVND(marketPrice) })}
                 </Text>
               )}
             </View>
           </View>
 
-          <FieldLabel>ODO (km)</FieldLabel>
+          <FieldLabel>{t('refuels.odo_label')}</FieldLabel>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 2 }}>
             <TextInput
               value={odometer}
               onChangeText={setOdometer}
-              placeholder="Số km hiện tại"
+              placeholder={t('refuels.odo_placeholder')}
               placeholderTextColor={colors.textSecondary}
               keyboardType="numeric"
               style={[input, { flex: 1 }]}
@@ -320,8 +432,62 @@ export default function AddRefuelScreen() {
 
           <DatePickerField label={t('refuels.date_label')} value={ngay} onChange={setNgay} />
 
-          <FieldLabel>Cây xăng</FieldLabel>
-          <TextInput value={cayXang} onChangeText={setCayXang} placeholder="Petrolimex, Shell..." placeholderTextColor={colors.textSecondary} style={[input, { marginBottom: 4 }]} />
+          <FieldLabel>{t('refuels.station_label')}</FieldLabel>
+          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 4 }}>
+            <TextInput
+              value={cayXang}
+              onChangeText={v => { setCayXang(v); if (!v) setStationsDropdown([]); }}
+              placeholder={t('refuels.station_placeholder')}
+              placeholderTextColor={colors.textSecondary}
+              style={[input, { flex: 1 }]}
+            />
+            <TouchableOpacity
+              onPress={handleFindNearbyInline}
+              disabled={nearbyLoading}
+              style={{
+                width: 46, borderRadius: 10, backgroundColor: colors.surface,
+                alignItems: 'center', justifyContent: 'center',
+              }}>
+              {nearbyLoading
+                ? <ActivityIndicator size="small" color={colors.primary} />
+                : <FontAwesome5 name="location-arrow" size={14} color={colors.primary} solid />}
+            </TouchableOpacity>
+          </View>
+          {stationsDropdown.length > 0 && (
+            <View style={{
+              backgroundColor: colors.surface, borderRadius: 10, marginBottom: 8,
+              borderWidth: 1, borderColor: colors.border, overflow: 'hidden',
+            }}>
+              {stationsDropdown.map((s, i) => {
+                const dist = s.dist != null
+                  ? (s.dist >= 1000 ? `${(s.dist / 1000).toFixed(1)}km` : `${s.dist}m`)
+                  : null;
+                return (
+                  <TouchableOpacity
+                    key={i}
+                    onPress={() => { setCayXang(s.name ?? ''); setStationsDropdown([]); }}
+                    style={{
+                      paddingHorizontal: 14, paddingVertical: 10,
+                      borderBottomWidth: i < stationsDropdown.length - 1 ? 1 : 0,
+                      borderBottomColor: colors.border,
+                    }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <FontAwesome5 name="gas-pump" size={11} color={colors.textSecondary} solid />
+                      <Text style={{ color: colors.text, fontWeight: '600', flex: 1, fontSize: 13 }} numberOfLines={1}>
+                        {s.name}
+                      </Text>
+                      {dist && <Text style={{ color: colors.textSecondary, fontSize: 12 }}>{dist}</Text>}
+                    </View>
+                    {s.addr ? (
+                      <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 2, marginLeft: 17 }} numberOfLines={1}>
+                        {s.addr}
+                      </Text>
+                    ) : null}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
 
           {/* Full tank toggle */}
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.surface, borderRadius: 10, padding: 14, marginBottom: 8 }}>
@@ -349,7 +515,7 @@ export default function AddRefuelScreen() {
               : (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                   <FontAwesome5 name="gas-pump" size={16} color="#fff" solid />
-                  <Text style={{ color: colors.primaryText, fontWeight: '800', fontSize: 16 }}>Lưu lần đổ xăng</Text>
+                  <Text style={{ color: colors.primaryText, fontWeight: '800', fontSize: 16 }}>{t('refuels.save_button')}</Text>
                 </View>
               )}
           </TouchableOpacity>
@@ -363,7 +529,7 @@ export default function AddRefuelScreen() {
         mode={ocrTarget === 'odo' ? 'odo' : 'receipt'}
         onResult={handleOdoOcrResult}
         onReceiptResult={handleReceiptResult}
-        hint={ocrTarget === 'odo' ? 'Chụp đồng hồ xe để lấy số ODO' : 'Chụp hoá đơn xăng'}
+        hint={ocrTarget === 'odo' ? t('ocr.hint_odo_dashboard') : t('ocr.title_receipt')}
       />
     </SafeAreaView>
   );

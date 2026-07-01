@@ -4,6 +4,7 @@ import {
   KeyboardAvoidingView, Platform, Alert, ActivityIndicator, StyleSheet,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AppBgPattern from '../../components/AppBgPattern';
 import { useNavigation } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import dayjs from 'dayjs';
@@ -11,18 +12,19 @@ import { useVehicles } from '../../hooks/useVehicles';
 import { useCreateService } from '../../hooks/useServices';
 import { useColors } from '../../utils/theme';
 import { useT } from '../../i18n';
+import MoneyInput from '../../components/MoneyInput';
 
 const LOAI_OPTIONS = [
-  { value: 'bao_duong', label: 'Bảo dưỡng' },
-  { value: 'sua_chua', label: 'Sửa chữa' },
-  { value: 'lop', label: 'Lốp' },
-  { value: 'bao_hiem', label: 'Bảo hiểm' },
-  { value: 'dang_kiem', label: 'Đăng kiểm' },
-  { value: 'phat_nguoi', label: 'Phạt nguội' },
-  { value: 'phi_gui_xe', label: 'Phí gửi xe' },
-  { value: 'phi_cau_duong', label: 'Phí cầu đường' },
-  { value: 'rua_xe', label: 'Rửa xe' },
-  { value: 'khac', label: 'Khác' },
+  { value: 'bao_duong', labelKey: 'services.type_bao_duong' },
+  { value: 'sua_chua', labelKey: 'services.type_sua_chua' },
+  { value: 'lop', labelKey: 'services.type_lop' },
+  { value: 'bao_hiem', labelKey: 'reminders.type_bao_hiem' },
+  { value: 'dang_kiem', labelKey: 'reminders.type_dang_kiem' },
+  { value: 'phat_nguoi', labelKey: 'services.type_phat_nguoi' },
+  { value: 'phi_gui_xe', labelKey: 'services.type_phi_gui_xe' },
+  { value: 'phi_cau_duong', labelKey: 'services.type_phi_cau_duong' },
+  { value: 'rua_xe', labelKey: 'services.type_rua_xe' },
+  { value: 'khac', labelKey: 'reminders.type_khac' },
 ];
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
@@ -129,11 +131,11 @@ export default function AddServiceScreen() {
 
   const handleSubmit = async () => {
     if (!vehicleId) {
-      Alert.alert(t('common.error'), 'Vui lòng chọn xe');
+      Alert.alert(t('common.error'), t('common.select_vehicle_required'));
       return;
     }
     if (!hangMuc.trim()) {
-      Alert.alert(t('common.error'), 'Vui lòng nhập tên hạng mục');
+      Alert.alert(t('common.error'), t('services.error_missing_item'));
       return;
     }
     try {
@@ -149,7 +151,7 @@ export default function AddServiceScreen() {
       });
       navigation.goBack();
     } catch (err: any) {
-      const msg = err.response?.data?.message ?? 'Không lưu được';
+      const msg = err.response?.data?.message ?? t('common.save_failed');
       const errs = err.response?.data?.errors;
       const detail = errs ? Object.values(errs).flat().join('\n') : null;
       Alert.alert(t('common.error'), detail ?? msg);
@@ -158,6 +160,7 @@ export default function AddServiceScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
+      <AppBgPattern />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.scrollContent}>
 
@@ -211,7 +214,7 @@ export default function AddServiceScreen() {
                   styles.chipText,
                   loai === opt.value && styles.chipTextActive,
                 ]}>
-                  {opt.label}
+                  {t(opt.labelKey as any)}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -222,19 +225,18 @@ export default function AddServiceScreen() {
           <TextInput
             value={hangMuc}
             onChangeText={setHangMuc}
-            placeholder="Tên hạng mục, VD: Thay dầu động cơ"
+            placeholder={t('services.item_placeholder')}
             placeholderTextColor={colors.textSecondary}
             style={styles.input}
           />
 
           {/* Chi phi */}
           <FieldLabel>{t('services.cost_label')}</FieldLabel>
-          <TextInput
+          <MoneyInput
             value={chiPhi}
             onChangeText={setChiPhi}
             placeholder={t('services.cost_label')}
             placeholderTextColor={colors.textSecondary}
-            keyboardType="numeric"
             style={styles.input}
           />
 
@@ -264,7 +266,7 @@ export default function AddServiceScreen() {
           <TextInput
             value={noiLam}
             onChangeText={setNoiLam}
-            placeholder="Gara, địa điểm..."
+            placeholder={t('services.location_placeholder')}
             placeholderTextColor={colors.textSecondary}
             style={styles.input}
           />
@@ -274,7 +276,7 @@ export default function AddServiceScreen() {
           <TextInput
             value={ghiChu}
             onChangeText={setGhiChu}
-            placeholder="Ghi chú thêm..."
+            placeholder={t('refuels.note_placeholder')}
             placeholderTextColor={colors.textSecondary}
             multiline
             style={[styles.input, styles.inputMultiline]}

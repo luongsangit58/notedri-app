@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, RefreshControl, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AppBgPattern from '../../components/AppBgPattern';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import client from '../../api/client';
@@ -15,10 +16,10 @@ function fmt(n: number | string | null | undefined): string {
   return formatVND(v) + '/L';
 }
 
-const GROUP_LABELS: Record<string, { label: string; color: string; icon: string }> = {
-  xang:   { label: 'Xăng',    color: '#F59E0B', icon: 'fire' },
-  diezel: { label: 'Dầu',     color: '#3B82F6', icon: 'tint' },
-  dau:    { label: 'Dầu hỏa', color: '#8B5CF6', icon: 'burn' },
+const GROUP_LABELS: Record<string, { labelKey: string; color: string; icon: string }> = {
+  xang:   { labelKey: 'fuel_prices.group_gasoline', color: '#F59E0B', icon: 'fire' },
+  diezel: { labelKey: 'fuel_prices.group_diesel',   color: '#3B82F6', icon: 'tint' },
+  dau:    { labelKey: 'fuel_prices.group_kerosene', color: '#8B5CF6', icon: 'burn' },
 };
 
 const SERIES_COLORS = ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#6366f1', '#a855f7'];
@@ -26,6 +27,7 @@ const SERIES_COLORS = ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#6366f1', '#
 /* ─── Mini line chart using Views ─── */
 function MiniLineChart({ series, labels }: { series: any[]; labels: string[] }) {
   const colors = useColors();
+  const t = useT();
   const CHART_H = 80;
   const CHART_W_PER_PT = 8;
   const visibleSeries = series.filter(s => s.data && s.data.some((v: any) => v != null));
@@ -49,7 +51,7 @@ function MiniLineChart({ series, labels }: { series: any[]; labels: string[] }) 
   return (
     <View style={{ marginTop: 16 }}>
       <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: '700', marginBottom: 8 }}>
-        Biến động 6 tháng qua
+        {t('fuel_prices.history_6months')}
       </Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
         <View style={{ height: CHART_H + 16, position: 'relative', width: n * CHART_W_PER_PT + 4 }}>
@@ -141,29 +143,30 @@ export default function FuelPricesScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom']}>
+      <AppBgPattern />
       <ScrollView
         refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={colors.primary} />}
         contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
 
         <Text style={{ color: colors.text, fontWeight: '800', fontSize: 20, marginBottom: 4 }}>
-          Giá xăng dầu
+          {t('fuel_prices.title')}
         </Text>
         <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 16 }}>
-          Giá hiện hành tại Việt Nam
+          {t('fuel_prices.subtitle')}
         </Text>
 
         {/* Tab switcher */}
         <View style={{ flexDirection: 'row', backgroundColor: colors.surface, borderRadius: 10, padding: 4, marginBottom: 20 }}>
-          {(['current', 'history'] as TabKey[]).map(t => (
+          {(['current', 'history'] as TabKey[]).map(key => (
             <TouchableOpacity
-              key={t}
-              onPress={() => setTab(t)}
+              key={key}
+              onPress={() => setTab(key)}
               style={{
                 flex: 1, paddingVertical: 8, borderRadius: 8, alignItems: 'center',
-                backgroundColor: tab === t ? colors.primary : 'transparent',
+                backgroundColor: tab === key ? colors.primary : 'transparent',
               }}>
-              <Text style={{ color: tab === t ? '#fff' : colors.textSecondary, fontWeight: '700', fontSize: 13 }}>
-                {t === 'current' ? 'Giá hiện tại' : 'Lịch sử biến động'}
+              <Text style={{ color: tab === key ? '#fff' : colors.textSecondary, fontWeight: '700', fontSize: 13 }}>
+                {key === 'current' ? t('fuel_prices.tab_current') : t('fuel_prices.tab_history')}
               </Text>
             </TouchableOpacity>
           ))}
@@ -175,17 +178,18 @@ export default function FuelPricesScreen() {
             {active.length === 0 && (
               <View style={{ alignItems: 'center', paddingVertical: 40 }}>
                 <FontAwesome5 name="gas-pump" size={36} color={colors.textSecondary} />
-                <Text style={{ color: colors.textSecondary, marginTop: 12 }}>Chưa có dữ liệu giá.</Text>
+                <Text style={{ color: colors.textSecondary, marginTop: 12 }}>{t('fuel_prices.no_current_data')}</Text>
               </View>
             )}
             {Object.entries(byGroup).map(([group, items]) => {
-              const cfg = GROUP_LABELS[group] ?? { label: group, color: colors.textSecondary, icon: 'gas-pump' };
+              const cfg = GROUP_LABELS[group] ?? { labelKey: '', color: colors.textSecondary, icon: 'gas-pump' };
+              const groupLabel = cfg.labelKey ? t(cfg.labelKey as any) : group;
               return (
                 <View key={group} style={{ marginBottom: 20 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
                     <FontAwesome5 name={cfg.icon} size={14} color={cfg.color} solid />
                     <Text style={{ color: cfg.color, fontWeight: '700', fontSize: 14, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                      {cfg.label}
+                      {groupLabel}
                     </Text>
                   </View>
                   <View style={{ backgroundColor: colors.surface, borderRadius: 12, overflow: 'hidden' }}>
@@ -214,7 +218,7 @@ export default function FuelPricesScreen() {
             {!histData || histData.empty ? (
               <View style={{ alignItems: 'center', paddingVertical: 40 }}>
                 <FontAwesome5 name="chart-line" size={36} color={colors.textSecondary} />
-                <Text style={{ color: colors.textSecondary, marginTop: 12 }}>Chưa có dữ liệu lịch sử.</Text>
+                <Text style={{ color: colors.textSecondary, marginTop: 12 }}>{t('fuel_prices.no_history_data')}</Text>
               </View>
             ) : (
               <View style={{ backgroundColor: colors.surface, borderRadius: 14, padding: 16 }}>
@@ -225,7 +229,7 @@ export default function FuelPricesScreen() {
         )}
 
         <Text style={{ color: colors.textSecondary, fontSize: 11, textAlign: 'center', marginTop: 16 }}>
-          Nguồn: dữ liệu nhà nước — cập nhật theo kỳ điều chỉnh
+          {t('fuel_prices.source')}
         </Text>
       </ScrollView>
     </SafeAreaView>

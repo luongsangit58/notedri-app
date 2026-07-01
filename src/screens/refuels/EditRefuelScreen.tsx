@@ -4,6 +4,7 @@ import {
   KeyboardAvoidingView, Platform, Alert, ActivityIndicator, Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AppBgPattern from '../../components/AppBgPattern';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useDeleteRefuel } from '../../hooks/useRefuels';
 import { refuelsApi } from '../../api/refuels';
@@ -11,6 +12,7 @@ import client from '../../api/client';
 import { useColors } from '../../utils/theme';
 import { useT } from '../../i18n';
 import DatePickerField from '../../components/DatePickerField';
+import MoneyInput, { toMoneyRaw } from '../../components/MoneyInput';
 
 const FUEL_TYPES = ['E5 RON 95-V', 'RON 95-III', 'E5 RON 92', 'Dầu DO 0,05S-V', 'Dầu DO 0,001S'];
 
@@ -62,11 +64,11 @@ export default function EditRefuelScreen() {
         const data = r.data?.data ?? r.data;
         setOriginal(data);
         setFuelType(data?.fuel_type ?? FUEL_TYPES[0]);
-        setTongTien(data?.tong_tien != null ? String(data.tong_tien) : '');
-        setSoLit(data?.so_lit != null ? String(data.so_lit) : '');
-        setGiaLit(data?.gia_lit != null ? String(data.gia_lit) : '');
+        setTongTien(toMoneyRaw(data?.tong_tien));
+        setSoLit(data?.so_lit != null ? String(Number(data.so_lit)) : '');
+        setGiaLit(toMoneyRaw(data?.gia_lit));
         setOdometer(data?.odometer != null ? String(data.odometer) : '');
-        setNgay(data?.ngay ?? '');
+        setNgay(data?.ngay ? String(data.ngay).slice(0, 10) : '');
         setCayXang(data?.cay_xang ?? '');
         setGhiChu(data?.ghi_chu ?? '');
         setIsFullTank(data?.is_full_tank ?? true);
@@ -77,7 +79,7 @@ export default function EditRefuelScreen() {
 
   const handleUpdate = async () => {
     if (!tongTien && !soLit) {
-      Alert.alert(t('common.error'), 'Nhập ít nhất tổng tiền hoặc số lít');
+      Alert.alert(t('common.error'), t('refuels.error_amount_or_liters'));
       return;
     }
     setUpdating(true);
@@ -95,7 +97,7 @@ export default function EditRefuelScreen() {
       });
       navigation.goBack();
     } catch (err: any) {
-      const msg = err?.response?.data?.message ?? 'Không cập nhật được';
+      const msg = err?.response?.data?.message ?? t('refuels.update_failed');
       const errs = err?.response?.data?.errors;
       const detail = errs ? Object.values(errs).flat().join('\n') : null;
       Alert.alert(t('common.error'), detail ?? msg);
@@ -117,7 +119,7 @@ export default function EditRefuelScreen() {
             deleteRefuel.mutate(refuelId, {
               onSuccess: () => navigation.goBack(),
               onError: (e: any) =>
-                Alert.alert(t('common.error'), e?.response?.data?.message ?? 'Không xoá được'),
+                Alert.alert(t('common.error'), e?.response?.data?.message ?? t('refuels.delete_failed')),
             });
           },
         },
@@ -128,6 +130,7 @@ export default function EditRefuelScreen() {
   if (loading) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}>
+        <AppBgPattern />
         <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
@@ -137,11 +140,12 @@ export default function EditRefuelScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom']}>
+      <AppBgPattern />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
 
           {/* Loại xăng */}
-          <FieldLabel>Loại nhiên liệu</FieldLabel>
+          <FieldLabel>{t('vehicles.fuel_type_label')}</FieldLabel>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 14 }}>
             {FUEL_TYPES.map((ft) => (
               <TouchableOpacity
@@ -164,12 +168,11 @@ export default function EditRefuelScreen() {
           {/* Tổng tiền */}
           <View style={{ marginBottom: 4 }}>
             <FieldLabel>{t('refuels.total_amount_label')}</FieldLabel>
-            <TextInput
+            <MoneyInput
               value={tongTien}
               onChangeText={setTongTien}
               placeholder="0"
               placeholderTextColor={colors.textSecondary}
-              keyboardType="numeric"
               style={[inputStyle, { fontSize: 18, fontWeight: '700' }]}
             />
           </View>
@@ -189,12 +192,11 @@ export default function EditRefuelScreen() {
             </View>
             <View style={{ flex: 1 }}>
               <FieldLabel>{t('refuels.price_per_liter_label')}</FieldLabel>
-              <TextInput
+              <MoneyInput
                 value={giaLit}
                 onChangeText={setGiaLit}
                 placeholder="0"
                 placeholderTextColor={colors.textSecondary}
-                keyboardType="numeric"
                 style={inputStyle}
               />
             </View>
@@ -204,7 +206,7 @@ export default function EditRefuelScreen() {
           <TextInput
             value={odometer}
             onChangeText={setOdometer}
-            placeholder="Số km hiện tại"
+            placeholder={t('refuels.odo_placeholder')}
             placeholderTextColor={colors.textSecondary}
             keyboardType="numeric"
             style={[inputStyle, { marginBottom: 4 }]}
@@ -216,7 +218,7 @@ export default function EditRefuelScreen() {
           <TextInput
             value={cayXang}
             onChangeText={setCayXang}
-            placeholder="Petrolimex, Shell..."
+            placeholder={t('refuels.station_placeholder')}
             placeholderTextColor={colors.textSecondary}
             style={[inputStyle, { marginBottom: 4 }]}
           />

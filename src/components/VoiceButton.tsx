@@ -5,6 +5,7 @@ import {
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useColors } from '../utils/theme';
 import { useVoiceInput } from '../hooks/useVoiceInput';
+import { useT } from '../i18n';
 
 interface VoiceButtonProps {
   label?: string;
@@ -15,6 +16,7 @@ interface VoiceButtonProps {
 
 export default function VoiceButton({ label, hint, onResult, compact = false }: VoiceButtonProps) {
   const colors = useColors();
+  const t = useT();
   const voice = useVoiceInput();
   const [feedback, setFeedback] = useState<string | null>(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -53,7 +55,11 @@ export default function VoiceButton({ label, hint, onResult, compact = false }: 
 
   const handlePress = () => {
     if (voice.status === 'listening') { voice.stop(); return; }
-    voice.listen((value, raw) => onResult(value, raw));
+    voice.listen((value, raw) => {
+      // Hiện transcript thô để user biết mic đã nghe được gì
+      if (raw) setFeedback(raw.length > 40 ? raw.slice(0, 40) + '…' : raw);
+      onResult(value, raw);
+    });
   };
 
   const isListening = voice.status === 'listening';
@@ -115,7 +121,7 @@ export default function VoiceButton({ label, hint, onResult, compact = false }: 
               </View>
             </View>
             <Text style={{ color: colors.text, fontSize: 17, fontWeight: '700', marginTop: 20 }}>
-              Đang nghe...
+              {t('voice.listening')}
             </Text>
             {hint && (
               <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 6, textAlign: 'center' }}>
@@ -123,7 +129,7 @@ export default function VoiceButton({ label, hint, onResult, compact = false }: 
               </Text>
             )}
             <TouchableOpacity onPress={() => voice.stop()} style={[styles.stopBtn, { backgroundColor: colors.background }]}>
-              <Text style={{ color: colors.textSecondary, fontSize: 13 }}>Tap để dừng</Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 13 }}>{t('voice.tap_to_stop')}</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -132,7 +138,7 @@ export default function VoiceButton({ label, hint, onResult, compact = false }: 
       <TouchableOpacity onPress={handlePress} style={[styles.fullBtn, { backgroundColor: colors.surface }]}>
         <FontAwesome5 name="microphone" size={16} color={colors.primary} solid />
         <Text style={{ color: colors.primary, fontWeight: '600', fontSize: 14 }}>
-          {label ?? 'Nhập bằng giọng nói'}
+          {label ?? t('voice.input_by_voice')}
         </Text>
       </TouchableOpacity>
 
