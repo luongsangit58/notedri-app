@@ -8,6 +8,7 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import { useAuthStore } from '../../store/authStore';
 import { profileApi } from '../../api/profile';
 import { geoApi, GeoItem } from '../../api/geo';
@@ -36,6 +37,7 @@ function FieldError({ errors, field }: { errors: FieldErrors; field: string }) {
 export default function EditProfileScreen() {
   const colors = useColors();
   const t = useT();
+  const navigation = useNavigation<any>();
 
   const inputStyle = {
     backgroundColor: colors.background,
@@ -116,18 +118,22 @@ export default function EditProfileScreen() {
     setInfoErrors({});
     setInfoLoading(true);
     try {
+      // Gửi CẢ chuỗi rỗng để xoá được (vd xoá SĐT). Web validate nullable nên '' sẽ ghi đè.
       const response = await profileApi.update({
-        name,
-        phone: phone || undefined,
-        tinh: tinh || undefined,
-        phuong_xa: phuong_xa || undefined,
-        dia_chi: dia_chi || undefined,
+        name: name.trim(),
+        phone: phone.trim(),
+        tinh: tinh.trim(),
+        phuong_xa: phuong_xa.trim(),
+        dia_chi: dia_chi.trim(),
       }); // email KHÔNG cho sửa (khớp web)
       const updatedUser = response.data.data;
       // ProfileController trả raw model (thiếu is_premium/vehicle_limit/can_add_vehicle).
       // Merge vào user hiện tại để không mất các field gói/quyền.
       setUser({ ...(user ?? {}), ...updatedUser });
-      Alert.alert(t('edit_profile.success'), t('edit_profile.info_updated'));
+      // Lưu xong quay về trang Hồ sơ (thông tin đã cập nhật ở store).
+      Alert.alert(t('edit_profile.success'), t('edit_profile.info_updated'), [
+        { text: t('common.ok'), onPress: () => navigation.goBack() },
+      ]);
     } catch (error: any) {
       const errors = extractErrors(error);
       if (Object.keys(errors).length > 0) {
