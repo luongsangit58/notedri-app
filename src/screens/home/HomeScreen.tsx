@@ -9,6 +9,7 @@ import AppBgPattern from '../../components/AppBgPattern';
 import { useNavigation } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
 import { FontAwesome5 } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useVehicles } from '../../hooks/useVehicles';
 import { useColors } from '../../utils/theme';
 import { useT } from '../../i18n';
@@ -282,8 +283,9 @@ export default function HomeScreen() {
         {/* Rich CTA cards - 2 col */}
         <View style={{ flexDirection: 'row', gap: 12, marginBottom: 12 }}>
 
-          {/* Do xang - amber gradient, dark text (bám màu logo web) */}
-          <View style={{ flex: 1, borderRadius: 16, overflow: 'hidden', backgroundColor: '#d97706' }}>
+          {/* Do xang - amber gradient (from-amber-300 to-amber-600, khớp web) */}
+          <LinearGradient colors={['#fcd34d', '#d97706']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+            style={{ flex: 1, borderRadius: 16, overflow: 'hidden' }}>
             <TouchableOpacity
               activeOpacity={0.85}
               onPress={() => nav.navigate('AddRefuel')}
@@ -311,10 +313,11 @@ export default function HomeScreen() {
                 {t('home.find_station')}
               </Text>
             </TouchableOpacity>
-          </View>
+          </LinearGradient>
 
-          {/* Cap nhat ODO - slate-800 (bám màu xe trên logo web - tối hơn) */}
-          <View style={{ flex: 1, borderRadius: 16, overflow: 'hidden', backgroundColor: '#1e293b' }}>
+          {/* Cap nhat ODO - slate gradient (from-slate-600 to-slate-800, khớp web) */}
+          <LinearGradient colors={['#475569', '#1e293b']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+            style={{ flex: 1, borderRadius: 16, overflow: 'hidden' }}>
             <TouchableOpacity
               activeOpacity={0.85}
               onPress={() => nav.navigate('AddOdometer')}
@@ -348,7 +351,7 @@ export default function HomeScreen() {
                 {t('home.odo_history')}
               </Text>
             </TouchableOpacity>
-          </View>
+          </LinearGradient>
 
         </View>
 
@@ -379,10 +382,12 @@ export default function HomeScreen() {
           activeOpacity={0.85}
           onPress={() => vehicleId ? nav.navigate('GpsTrips', { vehicleId, vehicleName }) : nav.navigate('AddVehicle')}
           style={{
-            backgroundColor: '#16A34A', borderRadius: 18, padding: 18, marginBottom: 12,
-            flexDirection: 'row', alignItems: 'center', gap: 16,
+            borderRadius: 18, marginBottom: 12, overflow: 'hidden',
             shadowColor: '#16A34A', shadowOpacity: 0.35, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 5,
           }}>
+          {/* GPS green gradient (from-green-500 to-green-700, khớp web) */}
+          <LinearGradient colors={['#22c55e', '#15803d']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+            style={{ padding: 18, flexDirection: 'row', alignItems: 'center', gap: 16 }}>
           <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: '#ffffff22', alignItems: 'center', justifyContent: 'center' }}>
             <FontAwesome5 name="route" size={26} color="#fff" solid />
           </View>
@@ -402,6 +407,7 @@ export default function HomeScreen() {
             </Text>
           </View>
           <FontAwesome5 name="chevron-right" size={16} color="#ffffffcc" />
+          </LinearGradient>
         </TouchableOpacity>
 
         {/* So lieu nhanh (stats strip) */}
