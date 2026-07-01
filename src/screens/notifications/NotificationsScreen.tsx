@@ -16,7 +16,7 @@ import { useT } from '../../i18n';
 import AppBgPattern from '../../components/AppBgPattern';
 
 dayjs.extend(relativeTime);
-dayjs.locale('vi');
+// locale dayjs do store i18n quản lý (theo ngôn ngữ app) - không ép 'vi' ở đây.
 
 interface NotificationItem {
   key: string;

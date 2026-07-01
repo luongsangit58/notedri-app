@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
 import { useCallback } from 'react';
+import dayjs from 'dayjs';
+import 'dayjs/locale/vi'; // 'en' là locale mặc định sẵn có của dayjs
 import vi from './vi';
 import en from './en';
 
@@ -8,6 +10,9 @@ export type Lang = 'vi' | 'en';
 
 const LANG_KEY = 'app_lang';
 const translations = { vi, en } as const;
+
+// Đồng bộ locale ngày/thứ của dayjs theo ngôn ngữ app (thứ, "x phút trước"...).
+dayjs.locale('vi'); // khớp lang mặc định
 
 type Translations = typeof vi;
 type Key = keyof Translations;
@@ -24,12 +29,16 @@ export const useI18nStore = create<I18nState>((set, get) => ({
 
   setLang: async (lang: Lang) => {
     await SecureStore.setItemAsync(LANG_KEY, lang);
+    dayjs.locale(lang);
     set({ lang });
   },
 
   loadSaved: async () => {
     const saved = await SecureStore.getItemAsync(LANG_KEY) as Lang | null;
-    if (saved === 'vi' || saved === 'en') set({ lang: saved });
+    if (saved === 'vi' || saved === 'en') {
+      dayjs.locale(saved);
+      set({ lang: saved });
+    }
   },
 
   t: (key: Key, params?: Record<string, string | number>): string => {

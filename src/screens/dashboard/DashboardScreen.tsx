@@ -235,7 +235,7 @@ export default function DashboardScreen() {
               <UserAvatar size={40} />
               <View style={{ flex: 1 }}>
                 <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12 }}>
-                  {(() => { const d = dayjs().locale('vi'); const wd = d.format('dddd'); return wd.charAt(0).toUpperCase() + wd.slice(1) + ', ' + d.format('DD/MM/YYYY'); })()}
+                  {(() => { const d = dayjs(); const wd = d.format('dddd'); return wd.charAt(0).toUpperCase() + wd.slice(1) + ', ' + d.format('DD/MM/YYYY'); })()}
                 </Text>
                 <Text style={{ color: '#fff', fontSize: 17, fontWeight: '800', lineHeight: 22 }} numberOfLines={1}>
                   {t('dashboard.hello')} {user?.name?.split(' ').pop() ?? ''}
