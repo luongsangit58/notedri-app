@@ -297,31 +297,38 @@ export default function HomeScreen() {
             style={{ flex: 1, borderRadius: 16, overflow: 'hidden' }}>
             <TouchableOpacity
               activeOpacity={0.85}
-              onPress={() => nav.navigate('AddRefuel')}
+              onPress={() => isEv
+                ? nav.navigate('NearbyStations', { standalone: true, mode: 'charging', latitude: coords?.lat, longitude: coords?.lng })
+                : nav.navigate('AddRefuel')}
               style={{ padding: 12 }}>
               <View style={{
                 width: 36, height: 36, borderRadius: 18,
                 backgroundColor: 'rgba(255,255,255,0.35)', alignItems: 'center', justifyContent: 'center', marginBottom: 8,
               }}>
-                <FontAwesome5 name={isEv ? 'bolt' : 'gas-pump'} size={16} color="#1c1917" solid />
+                <FontAwesome5 name={isEv ? 'charging-station' : 'gas-pump'} size={16} color="#1c1917" solid />
               </View>
               <Text style={{ color: '#1c1917', fontWeight: '800', fontSize: 14 }}>
-                {isEv ? t('home.charge_title') : t('dashboard.add_refuel')}
+                {isEv ? t('home.find_charging') : t('dashboard.add_refuel')}
               </Text>
               <Text style={{ color: 'rgba(0,0,0,0.55)', fontSize: 11, marginTop: 2 }}>
-                {t('home.refuel_subtitle')}
+                {isEv ? t('home.charging_hint') : t('home.refuel_subtitle')}
               </Text>
             </TouchableOpacity>
+            {/* Cây xăng gần đây: chỉ xe xăng (xe điện không đổ xăng, nút chính đã là trạm sạc) */}
+            {!isEv && (
+            <>
             <View style={{ height: 1, backgroundColor: 'rgba(0,0,0,0.12)' }} />
             <TouchableOpacity
               activeOpacity={0.85}
-              onPress={() => nav.navigate('NearbyStations', { standalone: true, mode: isEv ? 'charging' : 'fuel', latitude: coords?.lat, longitude: coords?.lng })}
+              onPress={() => nav.navigate('NearbyStations', { standalone: true, mode: 'fuel', latitude: coords?.lat, longitude: coords?.lng })}
               style={{ paddingHorizontal: 12, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
               <FontAwesome5 name="map-marker-alt" size={9} color="rgba(0,0,0,0.65)" solid />
               <Text style={{ color: 'rgba(0,0,0,0.65)', fontSize: 11, fontWeight: '600' }}>
-                {isEv ? t('home.find_charging') : t('home.find_station')}
+                {t('home.find_station')}
               </Text>
             </TouchableOpacity>
+            </>
+            )}
           </LinearGradient>
 
           {/* Cap nhat ODO - slate gradient (from-slate-600 to-slate-800, khớp web) */}

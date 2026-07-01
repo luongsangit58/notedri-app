@@ -830,6 +830,7 @@ const en = {
   "home.find_station": "Nearby stations",
   "home.charge_title": "Charge",
   "home.find_charging": "Nearby charging",
+  "home.charging_hint": "Find charging nearby",
   "home.odo_hint": "Log current km",
   "home.odo_history": "ODO history",
   "home.service_title": "Maintenance",

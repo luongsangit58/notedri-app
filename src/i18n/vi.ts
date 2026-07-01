@@ -830,6 +830,7 @@ const vi = {
   "home.find_station": "Cây xăng gần đây",
   "home.charge_title": "Nạp điện",
   "home.find_charging": "Trạm sạc gần đây",
+  "home.charging_hint": "Tìm trạm sạc quanh bạn",
   "home.odo_hint": "Ghi số km hiện tại",
   "home.odo_history": "Lịch sử ODO",
   "home.service_title": "Bảo dưỡng",
