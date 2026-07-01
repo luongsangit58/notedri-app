@@ -69,24 +69,27 @@ export default function EditProfileScreen() {
 
   const { user, setUser } = useAuthStore();
 
-  // Section 1: Personal info
+  // Thông tin cá nhân (email không cho sửa)
   const [name, setName] = useState(user?.name ?? '');
-  const [email, setEmail] = useState(user?.email ?? '');
+  const [email] = useState(user?.email ?? '');
+  const [phone, setPhone] = useState((user as any)?.phone ?? '');
+  const [tinh, setTinh] = useState((user as any)?.tinh ?? '');
+  const [phuong_xa, setPhuongXa] = useState((user as any)?.phuong_xa ?? '');
+  const [dia_chi, setDiaChi] = useState((user as any)?.dia_chi ?? '');
   const [infoLoading, setInfoLoading] = useState(false);
   const [infoErrors, setInfoErrors] = useState<FieldErrors>({});
-
-  // Section 2: Password change
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [password, setPassword] = useState('');
-  const [passwordConfirmation, setPasswordConfirmation] = useState('');
-  const [passwordLoading, setPasswordLoading] = useState(false);
-  const [passwordErrors, setPasswordErrors] = useState<FieldErrors>({});
 
   const handleSaveInfo = async () => {
     setInfoErrors({});
     setInfoLoading(true);
     try {
-      const response = await profileApi.update({ name }); // email KHÔNG cho sửa (khớp web)
+      const response = await profileApi.update({
+        name,
+        phone: phone || undefined,
+        tinh: tinh || undefined,
+        phuong_xa: phuong_xa || undefined,
+        dia_chi: dia_chi || undefined,
+      }); // email KHÔNG cho sửa (khớp web)
       const updatedUser = response.data.data;
       // ProfileController trả raw model (thiếu is_premium/vehicle_limit/can_add_vehicle).
       // Merge vào user hiện tại để không mất các field gói/quyền.
@@ -132,6 +135,37 @@ export default function EditProfileScreen() {
           value={email}
           editable={false}
           placeholder={t('auth.email')}
+          placeholderTextColor={colors.textSecondary}
+        />
+
+        {/* SĐT + địa chỉ (khớp web) */}
+        <TextInput
+          style={inputStyle}
+          value={phone}
+          onChangeText={setPhone}
+          placeholder={t('edit_profile.phone_placeholder')}
+          placeholderTextColor={colors.textSecondary}
+          keyboardType="phone-pad"
+        />
+        <TextInput
+          style={inputStyle}
+          value={tinh}
+          onChangeText={setTinh}
+          placeholder={t('edit_profile.province_placeholder')}
+          placeholderTextColor={colors.textSecondary}
+        />
+        <TextInput
+          style={inputStyle}
+          value={phuong_xa}
+          onChangeText={setPhuongXa}
+          placeholder={t('edit_profile.ward_placeholder')}
+          placeholderTextColor={colors.textSecondary}
+        />
+        <TextInput
+          style={inputStyle}
+          value={dia_chi}
+          onChangeText={setDiaChi}
+          placeholder={t('edit_profile.address_placeholder')}
           placeholderTextColor={colors.textSecondary}
         />
 

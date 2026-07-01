@@ -650,6 +650,10 @@ const en = {
   // EditProfile (new)
   "edit_profile.personal_info_title": "Personal info",
   "edit_profile.save_info_button": "Save info",
+  "edit_profile.phone_placeholder": "Phone number",
+  "edit_profile.province_placeholder": "Province/City",
+  "edit_profile.ward_placeholder": "Ward",
+  "edit_profile.address_placeholder": "Address (house no., street...)",
   "edit_profile.change_password_title": "Change password",
   "edit_profile.change_password_button": "Change password",
   "edit_profile.success": "Success",

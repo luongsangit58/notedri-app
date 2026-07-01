@@ -650,6 +650,10 @@ const vi = {
   // EditProfile (new)
   "edit_profile.personal_info_title": "Thông tin cá nhân",
   "edit_profile.save_info_button": "Lưu thông tin",
+  "edit_profile.phone_placeholder": "Số điện thoại",
+  "edit_profile.province_placeholder": "Tỉnh/Thành phố",
+  "edit_profile.ward_placeholder": "Phường/Xã",
+  "edit_profile.address_placeholder": "Địa chỉ (số nhà, đường...)",
   "edit_profile.change_password_title": "Đổi mật khẩu",
   "edit_profile.change_password_button": "Đổi mật khẩu",
   "edit_profile.success": "Thành công",
