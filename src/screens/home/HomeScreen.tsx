@@ -257,11 +257,13 @@ export default function HomeScreen() {
             activeOpacity={0.85}
             onPress={() => vehicleId && nav.navigate('Reminders', { vehicleId })}
             style={{
-              backgroundColor: topHighlight.remaining_days <= 0 ? '#7F1D1D' : '#1E293B',
-              borderRadius: 16, padding: 16, marginBottom: 12,
-              flexDirection: 'row', alignItems: 'center', gap: 14,
+              borderRadius: 16, marginBottom: 12, overflow: 'hidden',
               borderWidth: 1, borderColor: topHighlight.remaining_days <= 0 ? '#ef4444' : colors.warning,
             }}>
+          <LinearGradient
+            colors={topHighlight.remaining_days <= 0 ? ['#991b1b', '#7f1d1d'] : ['#334155', '#1e293b']}
+            start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+            style={{ padding: 16, flexDirection: 'row', alignItems: 'center', gap: 14 }}>
             <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: '#ffffff1a', alignItems: 'center', justifyContent: 'center' }}>
               <FontAwesome5 name="exclamation-circle" size={20} color={topHighlight.remaining_days <= 0 ? '#fca5a5' : colors.warning} solid />
             </View>
@@ -277,6 +279,7 @@ export default function HomeScreen() {
               </Text>
             </View>
             <FontAwesome5 name="chevron-right" size={14} color="#94a3b8" />
+          </LinearGradient>
           </TouchableOpacity>
         )}
 

@@ -55,7 +55,7 @@ function PickerModal<T extends { id: number; name: string }>({
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom']}>
         <View style={{
           flexDirection: 'row', alignItems: 'center', gap: 12,
           paddingHorizontal: 16, paddingVertical: 12,

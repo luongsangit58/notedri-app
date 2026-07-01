@@ -437,7 +437,7 @@ export default function HealthScreen() {
 
   if (vehiclesLoading) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }} edges={['bottom']}>
         <AppBgPattern />
         <ActivityIndicator color={colors.primary} size="large" />
         <Text style={{ color: colors.textSecondary, marginTop: 12 }}>{t('health.loading')}</Text>
@@ -447,7 +447,7 @@ export default function HealthScreen() {
 
   if (vehiclesError) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', padding: 24 }} edges={['bottom']}>
         <AppBgPattern />
         <Text style={{ color: colors.error, fontSize: 16, fontWeight: '700', marginBottom: 8 }}>{t('common.error_load')}</Text>
         <TouchableOpacity
@@ -461,7 +461,7 @@ export default function HealthScreen() {
 
   if (vehicles.length === 0) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', padding: 24 }} edges={['bottom']}>
         <AppBgPattern />
         <FontAwesome5 name="car-side" size={48} color={colors.textSecondary} solid style={{ marginBottom: 12 }} />
         <Text style={{ color: colors.text, fontSize: 16, fontWeight: '700', marginBottom: 6 }}>{t('health.no_vehicles')}</Text>

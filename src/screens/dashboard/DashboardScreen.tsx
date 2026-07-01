@@ -218,7 +218,7 @@ export default function DashboardScreen() {
   const effectiveVehicleId = selectedVehicleId ?? vehicle?.id;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'bottom']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom']}>
       <AppBgPattern />
       <ScrollView
         style={{ flex: 1 }}

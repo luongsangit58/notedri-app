@@ -6,6 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import client from '../../api/client';
 import { useColors } from '../../utils/theme';
@@ -250,18 +251,17 @@ export default function PremiumScreen() {
             <TouchableOpacity
               onPress={() => requestTrial()}
               disabled={isPending}
-              style={{
-                backgroundColor: AMBER, borderRadius: 14,
-                paddingVertical: 16, alignItems: 'center', marginBottom: 12,
-                opacity: isPending ? 0.7 : 1,
-              }}>
-              {isPending
-                ? <ActivityIndicator color="#fff" />
-                : (
-                  <Text style={{ color: '#fff', fontWeight: '800', fontSize: 17 }}>
-                    {t('premium.trial_cta', { days: trialDays })}
-                  </Text>
-                )}
+              style={{ borderRadius: 14, marginBottom: 12, overflow: 'hidden', opacity: isPending ? 0.7 : 1 }}>
+              <LinearGradient colors={['#fbbf24', '#d97706']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                style={{ paddingVertical: 16, alignItems: 'center' }}>
+                {isPending
+                  ? <ActivityIndicator color="#fff" />
+                  : (
+                    <Text style={{ color: '#fff', fontWeight: '800', fontSize: 17 }}>
+                      {t('premium.trial_cta', { days: trialDays })}
+                    </Text>
+                  )}
+              </LinearGradient>
             </TouchableOpacity>
             <Text style={{ color: colors.textSecondary, fontSize: 12, textAlign: 'center', marginBottom: 20 }}>
               {t('premium.request_flow_desc')}
@@ -358,19 +358,18 @@ export default function PremiumScreen() {
             <TouchableOpacity
               onPress={() => checkoutMutate()}
               disabled={isCheckingOut}
-              style={{
-                backgroundColor: AMBER, borderRadius: 12,
-                paddingVertical: 14, alignItems: 'center',
-                opacity: isCheckingOut ? 0.7 : 1,
-              }}>
-              {isCheckingOut
-                ? <ActivityIndicator color="#fff" />
-                : (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <FontAwesome5 name="qrcode" size={16} color="#fff" />
-                    <Text style={{ color: '#fff', fontWeight: '800', fontSize: 16 }}>{t('premium.checkout_btn')}</Text>
-                  </View>
-                )}
+              style={{ borderRadius: 12, overflow: 'hidden', opacity: isCheckingOut ? 0.7 : 1 }}>
+              <LinearGradient colors={['#fbbf24', '#d97706']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                style={{ paddingVertical: 14, alignItems: 'center' }}>
+                {isCheckingOut
+                  ? <ActivityIndicator color="#fff" />
+                  : (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <FontAwesome5 name="qrcode" size={16} color="#fff" />
+                      <Text style={{ color: '#fff', fontWeight: '800', fontSize: 16 }}>{t('premium.checkout_btn')}</Text>
+                    </View>
+                  )}
+              </LinearGradient>
             </TouchableOpacity>
             <Text style={{ color: colors.textSecondary, fontSize: 11, textAlign: 'center', marginTop: 8 }}>
               {t('premium.checkout_note')}
