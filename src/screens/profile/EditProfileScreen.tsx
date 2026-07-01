@@ -105,32 +105,6 @@ export default function EditProfileScreen() {
     }
   };
 
-  const handleSavePassword = async () => {
-    setPasswordErrors({});
-    setPasswordLoading(true);
-    try {
-      await profileApi.updatePassword({
-        current_password: currentPassword,
-        password,
-        password_confirmation: passwordConfirmation,
-      });
-      setCurrentPassword('');
-      setPassword('');
-      setPasswordConfirmation('');
-      Alert.alert(t('edit_profile.success'), t('edit_profile.password_changed'));
-    } catch (error: any) {
-      const errors = extractErrors(error);
-      if (Object.keys(errors).length > 0) {
-        setPasswordErrors(errors);
-      } else {
-        const message = error?.response?.data?.message ?? t('edit_profile.error_generic');
-        Alert.alert(t('common.error'), message);
-      }
-    } finally {
-      setPasswordLoading(false);
-    }
-  };
-
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <AppBgPattern />
@@ -170,47 +144,6 @@ export default function EditProfileScreen() {
             <ActivityIndicator color={colors.primaryText} />
           ) : (
             <Text style={{ color: colors.primaryText, fontWeight: '700', fontSize: 15 }}>{t('edit_profile.save_info_button')}</Text>
-          )}
-        </TouchableOpacity>
-      </View>
-
-      {/* Section 2: Change password */}
-      <View style={cardStyle}>
-        <Text style={sectionTitleStyle}>{t('edit_profile.change_password_title')}</Text>
-
-        <PasswordInput
-          value={currentPassword}
-          onChangeText={setCurrentPassword}
-          placeholder={t('auth.password')}
-          style={{ marginBottom: 4 }}
-        />
-        <FieldError errors={passwordErrors} field="current_password" />
-
-        <PasswordInput
-          value={password}
-          onChangeText={setPassword}
-          placeholder={t('auth.password')}
-          style={{ marginBottom: 4 }}
-        />
-        <FieldError errors={passwordErrors} field="password" />
-
-        <PasswordInput
-          value={passwordConfirmation}
-          onChangeText={setPasswordConfirmation}
-          placeholder={t('auth.password_confirm')}
-          style={{ marginBottom: 4 }}
-        />
-        <FieldError errors={passwordErrors} field="password_confirmation" />
-
-        <TouchableOpacity
-          style={saveButtonStyle}
-          onPress={handleSavePassword}
-          disabled={passwordLoading}
-        >
-          {passwordLoading ? (
-            <ActivityIndicator color={colors.primaryText} />
-          ) : (
-            <Text style={{ color: colors.primaryText, fontWeight: '700', fontSize: 15 }}>{t('edit_profile.change_password_button')}</Text>
           )}
         </TouchableOpacity>
       </View>

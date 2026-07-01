@@ -221,7 +221,7 @@ const vi = {
   "fuel_prices.source": "Nguồn: dữ liệu nhà nước — cập nhật theo kỳ điều chỉnh",
 
   // Nearby Stations
-  "nearby_stations.title": "Trạm xăng gần đây",
+  "nearby_stations.title": "Trạm gần đây",
   "nearby_stations.empty_title": "Không tìm thấy trạm nào",
 
   // Garage Guide
@@ -821,7 +821,7 @@ const vi = {
   "home.vehicle_fallback": "Xe #{{id}}",
   "home.highlight": "NỔI BẬT",
   "home.refuel_subtitle": "Ghi nhanh, tự tính",
-  "home.find_station": "Tìm cây xăng",
+  "home.find_station": "Cây xăng gần đây",
   "home.odo_hint": "Ghi số km hiện tại",
   "home.odo_history": "Lịch sử ODO",
   "home.service_title": "Bảo dưỡng",

@@ -3,10 +3,12 @@ import { View, Text, TouchableOpacity, Alert, ScrollView, Modal, TextInput, Acti
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AppBgPattern from '../../components/AppBgPattern';
 import { FontAwesome5 } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '../../store/authStore';
 import { profileApi } from '../../api/profile';
+import { achievementsApi } from '../../api/achievements';
 import { useColors, useThemeStore } from '../../utils/theme';
 import { useI18nStore, useLang, useT } from '../../i18n';
 
@@ -38,6 +40,11 @@ export default function ProfileScreen() {
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
   const [deleteError, setDeleteError] = useState('');
+
+  // Level (huy hiệu) để hiện tinh tế quanh avatar.
+  const { data: ach } = useQuery({ queryKey: ['achievements'], queryFn: () => achievementsApi.get().then(r => r.data?.data) });
+  const level = ach?.level;
+  const lvColor = level?.color && String(level.color).startsWith('#') ? String(level.color) : '#f59e0b';
 
   const { mutate: deleteAccount, isPending: isDeleting } = useMutation({
     mutationFn: () => profileApi.deleteAccount(deletePassword),
@@ -77,55 +84,67 @@ export default function ProfileScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom']}>
       <AppBgPattern />
       <ScrollView>
-        {/* Avatar */}
+        {/* Avatar + vòng level (chạm để xem Thành tích) */}
         <View style={{ alignItems: 'center', paddingVertical: 32 }}>
-          {user?.avatar ? (
-            <Image
-              source={{ uri: user.avatar }}
-              style={{ width: 80, height: 80, borderRadius: 40, marginBottom: 14 }}
-            />
-          ) : (
-            <View style={{
-              width: 80, height: 80, borderRadius: 40,
-              backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center',
-              marginBottom: 14,
-            }}>
-              <Text style={{ color: colors.primaryText, fontSize: 34, fontWeight: '800' }}>{initial}</Text>
+          <TouchableOpacity activeOpacity={0.85} onPress={() => navigation.navigate('Achievements')} style={{ alignItems: 'center', marginBottom: 10 }}>
+            <View style={{ padding: 3, borderRadius: 47, borderWidth: 2.5, borderColor: lvColor }}>
+              {user?.avatar ? (
+                <Image source={{ uri: user.avatar }} style={{ width: 80, height: 80, borderRadius: 40 }} />
+              ) : (
+                <View style={{
+                  width: 80, height: 80, borderRadius: 40,
+                  backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center',
+                }}>
+                  <Text style={{ color: colors.primaryText, fontSize: 34, fontWeight: '800' }}>{initial}</Text>
+                </View>
+              )}
             </View>
-          )}
+            {level && (
+              <View style={{
+                flexDirection: 'row', alignItems: 'center', gap: 5,
+                backgroundColor: lvColor, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3,
+                marginTop: -12, borderWidth: 2, borderColor: colors.background,
+              }}>
+                <FontAwesome5 name={level.icon || 'star'} size={10} color="#fff" solid />
+                <Text style={{ color: '#fff', fontSize: 11, fontWeight: '800' }}>LV.{level.level} · {level.name}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
           <Text style={{ color: colors.text, fontSize: 20, fontWeight: '800' }}>{user?.name}</Text>
           <Text style={{ color: colors.textSecondary, marginTop: 4, fontSize: 14 }}>{user?.email}</Text>
         </View>
 
-        {/* Plan badge */}
-        <View style={{
-          backgroundColor: colors.surface, borderRadius: 12, padding: 12,
-          marginHorizontal: 16, marginBottom: 12,
-        }}>
+        {/* Plan badge - Premium: gradient amber nổi bật; Free: thẻ nhã */}
+        <LinearGradient
+          colors={user?.is_premium ? ['#fbbf24', '#d97706'] : [colors.surface, colors.surface]}
+          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+          style={{
+            borderRadius: 14, padding: 14, marginHorizontal: 16, marginBottom: 12,
+            borderWidth: user?.is_premium ? 0 : 1, borderColor: colors.border,
+          }}>
           {user?.is_premium ? (
             <>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-                <FontAwesome5 name="crown" size={10} color="#F59E0B" solid />
-                <Text style={{ fontSize: 15, fontWeight: '700', color: '#F59E0B', marginLeft: 6 }}>
-                  {t('profile.premium_plan')}
-                </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4, gap: 7 }}>
+                <FontAwesome5 name="crown" size={14} color="#fff" solid />
+                <Text style={{ fontSize: 16, fontWeight: '800', color: '#fff' }}>{t('profile.premium_plan')}</Text>
               </View>
-              <Text style={{ fontSize: 13, color: colors.textSecondary }}>{t('profile.premium_plan_desc')}</Text>
+              <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.9)' }}>{t('profile.premium_plan_desc')}</Text>
             </>
           ) : (
             <>
-              <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text, marginBottom: 4 }}>
-                {t('profile.free_plan')}
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4, gap: 7 }}>
+                <FontAwesome5 name="leaf" size={13} color={colors.primary} solid />
+                <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text }}>{t('profile.free_plan')}</Text>
+              </View>
               <Text style={{ fontSize: 13, color: colors.textSecondary }}>{t('profile.free_plan_desc')}</Text>
             </>
           )}
           {user?.vehicle_limit != null && (
-            <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 6 }}>
+            <Text style={{ fontSize: 12, color: user?.is_premium ? 'rgba(255,255,255,0.85)' : colors.textSecondary, marginTop: 6 }}>
               {t('profile.vehicle_limit', { n: user.vehicle_limit })}
             </Text>
           )}
-        </View>
+        </LinearGradient>
 
         {/* Menu items */}
         <View style={{ backgroundColor: colors.surface, borderRadius: 14, marginHorizontal: 16, overflow: 'hidden', marginBottom: 16 }}>

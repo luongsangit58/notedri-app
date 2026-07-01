@@ -821,7 +821,7 @@ const en = {
   "home.vehicle_fallback": "Vehicle #{{id}}",
   "home.highlight": "HIGHLIGHT",
   "home.refuel_subtitle": "Quick log, auto calc",
-  "home.find_station": "Find station",
+  "home.find_station": "Nearby stations",
   "home.odo_hint": "Log current km",
   "home.odo_history": "ODO history",
   "home.service_title": "Maintenance",

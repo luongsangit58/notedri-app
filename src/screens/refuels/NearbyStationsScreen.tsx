@@ -191,7 +191,7 @@ export default function NearbyStationsScreen() {
       fontSize: 11,
     },
     distanceBadge: {
-      backgroundColor: colors.primary,
+      backgroundColor: colors.textSecondary + '22',
       borderRadius: 8,
       paddingHorizontal: 8,
       paddingVertical: 4,
@@ -200,7 +200,7 @@ export default function NearbyStationsScreen() {
       alignItems: 'center',
     },
     distanceText: {
-      color: colors.primaryText,
+      color: colors.text,
       fontWeight: '700',
       fontSize: 12,
     },
