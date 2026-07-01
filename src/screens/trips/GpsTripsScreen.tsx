@@ -12,6 +12,7 @@ import {
   Modal,
   TextInput,
   Pressable,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AppBgPattern from '../../components/AppBgPattern';
@@ -217,6 +218,9 @@ function InterruptedTripBanner({
 function ActiveTripCard({ vehicleId }: { vehicleId: number }) {
   const colors = useColors();
   const t = useT();
+  // Màn ngang (head-unit ô tô) thấp -> bản đồ live thấp hơn để chừa chỗ cho danh sách hành trình.
+  const { width, height } = useWindowDimensions();
+  const mapH = width > height ? 120 : 150;
   const { tripState, tracking, permission, routePoints, interruptedInfo,
     startTracking, stop, pause, resume, resumeInterrupted, saveInterrupted, discardInterrupted,
     checkRecordable } = useGpsTripState();
@@ -448,8 +452,8 @@ function ActiveTripCard({ vehicleId }: { vehicleId: number }) {
 
       {/* Live map */}
       {isRunning && pointCount > 0 && (
-        <View style={{ marginTop: 12 }}>
-          <RouteMap points={liveMapPoints} height={200} live />
+        <View style={{ marginTop: 8 }}>
+          <RouteMap points={liveMapPoints} height={mapH} live />
         </View>
       )}
     </View>
@@ -696,13 +700,13 @@ const styles = StyleSheet.create({
   backBtn: { padding: 4 },
   headerTitle: { fontSize: 17, fontWeight: '700' },
   headerSub: { fontSize: 12, marginTop: 1 },
-  list: { padding: 12, gap: 8, paddingBottom: 32 },
+  list: { padding: 10, gap: 8, paddingBottom: 24 },
   loader: { marginTop: 40 },
   empty: { alignItems: 'center', paddingTop: 60, gap: 10 },
   emptyTitle: { fontSize: 16, fontWeight: '600' },
   emptySub: { fontSize: 13, textAlign: 'center', paddingHorizontal: 32 },
 
-  activeCard: { borderRadius: 12, borderWidth: 1, padding: 14, marginBottom: 12 },
+  activeCard: { borderRadius: 12, borderWidth: 1, padding: 11, marginBottom: 8 },
   activeRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   badge: {
     flexDirection: 'row',
@@ -737,21 +741,21 @@ const styles = StyleSheet.create({
   },
   warnText: { fontSize: 11, flex: 1 },
 
-  diagBox: { marginTop: 12, gap: 6 },
+  diagBox: { marginTop: 8, gap: 5 },
   diagRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   diagLabel: { fontSize: 12, flex: 1 },
   diagValue: { fontSize: 12, fontWeight: '600' },
 
-  liveStats: { flexDirection: 'row', gap: 20, marginTop: 12 },
+  liveStats: { flexDirection: 'row', gap: 20, marginTop: 8 },
   liveStat: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   liveStatVal: { fontSize: 14, fontWeight: '600' },
-  hintText: { fontSize: 12, marginTop: 10 },
+  hintText: { fontSize: 12, marginTop: 8 },
 
-  row: { borderRadius: 10, borderWidth: 1, padding: 12 },
+  row: { borderRadius: 10, borderWidth: 1, padding: 10 },
   rowHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  rowLeft: { marginBottom: 8 },
+  rowLeft: { marginBottom: 6 },
   rowDate: { fontSize: 12 },
-  rowDistance: { fontSize: 20, fontWeight: '700', marginTop: 2 },
+  rowDistance: { fontSize: 18, fontWeight: '700', marginTop: 2 },
   rowChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   chipText: { fontSize: 12 },
