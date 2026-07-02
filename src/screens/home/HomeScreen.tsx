@@ -388,7 +388,8 @@ export default function HomeScreen() {
               <TouchableOpacity
                 activeOpacity={0.85}
                 onPress={() => nav.navigate('NearbyStations', { standalone: true, mode: 'charging', latitude: coords?.lat, longitude: coords?.lng })}
-                style={{ paddingHorizontal: 12, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                // Nền xanh nhạt (khớp thẻ xe điện #10b981) để phân biệt bằng mắt với link cây xăng phía trên; chữ/icon giữ đen như link kia.
+                style={{ paddingHorizontal: 12, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(16,185,129,0.15)' }}>
                 <FontAwesome5 name="charging-station" size={9} color="rgba(0,0,0,0.65)" solid />
                 <Text style={{ color: 'rgba(0,0,0,0.65)', fontSize: 11, fontWeight: '600' }}>
                   {t('home.charging_short')}
