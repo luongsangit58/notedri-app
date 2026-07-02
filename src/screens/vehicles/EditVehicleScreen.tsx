@@ -52,10 +52,11 @@ export default function EditVehicleScreen() {
   const deleteVehicle = useDeleteVehicle();
   // Loại nhiên liệu: danh sách TĨNH khớp web (không lấy từ bảng giá xăng).
   const FUEL_OPTIONS: { value: string; label: string }[] = [
-    { value: 'Xăng', label: t('vehicles.fuel_petrol') },
-    { value: 'Dầu',  label: t('vehicles.fuel_diesel') },
-    { value: 'Điện', label: t('vehicles.fuel_electric') },
-    { value: 'Khác', label: t('vehicles.fuel_other') },
+    { value: 'Xăng',   label: t('vehicles.fuel_petrol') },
+    { value: 'Dầu',    label: t('vehicles.fuel_diesel') },
+    { value: 'Điện',   label: t('vehicles.fuel_electric') },
+    { value: 'Hybrid', label: t('vehicles.fuel_hybrid') },
+    { value: 'Khác',   label: t('vehicles.fuel_other') },
   ];
 
   const [ten, setTen] = useState('');

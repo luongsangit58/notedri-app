@@ -148,8 +148,11 @@ export default function HomeScreen() {
   const vehicleId = selectedVehicleId ?? defaultVehicle?.id;
   const vehicle = vehicles.find((v) => v.id === vehicleId);
   const vehicleName = vehicle?.ten ?? vehicle?.name ?? vehicle?.ten_xe ?? '';
+  // Xe hybrid (xăng lai điện): có CẢ xăng lẫn điện -> hiện cả cây xăng + trạm sạc.
+  const isHybrid: boolean = vehicle?.is_hybrid ?? /hybrid/i.test(String(vehicle?.fuel_type ?? ''));
   // Xe điện? Ưu tiên cờ is_ev từ API, dự phòng đoán theo fuel_type -> hiện UI sạc điện.
-  const isEv: boolean = vehicle?.is_ev ?? /điện|electric|\bev\b/i.test(String(vehicle?.fuel_type ?? ''));
+  // Hybrid KHÔNG tính là xe điện thuần (vẫn đổ xăng là chính).
+  const isEv: boolean = !isHybrid && (vehicle?.is_ev ?? /điện|electric|\bev\b/i.test(String(vehicle?.fuel_type ?? '')));
   // Xe điện: thẻ nạp năng lượng dùng green gradient + chữ trắng (khác xe xăng amber/chữ tối).
   const energyColors = (isEv ? ['#10b981', '#047857'] : ['#fcd34d', '#d97706']) as [string, string];
   const energyText = isEv ? '#ffffff' : '#1c1917';
@@ -366,7 +369,7 @@ export default function HomeScreen() {
                 {isEv ? t('home.charging_hint') : t('home.refuel_subtitle')}
               </Text>
             </TouchableOpacity>
-            {/* Cây xăng gần đây: chỉ xe xăng (xe điện không đổ xăng, nút chính đã là trạm sạc) */}
+            {/* Cây xăng gần đây (xe xăng/dầu/hybrid). Hybrid có thêm link Trạm sạc. */}
             {!isEv && (
             <>
             <View style={{ height: 1, backgroundColor: 'rgba(0,0,0,0.12)' }} />
@@ -379,6 +382,20 @@ export default function HomeScreen() {
                 {t('home.find_station')}
               </Text>
             </TouchableOpacity>
+            {isHybrid && (
+              <>
+              <View style={{ height: 1, backgroundColor: 'rgba(0,0,0,0.12)' }} />
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={() => nav.navigate('NearbyStations', { standalone: true, mode: 'charging', latitude: coords?.lat, longitude: coords?.lng })}
+                style={{ paddingHorizontal: 12, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                <FontAwesome5 name="charging-station" size={9} color="rgba(0,0,0,0.65)" solid />
+                <Text style={{ color: 'rgba(0,0,0,0.65)', fontSize: 11, fontWeight: '600' }}>
+                  {t('home.charging_short')}
+                </Text>
+              </TouchableOpacity>
+              </>
+            )}
             </>
             )}
           </LinearGradient>

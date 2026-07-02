@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -20,10 +20,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import AppBgPattern from '../../components/AppBgPattern';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useColors } from '../../utils/theme';
 import { useT, useI18nStore } from '../../i18n';
 import { useGpsTripState, useGpsTrips } from '../../hooks/useGpsTrip';
 import { useVehicles } from '../../hooks/useVehicles';
+import { devicesApi, DeviceSession } from '../../api/devices';
 import { GpsTripRecord, gpsTripsApi } from '../../api/gpsTrips';
 import { openLocationSettings, openBatterySettings } from '../../services/gps/GpsTripTracker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -564,6 +566,70 @@ function Chip({ icon, label }: { icon: string; label: string }) {
   );
 }
 
+// Quản lý "Máy chính ghi hành trình": 1 thời điểm chỉ 1 máy nên khi máy KHÁC (không phải
+// máy chính) mở màn Hành trình -> hỏi có chuyển máy chính sang máy này không.
+function GpsPrimaryBanner() {
+  const colors = useColors();
+  const t = useT();
+  const qc = useQueryClient();
+  const { data } = useQuery({
+    queryKey: ['device-sessions'],
+    queryFn: () => devicesApi.list().then((r) => r.data.data),
+    staleTime: 30_000,
+  });
+  const sessions: DeviceSession[] = data ?? [];
+  const current = sessions.find((s) => s.is_current);
+  const primary = sessions.find((s) => s.is_gps_primary);
+  const isThisPrimary = !!current?.is_gps_primary;
+  const promptedRef = useRef(false);
+
+  const setPrimary = useMutation({
+    mutationFn: (id: number) => devicesApi.setPrimary(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['device-sessions'] }),
+  });
+
+  const makeThisPrimary = useCallback(() => {
+    if (current) setPrimary.mutate(current.id);
+  }, [current]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Máy khác đang là máy chính -> hỏi 1 lần khi vào màn.
+  useEffect(() => {
+    if (promptedRef.current || !current) return;
+    if (primary && primary.id !== current.id && !isThisPrimary) {
+      promptedRef.current = true;
+      Alert.alert(
+        t('gps_trips.primary_switch_title'),
+        t('gps_trips.primary_switch_body', { name: primary.device_name }),
+        [
+          { text: t('gps_trips.primary_keep'), style: 'cancel' },
+          { text: t('gps_trips.primary_switch_here'), onPress: makeThisPrimary },
+        ],
+      );
+    }
+  }, [primary?.id, current?.id, isThisPrimary]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (!current) return null;
+
+  return (
+    <View style={{ marginHorizontal: 16, marginTop: 12, marginBottom: 4, backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1, borderColor: isThisPrimary ? '#f59e0b55' : colors.border, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+      <FontAwesome5 name="star" size={14} color={isThisPrimary ? '#f59e0b' : colors.textSecondary} solid />
+      <View style={{ flex: 1 }}>
+        <Text style={{ color: colors.text, fontSize: 13, fontWeight: '700' }}>{t('gps_trips.primary_device_label')}</Text>
+        <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 1 }} numberOfLines={1}>
+          {isThisPrimary ? t('gps_trips.primary_is_this') : (primary?.device_name ?? t('gps_trips.primary_none'))}
+        </Text>
+      </View>
+      {!isThisPrimary && (
+        <TouchableOpacity onPress={makeThisPrimary} disabled={setPrimary.isPending}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: 1, borderColor: '#f59e0b', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 }}>
+          <FontAwesome5 name="star" size={10} color="#f59e0b" solid />
+          <Text style={{ color: '#f59e0b', fontSize: 12, fontWeight: '700' }}>{t('gps_trips.primary_set_this')}</Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+}
+
 export default function GpsTripsScreen({ embedded }: { embedded?: boolean } = {}) {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
@@ -577,26 +643,12 @@ export default function GpsTripsScreen({ embedded }: { embedded?: boolean } = {}
     : Array.isArray(vehiclesRaw) ? vehiclesRaw : [];
   const defaultVehicle = vehicles.find((v) => v.is_default) ?? vehicles[0];
 
-  // Xe dùng cho GPS: ưu tiên lựa chọn đã LƯU (persist) -> "xe mặc định GPS" thực sự,
-  // thay vì phụ thuộc điểm mở màn. Kế tiếp mới tới param rồi xe mặc định.
-  const [selectedVid, setSelectedVid] = useState<number | null>(null);
-  useEffect(() => {
-    AsyncStorage.getItem('gps_vehicle_id').then((v) => { if (v) setSelectedVid(Number(v)); }).catch(() => {});
-  }, []);
-  const pickVehicle = useCallback((id: number) => {
-    setSelectedVid(id);
-    AsyncStorage.setItem('gps_vehicle_id', String(id)).catch(() => {});
-  }, []);
-
+  const vehicleId: number = route.params?.vehicleId ?? defaultVehicle?.id ?? 0;
   const colors = useColors();
   const t = useT();
 
-  // Chỉ dùng xe đã chọn nếu nó còn tồn tại trong danh sách.
-  const validSelected = selectedVid != null && vehicles.some((v) => v.id === selectedVid) ? selectedVid : null;
-  const vehicleId: number = validSelected ?? route.params?.vehicleId ?? defaultVehicle?.id ?? 0;
-  const currentVehicle = vehicles.find((v) => v.id === vehicleId);
-  const vehicleName: string = currentVehicle?.ten ?? currentVehicle?.name
-    ?? route.params?.vehicleName ?? defaultVehicle?.ten ?? defaultVehicle?.name ?? t('common.vehicle');
+  const vehicleName: string = route.params?.vehicleName
+    ?? defaultVehicle?.ten ?? defaultVehicle?.name ?? t('common.vehicle');
 
   const { data, isLoading, refetch, isFetching } = useGpsTrips(vehicleId);
   const trips: GpsTripRecord[] = data?.data ?? [];
@@ -666,29 +718,7 @@ export default function GpsTripsScreen({ embedded }: { embedded?: boolean } = {}
         refreshControl={<RefreshControl refreshing={isFetching} onRefresh={handleRefresh} tintColor={colors.primary} />}
         ListHeaderComponent={
           <>
-            {vehicles.length > 1 && (
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 16, paddingTop: 12 }}>
-                {vehicles.map((v) => {
-                  const sel = v.id === vehicleId;
-                  return (
-                    <TouchableOpacity
-                      key={v.id}
-                      onPress={() => pickVehicle(v.id)}
-                      style={{
-                        flexDirection: 'row', alignItems: 'center', gap: 6,
-                        paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20,
-                        backgroundColor: sel ? colors.primary : colors.surface,
-                        borderWidth: 1, borderColor: sel ? colors.primary : colors.border,
-                      }}>
-                      <FontAwesome5 name="car-side" size={11} color={sel ? colors.primaryText : colors.textSecondary} solid />
-                      <Text style={{ color: sel ? colors.primaryText : colors.textSecondary, fontSize: 13, fontWeight: sel ? '700' : '400' }}>
-                        {v.ten ?? v.name}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            )}
+            <GpsPrimaryBanner />
             <ActiveTripCard vehicleId={vehicleId} />
           </>
         }

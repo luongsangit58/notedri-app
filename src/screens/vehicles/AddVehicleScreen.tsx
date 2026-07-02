@@ -28,7 +28,10 @@ import AppBgPattern from '../../components/AppBgPattern';
 import type { VehiclePhoto } from '../../api/vehicles';
 
 // ── Types ──────────────────────────────────────────────────────────────────
-type VehicleType = 'oto' | 'xe_may' | 'xe_dien';
+// Chỉ 2 loại như web: ô tô + xe máy. Xe điện KHÔNG phải loại riêng (nhận biết qua
+// nhiên liệu "Điện"/spec is_ev). DB lưu vehicle_type = 'oto' | 'xemay'.
+type VehicleType = 'oto' | 'xe_may';
+const dbVehicleType = (t: VehicleType) => (t === 'xe_may' ? 'xemay' : 'oto');
 type Brand  = { id: number; name: string; color?: string };
 type VModel = { id: number; brand_id: number; name: string; type: string };
 type Spec   = { id: number; model_id: number; version?: string; year_from?: number; year_to?: number;
@@ -115,10 +118,11 @@ export default function AddVehicleScreen() {
   const createVehicle = useCreateVehicle();
   // Loại nhiên liệu: danh sách TĨNH khớp web (không lấy từ bảng giá xăng dầu).
   const FUEL_OPTIONS: { value: string; label: string }[] = [
-    { value: 'Xăng', label: t('vehicles.fuel_petrol') },
-    { value: 'Dầu',  label: t('vehicles.fuel_diesel') },
-    { value: 'Điện', label: t('vehicles.fuel_electric') },
-    { value: 'Khác', label: t('vehicles.fuel_other') },
+    { value: 'Xăng',   label: t('vehicles.fuel_petrol') },
+    { value: 'Dầu',    label: t('vehicles.fuel_diesel') },
+    { value: 'Điện',   label: t('vehicles.fuel_electric') },
+    { value: 'Hybrid', label: t('vehicles.fuel_hybrid') },
+    { value: 'Khác',   label: t('vehicles.fuel_other') },
   ];
 
   const inputStyle = {
@@ -166,13 +170,15 @@ export default function AddVehicleScreen() {
 
   // ── Derived cascade data ──────────────────────────────────────────────────
   const brandsForType = useMemo(() => {
-    const brandIds = new Set(allModels.filter(m => (m.type || 'oto') === vehicleType).map(m => m.brand_id));
+    const dbType = dbVehicleType(vehicleType);
+    const brandIds = new Set(allModels.filter(m => (m.type || 'oto') === dbType).map(m => m.brand_id));
     return allBrands.filter(b => brandIds.has(b.id));
   }, [allBrands, allModels, vehicleType]);
 
   const modelsForBrand = useMemo(() => {
     if (!selectedBrand) return [];
-    return allModels.filter(m => m.brand_id === selectedBrand.id && (m.type || 'oto') === vehicleType);
+    const dbType = dbVehicleType(vehicleType);
+    return allModels.filter(m => m.brand_id === selectedBrand.id && (m.type || 'oto') === dbType);
   }, [allModels, selectedBrand, vehicleType]);
 
   const specsForModel = useMemo(() => {
@@ -213,9 +219,6 @@ export default function AddVehicleScreen() {
     setSelectedBrand(null); setSelectedModel(null); setSelectedSpec(null);
     setMake(''); setModel(''); setNam('');
     setTankCapacity(''); setConsumptionOfficial(''); setVehicleSpecId(null);
-    // Xe điện -> khoá nhiên liệu về "Điện"; đổi sang xe xăng/dầu thì bỏ lựa chọn "Điện" cũ.
-    if (ty === 'xe_dien') setFuelType('Điện');
-    else setFuelType(prev => (prev === 'Điện' ? '' : prev));
   };
 
   // ── Fallback text search (when no cascade data or manual override) ─────────
@@ -278,7 +281,6 @@ export default function AddVehicleScreen() {
   const TYPES: { key: VehicleType; label: string; icon: string }[] = [
     { key: 'oto',     label: t('add_vehicle.type_car'),        icon: 'car-side' },
     { key: 'xe_may',  label: t('add_vehicle.type_motorcycle'), icon: 'motorcycle' },
-    { key: 'xe_dien', label: t('add_vehicle.type_ev'),         icon: 'bolt' },
   ];
 
   return (
@@ -514,23 +516,19 @@ export default function AddVehicleScreen() {
           value={nam} onChangeText={setNam} keyboardType="numeric" returnKeyType="next"
         />
 
-        {/* ── Loại nhiên liệu (danh sách tĩnh; xe điện -> khoá "Điện") ── */}
+        {/* ── Loại nhiên liệu (danh sách tĩnh, khớp web) ── */}
         <Text style={labelStyle}>{t('vehicles.fuel_type_label')}</Text>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 4, paddingVertical: 4 }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12, paddingVertical: 4 }}>
           {FUEL_OPTIONS.map((opt) => {
             const selected = fuel_type === opt.value;
-            // Xe điện: chỉ cho chọn "Điện", các loại còn lại bị khoá.
-            const locked = vehicleType === 'xe_dien' && opt.value !== 'Điện';
             return (
               <TouchableOpacity
                 key={opt.value}
-                disabled={locked}
                 onPress={() => setFuelType(opt.value)}
                 style={{
                   paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20,
                   backgroundColor: selected ? colors.primary : colors.surface,
                   borderWidth: 1, borderColor: selected ? colors.primary : colors.border,
-                  opacity: locked ? 0.4 : 1,
                 }}>
                 <Text style={{ color: selected ? colors.primaryText : colors.textSecondary, fontSize: 13, fontWeight: selected ? '700' : '400' }}>
                   {opt.label}
@@ -539,11 +537,6 @@ export default function AddVehicleScreen() {
             );
           })}
         </View>
-        {vehicleType === 'xe_dien' && (
-          <Text style={{ color: colors.textSecondary, fontSize: 12, marginBottom: 12 }}>
-            {t('add_vehicle.fuel_locked_ev')}
-          </Text>
-        )}
 
         {/* ── ODO ban đầu ── */}
         <Text style={labelStyle}>{t('vehicles.odo_initial_label')}</Text>
