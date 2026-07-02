@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { authApi } from '../api/auth';
+import { queryClient } from '../api/queryClient';
 import { storage } from '../utils/storage';
 import { registerPushToken } from '../utils/pushNotifications';
 import { sendDeviceHeartbeat } from '../api/devices';
@@ -69,6 +70,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const { token, user } = response.data;
       await storage.setToken(token);
       await storage.setUser(JSON.stringify(user));
+      queryClient.clear(); // xoá cache user cũ để không lẫn dữ liệu khi đổi tài khoản
       set({ token, user, isLoading: false });
       registerPushToken();
       sendDeviceHeartbeat();
@@ -86,6 +88,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const { token, user } = response.data;
       await storage.setToken(token);
       await storage.setUser(JSON.stringify(user));
+      queryClient.clear(); // xoá cache user cũ để không lẫn dữ liệu khi đổi tài khoản
       set({ token, user, isLoading: false });
       registerPushToken();
       sendDeviceHeartbeat();
@@ -105,6 +108,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } finally {
       await storage.deleteToken();
       await storage.deleteUser();
+      queryClient.clear(); // xoá toàn bộ cache React Query khi đăng xuất
       set({ user: null, token: null });
     }
   },
@@ -113,6 +117,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   setSession: async (token: string, user: User) => {
     await storage.setToken(token);
     await storage.setUser(JSON.stringify(user));
+    queryClient.clear(); // xoá cache user cũ để không lẫn dữ liệu khi đổi tài khoản
     set({ token, user, isLoading: false });
     registerPushToken();
   },

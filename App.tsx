@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from './src/api/queryClient';
 import { NavigationContainer } from '@react-navigation/native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -14,21 +15,6 @@ import { sendDeviceHeartbeat } from './src/api/devices';
 import { useAuthStore } from './src/store/authStore';
 // Side-effect import: registers the GPS_TRIP_TRACKING background task at module load time
 import './src/services/gps/GpsTripTracker';
-
-// Mặc định caching hợp lý -> KHÔNG refetch (quay spinner) mỗi lần vào lại màn.
-// Dữ liệu "tươi" trong 60s; giữ cache 5 phút; không refetch khi quay lại app.
-// Mutation vẫn invalidate để cập nhật; pull-to-refresh vẫn ép tải mới.
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 60_000,
-      gcTime: 5 * 60_000,
-      refetchOnWindowFocus: false,
-      refetchOnReconnect: true,
-      retry: 1,
-    },
-  },
-});
 
 function AppLoader({ children }: { children: React.ReactNode }) {
   const loadTheme = useThemeStore(s => s.loadSaved);
