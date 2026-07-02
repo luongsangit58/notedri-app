@@ -35,7 +35,7 @@ const dbVehicleType = (t: VehicleType) => (t === 'xe_may' ? 'xemay' : 'oto');
 type Brand  = { id: number; name: string; color?: string };
 type VModel = { id: number; brand_id: number; name: string; type: string };
 type Spec   = { id: number; model_id: number; version?: string; year_from?: number; year_to?: number;
-                 is_ev: boolean; tank?: number; comb?: number; battery?: number; range_km?: number };
+                 is_ev: boolean; is_hybrid?: boolean; tank?: number; comb?: number; battery?: number; range_km?: number };
 
 // ── Picker Modal ────────────────────────────────────────────────────────────
 function PickerModal<T extends { id: number; name: string }>({
@@ -196,6 +196,7 @@ export default function AddVehicleScreen() {
     if (mdl)    setModel(mdl.name);
     // Xe điện -> tự chọn nhiên liệu "Điện" (khớp web).
     if (spec.is_ev) setFuelType('Điện');
+    else if (spec.is_hybrid) setFuelType('Hybrid'); // xe hybrid -> tự chọn nhiên liệu "Hybrid" (khớp web)
     setSelectedSpec(spec);
   }, []);
 
