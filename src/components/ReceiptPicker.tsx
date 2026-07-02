@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, Image, Alert } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, Image, Alert, Modal, Pressable } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useColors } from '../utils/theme';
@@ -23,6 +23,7 @@ export default function ReceiptPicker({
 }) {
   const colors = useColors();
   const t = useT();
+  const [viewing, setViewing] = useState(false);
 
   const pick = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -45,7 +46,12 @@ export default function ReceiptPicker({
     <View style={{ marginBottom: 12 }}>
       {previewUri ? (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-          <Image source={{ uri: previewUri }} style={{ width: 72, height: 72, borderRadius: 10, borderWidth: 1, borderColor: colors.border }} />
+          <TouchableOpacity activeOpacity={0.85} onPress={() => setViewing(true)}>
+            <Image source={{ uri: previewUri }} style={{ width: 72, height: 72, borderRadius: 10, borderWidth: 1, borderColor: colors.border }} />
+            <View style={{ position: 'absolute', right: 4, bottom: 4, backgroundColor: '#000a', borderRadius: 10, width: 20, height: 20, alignItems: 'center', justifyContent: 'center' }}>
+              <FontAwesome5 name="search-plus" size={9} color="#fff" solid />
+            </View>
+          </TouchableOpacity>
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <TouchableOpacity
               onPress={pick}
@@ -73,6 +79,22 @@ export default function ReceiptPicker({
           <Text style={{ color: colors.text, fontSize: 14, fontWeight: '600' }}>{t('services.receipt_add')}</Text>
         </TouchableOpacity>
       )}
+
+      {/* Xem ảnh full-screen (chạm nền để đóng) */}
+      <Modal visible={viewing && !!previewUri} transparent animationType="fade" onRequestClose={() => setViewing(false)}>
+        <Pressable
+          onPress={() => setViewing(false)}
+          style={{ flex: 1, backgroundColor: '#000e', alignItems: 'center', justifyContent: 'center' }}>
+          {previewUri ? (
+            <Image source={{ uri: previewUri }} style={{ width: '100%', height: '80%' }} resizeMode="contain" />
+          ) : null}
+          <TouchableOpacity
+            onPress={() => setViewing(false)}
+            style={{ position: 'absolute', top: 44, right: 20, width: 40, height: 40, borderRadius: 20, backgroundColor: '#0008', alignItems: 'center', justifyContent: 'center' }}>
+            <FontAwesome5 name="times" size={18} color="#fff" solid />
+          </TouchableOpacity>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
