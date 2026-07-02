@@ -597,16 +597,20 @@ export default function RemindersScreen() {
                   disabled={!canAdd}
                   onPress={() => navigation.navigate('AddReminder', { vehicleId: resolvedVehicleId, hang_muc: s.hang_muc, loai: s.loai })}
                   style={{
-                    flexDirection: 'row', alignItems: 'center', gap: 10,
+                    flexDirection: 'row', alignItems: 'flex-start', gap: 10,
                     backgroundColor: colors.surface, borderRadius: 10, padding: 12, marginBottom: 8,
                     borderWidth: 1, borderColor: colors.border, opacity: canAdd ? 1 : 0.5,
                   }}>
-                  <FontAwesome5 name="plus-circle" size={16} color={colors.primary} solid />
+                  <FontAwesome5 name="plus-circle" size={16} color={colors.primary} solid style={{ marginTop: 2 }} />
                   <View style={{ flex: 1 }}>
                     <Text style={{ color: colors.text, fontSize: 14, fontWeight: '600' }}>{s.hang_muc}</Text>
                     {s.anchor && (
                       <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 2 }}>{s.anchor}</Text>
                     )}
+                    {/* Mô tả kỹ thuật (từ API desc) - giúp user hiểu "cái này là gì" ngay tại chỗ */}
+                    {s.desc ? (
+                      <Text style={{ color: colors.textSecondary, fontSize: 11.5, marginTop: 3, lineHeight: 16 }}>{s.desc}</Text>
+                    ) : null}
                   </View>
                   {!canAdd && (
                     <View style={{ backgroundColor: '#F59E0B22', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2 }}>

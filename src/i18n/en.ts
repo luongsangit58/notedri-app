@@ -145,7 +145,7 @@ const en = {
   "services.cost_label": "Cost (VND)",
   "services.location_label": "Location",
   "services.save_button": "Save service",
-  "services.receipt_label": "Receipt photo",
+  "services.receipt_label": "Image",
   "services.receipt_add": "Add receipt photo",
   "services.receipt_change": "Change",
   "services.delete_confirm_title": "Delete service",

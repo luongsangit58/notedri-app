@@ -331,6 +331,16 @@ export default function EditServiceScreen() {
             style={styles.input}
           />
 
+          {/* Hình ảnh - đặt TRƯỚC Ghi chú (Ghi chú là ô cuối) */}
+          <FieldLabel>{t('services.receipt_label')}</FieldLabel>
+          <ReceiptPicker
+            photo={photo}
+            existingUrl={original?.dinh_kem_url}
+            removed={removePhoto}
+            onPicked={setPhoto}
+            onRemoved={setRemovePhoto}
+          />
+
           {/* Ghi chu */}
           <FieldLabel>{t('common.note')}</FieldLabel>
           <TextInput
@@ -340,16 +350,6 @@ export default function EditServiceScreen() {
             placeholderTextColor={colors.textSecondary}
             multiline
             style={[styles.input, styles.inputMultiline]}
-          />
-
-          {/* Ảnh hoá đơn */}
-          <FieldLabel>{t('services.receipt_label')}</FieldLabel>
-          <ReceiptPicker
-            photo={photo}
-            existingUrl={original?.dinh_kem_url}
-            removed={removePhoto}
-            onPicked={setPhoto}
-            onRemoved={setRemovePhoto}
           />
 
           {/* Update button */}

@@ -272,6 +272,10 @@ export default function AddServiceScreen() {
             style={styles.input}
           />
 
+          {/* Hình ảnh - đặt TRƯỚC Ghi chú (Ghi chú là ô cuối) */}
+          <FieldLabel>{t('services.receipt_label')}</FieldLabel>
+          <ReceiptPicker photo={photo} onPicked={setPhoto} onRemoved={() => {}} />
+
           {/* Ghi chu */}
           <FieldLabel>{t('common.note')}</FieldLabel>
           <TextInput
@@ -282,10 +286,6 @@ export default function AddServiceScreen() {
             multiline
             style={[styles.input, styles.inputMultiline]}
           />
-
-          {/* Ảnh hoá đơn */}
-          <FieldLabel>{t('services.receipt_label')}</FieldLabel>
-          <ReceiptPicker photo={photo} onPicked={setPhoto} onRemoved={() => {}} />
 
           {/* Submit */}
           <TouchableOpacity

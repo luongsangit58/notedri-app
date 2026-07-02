@@ -146,7 +146,7 @@ const vi = {
   "services.cost_label": "Chi phí (đ)",
   "services.location_label": "Nơi làm",
   "services.save_button": "Lưu bảo dưỡng",
-  "services.receipt_label": "Ảnh hoá đơn",
+  "services.receipt_label": "Hình ảnh",
   "services.receipt_add": "Thêm ảnh hoá đơn",
   "services.receipt_change": "Đổi ảnh",
   "services.delete_confirm_title": "Xoá bảo dưỡng",
