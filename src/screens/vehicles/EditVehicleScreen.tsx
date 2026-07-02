@@ -15,7 +15,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useVehicle, useUpdateVehicle, useDeleteVehicle } from '../../hooks/useVehicles';
-import { useFuelTypes } from '../../hooks/useFuelTypes';
+import VehicleMoreFields, { VehicleExtra, EMPTY_VEHICLE_EXTRA, extraFromVehicle, extraToPayload } from '../../components/VehicleMoreFields';
 import LoadingView from '../../components/LoadingView';
 import ErrorView from '../../components/ErrorView';
 import AppBgPattern from '../../components/AppBgPattern';
@@ -50,22 +50,26 @@ export default function EditVehicleScreen() {
   const { data: vehicleData, isLoading, isError, refetch } = useVehicle(vehicleId);
   const updateVehicle = useUpdateVehicle();
   const deleteVehicle = useDeleteVehicle();
-  const { data: fuelTypesRaw, isLoading: fuelTypesLoading } = useFuelTypes();
-
-  const fuelTypes: any[] = Array.isArray(fuelTypesRaw)
-    ? fuelTypesRaw.filter((ft: any) => ft.kich_hoat)
-    : [];
+  // Loại nhiên liệu: danh sách TĨNH khớp web (không lấy từ bảng giá xăng).
+  const FUEL_OPTIONS: { value: string; label: string }[] = [
+    { value: 'Xăng', label: t('vehicles.fuel_petrol') },
+    { value: 'Dầu',  label: t('vehicles.fuel_diesel') },
+    { value: 'Điện', label: t('vehicles.fuel_electric') },
+    { value: 'Khác', label: t('vehicles.fuel_other') },
+  ];
 
   const [ten, setTen] = useState('');
   const [bien_so, setBienSo] = useState('');
   const [make, setMake] = useState('');
   const [model, setModel] = useState('');
   const [nam, setNam] = useState('');
-  const [fuel_type, setFuelType] = useState('E5 RON 95-V');
+  const [fuel_type, setFuelType] = useState('Xăng');
   const [odo_ban_dau, setOdoBanDau] = useState('');
   const [tank_capacity_l, setTankCapacity] = useState('');
   const [consumption_official, setConsumptionOfficial] = useState('');
   const [is_default, setIsDefault] = useState(false);
+  const [extra, setExtra] = useState<VehicleExtra>(EMPTY_VEHICLE_EXTRA);
+  const [showMore, setShowMore] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
   const [initialized, setInitialized] = useState(false);
   const [photo, setPhoto] = useState<VehiclePhoto | null>(null);
@@ -80,11 +84,12 @@ export default function EditVehicleScreen() {
       setMake(v?.make ?? '');
       setModel(v?.model ?? '');
       setNam(v?.nam != null ? String(v.nam) : '');
-      setFuelType(v?.fuel_type ?? 'E5 RON 95-V');
+      setFuelType(v?.fuel_type ?? 'Xăng');
       setOdoBanDau(v?.odo_ban_dau != null ? String(v.odo_ban_dau) : '');
       setTankCapacity(v?.tank_capacity_l != null ? String(v.tank_capacity_l) : '');
       setConsumptionOfficial(v?.consumption_official != null ? String(v.consumption_official) : '');
       setIsDefault(v?.is_default ?? false);
+      setExtra(extraFromVehicle(v));
       setExistingPhotoUrl(v?.anh_url ?? null);
       setInitialized(true);
     }
@@ -128,6 +133,7 @@ export default function EditVehicleScreen() {
       odo_ban_dau: odo_ban_dau.trim() ? parseInt(odo_ban_dau.trim(), 10) : null,
       tank_capacity_l: tank_capacity_l.trim() ? parseFloat(tank_capacity_l.trim()) : null,
       consumption_official: consumption_official.trim() ? parseFloat(consumption_official.trim()) : null,
+      ...extraToPayload(extra),
     };
 
     if (removeExistingPhoto && !photo) {
@@ -250,40 +256,25 @@ export default function EditVehicleScreen() {
         />
 
         <Text style={labelStyle}>{t('vehicles.fuel_type_label')}</Text>
-        {fuelTypesLoading ? (
-          <ActivityIndicator color={colors.primary} style={{ marginBottom: 12, alignSelf: 'flex-start' }} />
-        ) : (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={{ marginBottom: 12 }}
-            contentContainerStyle={{ gap: 8, paddingVertical: 4 }}>
-            {fuelTypes.map((ft: any) => {
-              const selected = fuel_type === ft.ten;
-              return (
-                <TouchableOpacity
-                  key={ft.id}
-                  onPress={() => setFuelType(ft.ten)}
-                  style={{
-                    paddingHorizontal: 14,
-                    paddingVertical: 8,
-                    borderRadius: 20,
-                    backgroundColor: selected ? colors.primary : colors.surface,
-                    borderWidth: 1,
-                    borderColor: selected ? colors.primary : '#2E2E2E',
-                  }}>
-                  <Text style={{
-                    color: selected ? colors.primaryText : colors.textSecondary,
-                    fontSize: 13,
-                    fontWeight: selected ? '700' : '400',
-                  }}>
-                    {ft.ten}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-        )}
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12, paddingVertical: 4 }}>
+          {FUEL_OPTIONS.map((opt) => {
+            const selected = fuel_type === opt.value;
+            return (
+              <TouchableOpacity
+                key={opt.value}
+                onPress={() => setFuelType(opt.value)}
+                style={{
+                  paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20,
+                  backgroundColor: selected ? colors.primary : colors.surface,
+                  borderWidth: 1, borderColor: selected ? colors.primary : colors.border,
+                }}>
+                <Text style={{ color: selected ? colors.primaryText : colors.textSecondary, fontSize: 13, fontWeight: selected ? '700' : '400' }}>
+                  {opt.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
 
         <Text style={labelStyle}>{t('vehicles.odo_initial_label')}</Text>
         <TextInput
@@ -317,6 +308,27 @@ export default function EditVehicleScreen() {
           keyboardType="numeric"
           returnKeyType="done"
         />
+
+        {/* Thêm thông tin xe (tuỳ chọn) - khớp web */}
+        <TouchableOpacity
+          onPress={() => setShowMore(v => !v)}
+          activeOpacity={0.8}
+          style={{
+            flexDirection: 'row', alignItems: 'center', gap: 12,
+            backgroundColor: colors.surface, borderRadius: 12,
+            paddingHorizontal: 14, paddingVertical: 13, marginTop: 4, marginBottom: 12,
+            borderWidth: 1, borderColor: showMore ? colors.primary : colors.border,
+          }}>
+          <View style={{ width: 32, height: 32, borderRadius: 8, backgroundColor: colors.primary + '1f', alignItems: 'center', justifyContent: 'center' }}>
+            <FontAwesome5 name="sliders-h" size={13} color={colors.primary} solid />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: colors.text, fontSize: 14, fontWeight: '700' }}>{t('add_vehicle.more_info_title')}</Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 1 }}>{t('add_vehicle.more_info_subtitle')}</Text>
+          </View>
+          <FontAwesome5 name={showMore ? 'chevron-up' : 'chevron-down'} size={13} color={colors.textSecondary} />
+        </TouchableOpacity>
+        {showMore && <VehicleMoreFields value={extra} onChange={(patch) => setExtra(e => ({ ...e, ...patch }))} />}
 
         <View style={{ marginBottom: 16 }}>
           <Text style={labelStyle}>{t('add_vehicle.photo_label')}</Text>

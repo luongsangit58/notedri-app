@@ -22,14 +22,8 @@ import { useCreateVehicle } from '../../hooks/useVehicles';
 import client from '../../api/client';
 import { useColors } from '../../utils/theme';
 import { normalizeSearch } from '../../utils/text';
-import DatePickerField from '../../components/DatePickerField';
 import { useT } from '../../i18n';
-
-// Định dạng tiền: chỉ giữ chữ số + chấm phân tách nghìn (submit sẽ bỏ dấu chấm).
-function formatMoney(v: string): string {
-  const digits = v.replace(/\D/g, '');
-  return digits ? digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.') : '';
-}
+import VehicleMoreFields, { VehicleExtra, EMPTY_VEHICLE_EXTRA, extraToPayload } from '../../components/VehicleMoreFields';
 import AppBgPattern from '../../components/AppBgPattern';
 import type { VehiclePhoto } from '../../api/vehicles';
 
@@ -156,10 +150,7 @@ export default function AddVehicleScreen() {
   const [tank_capacity_l, setTankCapacity]         = useState('');
   const [consumption_official, setConsumptionOfficial] = useState('');
   const [is_default, setIsDefault]  = useState(false);
-  const [ngay_mua, setNgayMua]      = useState('');
-  const [gia_mua, setGiaMua]        = useState('');
-  const [vin, setVin]               = useState('');
-  const [notes, setNotes]           = useState('');
+  const [extra, setExtra]           = useState<VehicleExtra>(EMPTY_VEHICLE_EXTRA);
   const [vehicle_spec_id, setVehicleSpecId] = useState<number | null>(null);
   const [showExtra, setShowExtra]   = useState(false);
   const [apiError, setApiError]     = useState<string | null>(null);
@@ -273,10 +264,8 @@ export default function AddVehicleScreen() {
     if (tank_capacity_l.trim())   payload.tank_capacity_l       = parseFloat(tank_capacity_l.trim());
     if (consumption_official.trim()) payload.consumption_official = parseFloat(consumption_official.trim());
     if (vehicle_spec_id)          payload.vehicle_spec_id = vehicle_spec_id;
-    if (ngay_mua.trim())          payload.ngay_mua    = ngay_mua.trim();
-    if (gia_mua.trim())           payload.gia_mua     = parseFloat(gia_mua.replace(/\./g, '').trim());
-    if (vin.trim())               payload.vin         = vin.trim();
-    if (notes.trim())             payload.notes       = notes.trim();
+    // Trường hồ sơ tuỳ chọn (màu, VIN, số máy, đại lý, ngày/giá mua, ghi chú) - bỏ giá trị rỗng.
+    Object.entries(extraToPayload(extra)).forEach(([k, val]) => { if (val != null) payload[k] = val; });
     try {
       await createVehicle.mutateAsync({ data: payload, photo: photo ?? undefined });
       navigation.goBack();
@@ -610,30 +599,7 @@ export default function AddVehicleScreen() {
         </TouchableOpacity>
 
         {showExtra && (
-          <>
-            <Text style={labelStyle}>{t('add_vehicle.purchase_date_label')}</Text>
-            <DatePickerField value={ngay_mua} onChange={setNgayMua} style={{ marginBottom: 12 }} />
-            <Text style={labelStyle}>{t('add_vehicle.purchase_price_label')}</Text>
-            <View style={{
-              flexDirection: 'row', alignItems: 'center',
-              backgroundColor: colors.surface, borderRadius: 10, borderWidth: 1, borderColor: colors.border,
-              marginBottom: 12, paddingRight: 14,
-            }}>
-              <TextInput
-                style={{ flex: 1, color: colors.text, fontSize: 15, paddingHorizontal: 14, paddingVertical: 12 }}
-                placeholder={t('add_vehicle.purchase_price_placeholder')}
-                placeholderTextColor={colors.textSecondary}
-                value={gia_mua}
-                onChangeText={(v) => setGiaMua(formatMoney(v))}
-                keyboardType="numeric"
-              />
-              <Text style={{ color: colors.textSecondary, fontSize: 15, fontWeight: '700' }}>đ</Text>
-            </View>
-            <Text style={labelStyle}>{t('add_vehicle.vin_label')}</Text>
-            <TextInput style={inputStyle} placeholder={t('add_vehicle.vin_placeholder')} placeholderTextColor={colors.textSecondary} value={vin} onChangeText={setVin} autoCapitalize="characters" />
-            <Text style={labelStyle}>{t('common.note')}</Text>
-            <TextInput style={[inputStyle, { minHeight: 72, textAlignVertical: 'top' }]} placeholder={t('add_vehicle.notes_placeholder')} placeholderTextColor={colors.textSecondary} value={notes} onChangeText={setNotes} multiline />
-          </>
+          <VehicleMoreFields value={extra} onChange={(patch) => setExtra(e => ({ ...e, ...patch }))} />
         )}
 
         {/* ── Ảnh xe ── */}
