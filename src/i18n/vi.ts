@@ -528,6 +528,7 @@ const vi = {
   "reminders.remaining_km": "Còn {{n}} km",
   "reminders.every_km": "Mỗi {{km}}km",
   "reminders.every_km_month": "Mỗi {{km}}km / {{m}} tháng",
+  "reminders.every_month": "Mỗi {{m}} tháng",
   "reminders.last_done": "Lần cuối: {{date}}",
   "reminders.last_done_odo": "Lần cuối: {{date}} · ODO {{odo}}km",
   "reminders.due_prefix": "Hạn: {{date}}",

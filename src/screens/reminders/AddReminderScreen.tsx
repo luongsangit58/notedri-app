@@ -37,7 +37,9 @@ export default function AddReminderScreen() {
   };
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
-  const { vehicleId: paramVehicleId } = (route.params ?? {}) as { vehicleId?: number };
+  // Nhận prefill từ đề xuất lời nhắc: hạng mục + loại + chu kỳ khuyến nghị.
+  const { vehicleId: paramVehicleId, hang_muc: paramItem, loai: paramLoai, interval_km: paramKm, interval_thang: paramThang } =
+    (route.params ?? {}) as { vehicleId?: number; hang_muc?: string; loai?: Loai; interval_km?: number; interval_thang?: number };
   const { mutate, isPending } = useCreateReminder();
 
   // If no vehicleId param (e.g. from QuickAddFAB), pick the default vehicle
@@ -53,11 +55,11 @@ export default function AddReminderScreen() {
   }, [vehicleId]);
   const effectiveVehicleId = paramVehicleId ?? selectedVehicleId ?? vehicleId;
 
-  const [hang_muc, setHangMuc] = useState('');
-  const [loai, setLoai] = useState<Loai>('bao_duong');
+  const [hang_muc, setHangMuc] = useState(paramItem ?? '');
+  const [loai, setLoai] = useState<Loai>(paramLoai ?? 'bao_duong');
   const [che_do, setCheĐo] = useState<CheDo>('chu_ky');
-  const [interval_km, setIntervalKm] = useState('');
-  const [interval_thang, setIntervalThang] = useState('');
+  const [interval_km, setIntervalKm] = useState(paramKm != null ? String(paramKm) : '');
+  const [interval_thang, setIntervalThang] = useState(paramThang != null ? String(paramThang) : '');
   const [last_done_odo, setLastDoneOdo] = useState('');
   const [last_done_date, setLastDoneDate] = useState('');
   const [due_date, setDueDate] = useState('');

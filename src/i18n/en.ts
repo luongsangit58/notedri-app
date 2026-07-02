@@ -528,6 +528,7 @@ const en = {
   "reminders.remaining_km": "{{n}} km left",
   "reminders.every_km": "Every {{km}}km",
   "reminders.every_km_month": "Every {{km}}km / {{m}} months",
+  "reminders.every_month": "Every {{m}} months",
   "reminders.last_done": "Last done: {{date}}",
   "reminders.last_done_odo": "Last done: {{date}} · ODO {{odo}}km",
   "reminders.due_prefix": "Due: {{date}}",

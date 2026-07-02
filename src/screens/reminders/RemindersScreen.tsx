@@ -595,7 +595,7 @@ export default function RemindersScreen() {
                 <TouchableOpacity
                   key={i}
                   disabled={!canAdd}
-                  onPress={() => navigation.navigate('AddReminder', { vehicleId: resolvedVehicleId, hang_muc: s.hang_muc, loai: s.loai })}
+                  onPress={() => navigation.navigate('AddReminder', { vehicleId: resolvedVehicleId, hang_muc: s.hang_muc, loai: s.loai, interval_km: s.interval_km ?? undefined, interval_thang: s.interval_thang ?? undefined })}
                   style={{
                     flexDirection: 'row', alignItems: 'flex-start', gap: 10,
                     backgroundColor: colors.surface, borderRadius: 10, padding: 12, marginBottom: 8,
@@ -604,6 +604,16 @@ export default function RemindersScreen() {
                   <FontAwesome5 name="plus-circle" size={16} color={colors.primary} solid style={{ marginTop: 2 }} />
                   <View style={{ flex: 1 }}>
                     <Text style={{ color: colors.text, fontSize: 14, fontWeight: '600' }}>{s.hang_muc}</Text>
+                    {/* Chu kỳ khuyến nghị - tham khảo "nên làm mỗi bao lâu" */}
+                    {(s.interval_km || s.interval_thang) ? (
+                      <Text style={{ color: colors.primary, fontSize: 11.5, fontWeight: '600', marginTop: 2 }}>
+                        {s.interval_km && s.interval_thang
+                          ? t('reminders.every_km_month', { km: Number(s.interval_km).toLocaleString('vi-VN'), m: s.interval_thang })
+                          : s.interval_km
+                          ? t('reminders.every_km', { km: Number(s.interval_km).toLocaleString('vi-VN') })
+                          : t('reminders.every_month', { m: s.interval_thang })}
+                      </Text>
+                    ) : null}
                     {s.anchor && (
                       <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 2 }}>{s.anchor}</Text>
                     )}
