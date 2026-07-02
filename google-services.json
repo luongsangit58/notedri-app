@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "819728846867",
+    "project_id": "notedri-app",
+    "storage_bucket": "notedri-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:819728846867:android:95f254beb9bf740b69efe6",
+        "android_client_info": {
+          "package_name": "com.notedri"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB9nOoHgFWAF3zDFZZpD9xk3GNKuzkdHEg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
