@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -257,7 +257,12 @@ function ActiveTripCard({ vehicleId }: { vehicleId: number }) {
         Alert.alert(t('gps_trips.end_trip_title'), t('gps_trips.end_trip_body'), [
           { text: t('gps_trips.keep_recording'), style: 'cancel' },
           { text: t('gps_trips.discard_no_save'), style: 'destructive', onPress: () => stop(false) },
-          { text: t('common.save'), onPress: () => stop(true) },
+          { text: t('common.save'), onPress: async () => {
+            const saved = await stop(true);
+            if (saved) {
+              Alert.alert(t('gps_trips.saved_title'), t('gps_trips.saved_body', { km: Number(saved.distanceKm).toFixed(1) }));
+            }
+          } },
         ]);
       } else {
         // Chỉ đang theo dõi, chưa vào chuyến -> tắt luôn
@@ -563,18 +568,35 @@ export default function GpsTripsScreen({ embedded }: { embedded?: boolean } = {}
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
 
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+
   // Mở từ FAB không có param -> dùng xe mặc định
   const { data: vehiclesRaw } = useVehicles();
   const vehicles: any[] = Array.isArray(vehiclesRaw?.data) ? vehiclesRaw.data
     : Array.isArray(vehiclesRaw) ? vehiclesRaw : [];
   const defaultVehicle = vehicles.find((v) => v.is_default) ?? vehicles[0];
 
-  const vehicleId: number = route.params?.vehicleId ?? defaultVehicle?.id ?? 0;
+  // Xe dùng cho GPS: ưu tiên lựa chọn đã LƯU (persist) -> "xe mặc định GPS" thực sự,
+  // thay vì phụ thuộc điểm mở màn. Kế tiếp mới tới param rồi xe mặc định.
+  const [selectedVid, setSelectedVid] = useState<number | null>(null);
+  useEffect(() => {
+    AsyncStorage.getItem('gps_vehicle_id').then((v) => { if (v) setSelectedVid(Number(v)); }).catch(() => {});
+  }, []);
+  const pickVehicle = useCallback((id: number) => {
+    setSelectedVid(id);
+    AsyncStorage.setItem('gps_vehicle_id', String(id)).catch(() => {});
+  }, []);
+
   const colors = useColors();
   const t = useT();
 
-  const vehicleName: string = route.params?.vehicleName
-    ?? defaultVehicle?.ten ?? defaultVehicle?.name ?? t('common.vehicle');
+  // Chỉ dùng xe đã chọn nếu nó còn tồn tại trong danh sách.
+  const validSelected = selectedVid != null && vehicles.some((v) => v.id === selectedVid) ? selectedVid : null;
+  const vehicleId: number = validSelected ?? route.params?.vehicleId ?? defaultVehicle?.id ?? 0;
+  const currentVehicle = vehicles.find((v) => v.id === vehicleId);
+  const vehicleName: string = currentVehicle?.ten ?? currentVehicle?.name
+    ?? route.params?.vehicleName ?? defaultVehicle?.ten ?? defaultVehicle?.name ?? t('common.vehicle');
 
   const { data, isLoading, refetch, isFetching } = useGpsTrips(vehicleId);
   const trips: GpsTripRecord[] = data?.data ?? [];
@@ -642,7 +664,34 @@ export default function GpsTripsScreen({ embedded }: { embedded?: boolean } = {}
         data={trips}
         keyExtractor={(item) => String(item.id)}
         refreshControl={<RefreshControl refreshing={isFetching} onRefresh={handleRefresh} tintColor={colors.primary} />}
-        ListHeaderComponent={<ActiveTripCard vehicleId={vehicleId} />}
+        ListHeaderComponent={
+          <>
+            {vehicles.length > 1 && (
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 16, paddingTop: 12 }}>
+                {vehicles.map((v) => {
+                  const sel = v.id === vehicleId;
+                  return (
+                    <TouchableOpacity
+                      key={v.id}
+                      onPress={() => pickVehicle(v.id)}
+                      style={{
+                        flexDirection: 'row', alignItems: 'center', gap: 6,
+                        paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20,
+                        backgroundColor: sel ? colors.primary : colors.surface,
+                        borderWidth: 1, borderColor: sel ? colors.primary : colors.border,
+                      }}>
+                      <FontAwesome5 name="car-side" size={11} color={sel ? colors.primaryText : colors.textSecondary} solid />
+                      <Text style={{ color: sel ? colors.primaryText : colors.textSecondary, fontSize: 13, fontWeight: sel ? '700' : '400' }}>
+                        {v.ten ?? v.name}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
+            <ActiveTripCard vehicleId={vehicleId} />
+          </>
+        }
         ListEmptyComponent={
           isLoading ? (
             <ActivityIndicator color={colors.primary} style={styles.loader} />
@@ -663,7 +712,7 @@ export default function GpsTripsScreen({ embedded }: { embedded?: boolean } = {}
             onEditNote={openNote}
           />
         )}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={[styles.list, isLandscape && { maxWidth: 760, alignSelf: 'center', width: '100%' }]}
         ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
       />
 

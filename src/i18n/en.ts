@@ -892,6 +892,8 @@ const en = {
   "gps_trips.discard": "Discard",
   "gps_trips.pause": "Pause",
   "gps_trips.end_trip_title": "End trip?",
+  "gps_trips.saved_title": "Trip saved",
+  "gps_trips.saved_body": "Recorded {{km}} km. The trip now shows in the list below.",
   "gps_trips.end_trip_body": "Do you want to save the trip you just recorded?",
   "gps_trips.keep_recording": "Keep recording",
   "gps_trips.discard_no_save": "Discard, don't save",

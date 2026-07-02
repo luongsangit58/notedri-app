@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   getTripState,
   isTrackingActive,
@@ -16,6 +16,7 @@ import {
   checkInterruptedTrip,
   resumeInterruptedTrip,
   GpsTripState,
+  GpsTripSummary,
   RoutePoint,
   StartResult,
   InterruptedTripInfo,
@@ -36,6 +37,12 @@ export function useGpsTripState() {
   const [routePoints, setRoutePoints] = useState<RoutePoint[]>([]);
   const [interruptedInfo, setInterruptedInfo] = useState<InterruptedTripInfo | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const qc = useQueryClient();
+  // Sau khi lưu/đồng bộ chuyến -> làm mới danh sách hành trình (nếu không, chuyến đã lưu
+  // KHÔNG hiện ra tới khi user tự kéo refresh -> tưởng "không lưu được").
+  const invalidateTrips = useCallback(() => {
+    qc.invalidateQueries({ queryKey: ['gps_trips'] });
+  }, [qc]);
 
   // Poll NHẸ mỗi 4s: chỉ đọc trạng thái chuyến + route (cho bảng tín hiệu live).
   // KHÔNG kiểm quyền/định vị ở đây (chậm + ít đổi) -> tránh app nặng.
@@ -58,7 +65,8 @@ export function useGpsTripState() {
   // Dọn dẹp hành trình mồ côi + kiểm tra resume. Gọi cả lúc cold start lẫn foreground.
   const handleForeground = useCallback(async () => {
     await maybeAutoShutdownStale();
-    await flushPendingGpsTrips();
+    const flushed = await flushPendingGpsTrips();
+    if (flushed.synced > 0) invalidateTrips(); // chuyến ghi nền/hôm trước vừa lên server
     await refresh();
     await refreshReadiness();
     // Gia hạn lock khi user mở lại app (heartbeat thay thế background interval)
@@ -71,7 +79,7 @@ export function useGpsTripState() {
     // Sau khi maybeAutoShutdownStale() xử lý, kiểm tra có trip bị gián đoạn cần resume
     const info = await checkInterruptedTrip();
     setInterruptedInfo(info.hasInterrupted ? info : null);
-  }, [refresh, refreshReadiness]);
+  }, [refresh, refreshReadiness, invalidateTrips]);
 
   // Cold start: gọi handleForeground ngay lập tức (AppState change không fire khi khởi động mới)
   useEffect(() => {
@@ -99,12 +107,14 @@ export function useGpsTripState() {
     return result;
   }, [refresh]);
 
-  const stop = useCallback(async (save: boolean = true) => {
-    await stopTracking(save);
+  const stop = useCallback(async (save: boolean = true): Promise<GpsTripSummary | null> => {
+    const saved = await stopTracking(save);
     if (save) await flushPendingGpsTrips();
+    invalidateTrips();
     setInterruptedInfo(null);
     await refresh();
-  }, [refresh]);
+    return saved;
+  }, [refresh, invalidateTrips]);
 
   const pause = useCallback(async () => {
     await pauseTracking();
@@ -135,9 +145,10 @@ export function useGpsTripState() {
   const saveInterrupted = useCallback(async () => {
     await stopTracking(true);
     await flushPendingGpsTrips();
+    invalidateTrips();
     setInterruptedInfo(null);
     await refresh();
-  }, [refresh]);
+  }, [refresh, invalidateTrips]);
 
   // Bỏ hành trình bị gián đoạn (không lưu)
   const discardInterrupted = useCallback(async () => {

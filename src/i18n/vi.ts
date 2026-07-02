@@ -892,6 +892,8 @@ const vi = {
   "gps_trips.discard": "Bỏ",
   "gps_trips.pause": "Tạm dừng",
   "gps_trips.end_trip_title": "Kết thúc hành trình?",
+  "gps_trips.saved_title": "Đã lưu hành trình",
+  "gps_trips.saved_body": "Đã ghi nhận {{km}} km. Hành trình đã hiện trong danh sách bên dưới.",
   "gps_trips.end_trip_body": "Bạn muốn lưu lại hành trình vừa ghi?",
   "gps_trips.keep_recording": "Tiếp tục ghi",
   "gps_trips.discard_no_save": "Bỏ, không lưu",

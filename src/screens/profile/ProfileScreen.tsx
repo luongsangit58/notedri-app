@@ -51,7 +51,7 @@ export default function ProfileScreen() {
   const handleLinkGoogle = async () => {
     try {
       const url = `${BASE_URL}/auth/google/mobile?link_token=${encodeURIComponent(token ?? '')}`;
-      const result = await WebBrowser.openAuthSessionAsync(url, 'notedri://auth', { preferEphemeralSession: true });
+      const result = await WebBrowser.openAuthSessionAsync(url, 'notedri://auth', { preferEphemeralSession: false });
       if (result.type !== 'success') return;
       const params = new URLSearchParams(result.url.split('?')[1] ?? '');
       if (params.get('error')) { Alert.alert(t('common.error'), decodeURIComponent(params.get('error')!)); return; }

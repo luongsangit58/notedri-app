@@ -698,16 +698,18 @@ export async function getRoutePoints(): Promise<RoutePoint[]> {
   return readRoute();
 }
 
-// save=false -> dừng và BỎ hành trình đang ghi (không lưu)
-export async function stopTracking(save: boolean = true): Promise<void> {
+// save=false -> dừng và BỎ hành trình đang ghi (không lưu).
+// Trả về summary nếu có chuyến được lưu (để UI báo "Đã lưu X km"), null nếu không.
+export async function stopTracking(save: boolean = true): Promise<GpsTripSummary | null> {
   const isRunning = await Location.hasStartedLocationUpdatesAsync(GPS_TASK_NAME).catch(() => false);
   if (isRunning) {
     await Location.stopLocationUpdatesAsync(GPS_TASK_NAME);
   }
   const state = await readState();
+  let saved: GpsTripSummary | null = null;
   if (save && (state.status === 'active' || state.status === 'waiting_stop')) {
-    const summary = await finalizeTrip(state);
-    if (summary) await enqueueTripFromTask(summary);
+    saved = await finalizeTrip(state);
+    if (saved) await enqueueTripFromTask(saved);
   }
   // Release tracking lock so other devices can start tracking this vehicle
   if (state.vehicleId) {
@@ -718,6 +720,7 @@ export async function stopTracking(save: boolean = true): Promise<void> {
   }
   await clearRoute();
   await writeState(defaultState());
+  return saved;
 }
 
 // TẠM DỪNG ghi: giữ service chạy nhưng KHÔNG cộng quãng đường/điểm tới khi tiếp tục.
