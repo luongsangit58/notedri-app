@@ -1,5 +1,5 @@
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { servicesApi } from '../api/services';
+import { servicesApi, ServicePhoto } from '../api/services';
 
 export const useServices = (vehicleId?: number) =>
   useInfiniteQuery({
@@ -15,7 +15,8 @@ export const useServices = (vehicleId?: number) =>
 export const useCreateService = () => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: any) => servicesApi.create(data).then(r => r.data),
+    mutationFn: ({ data, photo }: { data: any; photo?: ServicePhoto }) =>
+      servicesApi.create(data, photo).then(r => r.data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['services'] });
       qc.invalidateQueries({ queryKey: ['dashboard'] });
@@ -27,8 +28,8 @@ export const useCreateService = () => {
 export const useUpdateService = () => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: any }) =>
-      servicesApi.update(id, data).then(r => r.data),
+    mutationFn: ({ id, data, photo, removePhoto }: { id: number; data: any; photo?: ServicePhoto; removePhoto?: boolean }) =>
+      servicesApi.update(id, data, photo, removePhoto).then(r => r.data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['services'] });
       qc.invalidateQueries({ queryKey: ['dashboard'] });

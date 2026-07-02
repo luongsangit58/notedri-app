@@ -48,6 +48,7 @@ interface ServiceItem {
   noi_lam: string;
   odometer: number;
   ghi_chu: string;
+  dinh_kem_url?: string | null;
 }
 
 function ServiceCard({ item, onPress }: { item: ServiceItem; onPress?: () => void }) {
@@ -83,7 +84,12 @@ function ServiceCard({ item, onPress }: { item: ServiceItem; onPress?: () => voi
           <FontAwesome5 name="wrench" size={18} color={colors.primary} solid />
         </View>
         <View style={styles.cardMain}>
-          <Text style={styles.hangMuc} numberOfLines={1}>{item.hang_muc}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Text style={[styles.hangMuc, { flexShrink: 1 }]} numberOfLines={1}>{item.hang_muc}</Text>
+            {item.dinh_kem_url ? (
+              <FontAwesome5 name="paperclip" size={11} color={colors.textSecondary} solid />
+            ) : null}
+          </View>
           <View style={styles.metaRow}>
             <View style={styles.badge}><Text style={styles.badgeText}>{loaiLabel}</Text></View>
             <Text style={styles.ngay}>{formatDate(item.ngay)}</Text>

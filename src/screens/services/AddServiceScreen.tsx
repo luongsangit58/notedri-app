@@ -14,6 +14,8 @@ import { useCreateService } from '../../hooks/useServices';
 import { useColors } from '../../utils/theme';
 import { useT } from '../../i18n';
 import MoneyInput from '../../components/MoneyInput';
+import ReceiptPicker from '../../components/ReceiptPicker';
+import { ServicePhoto } from '../../api/services';
 
 const LOAI_OPTIONS = [
   { value: 'bao_duong', labelKey: 'services.type_bao_duong' },
@@ -123,6 +125,7 @@ export default function AddServiceScreen() {
   const [ngay, setNgay] = useState(dayjs().format('YYYY-MM-DD'));
   const [noiLam, setNoiLam] = useState('');
   const [ghiChu, setGhiChu] = useState('');
+  const [photo, setPhoto] = useState<ServicePhoto | null>(null);
 
   useEffect(() => {
     if (!vehicleId && defaultVehicle) {
@@ -141,14 +144,17 @@ export default function AddServiceScreen() {
     }
     try {
       await createService.mutateAsync({
-        vehicle_id: vehicleId,
-        hang_muc: hangMuc.trim(),
-        loai,
-        chi_phi: chiPhi ? parseFloat(chiPhi) : null,
-        odometer: odometer ? parseInt(odometer, 10) : null,
-        ngay,
-        noi_lam: noiLam.trim() || null,
-        ghi_chu: ghiChu.trim() || null,
+        data: {
+          vehicle_id: vehicleId,
+          hang_muc: hangMuc.trim(),
+          loai,
+          chi_phi: chiPhi ? parseFloat(chiPhi) : null,
+          odometer: odometer ? parseInt(odometer, 10) : null,
+          ngay,
+          noi_lam: noiLam.trim() || null,
+          ghi_chu: ghiChu.trim() || null,
+        },
+        photo: photo ?? undefined,
       });
       navigation.goBack();
     } catch (err: any) {
@@ -276,6 +282,10 @@ export default function AddServiceScreen() {
             multiline
             style={[styles.input, styles.inputMultiline]}
           />
+
+          {/* Ảnh hoá đơn */}
+          <FieldLabel>{t('services.receipt_label')}</FieldLabel>
+          <ReceiptPicker photo={photo} onPicked={setPhoto} onRemoved={() => {}} />
 
           {/* Submit */}
           <TouchableOpacity

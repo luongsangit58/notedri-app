@@ -11,7 +11,8 @@ import dayjs from 'dayjs';
 import MoneyInput, { toMoneyRaw } from '../../components/MoneyInput';
 import { useVehicles } from '../../hooks/useVehicles';
 import { useUpdateService, useDeleteService } from '../../hooks/useServices';
-import { servicesApi } from '../../api/services';
+import { servicesApi, ServicePhoto } from '../../api/services';
+import ReceiptPicker from '../../components/ReceiptPicker';
 import { useColors } from '../../utils/theme';
 import { useT } from '../../i18n';
 
@@ -145,6 +146,8 @@ export default function EditServiceScreen() {
   const [ngay, setNgay] = useState(dayjs().format('YYYY-MM-DD'));
   const [noiLam, setNoiLam] = useState('');
   const [ghiChu, setGhiChu] = useState('');
+  const [photo, setPhoto] = useState<ServicePhoto | null>(null);
+  const [removePhoto, setRemovePhoto] = useState(false);
 
   useEffect(() => {
     servicesApi.get(serviceId)
@@ -186,6 +189,8 @@ export default function EditServiceScreen() {
           noi_lam: noiLam.trim() || null,
           ghi_chu: ghiChu.trim() || null,
         },
+        photo: photo ?? undefined,
+        removePhoto,
       });
       navigation.goBack();
     } catch (err: any) {
@@ -335,6 +340,16 @@ export default function EditServiceScreen() {
             placeholderTextColor={colors.textSecondary}
             multiline
             style={[styles.input, styles.inputMultiline]}
+          />
+
+          {/* Ảnh hoá đơn */}
+          <FieldLabel>{t('services.receipt_label')}</FieldLabel>
+          <ReceiptPicker
+            photo={photo}
+            existingUrl={original?.dinh_kem_url}
+            removed={removePhoto}
+            onPicked={setPhoto}
+            onRemoved={setRemovePhoto}
           />
 
           {/* Update button */}
