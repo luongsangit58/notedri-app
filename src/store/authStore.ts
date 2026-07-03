@@ -34,6 +34,7 @@ interface AuthState {
   user: User | null;
   token: string | null;
   isLoading: boolean;
+  isLoggingOut: boolean;
   error: string | null;
   login: (email: string, password: string) => Promise<void>;
   loginWithGoogle: (idToken: string) => Promise<void>;
@@ -48,6 +49,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   token: null,
   isLoading: true,
+  isLoggingOut: false,
   error: null,
 
   initialize: async () => {
@@ -119,12 +121,23 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: async () => {
+    // Chống gọi lại chồng lấn: nhiều request 401 cùng lúc (me + heartbeat...) sẽ gọi logout()
+    // song song -> chỉ cho chạy 1 lần.
+    if (get().isLoggingOut) return;
+    set({ isLoggingOut: true });
     try {
       const { token } = get();
       if (token) {
         await authApi.logout().catch(() => {});
       }
     } finally {
+      // DỪNG HẲN GPS tracking + xoá state chuyến đang chạy: nếu để foreground service chạy tiếp
+      // sau đăng xuất, chuyến của user A có thể kết thúc rồi bị đẩy dưới token user B (rò rỉ vị trí
+      // chéo tài khoản) + hao pin dù không còn ai đăng nhập. stopTracking(false) = KHÔNG lưu chuyến.
+      try {
+        const { stopTracking } = await import('../services/gps/GpsTripTracker');
+        await stopTracking(false);
+      } catch { /* non-critical */ }
       await storage.deleteToken();
       await storage.deleteUser();
       queryClient.clear(); // xoá toàn bộ cache React Query khi đăng xuất
@@ -132,7 +145,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // sang tài khoản mới đăng nhập trên cùng thiết bị.
       await clearGpsQueue();
       await clearObdQueue();
-      set({ user: null, token: null });
+      set({ user: null, token: null, isLoggingOut: false });
     }
   },
 

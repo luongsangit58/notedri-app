@@ -19,7 +19,11 @@ client.interceptors.request.use(async (config) => {
 client.interceptors.response.use(
   (response) => response,
   async (error) => {
-    if (error.response?.status === 401) {
+    // 401 -> tự đăng xuất. NHƯNG bỏ qua nếu CHÍNH request /auth/logout bị 401: nếu không,
+    // logout() gọi authApi.logout() -> 401 -> interceptor lại gọi logout() -> đệ quy không thoát
+    // (token chưa kịp xoá vì set(token:null) nằm trong finally, chỉ chạy khi authApi.logout() xong).
+    const url = error.config?.url ?? '';
+    if (error.response?.status === 401 && !url.includes('/auth/logout')) {
       const { useAuthStore } = await import('../store/authStore');
       await useAuthStore.getState().logout();
     }
