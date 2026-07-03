@@ -36,6 +36,10 @@ export const useDeleteRefuel = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: number) => refuelsApi.delete(id).then(r => r.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['refuels'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['refuels'] });
+      qc.invalidateQueries({ queryKey: ['dashboard'] });
+      qc.invalidateQueries({ queryKey: ['timeline'] });
+    },
   });
 };

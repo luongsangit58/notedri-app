@@ -9,6 +9,8 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import client from '../../api/client';
+import { authApi } from '../../api/auth';
+import { useAuthStore } from '../../store/authStore';
 import { useColors } from '../../utils/theme';
 import { useT } from '../../i18n';
 import AppBgPattern from '../../components/AppBgPattern';
@@ -16,6 +18,17 @@ import { formatVND } from '../../utils/format';
 import dayjs from 'dayjs';
 
 const AMBER = '#F59E0B';
+
+// Đồng bộ lại authStore.user sau khi kích hoạt Premium (redeem/thanh toán) để các
+// gate đọc thẳng user?.is_premium (OBD, thành tích, chi tiết xe) mở khoá NGAY, không
+// phải mở lại app.
+async function refreshAuthUser() {
+  try {
+    const res = await authApi.me();
+    const fresh = res.data?.data ?? res.data;
+    if (fresh) useAuthStore.getState().setUser(fresh);
+  } catch { /* bỏ qua - initialize() lần mở app sau sẽ tự đồng bộ */ }
+}
 
 const PLAN_MONTHS: (1 | 3 | 6 | 12)[] = [1, 3, 6, 12];
 
@@ -96,6 +109,7 @@ export default function PremiumScreen() {
       Alert.alert(t('premium.notification_title'), res?.data?.message ?? t('premium.notification_title'));
       setRedeemCode('');
       qc.invalidateQueries({ queryKey: ['premium-status'] });
+      refreshAuthUser();
     },
     onError: (err: any) => {
       Alert.alert(t('common.error'), err?.response?.data?.message ?? t('common.error_generic'));
@@ -130,6 +144,7 @@ export default function PremiumScreen() {
       setPayModalVisible(false);
       setPayOrder(null);
       qc.invalidateQueries({ queryKey: ['premium-status'] });
+      refreshAuthUser();
       Alert.alert(t('premium.notification_title'), t('premium.payment_success_msg'));
     }
   }, [statusData?.is_premium]);

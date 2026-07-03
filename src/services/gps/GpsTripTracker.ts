@@ -158,6 +158,8 @@ async function finalizeTrip(state: GpsTripState, endTs?: number): Promise<GpsTri
   // Clamp to the backend's accepted range (0-300). A single GPS glitch reading
   // (e.g. 900 km/h) must not make the server reject the whole trip (422) and
   // lose the real distance data.
+  // Lưu ý: đây là tốc độ trung bình khi ĐANG DI CHUYỂN (speedSum/speedCount chỉ cộng
+  // khi speedKmh > 0), không tính thời gian dừng.
   const avgSpeedKmh = Math.min(300,
     state.speedCount > 0 ? Math.round(state.speedSum / state.speedCount) : 0);
 
@@ -183,9 +185,10 @@ async function finalizeTrip(state: GpsTripState, endTs?: number): Promise<GpsTri
 // before the previous async chain finishes, which would cause lost-update races
 // on the AsyncStorage-backed state (dropped distance / route points).
 let taskChain: Promise<void> = Promise.resolve();
-function runSerialized(fn: () => Promise<void>): Promise<void> {
+function runSerialized<T>(fn: () => Promise<T>): Promise<T> {
   const next = taskChain.then(fn, fn);
-  taskChain = next.catch(() => {});
+  // Nối tiếp hàng đợi và nuốt lỗi để một tác vụ hỏng không làm kẹt cả chuỗi.
+  taskChain = next.then(() => undefined, () => undefined);
   return next;
 }
 
@@ -229,8 +232,9 @@ async function handleLocation(loc: Location.LocationObject): Promise<void> {
     return;
   }
 
-  // Elapsed since last point (capped at 30s to avoid huge gaps from app suspend)
-  const elapsedMs = state.lastTs ? Math.min(now - state.lastTs, 30_000) : 0;
+  // Elapsed since last point (capped at 30s to avoid huge gaps from app suspend).
+  // Kẹp >= 0: mốc GPS lùi/không đúng thứ tự (now < lastTs) không được trừ vào tổng idle/driving.
+  const elapsedMs = state.lastTs ? Math.max(0, Math.min(now - state.lastTs, 30_000)) : 0;
 
   // Speed: prefer GPS-reported value, fall back to distance/time when GPS speed
   // is missing or invalid. Many Android devices report null or -1 on the
@@ -528,17 +532,19 @@ export async function requestPermissionsAndStart(vehicleId: number): Promise<Sta
     }
   } catch { backgroundGranted = false; }
 
-  // 3) Prepare state
-  const state = await readState();
-  if (state.status === 'idle') {
-    const fresh = defaultState();
-    fresh.vehicleId = vehicleId;
-    await writeState(fresh);
-    await clearRoute();
-  } else if (state.vehicleId !== vehicleId) {
-    state.vehicleId = vehicleId;
-    await writeState(state);
-  }
+  // 3) Prepare state (đọc-sửa-ghi qua hàng đợi để không đè lên handler nền đang chạy)
+  await runSerialized(async () => {
+    const state = await readState();
+    if (state.status === 'idle') {
+      const fresh = defaultState();
+      fresh.vehicleId = vehicleId;
+      await writeState(fresh);
+      await clearRoute();
+    } else if (state.vehicleId !== vehicleId) {
+      state.vehicleId = vehicleId;
+      await writeState(state);
+    }
+  });
 
   // 4) Start the location updates. If it throws (commonly because background
   //    permission is missing on Android), guide the user to Settings.
@@ -555,15 +561,18 @@ export async function requestPermissionsAndStart(vehicleId: number): Promise<Sta
   }
 
   // 5) Seed one immediate fix so the status panel shows GPS is alive right away.
+  //    Lấy vị trí NGOÀI hàng đợi (không chặn chuỗi), chỉ đọc-sửa-ghi state trong hàng đợi.
   try {
     const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-    const s = await readState();
-    s.lastTs = pos.timestamp;
-    s.lastLat = pos.coords.latitude;
-    s.lastLng = pos.coords.longitude;
-    s.lastAccuracy = pos.coords.accuracy ?? null;
-    s.lastSpeedKmh = pos.coords.speed && pos.coords.speed > 0 ? Math.round(pos.coords.speed * 3.6) : 0;
-    await writeState(s);
+    await runSerialized(async () => {
+      const s = await readState();
+      s.lastTs = pos.timestamp;
+      s.lastLat = pos.coords.latitude;
+      s.lastLng = pos.coords.longitude;
+      s.lastAccuracy = pos.coords.accuracy ?? null;
+      s.lastSpeedKmh = pos.coords.speed && pos.coords.speed > 0 ? Math.round(pos.coords.speed * 3.6) : 0;
+      await writeState(s);
+    });
   } catch { /* non-fatal */ }
 
   return { ok: true, backgroundGranted };
@@ -727,50 +736,63 @@ export async function stopTracking(save: boolean = true): Promise<GpsTripSummary
   if (isRunning) {
     await Location.stopLocationUpdatesAsync(GPS_TASK_NAME);
   }
-  const state = await readState();
-  let saved: GpsTripSummary | null = null;
-  if (save && (state.status === 'active' || state.status === 'waiting_stop')) {
-    saved = await finalizeTrip(state);
-    if (saved) await enqueueTripFromTask(saved);
-  }
+  // Đọc-sửa-ghi state chạy qua cùng hàng đợi với handleLocation: một handler nền đang
+  // dở (đã đọc state 'active' TRƯỚC khi stop ghi default) không được ghi đè lên
+  // writeState(default) làm chuyến "sống lại" (ghost trip).
+  const { saved, vehicleId } = await runSerialized(async () => {
+    const state = await readState();
+    let saved: GpsTripSummary | null = null;
+    if (save && (state.status === 'active' || state.status === 'waiting_stop')) {
+      saved = await finalizeTrip(state);
+      if (saved) await enqueueTripFromTask(saved);
+    }
+    const vehicleId = state.vehicleId;
+    await clearRoute();
+    await writeState(defaultState());
+    return { saved, vehicleId };
+  });
   // Release tracking lock so other devices can start tracking this vehicle
-  if (state.vehicleId) {
+  if (vehicleId) {
     try {
       const deviceId = await getDeviceId();
-      await gpsTripsApi.trackingLock.release(state.vehicleId, deviceId);
+      await gpsTripsApi.trackingLock.release(vehicleId, deviceId);
     } catch { /* non-critical */ }
   }
-  await clearRoute();
-  await writeState(defaultState());
   return saved;
 }
 
 // TẠM DỪNG ghi: giữ service chạy nhưng KHÔNG cộng quãng đường/điểm tới khi tiếp tục.
 // Dùng khi dừng đổ xăng, ghé việc... mà không muốn kết thúc hẳn chuyến.
 export async function pauseTracking(): Promise<void> {
-  const state = await readState();
-  if (state.status === 'idle') return; // chưa có gì để tạm dừng
-  state.paused = true;
-  state.idleStartTs = null;   // hoãn bộ đếm dừng-tự-kết-thúc
-  state.lastSpeedKmh = 0;
-  await writeState(state);
+  // Nối vào hàng đợi để không bị handler nền chạy xen giữa đọc và ghi.
+  await runSerialized(async () => {
+    const state = await readState();
+    if (state.status === 'idle') return; // chưa có gì để tạm dừng
+    state.paused = true;
+    state.idleStartTs = null;   // hoãn bộ đếm dừng-tự-kết-thúc
+    state.lastSpeedKmh = 0;
+    await writeState(state);
+  });
 }
 
 // TIẾP TỤC ghi: làm mới mốc tham chiếu theo vị trí hiện tại để đoạn đầu sau khi
 // tiếp tục được đo từ ĐÂY (không tính đoạn đã đi trong lúc tạm dừng).
 export async function resumeTracking(): Promise<void> {
-  const state = await readState();
-  if (!state.paused) return;
-  try {
-    const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
-    state.lastLat = pos.coords.latitude;
-    state.lastLng = pos.coords.longitude;
-    state.lastTs = pos.timestamp;
-    state.lastAccuracy = pos.coords.accuracy ?? null;
-  } catch { /* giữ mốc cũ - đã cập nhật liên tục trong lúc tạm dừng */ }
-  state.paused = false;
-  state.idleStartTs = null;
-  await writeState(state);
+  // Nối vào hàng đợi để không bị handler nền chạy xen giữa đọc và ghi.
+  await runSerialized(async () => {
+    const state = await readState();
+    if (!state.paused) return;
+    try {
+      const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      state.lastLat = pos.coords.latitude;
+      state.lastLng = pos.coords.longitude;
+      state.lastTs = pos.timestamp;
+      state.lastAccuracy = pos.coords.accuracy ?? null;
+    } catch { /* giữ mốc cũ - đã cập nhật liên tục trong lúc tạm dừng */ }
+    state.paused = false;
+    state.idleStartTs = null;
+    await writeState(state);
+  });
 }
 
 // Có hành trình đang ghi (đủ điều kiện lưu) không? -> để UI hỏi lưu/bỏ
@@ -789,9 +811,12 @@ export async function isTrackingActive(): Promise<boolean> {
 }
 
 export async function setActiveVehicle(vehicleId: number): Promise<void> {
-  const state = await readState();
-  state.vehicleId = vehicleId;
-  await writeState(state);
+  // Nối vào hàng đợi để không bị handler nền chạy xen giữa đọc và ghi.
+  await runSerialized(async () => {
+    const state = await readState();
+    state.vehicleId = vehicleId;
+    await writeState(state);
+  });
 }
 
 // Kiểm tra xem có hành trình bị gián đoạn (service bị kill) hay không.

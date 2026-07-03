@@ -112,18 +112,22 @@ export class TripSession {
         this.idleStartTime = null;
       }
 
-      const rpm = snapshot.rpm ?? 0;
-      if (rpm < IDLE_RPM_THRESHOLD) {
-        if (this.idleStartTime === null) {
-          this.idleStartTime = now;
-        } else if (now - this.idleStartTime >= IDLE_STOP_DELAY_MS) {
-          this.state = 'stopping';
-          this.finalize();
-          return;
+      // Chỉ đánh giá idle khi ĐỌC RPM THÀNH CÔNG. Snapshot đọc lỗi (rpm null vì adapter
+      // rớt tạm thời) KHÔNG được coi là idle - nếu không một loạt đọc lỗi 30s sẽ tự kết
+      // thúc chuyến giữa chừng. Đọc lỗi = thoáng qua: bỏ qua, giữ nguyên bộ đếm, vẫn ghi.
+      if (snapshot.rpm !== null) {
+        if (snapshot.rpm < IDLE_RPM_THRESHOLD) {
+          if (this.idleStartTime === null) {
+            this.idleStartTime = now;
+          } else if (now - this.idleStartTime >= IDLE_STOP_DELAY_MS) {
+            this.state = 'stopping';
+            this.finalize();
+            return;
+          }
+          this.idleMs += elapsedMs;
+        } else {
+          this.idleStartTime = null;
         }
-        this.idleMs += elapsedMs;
-      } else {
-        this.idleStartTime = null;
       }
 
       if (this.snapshots.length % Math.round(300000 / POLL_INTERVAL_MS) === 0) {

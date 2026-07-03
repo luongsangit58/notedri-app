@@ -22,6 +22,10 @@ import { formatVND, formatKm } from '../../utils/format';
 import { useT } from '../../i18n';
 import { refuelsApi } from '../../api/refuels';
 
+// Chuẩn hoá số lít: bàn phím VN cho "12,5" -> parseFloat("12,5")=12 (mất 0.5L).
+// Đổi dấu phẩy thành chấm trước khi parse.
+const parseLiters = (s: string): number => parseFloat(String(s).replace(',', '.'));
+
 function FieldLabel({ children }: any) {
   const colors = useColors();
   return <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 6, marginTop: 4 }}>{children}</Text>;
@@ -192,7 +196,7 @@ export default function AddRefuelScreen() {
       setVoiceFeedback(t('add_refuel.voice_total_amount', { value: disp }));
     } else {
       handleSoLitChange(value);
-      const liters = parseFloat(value);
+      const liters = parseLiters(value);
       setVoiceFeedback(t('add_refuel.voice_liters', { value: isNaN(liters) ? value : liters }));
     }
     voiceFeedbackTimer.current = setTimeout(() => setVoiceFeedback(null), 2500);
@@ -201,7 +205,7 @@ export default function AddRefuelScreen() {
   const handleReceiptResult = ({ tongTien: t, soLit: s }: ReceiptData) => {
     if (t) setTongTien(t);
     if (s) setSoLit(s);
-    const tNum = parseFloat(t), sNum = parseFloat(s);
+    const tNum = parseFloat(t), sNum = parseLiters(s);
     if (tNum > 0 && sNum > 0) setGiaLit(Math.round(tNum / sNum).toString());
   };
 
@@ -212,20 +216,20 @@ export default function AddRefuelScreen() {
 
   const handleTongTienChange = (v: string) => {
     setTongTien(v);
-    const t = parseFloat(v), s = parseFloat(soLit);
+    const t = parseFloat(v), s = parseLiters(soLit);
     if (t > 0 && s > 0) setGiaLit(Math.round(t / s).toString());
   };
 
   const handleSoLitChange = (v: string) => {
     setSoLit(v);
-    const t = parseFloat(tongTien), s = parseFloat(v);
+    const t = parseFloat(tongTien), s = parseLiters(v);
     if (t > 0 && s > 0) setGiaLit(Math.round(t / s).toString());
   };
 
   const handleGiaLitChange = (v: string) => {
     autoFilledPriceRef.current = ''; // user manually edited - stop auto-updating
     setGiaLit(v);
-    const g = parseFloat(v), s = parseFloat(soLit);
+    const g = parseFloat(v), s = parseLiters(soLit);
     if (g > 0 && s > 0) setTongTien(Math.round(g * s).toString());
   };
 
@@ -266,7 +270,7 @@ export default function AddRefuelScreen() {
         fuel_type_id: fuelTypeId,
         fuel_type: selectedFuelType?.ten ?? null,
         tong_tien: tongTien ? parseFloat(tongTien) : null,
-        so_lit: soLit ? parseFloat(soLit) : null,
+        so_lit: soLit && parseLiters(soLit) > 0 ? parseLiters(soLit) : null,
         gia_lit: giaLit ? parseFloat(giaLit) : null,
         odometer: odometer ? parseInt(odometer) : null,
         ngay,

@@ -69,7 +69,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       set({ isLoading: true, error: null });
       const response = await authApi.login(email, password);
-      const { token, user } = response.data;
+      // Bóc envelope giống me()/setSession -> nếu backend đổi shape sang { data: {...} }
+      // vẫn không lưu nhầm token=undefined.
+      const { token, user } = response.data?.data ?? response.data;
       await storage.setToken(token);
       await storage.setUser(JSON.stringify(user));
       queryClient.clear(); // xoá cache user cũ để không lẫn dữ liệu khi đổi tài khoản
@@ -87,7 +89,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       set({ isLoading: true, error: null });
       const response = await authApi.googleMobile(idToken);
-      const { token, user } = response.data;
+      // Bóc envelope giống me()/setSession (xem login).
+      const { token, user } = response.data?.data ?? response.data;
       await storage.setToken(token);
       await storage.setUser(JSON.stringify(user));
       queryClient.clear(); // xoá cache user cũ để không lẫn dữ liệu khi đổi tài khoản

@@ -18,7 +18,11 @@ export const useCreateVehicle = () => {
   return useMutation({
     mutationFn: ({ data, photo }: { data: any; photo?: VehiclePhoto }) =>
       vehiclesApi.create(data, photo).then(r => r.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['vehicles'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['vehicles'] });
+      qc.invalidateQueries({ queryKey: ['dashboard'] });
+      qc.invalidateQueries({ queryKey: ['timeline'] });
+    },
   });
 };
 
@@ -27,7 +31,11 @@ export const useUpdateVehicle = () => {
   return useMutation({
     mutationFn: ({ id, data, photo }: { id: number; data: any; photo?: VehiclePhoto }) =>
       vehiclesApi.update(id, data, photo).then(r => r.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['vehicles'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['vehicles'] });
+      qc.invalidateQueries({ queryKey: ['dashboard'] });
+      qc.invalidateQueries({ queryKey: ['timeline'] });
+    },
   });
 };
 
@@ -35,7 +43,11 @@ export const useDeleteVehicle = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: number) => vehiclesApi.delete(id).then(r => r.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['vehicles'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['vehicles'] });
+      qc.invalidateQueries({ queryKey: ['dashboard'] });
+      qc.invalidateQueries({ queryKey: ['timeline'] });
+    },
   });
 };
 

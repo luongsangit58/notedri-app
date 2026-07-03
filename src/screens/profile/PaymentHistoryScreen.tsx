@@ -6,6 +6,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { paymentApi } from '../../api/payment';
+import { authApi } from '../../api/auth';
+import { useAuthStore } from '../../store/authStore';
 import { useColors } from '../../utils/theme';
 import { useT } from '../../i18n';
 import AppBgPattern from '../../components/AppBgPattern';
@@ -13,6 +15,16 @@ import { formatVND } from '../../utils/format';
 import dayjs from 'dayjs';
 
 const AMBER = '#F59E0B';
+
+// Đồng bộ lại authStore.user sau khi thanh toán thành công để gate đọc user?.is_premium
+// (OBD, thành tích, chi tiết xe) mở khoá NGAY, không phải mở lại app.
+async function refreshAuthUser() {
+  try {
+    const res = await authApi.me();
+    const fresh = res.data?.data ?? res.data;
+    if (fresh) useAuthStore.getState().setUser(fresh);
+  } catch { /* bỏ qua - initialize() lần mở app sau sẽ tự đồng bộ */ }
+}
 
 interface OrderItem {
   order_id: number;
@@ -91,6 +103,7 @@ export default function PaymentHistoryScreen() {
       setPayOrder(null);
       qc.invalidateQueries({ queryKey: ['payment-orders'] });
       qc.invalidateQueries({ queryKey: ['premium-status'] });
+      refreshAuthUser();
       Alert.alert(t('premium.notification_title'), t('premium.payment_success_msg'));
     }
   }, [statusData?.is_premium, statusData?.status]);

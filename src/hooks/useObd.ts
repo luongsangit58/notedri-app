@@ -210,6 +210,29 @@ export function useObdConnection(vehicleId: number) {
     currentTripRef.current?.stop();
   }, []);
 
+  // Seed từ singleton khi mount: OBDSetupScreen connect xong rồi navigation.replace()
+  // sang OBDDashboard -> hook MỚI khởi tạo 'disconnected' dù bleService đã kết nối.
+  // Nếu không đọc lại trạng thái thật, badge đỏ + nút Start Trip bị disabled vĩnh viễn.
+  useEffect(() => {
+    if (bleService.isConnected()) {
+      setConnectionState('connected');
+      // Rehydrate snapshot sống để lưới số liệu không hiện "-"
+      readSnapshot().then((snap) => setLiveSnapshot(snap)).catch(() => {});
+      // Đăng ký lại callback mất kết nối (Setup unmount đã set bleService.onDisconnect = null)
+      bleService.onDisconnect = () => {
+        if (currentTripRef.current) {
+          currentTripRef.current.stop();
+          currentTripRef.current = null;
+          setIsTripActive(false);
+        }
+        setConnectionState('disconnected');
+        setLiveSnapshot(null);
+      };
+    }
+    // Chỉ chạy 1 lần khi mount - trạng thái thật nằm ở singleton, không phải deps.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Cleanup on unmount: stop scan + finalize any active trip
   useEffect(() => {
     return () => {

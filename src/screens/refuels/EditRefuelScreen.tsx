@@ -16,6 +16,10 @@ import MoneyInput, { toMoneyRaw } from '../../components/MoneyInput';
 
 const FUEL_TYPES = ['E5 RON 95-V', 'RON 95-III', 'E5 RON 92', 'Dầu DO 0,05S-V', 'Dầu DO 0,001S'];
 
+// Chuẩn hoá số lít: bàn phím VN cho "12,5" -> parseFloat("12,5")=12 (mất 0.5L).
+// Đổi dấu phẩy thành chấm trước khi parse.
+const parseLiters = (s: string): number => parseFloat(String(s).replace(',', '.'));
+
 function FieldLabel({ children }: { children: React.ReactNode }) {
   const colors = useColors();
   return (
@@ -87,7 +91,7 @@ export default function EditRefuelScreen() {
       await refuelsApi.update(refuelId, {
         fuel_type: fuelType,
         tong_tien: tongTien ? parseFloat(tongTien) : null,
-        so_lit: soLit ? parseFloat(soLit) : null,
+        so_lit: soLit && parseLiters(soLit) > 0 ? parseLiters(soLit) : null,
         gia_lit: giaLit ? parseFloat(giaLit) : null,
         odometer: odometer ? parseInt(odometer, 10) : null,
         ngay,

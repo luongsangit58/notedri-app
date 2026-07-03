@@ -42,6 +42,10 @@ export const useDeleteService = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: number) => servicesApi.delete(id).then(r => r.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['services'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['services'] });
+      qc.invalidateQueries({ queryKey: ['dashboard'] });
+      qc.invalidateQueries({ queryKey: ['timeline'] });
+    },
   });
 };

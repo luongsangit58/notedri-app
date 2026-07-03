@@ -46,9 +46,14 @@ export async function flushPendingGpsTrips(): Promise<{ synced: number; failed: 
       try {
         await gpsTripsApi.saveTrip(item);
         synced++;
-      } catch {
+      } catch (err: any) {
+        // Phân biệt lỗi tạm thời vs vĩnh viễn để không âm thầm mất chuyến:
+        // - 4xx (trừ 429) = lỗi client vĩnh viễn (payload sai, xe đã xoá...) -> BỎ, retry vô ích.
+        // - Mạng lỗi / 5xx / 429 = tạm thời -> GIỮ vô thời hạn (không bỏ theo số lần thử).
+        const status: number | undefined = err?.response?.status;
+        const permanent = status !== undefined && status >= 400 && status < 500 && status !== 429;
         item.retries++;
-        if (item.retries < 5) remaining.push(item);
+        if (!permanent) remaining.push(item);
         failed++;
       }
     }

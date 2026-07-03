@@ -56,15 +56,24 @@ class BleService {
 
   async waitForBleReady(): Promise<void> {
     return new Promise((resolve, reject) => {
+      // Timeout: các state như Unknown/Resetting không phát PoweredOn/Off -> nếu không
+      // có mốc thời gian thì promise treo mãi mãi. Sau 5s coi như Bluetooth không sẵn sàng.
+      let timer: ReturnType<typeof setTimeout>;
       const subscription = this.manager.onStateChange((state) => {
         if (state === State.PoweredOn) {
+          clearTimeout(timer);
           subscription.remove();
           resolve();
         } else if (state === State.PoweredOff || state === State.Unsupported) {
+          clearTimeout(timer);
           subscription.remove();
           reject(new Error(useI18nStore.getState().t('obd.bluetooth_unavailable')));
         }
       }, true);
+      timer = setTimeout(() => {
+        subscription.remove();
+        reject(new Error(useI18nStore.getState().t('obd.bluetooth_unavailable')));
+      }, 5000);
     });
   }
 
@@ -193,8 +202,15 @@ class BleService {
 
     const device = this.connectedDevice;
 
+    // Xoá buffer dở TRƯỚC khi gửi lệnh mới: mảnh response còn sót của lệnh trước
+    // (đặc biệt lệnh đã timeout) không được lẫn vào response của lệnh này.
+    this.responseBuffer = '';
+
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
+        // Xoá buffer khi timeout: response TRỄ của lệnh này không được resolve nhầm
+        // vào promise của lệnh kế tiếp (đọc sai giá trị / sai DTC).
+        this.responseBuffer = '';
         this.responseResolver = null;
         this.responseRejecter = null;
         reject(new Error(`OBD timeout: ${command}`));
