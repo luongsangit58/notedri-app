@@ -17,6 +17,17 @@ interface User {
   is_premium?: boolean;
   vehicle_limit?: number;
   can_add_vehicle?: boolean;
+  locale?: 'vi' | 'en' | null;
+}
+
+// Áp ngôn ngữ đã lưu ở TÀI KHOẢN vào UI app (chỉ khi user đã chọn rõ vi/en) -> đồng bộ
+// với web + email. locale null (chưa chọn) thì GIỮ lựa chọn hiện tại của máy.
+function adoptAccountLocale(user: User | null): void {
+  if (user?.locale === 'vi' || user?.locale === 'en') {
+    if (useI18nStore.getState().lang !== user.locale) {
+      useI18nStore.getState().setLang(user.locale);
+    }
+  }
 }
 
 interface AuthState {
@@ -55,6 +66,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           if (fresh) {
             storage.setUser(JSON.stringify(fresh));
             set({ user: fresh });
+            adoptAccountLocale(fresh); // đồng bộ ngôn ngữ theo tài khoản khi mở lại app
           }
         }).catch(() => {});
       } else {
@@ -76,6 +88,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await storage.setUser(JSON.stringify(user));
       queryClient.clear(); // xoá cache user cũ để không lẫn dữ liệu khi đổi tài khoản
       set({ token, user, isLoading: false });
+      adoptAccountLocale(user); // đồng bộ ngôn ngữ theo tài khoản
       registerPushToken();
       sendDeviceHeartbeat();
     } catch (error: any) {
@@ -95,6 +108,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await storage.setUser(JSON.stringify(user));
       queryClient.clear(); // xoá cache user cũ để không lẫn dữ liệu khi đổi tài khoản
       set({ token, user, isLoading: false });
+      adoptAccountLocale(user); // đồng bộ ngôn ngữ theo tài khoản
       registerPushToken();
       sendDeviceHeartbeat();
     } catch (error: any) {

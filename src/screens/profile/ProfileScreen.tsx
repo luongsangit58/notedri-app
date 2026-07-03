@@ -300,7 +300,12 @@ export default function ProfileScreen() {
           <MenuItem
             icon={<FontAwesome5 name="language" size={16} color={colors.textSecondary} solid />}
             label={t('profile.language')}
-            onPress={() => setLang(lang === 'vi' ? 'en' : 'vi')}
+            onPress={() => {
+              const next = lang === 'vi' ? 'en' : 'vi';
+              setLang(next);
+              // Lưu vào tài khoản để web + email đồng bộ (im lặng nếu offline).
+              profileApi.setLocale(next).catch(() => {});
+            }}
             right={
               <View style={{
                 paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12,
