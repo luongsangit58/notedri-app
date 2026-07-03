@@ -59,31 +59,52 @@ export async function enqueueTripSync(
   await writeQueue(queue);
 }
 
+// Single-flight: chặn flush chạy chồng nhau -> tránh upload trùng cùng 1 chuyến.
+let isFlushingObd = false;
+
 export async function flushPendingTrips(): Promise<{ synced: number; failed: number }> {
-  const queue = await readQueue();
-  if (queue.length === 0) return { synced: 0, failed: 0 };
+  if (isFlushingObd) return { synced: 0, failed: 0 };
+  isFlushingObd = true;
+  try {
+    const queue = await readQueue();
+    if (queue.length === 0) return { synced: 0, failed: 0 };
 
-  const remaining: PendingTrip[] = [];
-  let synced = 0;
-  let failed = 0;
+    const remaining: PendingTrip[] = [];
+    let synced = 0;
+    let failed = 0;
 
-  for (const item of queue) {
-    try {
-      // obdApi.saveTrip accepts a StorableSummary - snapshots field is optional
-      await obdApi.saveTrip(item.summary as TripSummary, item.deviceId);
-      synced++;
-    } catch {
-      item.retries++;
-      if (item.retries < 5) remaining.push(item);
-      failed++;
+    for (const item of queue) {
+      try {
+        // obdApi.saveTrip accepts a StorableSummary - snapshots field is optional
+        await obdApi.saveTrip(item.summary as TripSummary, item.deviceId);
+        synced++;
+      } catch {
+        item.retries++;
+        if (item.retries < 5) remaining.push(item);
+        failed++;
+      }
     }
-  }
 
-  await writeQueue(remaining);
-  return { synced, failed };
+    // Giữ item lỗi cần retry + item MỚI enqueue trong lúc flush -> không mất chuyến.
+    const after = await readQueue();
+    const newItems = after.slice(queue.length);
+    await writeQueue([...remaining, ...newItems]);
+    return { synced, failed };
+  } finally {
+    isFlushingObd = false;
+  }
 }
 
 export async function pendingCount(): Promise<number> {
   const queue = await readQueue();
   return queue.length;
+}
+
+/** Xoá sạch hàng đợi (gọi khi logout để không đẩy chuyến của user cũ sang tài khoản mới). */
+export async function clearObdQueue(): Promise<void> {
+  try {
+    await SecureStore.deleteItemAsync(QUEUE_KEY);
+  } catch {
+    // ignore
+  }
 }

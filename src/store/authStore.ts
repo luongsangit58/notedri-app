@@ -5,6 +5,8 @@ import { storage } from '../utils/storage';
 import { registerPushToken } from '../utils/pushNotifications';
 import { sendDeviceHeartbeat } from '../api/devices';
 import { useI18nStore } from '../i18n';
+import { clearGpsQueue } from '../services/gps/GpsTripSyncQueue';
+import { clearObdQueue } from '../services/obd/TripSyncQueue';
 
 interface User {
   id: number;
@@ -109,6 +111,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await storage.deleteToken();
       await storage.deleteUser();
       queryClient.clear(); // xoá toàn bộ cache React Query khi đăng xuất
+      // Xoá hàng đợi chuyến đi chưa sync: tránh đẩy chuyến/lịch sử vị trí của user cũ
+      // sang tài khoản mới đăng nhập trên cùng thiết bị.
+      await clearGpsQueue();
+      await clearObdQueue();
       set({ user: null, token: null });
     }
   },
