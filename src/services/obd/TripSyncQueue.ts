@@ -61,10 +61,14 @@ export async function enqueueTripSync(
 
 // Single-flight: chặn flush chạy chồng nhau -> tránh upload trùng cùng 1 chuyến.
 let isFlushingObd = false;
+// Bộ đếm "đã xoá hàng đợi": tăng mỗi lần clearObdQueue() (logout) -> flush đang chạy biết để
+// không hồi sinh chuyến của user cũ vào hàng đợi (rồi đẩy sang tài khoản mới).
+let obdClearEpoch = 0;
 
 export async function flushPendingTrips(): Promise<{ synced: number; failed: number }> {
   if (isFlushingObd) return { synced: 0, failed: 0 };
   isFlushingObd = true;
+  const epochAtStart = obdClearEpoch;
   try {
     const queue = await readQueue();
     if (queue.length === 0) return { synced: 0, failed: 0 };
@@ -90,6 +94,10 @@ export async function flushPendingTrips(): Promise<{ synced: number; failed: num
       }
     }
 
+    // Có logout (clearObdQueue) xen giữa flush -> KHÔNG ghi lại để tránh hồi sinh chuyến user cũ.
+    if (obdClearEpoch !== epochAtStart) {
+      return { synced, failed };
+    }
     // Giữ item lỗi cần retry + item MỚI enqueue trong lúc flush -> không mất chuyến.
     const after = await readQueue();
     const newItems = after.slice(queue.length);
@@ -107,6 +115,7 @@ export async function pendingCount(): Promise<number> {
 
 /** Xoá sạch hàng đợi (gọi khi logout để không đẩy chuyến của user cũ sang tài khoản mới). */
 export async function clearObdQueue(): Promise<void> {
+  obdClearEpoch++; // báo cho flush đang chạy: hàng đợi đã bị xoá -> đừng ghi lại item cũ
   try {
     await SecureStore.deleteItemAsync(QUEUE_KEY);
   } catch {

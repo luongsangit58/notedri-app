@@ -303,8 +303,12 @@ export default function ProfileScreen() {
             onPress={() => {
               const next = lang === 'vi' ? 'en' : 'vi';
               setLang(next);
-              // Lưu vào tài khoản để web + email đồng bộ (im lặng nếu offline).
-              profileApi.setLocale(next).catch(() => {});
+              // Lưu vào tài khoản để web + email đồng bộ. Đánh dấu "chưa đẩy" -> nếu offline thất bại,
+              // adoptAccountLocale sẽ KHÔNG revert về locale cũ và sẽ thử đẩy lại khi online (không mất lựa chọn).
+              useI18nStore.getState().setLocalePendingPush(true);
+              profileApi.setLocale(next)
+                .then(() => useI18nStore.getState().setLocalePendingPush(false))
+                .catch(() => { /* giữ pending -> retry lần online sau */ });
             }}
             right={
               <View style={{

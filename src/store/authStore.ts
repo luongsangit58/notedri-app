@@ -23,9 +23,19 @@ interface User {
 // Áp ngôn ngữ đã lưu ở TÀI KHOẢN vào UI app (chỉ khi user đã chọn rõ vi/en) -> đồng bộ
 // với web + email. locale null (chưa chọn) thì GIỮ lựa chọn hiện tại của máy.
 function adoptAccountLocale(user: User | null): void {
+  const i18n = useI18nStore.getState();
+  // Có lựa chọn ngôn ngữ đổi ở máy nhưng CHƯA đẩy được lên tài khoản (đổi lúc offline):
+  // KHÔNG để locale tài khoản (cũ) ghi đè -> thay vào đó thử đẩy lại lựa chọn local lên tài khoản.
+  if (i18n.localePendingPush) {
+    import('../api/profile')
+      .then(({ profileApi }) => profileApi.setLocale(i18n.lang as 'vi' | 'en'))
+      .then(() => useI18nStore.getState().setLocalePendingPush(false))
+      .catch(() => { /* vẫn offline -> giữ pending, thử lại lần sau */ });
+    return;
+  }
   if (user?.locale === 'vi' || user?.locale === 'en') {
-    if (useI18nStore.getState().lang !== user.locale) {
-      useI18nStore.getState().setLang(user.locale);
+    if (i18n.lang !== user.locale) {
+      i18n.setLang(user.locale);
     }
   }
 }

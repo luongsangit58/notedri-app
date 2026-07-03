@@ -9,6 +9,9 @@ import en from './en';
 export type Lang = 'vi' | 'en';
 
 const LANG_KEY = 'app_lang';
+// Cờ "ngôn ngữ đổi ở máy nhưng CHƯA đẩy lên tài khoản" (đổi lúc offline). Còn true -> adoptAccountLocale
+// KHÔNG ghi đè local bằng locale tài khoản (tránh nuốt lựa chọn), và sẽ thử đẩy lại khi online.
+const LANG_PENDING_KEY = 'app_lang_pending_push';
 const translations = { vi, en } as const;
 
 // Đồng bộ locale ngày/thứ của dayjs theo ngôn ngữ app (thứ, "x phút trước"...).
@@ -19,18 +22,26 @@ type Key = keyof Translations;
 
 interface I18nState {
   lang: Lang;
+  localePendingPush: boolean;
   setLang: (lang: Lang) => Promise<void>;
+  setLocalePendingPush: (pending: boolean) => Promise<void>;
   loadSaved: () => Promise<void>;
   t: (key: Key, params?: Record<string, string | number>) => string;
 }
 
 export const useI18nStore = create<I18nState>((set, get) => ({
   lang: 'vi',
+  localePendingPush: false,
 
   setLang: async (lang: Lang) => {
     await SecureStore.setItemAsync(LANG_KEY, lang);
     dayjs.locale(lang);
     set({ lang });
+  },
+
+  setLocalePendingPush: async (pending: boolean) => {
+    try { await SecureStore.setItemAsync(LANG_PENDING_KEY, pending ? '1' : '0'); } catch { /* noop */ }
+    set({ localePendingPush: pending });
   },
 
   loadSaved: async () => {
@@ -39,6 +50,10 @@ export const useI18nStore = create<I18nState>((set, get) => ({
       dayjs.locale(saved);
       set({ lang: saved });
     }
+    try {
+      const pending = await SecureStore.getItemAsync(LANG_PENDING_KEY);
+      set({ localePendingPush: pending === '1' });
+    } catch { /* noop */ }
   },
 
   t: (key: Key, params?: Record<string, string | number>): string => {
