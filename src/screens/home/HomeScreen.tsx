@@ -384,14 +384,15 @@ export default function HomeScreen() {
             </TouchableOpacity>
             {isHybrid && (
               <>
-              <View style={{ height: 1, backgroundColor: 'rgba(0,0,0,0.12)' }} />
+              <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.25)' }} />
               <TouchableOpacity
                 activeOpacity={0.85}
                 onPress={() => nav.navigate('NearbyStations', { standalone: true, mode: 'charging', latitude: coords?.lat, longitude: coords?.lng })}
-                // Nền xanh nhạt (khớp thẻ xe điện #10b981) để phân biệt bằng mắt với link cây xăng phía trên; chữ/icon giữ đen như link kia.
-                style={{ paddingHorizontal: 12, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: 'rgba(16,185,129,0.15)' }}>
-                <FontAwesome5 name="charging-station" size={9} color="rgba(0,0,0,0.65)" solid />
-                <Text style={{ color: 'rgba(0,0,0,0.65)', fontSize: 11, fontWeight: '600' }}>
+                // Cùng màu #10b981 với thẻ "Xe điện" (energyColors khi isEv) - bê nguyên tông màu
+                // thay vì bịa tông mới, để "sạc điện" luôn là 1 màu xuyên suốt cả 2 nhánh.
+                style={{ paddingHorizontal: 12, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#10b981' }}>
+                <FontAwesome5 name="charging-station" size={9} color="rgba(255,255,255,0.9)" solid />
+                <Text style={{ color: 'rgba(255,255,255,0.9)', fontSize: 11, fontWeight: '600' }}>
                   {t('home.charging_short')}
                 </Text>
               </TouchableOpacity>

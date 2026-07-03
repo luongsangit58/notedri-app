@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, Dimensions } from 'react-native';
+import { View, useWindowDimensions } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useColors } from '../utils/theme';
 import { useThemeStore } from '../utils/theme';
@@ -15,7 +15,9 @@ const BG_ROTATIONS = [0, 15, -10, 20];
 export default function AppBgPattern({ opacity }: { opacity?: number }) {
   const colors = useColors();
   const mode = useThemeStore((s) => s.mode);
-  const { width, height } = Dimensions.get('window');
+  // useWindowDimensions cập nhật khi xoay ngang/dọc -> hoạ tiết nền phủ đúng
+  // kích thước hiện tại (Dimensions.get tĩnh giữ kích thước dọc -> thiếu ở landscape).
+  const { width, height } = useWindowDimensions();
   const cols = Math.ceil(width / 96) + 1;
   const rows = Math.ceil(height / 96) + 2;
 

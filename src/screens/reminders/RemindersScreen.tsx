@@ -39,6 +39,7 @@ function formatShortDate(s: string): string {
 interface Reminder {
   id: number;
   hang_muc: string;
+  hang_muc_label?: string | null;
   loai: LoaiKey;
   che_do: 'chu_ky' | 'ngay_co_dinh' | 'mot_lan';
   interval_km?: number | null;
@@ -193,7 +194,7 @@ function ReminderCard({
   const handleDelete = () => {
     Alert.alert(
       t('reminders.delete_confirm_title'),
-      t('reminders.delete_confirm_message', { name: item.hang_muc ?? loaiLabel }),
+      t('reminders.delete_confirm_message', { name: item.hang_muc_label ?? item.hang_muc ?? loaiLabel }),
       [
         { text: t('common.cancel'), style: 'cancel' },
         { text: t('common.delete'), style: 'destructive', onPress: () => onDelete(item.id) },
@@ -230,7 +231,7 @@ function ReminderCard({
         <View style={styles.cardTitleRow}>
           <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
           <Text style={styles.cardTitle} numberOfLines={1}>
-            {item.hang_muc}
+            {item.hang_muc_label ?? item.hang_muc}
           </Text>
         </View>
         <TouchableOpacity onPress={() => onEdit(item.id)} style={styles.deleteBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
