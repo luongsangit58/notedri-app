@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { AppState, AppStateStatus } from 'react-native';
+import { AppState, AppStateStatus, Appearance } from 'react-native';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './src/api/queryClient';
 import { NavigationContainer } from '@react-navigation/native';
@@ -39,6 +39,12 @@ function AppLoader({ children }: { children: React.ReactNode }) {
       }
       appState.current = next;
     });
+    return () => sub.remove();
+  }, []);
+
+  // Live-follow theme: OS đổi sáng/tối lúc app đang chạy -> đổi ngay NẾU user chưa tự chọn.
+  useEffect(() => {
+    const sub = Appearance.addChangeListener(() => useThemeStore.getState().applySystemIfFollowing());
     return () => sub.remove();
   }, []);
 

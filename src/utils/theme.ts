@@ -51,9 +51,11 @@ const THEME_KEY = 'app_theme';
 interface ThemeState {
   mode: ThemeMode;
   colors: ColorPalette;
+  followSystem: boolean; // true = chưa tự chọn -> bám theo OS (kể cả khi OS đổi lúc app đang chạy)
   setMode: (mode: ThemeMode) => Promise<void>;
   toggle: () => Promise<void>;
   loadSaved: () => Promise<void>;
+  applySystemIfFollowing: () => void; // gọi khi OS đổi chế độ sáng/tối
 }
 
 // Khởi tạo theo OS ngay từ đầu (đồng bộ) -> tránh nháy dark 1 nhịp trên máy để sáng
@@ -63,10 +65,12 @@ const initialMode: ThemeMode = Appearance.getColorScheme() === 'light' ? 'light'
 export const useThemeStore = create<ThemeState>((set, get) => ({
   mode: initialMode,
   colors: initialMode === 'dark' ? darkColors : lightColors,
+  followSystem: true, // chưa biết có lựa chọn đã lưu -> tạm bám OS; loadSaved() xác định lại
 
   setMode: async (mode: ThemeMode) => {
     await SecureStore.setItemAsync(THEME_KEY, mode);
-    set({ mode, colors: mode === 'dark' ? darkColors : lightColors });
+    // User TỰ chọn -> khoá theo OS.
+    set({ mode, colors: mode === 'dark' ? darkColors : lightColors, followSystem: false });
   },
 
   toggle: async () => {
@@ -78,12 +82,21 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
     const saved = await SecureStore.getItemAsync(THEME_KEY) as ThemeMode | null;
     if (saved === 'light' || saved === 'dark') {
       // User ĐÃ tự chọn -> tôn trọng, không theo OS nữa.
-      set({ mode: saved, colors: saved === 'dark' ? darkColors : lightColors });
+      set({ mode: saved, colors: saved === 'dark' ? darkColors : lightColors, followSystem: false });
       return;
     }
     // CHƯA chọn -> theo chế độ HỆ ĐIỀU HÀNH (giống web). OS sáng -> light, còn lại -> dark.
     const mode: ThemeMode = Appearance.getColorScheme() === 'light' ? 'light' : 'dark';
-    set({ mode, colors: mode === 'dark' ? darkColors : lightColors });
+    set({ mode, colors: mode === 'dark' ? darkColors : lightColors, followSystem: true });
+  },
+
+  // Live-follow: khi OS đổi sáng/tối lúc app đang chạy, cập nhật ngay NẾU user chưa tự chọn.
+  applySystemIfFollowing: () => {
+    if (!get().followSystem) return;
+    const mode: ThemeMode = Appearance.getColorScheme() === 'light' ? 'light' : 'dark';
+    if (mode !== get().mode) {
+      set({ mode, colors: mode === 'dark' ? darkColors : lightColors });
+    }
   },
 }));
 
