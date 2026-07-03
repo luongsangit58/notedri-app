@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { Appearance } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 
 export type ThemeMode = 'dark' | 'light';
@@ -55,9 +56,13 @@ interface ThemeState {
   loadSaved: () => Promise<void>;
 }
 
+// Khởi tạo theo OS ngay từ đầu (đồng bộ) -> tránh nháy dark 1 nhịp trên máy để sáng
+// trước khi loadSaved() chạy. loadSaved() sau đó ghi đè bằng lựa chọn đã lưu (nếu có).
+const initialMode: ThemeMode = Appearance.getColorScheme() === 'light' ? 'light' : 'dark';
+
 export const useThemeStore = create<ThemeState>((set, get) => ({
-  mode: 'dark',
-  colors: darkColors,
+  mode: initialMode,
+  colors: initialMode === 'dark' ? darkColors : lightColors,
 
   setMode: async (mode: ThemeMode) => {
     await SecureStore.setItemAsync(THEME_KEY, mode);
@@ -72,8 +77,13 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
   loadSaved: async () => {
     const saved = await SecureStore.getItemAsync(THEME_KEY) as ThemeMode | null;
     if (saved === 'light' || saved === 'dark') {
+      // User ĐÃ tự chọn -> tôn trọng, không theo OS nữa.
       set({ mode: saved, colors: saved === 'dark' ? darkColors : lightColors });
+      return;
     }
+    // CHƯA chọn -> theo chế độ HỆ ĐIỀU HÀNH (giống web). OS sáng -> light, còn lại -> dark.
+    const mode: ThemeMode = Appearance.getColorScheme() === 'light' ? 'light' : 'dark';
+    set({ mode, colors: mode === 'dark' ? darkColors : lightColors });
   },
 }));
 
