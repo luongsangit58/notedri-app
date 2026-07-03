@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Alert } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, Alert, Linking } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
 import { useAuthStore } from '../../store/authStore';
@@ -15,6 +15,55 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
   const { login, isLoading, error, clearError } = useAuthStore();
+  const handledGoogleTokenRef = useRef<string | null>(null);
+
+  const finishGoogleLogin = useCallback(async (urlStr: string): Promise<boolean> => {
+    let query = '';
+    if (urlStr.includes('?')) {
+      query = urlStr.split('?')[1];
+    } else if (urlStr.includes('#')) {
+      query = urlStr.split('#')[1];
+    }
+
+    const params = new URLSearchParams(query ?? '');
+    const token = params.get('token');
+    const googleError = params.get('error');
+
+    if (googleError) {
+      Alert.alert(t('common.error'), googleError);
+      return true;
+    }
+
+    if (!token) return false;
+    if (handledGoogleTokenRef.current === token) return true;
+
+    handledGoogleTokenRef.current = token;
+    try {
+      const { authApi } = await import('../../api/auth');
+      const me = await authApi.me(token);
+      const userData = me.data?.data ?? me.data;
+      await useAuthStore.getState().setSession(token, userData);
+    } catch (e: any) {
+      handledGoogleTokenRef.current = null;
+      Alert.alert(t('common.error'), e?.message ?? t('auth.login_google_failed'));
+    }
+
+    return true;
+  }, [t]);
+
+  useEffect(() => {
+    const sub = Linking.addEventListener('url', ({ url }) => {
+      void finishGoogleLogin(url);
+    });
+
+    Linking.getInitialURL()
+      .then((url) => {
+        if (url) void finishGoogleLogin(url);
+      })
+      .catch(() => {});
+
+    return () => sub.remove();
+  }, [finishGoogleLogin]);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -32,16 +81,14 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
       const result = await WebBrowser.openAuthSessionAsync(GOOGLE_MOBILE_URL, 'notedri://auth', {
         preferEphemeralSession: false,
       });
-      if (result.type !== 'success') return;
-      const params = new URLSearchParams(result.url.split('?')[1] ?? '');
-      const token = params.get('token');
-      const googleError = params.get('error');
-      if (googleError) { Alert.alert(t('common.error'), decodeURIComponent(googleError)); return; }
-      if (!token) { Alert.alert(t('common.error'), t('auth.google_no_id_token')); return; }
-      const { authApi } = await import('../../api/auth');
-      const me = await authApi.me(token);
-      const userData = me.data?.data ?? me.data;
-      await useAuthStore.getState().setSession(token, userData);
+      if ('url' in result && result.url) {
+        await finishGoogleLogin(result.url);
+        return;
+      }
+
+      if (!handledGoogleTokenRef.current && !useAuthStore.getState().token) {
+        Alert.alert(t('common.error'), t('auth.login_google_failed'));
+      }
     } catch (e: any) {
       Alert.alert(t('common.error'), e?.message ?? t('auth.login_google_failed'));
     }

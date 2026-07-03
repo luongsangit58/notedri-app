@@ -52,9 +52,12 @@ export default function ProfileScreen() {
     try {
       const url = `${BASE_URL}/auth/google/mobile?link_token=${encodeURIComponent(token ?? '')}`;
       const result = await WebBrowser.openAuthSessionAsync(url, 'notedri://auth', { preferEphemeralSession: false });
-      if (result.type !== 'success') return;
-      const params = new URLSearchParams(result.url.split('?')[1] ?? '');
-      if (params.get('error')) { Alert.alert(t('common.error'), decodeURIComponent(params.get('error')!)); return; }
+      const urlStr = 'url' in result ? result.url ?? '' : '';
+      if (!urlStr) return;
+      const query = urlStr.includes('?') ? urlStr.split('?')[1] : (urlStr.includes('#') ? urlStr.split('#')[1] : '');
+      const params = new URLSearchParams(query ?? '');
+      const error = params.get('error');
+      if (error) { Alert.alert(t('common.error'), error); return; }
       if (params.get('linked')) {
         const me = await authApi.me();
         setUser({ ...(user ?? {}), ...(me.data?.data ?? me.data) });
