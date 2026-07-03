@@ -21,14 +21,27 @@ export default function AppBgPattern({ opacity }: { opacity?: number }) {
   const cols = Math.ceil(width / 96) + 1;
   const rows = Math.ceil(height / 96) + 2;
 
-  const items = useMemo(
-    () => Array.from({ length: cols * rows }, (_, i) => ({
-      icon: BG_ICONS[i % BG_ICONS.length],
-      rotate: BG_ROTATIONS[i % 4],
-      x: (i % cols) * 96,
-      y: Math.floor(i / cols) * 96,
-    })),
-    [cols, rows],
+  // Memo hoá LƯỚI ĐÃ RENDER (không chỉ mảng): useWindowDimensions khiến component re-render mỗi
+  // lần đổi kích thước (xoay/bàn phím/cỡ chữ). Chỉ dựng lại ~100 icon khi cols/rows hoặc màu đổi
+  // -> tránh reconcile toàn bộ lưới ở những re-render không liên quan (bàn phím bật/tắt...).
+  const grid = useMemo(
+    () => Array.from({ length: cols * rows }, (_, i) => (
+      <View
+        key={i}
+        style={{
+          position: 'absolute',
+          left: (i % cols) * 96,
+          top: Math.floor(i / cols) * 96,
+          width: 96,
+          height: 96,
+          alignItems: 'center',
+          justifyContent: 'center',
+          transform: [{ rotate: `${BG_ROTATIONS[i % 4]}deg` }],
+        }}>
+        <FontAwesome5 name={BG_ICONS[i % BG_ICONS.length]} size={28} color={colors.text} solid />
+      </View>
+    )),
+    [cols, rows, colors.text],
   );
 
   // Nền sáng cần đậm hơn chút để thấy được, nền tối thì nhạt cho dịu mắt.
@@ -38,22 +51,7 @@ export default function AppBgPattern({ opacity }: { opacity?: number }) {
     <View
       pointerEvents="none"
       style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, opacity: fade }}>
-      {items.map((item, i) => (
-        <View
-          key={i}
-          style={{
-            position: 'absolute',
-            left: item.x,
-            top: item.y,
-            width: 96,
-            height: 96,
-            alignItems: 'center',
-            justifyContent: 'center',
-            transform: [{ rotate: `${item.rotate}deg` }],
-          }}>
-          <FontAwesome5 name={item.icon} size={28} color={colors.text} solid />
-        </View>
-      ))}
+      {grid}
     </View>
   );
 }

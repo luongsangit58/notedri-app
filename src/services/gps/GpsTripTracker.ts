@@ -594,6 +594,9 @@ export async function requestPermissionsAndStart(vehicleId: number): Promise<Sta
 //   foreground, service còn + GPS bình thường → false (không làm gì)
 //   cold-start, waiting_start + killed     → true  (D) → reset idle
 export async function maybeAutoShutdownStale(): Promise<boolean> {
+  // Nối vào hàng đợi serialize (như các mutator state khác) -> handler GPS nền không xen giữa
+  // đọc-sửa-ghi state, tránh lost-update làm chuyến vừa finalize "sống lại" (ghost trip).
+  return runSerialized(async () => {
   const state = await readState();
   const now = Date.now();
   const inTrip = state.status === 'active' || state.status === 'waiting_stop';
@@ -674,6 +677,7 @@ export async function maybeAutoShutdownStale(): Promise<boolean> {
     return true;
   }
   return false;
+  });
 }
 
 export async function getPermissionStatus(): Promise<{ foreground: boolean; background: boolean }> {
