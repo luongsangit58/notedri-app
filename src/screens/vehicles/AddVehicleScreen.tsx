@@ -149,7 +149,7 @@ export default function AddVehicleScreen() {
   const [make, setMake]             = useState('');
   const [model, setModel]           = useState('');
   const [nam, setNam]               = useState('');
-  const [fuel_type, setFuelType]    = useState('');
+  const [fuel_type, setFuelType]    = useState('Xăng');
   const [odo_ban_dau, setOdoBanDau] = useState('');
   const [tank_capacity_l, setTankCapacity]         = useState('');
   const [consumption_official, setConsumptionOfficial] = useState('');
@@ -260,6 +260,7 @@ export default function AddVehicleScreen() {
     if (!ten.trim()) { Alert.alert(t('vehicles.missing_info_title'), t('vehicles.name_required_msg')); return; }
     setApiError(null);
     const payload: Record<string, any> = { ten: ten.trim(), fuel_type, is_default };
+    payload.vehicle_type = dbVehicleType(vehicleType);
     if (bien_so.trim())           payload.bien_so     = bien_so.trim();
     if (make.trim())              payload.make        = make.trim();
     if (model.trim())             payload.model       = model.trim();

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Alert, Linking } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
-import * as WebBrowser from 'expo-web-browser';
+import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import { useAuthStore } from '../../store/authStore';
 import { useT } from '../../i18n';
 import { BASE_URL } from '../../utils/api';
@@ -75,22 +75,31 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
 
   const handleGoogle = async () => {
     try {
-      // KHÔNG ephemeral: dùng chung phiên trình duyệt, nếu trình duyệt đã đăng nhập
-      // Google sẵn thì đăng nhập 1 chạm (không bắt gõ lại). Web đã thêm prompt=select_account
-      // để vẫn cho chọn tài khoản khi cần.
-      const result = await WebBrowser.openAuthSessionAsync(GOOGLE_MOBILE_URL, 'notedri://auth', {
-        preferEphemeralSession: false,
-      });
-      if ('url' in result && result.url) {
-        await finishGoogleLogin(result.url);
-        return;
-      }
+      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      const userInfo = await GoogleSignin.signIn();
+      const tokens = await GoogleSignin.getTokens();
+      const idToken = tokens.idToken;
+      if (!idToken) throw new Error('No idToken returned from Google Sign-In');
 
-      if (!handledGoogleTokenRef.current && !useAuthStore.getState().token) {
-        Alert.alert(t('common.error'), t('auth.login_google_failed'));
+      // send idToken to backend to exchange for app session
+      try {
+        const { authApi } = await import('../../api/auth');
+        const me = await authApi.me(idToken);
+        const userData = me.data?.data ?? me.data;
+        await useAuthStore.getState().setSession(idToken, userData);
+      } catch (e: any) {
+        Alert.alert(t('common.error'), e?.message ?? t('auth.login_google_failed'));
       }
-    } catch (e: any) {
-      Alert.alert(t('common.error'), e?.message ?? t('auth.login_google_failed'));
+    } catch (error: any) {
+      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
+        // user cancelled
+      } else if (error.code === statusCodes.IN_PROGRESS) {
+        // operation in progress
+      } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+        Alert.alert(t('common.error'), 'Play services not available or outdated');
+      } else {
+        Alert.alert(t('common.error'), error?.message ?? t('auth.login_google_failed'));
+      }
     }
   };
 

@@ -1,5 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { AppState, AppStateStatus, Appearance } from 'react-native';
+import Constants from 'expo-constants';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './src/api/queryClient';
 import { NavigationContainer } from '@react-navigation/native';
@@ -24,6 +26,18 @@ function AppLoader({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     loadTheme();
     loadLang();
+    // Configure native Google Sign-In (will be a no-op in web)
+    try {
+      const webClientId = (Constants.expoConfig && (Constants.expoConfig as any).extra && (Constants.expoConfig as any).extra.googleWebClientId)
+        || ((Constants as any).manifest && (Constants as any).manifest.extra && (Constants as any).manifest.extra.googleWebClientId)
+        || '<WEB_CLIENT_ID_FROM_GOOGLE_CLOUD>';
+      GoogleSignin.configure({
+        webClientId,
+        offlineAccess: true,
+      });
+    } catch (e) {
+      // ignore in environments where native module isn't available
+    }
     flushPendingTrips().catch(() => {});
     maybeAutoShutdownStale().catch(() => {}); // đóng chuyến bị kẹt từ phiên trước (app bị kill)
     flushPendingGpsTrips().catch(() => {});
