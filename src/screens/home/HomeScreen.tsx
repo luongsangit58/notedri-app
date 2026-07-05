@@ -16,7 +16,7 @@ import { useT } from '../../i18n';
 import { vehicleIcon } from '../../utils/vehicleIcon';
 import { useNotifications } from '../../hooks/useNotifications';
 import { useAuthStore } from '../../store/authStore';
-import AdMobBanner from '../../components/AdMobBanner';
+import AppLovinBanner from '../../components/AppLovinBanner';
 import { useDashboard } from '../../hooks/useDashboard';
 import { formatVND, formatKm } from '../../utils/format';
 import client from '../../api/client';
@@ -533,9 +533,10 @@ export default function HomeScreen() {
           </View>
         )}
 
-        <AdMobBanner />
         </>
         )}
+
+        <AppLovinBanner />
 
       </ScrollView>
     </SafeAreaView>

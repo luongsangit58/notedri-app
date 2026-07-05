@@ -11,13 +11,15 @@
       "eas": {
         "projectId": "92c0bda5-b744-47c5-b06d-12bff12b13f9"
       },
-      "googleWebClientId": "1004530110791-mdsui9ttl0vc43214nilgu564vok8nqs.apps.googleusercontent.com"
+      "googleWebClientId": "1004530110791-mdsui9ttl0vc43214nilgu564vok8nqs.apps.googleusercontent.com",
+      "applovin": {
+        "sdkKey": "",
+        "androidBannerAdUnitId": "",
+        "iosBannerAdUnitId": ""
+      }
     },
     "ios": {
       "supportsTablet": true,
-      "config": {
-        "googleMobileAdsAppId": "ca-app-pub-4780395471669390~3960268170"
-      },
       "infoPlist": {
         "NSBluetoothAlwaysUsageDescription": "NoteDri cần Bluetooth để kết nối với thiết bị OBD của xe bạn",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "NoteDri cần vị trí để tự động ghi hành trình khi bạn lái xe",
@@ -38,9 +40,6 @@
       "package": "com.notedri",
       "versionCode": 1,
       "googleServicesFile": "./google-services.json",
-      "config": {
-        "googleMobileAdsAppId": "ca-app-pub-XXXXXXXXXXXXXXXX~YYYYYYYYYY"
-      },
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -114,8 +113,7 @@
           "microphonePermission": "NoteDri cần micro để nhận nhập số ODO và số tiền bằng giọng nói",
           "speechRecognitionPermission": "NoteDri cần nhận dạng giọng nói để đọc số ODO và số tiền"
         }
-      ],
-      "expo-ads-admob"
+      ]
     ]
   }
 }

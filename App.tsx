@@ -15,6 +15,7 @@ import { flushPendingGpsTrips } from './src/services/gps/GpsTripSyncQueue';
 import { maybeAutoShutdownStale } from './src/services/gps/GpsTripTracker';
 import { sendDeviceHeartbeat } from './src/api/devices';
 import { useAuthStore } from './src/store/authStore';
+import { initializeAppLovinAds } from './src/services/ads/appLovin';
 // Side-effect import: registers the GPS_TRIP_TRACKING background task at module load time
 import './src/services/gps/GpsTripTracker';
 
@@ -38,6 +39,7 @@ function AppLoader({ children }: { children: React.ReactNode }) {
     } catch (e) {
       // ignore in environments where native module isn't available
     }
+    void initializeAppLovinAds();
     flushPendingTrips().catch(() => {});
     maybeAutoShutdownStale().catch(() => {}); // đóng chuyến bị kẹt từ phiên trước (app bị kill)
     flushPendingGpsTrips().catch(() => {});

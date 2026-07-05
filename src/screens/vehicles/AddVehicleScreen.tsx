@@ -19,6 +19,7 @@ import { useQuery } from '@tanstack/react-query';
 import { FontAwesome5 } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useCreateVehicle } from '../../hooks/useVehicles';
+import { useAuthStore } from '../../store/authStore';
 import client from '../../api/client';
 import { useColors } from '../../utils/theme';
 import { normalizeSearch } from '../../utils/text';
@@ -52,7 +53,7 @@ function PickerModal<T extends { id: number; name: string }>({
   const [q, setQ] = useState('');
   const filtered = useMemo(
     () => q.trim()
-      ? items.filter(i => normalizeSearch(i.name).includes(normalizeSearch(q)))
+      ? items.filter(i => normalizeSearch(String(i?.name ?? '')).includes(normalizeSearch(q)))
       : items,
     [items, q],
   );
@@ -115,6 +116,7 @@ export default function AddVehicleScreen() {
   const colors = useColors();
   const t = useT();
   const navigation = useNavigation<any>();
+  const token = useAuthStore((s) => s.token);
   const createVehicle = useCreateVehicle();
   // Loại nhiên liệu: danh sách TĨNH khớp web (không lấy từ bảng giá xăng dầu).
   const FUEL_OPTIONS: { value: string; label: string }[] = [
@@ -137,10 +139,12 @@ export default function AddVehicleScreen() {
     queryKey: ['vehicle-specs-cascade'],
     queryFn: () => client.get('/vehicle-specs/cascade').then(r => r.data?.data ?? { brands: [], models: [], specs: [] }),
     staleTime: 1000 * 60 * 60 * 6,
+    retry: 0,
+    enabled: !!token,
   });
-  const allBrands: Brand[]  = cascadeQuery.data?.brands  ?? [];
-  const allModels: VModel[] = cascadeQuery.data?.models  ?? [];
-  const allSpecs:  Spec[]   = cascadeQuery.data?.specs   ?? [];
+  const allBrands: Brand[]  = Array.isArray(cascadeQuery.data?.brands) ? cascadeQuery.data.brands : [];
+  const allModels: VModel[] = Array.isArray(cascadeQuery.data?.models) ? cascadeQuery.data.models : [];
+  const allSpecs:  Spec[]   = Array.isArray(cascadeQuery.data?.specs) ? cascadeQuery.data.specs : [];
   const hasCascade = allBrands.length > 0;
 
   // ── Form state ────────────────────────────────────────────────────────────
@@ -228,8 +232,9 @@ export default function AddVehicleScreen() {
   const specSearch = useQuery({
     queryKey: ['vehicle-specs-search', specQuery],
     queryFn: () => client.get('/vehicle-specs/search', { params: { q: specQuery, limit: 8 } }).then(r => r.data?.data ?? []),
-    enabled: !hasCascade && specQuery.length >= 2,
+    enabled: !!token && !hasCascade && specQuery.length >= 2,
     staleTime: 1000 * 60 * 60,
+    retry: 0,
   });
   const applySpecFromSearch = useCallback((spec: any) => {
     if (spec.id)   setVehicleSpecId(spec.id);

@@ -81,12 +81,9 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
       const idToken = tokens.idToken;
       if (!idToken) throw new Error('No idToken returned from Google Sign-In');
 
-      // send idToken to backend to exchange for app session
+      // Dùng chung flow auth store để khớp response backend và tránh lệch shape giữa 2 nơi.
       try {
-        const { authApi } = await import('../../api/auth');
-        const me = await authApi.me(idToken);
-        const userData = me.data?.data ?? me.data;
-        await useAuthStore.getState().setSession(idToken, userData);
+        await useAuthStore.getState().loginWithGoogle(idToken);
       } catch (e: any) {
         Alert.alert(t('common.error'), e?.message ?? t('auth.login_google_failed'));
       }
