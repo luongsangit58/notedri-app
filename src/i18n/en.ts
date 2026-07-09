@@ -691,6 +691,9 @@ const en = {
   "export.exported_at_label": "Exported at: {{time}}",
   "export.reload_button": "Reload",
   "export.error_msg": "Cannot load data. Please try again.",
+  "export.premium_feature_title": "Premium feature",
+  "export.premium_required": "Exporting data is a Premium feature.",
+  "export.upgrade_button": "Upgrade to Premium",
 
   // Feedback (new)
   "feedback.heading": "Send feedback to NoteDri",
@@ -1184,6 +1187,8 @@ const en = {
   "profile.completeness_hint": "Add your phone and address to complete your profile.",
   "profile.delete_account_password_prompt": "Enter your password to confirm. This action cannot be undone.",
   "profile.your_password": "Your password",
+  "profile.delete_account_email_prompt": "Your account signs in with Google and has no password. Type your email again to confirm. This action cannot be undone.",
+  "profile.confirm_email_placeholder": "Type your email again",
   "error.generic": "Something went wrong",
   "voice.listening": "Listening...",
   "voice.tap_to_stop": "Tap to stop",

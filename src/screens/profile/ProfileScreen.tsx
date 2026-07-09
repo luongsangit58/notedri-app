@@ -41,7 +41,7 @@ export default function ProfileScreen() {
   const { lang, setLang } = useI18nStore();
   const t = useT();
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
-  const [deletePassword, setDeletePassword] = useState('');
+  const [deleteConfirm, setDeleteConfirm] = useState('');
   const [deleteError, setDeleteError] = useState('');
 
   const hasGoogle: boolean = (user as any)?.has_google ?? false;
@@ -92,13 +92,14 @@ export default function ProfileScreen() {
   const lvColor = level?.color && String(level.color).startsWith('#') ? String(level.color) : '#f59e0b';
 
   const { mutate: deleteAccount, isPending: isDeleting } = useMutation({
-    mutationFn: () => profileApi.deleteAccount(deletePassword),
+    mutationFn: () => profileApi.deleteAccount(deleteConfirm, hasPassword),
     onSuccess: () => {
       setDeleteModalVisible(false);
       logout();
     },
     onError: (err: any) => {
       const msg = err?.response?.data?.errors?.password?.[0]
+        ?? err?.response?.data?.errors?.confirm_email?.[0]
         ?? err?.response?.data?.message
         ?? t('common.error_occurred');
       setDeleteError(msg);
@@ -118,7 +119,7 @@ export default function ProfileScreen() {
       t('profile.delete_account_warning'),
       [
         { text: t('common.cancel'), style: 'cancel' },
-        { text: t('common.continue'), style: 'destructive', onPress: () => { setDeletePassword(''); setDeleteError(''); setDeleteModalVisible(true); } },
+        { text: t('common.continue'), style: 'destructive', onPress: () => { setDeleteConfirm(''); setDeleteError(''); setDeleteModalVisible(true); } },
       ],
     );
   };
@@ -358,13 +359,15 @@ export default function ProfileScreen() {
               {t('auth.delete_account')}
             </Text>
             <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 20, lineHeight: 18 }}>
-              {t('profile.delete_account_password_prompt')}
+              {hasPassword ? t('profile.delete_account_password_prompt') : t('profile.delete_account_email_prompt')}
             </Text>
             <TextInput
-              value={deletePassword}
-              onChangeText={v => { setDeletePassword(v); setDeleteError(''); }}
-              secureTextEntry
-              placeholder={t('profile.your_password')}
+              value={deleteConfirm}
+              onChangeText={v => { setDeleteConfirm(v); setDeleteError(''); }}
+              secureTextEntry={hasPassword}
+              autoCapitalize="none"
+              keyboardType={hasPassword ? 'default' : 'email-address'}
+              placeholder={hasPassword ? t('profile.your_password') : t('profile.confirm_email_placeholder')}
               placeholderTextColor={colors.textSecondary}
               style={{
                 backgroundColor: colors.background, color: colors.text,
@@ -377,11 +380,11 @@ export default function ProfileScreen() {
             )}
             <TouchableOpacity
               onPress={() => deleteAccount()}
-              disabled={isDeleting || !deletePassword}
+              disabled={isDeleting || !deleteConfirm}
               style={{
                 backgroundColor: colors.error, borderRadius: 10,
                 paddingVertical: 14, alignItems: 'center', marginTop: 4,
-                opacity: isDeleting || !deletePassword ? 0.5 : 1,
+                opacity: isDeleting || !deleteConfirm ? 0.5 : 1,
               }}>
               {isDeleting
                 ? <ActivityIndicator color="#fff" />

@@ -26,8 +26,6 @@
         "NSLocationAlwaysUsageDescription": "NoteDri cần vị trí nền để ghi hành trình ngay cả khi app đang đóng",
         "UIBackgroundModes": [
           "location",
-          "fetch",
-          "location",
           "fetch"
         ],
         "NSSpeechRecognitionUsageDescription": "NoteDri cần nhận dạng giọng nói để đọc số ODO và số tiền",
@@ -55,6 +53,7 @@
         "android.permission.ACCESS_BACKGROUND_LOCATION",
         "android.permission.FOREGROUND_SERVICE",
         "android.permission.FOREGROUND_SERVICE_LOCATION",
+        "android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS",
         "android.permission.RECEIVE_BOOT_COMPLETED",
         "android.permission.VIBRATE",
         "android.permission.USE_EXACT_ALARM",
@@ -113,7 +112,8 @@
           "microphonePermission": "NoteDri cần micro để nhận nhập số ODO và số tiền bằng giọng nói",
           "speechRecognitionPermission": "NoteDri cần nhận dạng giọng nói để đọc số ODO và số tiền"
         }
-      ]
+      ],
+      "./withOptionalHardwareFeatures.js"
     ]
   }
 }

@@ -716,11 +716,24 @@ export async function openLocationSettings(): Promise<void> {
   await Linking.Linking.openSettings().catch(() => {});
 }
 
-// Mở Cài đặt tối ưu pin để user tắt cho NoteDri (service nền đỡ bị kill)
+// Xin miễn trừ tối ưu pin cho NoteDri (service nền đỡ bị kill khi tắt màn hình).
+// Ưu tiên hộp thoại 1-chạm REQUEST_IGNORE_BATTERY_OPTIMIZATIONS (xin thẳng cho app này) thay vì
+// mở danh sách IGNORE_BATTERY_OPTIMIZATION_SETTINGS chung, vì user thường bỏ qua bước tự tìm app
+// trong danh sách -> đây là nguyên nhân phổ biến nhất khiến Xiaomi/Oppo/Samsung... kill tracking
+// khi tắt màn hình dù code đã dùng foreground service đúng chuẩn.
 export async function openBatterySettings(): Promise<void> {
   if (Platform.OS === 'android') {
     try {
+      const Constants = (await import('expo-constants')).default;
       const IntentLauncher = await import('expo-intent-launcher');
+      const packageName = Constants.expoConfig?.android?.package;
+      if (packageName) {
+        await IntentLauncher.startActivityAsync(
+          'android.settings.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS',
+          { data: `package:${packageName}` },
+        );
+        return;
+      }
       await IntentLauncher.startActivityAsync('android.settings.IGNORE_BATTERY_OPTIMIZATION_SETTINGS');
       return;
     } catch { /* fallback */ }

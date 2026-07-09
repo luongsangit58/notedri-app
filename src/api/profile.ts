@@ -7,6 +7,8 @@ export const profileApi = {
     client.put('/profile/password', data),
   // Lưu ngôn ngữ vào tài khoản để đồng bộ web + email (không chỉ ở máy này).
   setLocale: (locale: 'vi' | 'en') => client.put('/profile/locale', { locale }),
-  deleteAccount: (password: string) =>
-    client.delete('/profile', { data: { password } }),
+  // Tài khoản có mật khẩu -> xác nhận bằng password; tài khoản Google-only (không mật khẩu)
+  // -> xác nhận bằng cách gõ lại email (khớp ProfileController::destroy phía backend).
+  deleteAccount: (confirmValue: string, hasPassword: boolean) =>
+    client.delete('/profile', { data: hasPassword ? { password: confirmValue } : { confirm_email: confirmValue } }),
 };

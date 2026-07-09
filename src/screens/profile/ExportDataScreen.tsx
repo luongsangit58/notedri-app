@@ -4,6 +4,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import client from '../../api/client';
 import { useColors } from '../../utils/theme';
 import { useT } from '../../i18n';
@@ -23,6 +24,7 @@ function InfoRow({ icon, label, value }: { icon: string; label: string; value: s
 export default function ExportDataScreen() {
   const colors = useColors();
   const t = useT();
+  const navigation = useNavigation<any>();
   const [loading, setLoading] = useState(false);
   const [preview, setPreview] = useState<any>(null);
 
@@ -32,8 +34,19 @@ export default function ExportDataScreen() {
       const res = await client.get('/account/export');
       const exportData = res.data?.data ?? res.data;
       setPreview(exportData);
-    } catch {
-      Alert.alert(t('common.error'), t('export.error_msg'));
+    } catch (err: any) {
+      if (err?.response?.status === 403) {
+        Alert.alert(
+          t('export.premium_feature_title'),
+          err?.response?.data?.message || t('export.premium_required'),
+          [
+            { text: t('common.cancel'), style: 'cancel' },
+            { text: t('export.upgrade_button'), onPress: () => navigation.navigate('Premium') },
+          ],
+        );
+      } else {
+        Alert.alert(t('common.error'), t('export.error_msg'));
+      }
     } finally {
       setLoading(false);
     }

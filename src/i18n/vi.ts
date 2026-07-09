@@ -691,6 +691,9 @@ const vi = {
   "export.exported_at_label": "Xuất lúc: {{time}}",
   "export.reload_button": "Tải lại",
   "export.error_msg": "Không thể tải dữ liệu. Vui lòng thử lại.",
+  "export.premium_feature_title": "Tính năng Premium",
+  "export.premium_required": "Xuất dữ liệu là tính năng Premium.",
+  "export.upgrade_button": "Nâng cấp Premium",
 
   // Feedback (new)
   "feedback.heading": "Góp ý cho NoteDri",
@@ -1184,6 +1187,8 @@ const vi = {
   "profile.completeness_hint": "Bổ sung SĐT và địa chỉ để hoàn thiện hồ sơ.",
   "profile.delete_account_password_prompt": "Nhập mật khẩu để xác nhận. Hành động này không thể hoàn tác.",
   "profile.your_password": "Mật khẩu của bạn",
+  "profile.delete_account_email_prompt": "Tài khoản của bạn đăng nhập bằng Google, không có mật khẩu. Gõ lại email của bạn để xác nhận. Hành động này không thể hoàn tác.",
+  "profile.confirm_email_placeholder": "Gõ lại email của bạn",
   "error.generic": "Đã có lỗi xảy ra",
   "voice.listening": "Đang nghe...",
   "voice.tap_to_stop": "Tap để dừng",
