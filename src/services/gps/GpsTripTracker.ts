@@ -150,7 +150,11 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): nu
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-async function finalizeTrip(state: GpsTripState, endTs?: number): Promise<GpsTripSummary | null> {
+async function finalizeTrip(
+  state: GpsTripState,
+  endTs?: number,
+  truncatedReason?: 'stale' | 'interrupted',
+): Promise<GpsTripSummary | null> {
   if (!state.startedAt || !state.vehicleId || state.distanceKm < MIN_TRIP_DISTANCE_KM) {
     return null;
   }
@@ -177,7 +181,14 @@ async function finalizeTrip(state: GpsTripState, endTs?: number): Promise<GpsTri
     idleTimeSeconds: Math.round(state.idleMs / 1000),
     drivingTimeSeconds: Math.round(state.drivingMs / 1000),
     routePoints,
-    ghiChu: state.hadGap ? useI18nStore.getState().t('gps_trips.note_signal_gap') : null,
+    // Ưu tiên cảnh báo "bị cắt ngang" (cả chuyến, không chỉ 1 đoạn) hơn note hadGap
+    // thông thường (chỉ 1 đoạn ngắn mất tín hiệu trong chuyến vẫn trọn vẹn) - user cần
+    // biết số liệu này có thể THIẾU rất nhiều so với quãng đường thực đã đi.
+    ghiChu: truncatedReason
+      ? useI18nStore.getState().t(
+          truncatedReason === 'stale' ? 'gps_trips.note_truncated_stale' : 'gps_trips.note_truncated_interrupted',
+        )
+      : state.hadGap ? useI18nStore.getState().t('gps_trips.note_signal_gap') : null,
   };
 }
 
@@ -614,7 +625,7 @@ export async function maybeAutoShutdownStale(): Promise<boolean> {
   const tripStale = state.lastTs != null && now - state.lastTs >= STALE_ACTIVE_MS;
   if (inTrip && running && tripStale) {
     await Location.stopLocationUpdatesAsync(GPS_TASK_NAME).catch(() => {});
-    const summary = await finalizeTrip(state, state.lastTs ?? undefined);
+    const summary = await finalizeTrip(state, state.lastTs ?? undefined, 'stale');
     await clearRoute();
     const fresh = defaultState();
     fresh.vehicleId = state.vehicleId;
@@ -642,7 +653,7 @@ export async function maybeAutoShutdownStale(): Promise<boolean> {
       return false;
     }
     // Đã quá cửa sổ resume → tự lưu và báo
-    const summary = await finalizeTrip(state, state.lastTs ?? undefined);
+    const summary = await finalizeTrip(state, state.lastTs ?? undefined, 'interrupted');
     await clearRoute();
     const fresh = defaultState();
     fresh.vehicleId = state.vehicleId;
