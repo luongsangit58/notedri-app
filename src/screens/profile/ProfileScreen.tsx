@@ -54,13 +54,18 @@ export default function ProfileScreen() {
   // has_password/has_google có thể chưa có trong cache (user vừa mở app, background refresh
   // /auth/me ở authStore.initialize() chưa kịp xong) -> mặc định hasPassword=true có thể đưa
   // nhầm tài khoản Google-only vào luồng cần mật khẩu (xoá tài khoản / gỡ liên kết Google).
-  // Dùng chung cho cả 2 nơi thay vì lặp lại.
+  // Dùng chung cho cả 2 nơi thay vì lặp lại. Giới hạn 4s (thay vì timeout mặc định 30s của
+  // client) - đây chỉ là làm mới tốt-nhất-có-thể trước khi mở 1 Alert, mạng chậm/mất mạng
+  // không nên khiến user chờ tới 30s mới thấy hộp thoại xác nhận.
   const refreshUserIfPasswordUnknown = async (): Promise<void> => {
     if ((user as any)?.has_password !== undefined) return;
     try {
-      const me = await authApi.me();
+      const me = await Promise.race([
+        authApi.me(),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 4000)),
+      ]);
       setUser({ ...(user ?? {}), ...(me.data?.data ?? me.data) });
-    } catch { /* offline - dùng cache hiện có */ }
+    } catch { /* offline/chậm - dùng cache hiện có */ }
   };
 
   // Liên kết Google: mở OAuth kèm link_token -> callback gắn Google vào tài khoản này.

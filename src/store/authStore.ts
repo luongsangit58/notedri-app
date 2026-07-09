@@ -45,6 +45,11 @@ interface AuthState {
   token: string | null;
   isLoading: boolean;
   isLoggingOut: boolean;
+  // false = `user` chỉ mới là dữ liệu cache lúc cold-start, background refresh /auth/me
+  // CHƯA xong (thành công hay thất bại). Màn hình nào quyết định điều hướng/chặn tính năng dựa
+  // trên field có thể đổi giữa server (vd is_premium) nên đợi cờ này = true trước khi hành động,
+  // tránh đá nhầm user Premium ra màn nâng cấp chỉ vì cache cũ chưa kịp làm mới.
+  userSynced: boolean;
   error: string | null;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -59,6 +64,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   token: null,
   isLoading: true,
   isLoggingOut: false,
+  userSynced: false,
   error: null,
 
   initialize: async () => {
@@ -79,12 +85,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             set({ user: fresh });
             adoptAccountLocale(fresh); // đồng bộ ngôn ngữ theo tài khoản khi mở lại app
           }
-        }).catch(() => {});
+        }).catch(() => {})
+          // Dù thành công hay lỗi (vd offline) cũng coi là "đã đồng bộ" - không có cách nào
+          // mới hơn để đợi, chặn mãi mãi còn tệ hơn dùng tạm dữ liệu cache.
+          .finally(() => set({ userSynced: true }));
       } else {
-        set({ isLoading: false });
+        // Không có phiên cũ để làm mới -> không có gì "cũ" cả, coi như đã đồng bộ ngay.
+        set({ isLoading: false, userSynced: true });
       }
     } catch {
-      set({ isLoading: false });
+      set({ isLoading: false, userSynced: true });
     }
   },
 
@@ -98,7 +108,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await storage.setToken(token);
       await storage.setUser(JSON.stringify(user));
       queryClient.clear(); // xoá cache user cũ để không lẫn dữ liệu khi đổi tài khoản
-      set({ token, user, isLoading: false });
+      // Vừa đăng nhập -> user LUÔN là dữ liệu tươi từ server, không phải cache.
+      set({ token, user, isLoading: false, userSynced: true });
       adoptAccountLocale(user); // đồng bộ ngôn ngữ theo tài khoản
       registerPushToken();
       sendDeviceHeartbeat();
@@ -134,7 +145,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // sang tài khoản mới đăng nhập trên cùng thiết bị.
       await clearGpsQueue();
       await clearObdQueue();
-      set({ user: null, token: null, isLoggingOut: false });
+      set({ user: null, token: null, isLoggingOut: false, userSynced: false });
     }
   },
 
@@ -143,7 +154,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     await storage.setToken(token);
     await storage.setUser(JSON.stringify(user));
     queryClient.clear(); // xoá cache user cũ để không lẫn dữ liệu khi đổi tài khoản
-    set({ token, user, isLoading: false });
+    // Vừa đăng nhập (Google) -> user LUÔN là dữ liệu tươi từ server, không phải cache.
+    set({ token, user, isLoading: false, userSynced: true });
     registerPushToken();
   },
   clearError: () => set({ error: null }),

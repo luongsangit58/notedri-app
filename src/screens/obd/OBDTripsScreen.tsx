@@ -60,11 +60,13 @@ export default function OBDTripsScreen() {
   const t = useT();
   const colors = useColors();
   const isPremium = useAuthStore((s) => s.user?.is_premium ?? false);
+  const userSynced = useAuthStore((s) => s.userSynced);
 
-  // Redirect non-premium users away
+  // Redirect non-premium users away. Đợi userSynced để không đá nhầm user Premium thật ra màn
+  // nâng cấp chỉ vì cache lúc cold-start chưa kịp làm mới is_premium.
   useEffect(() => {
-    if (!isPremium) navigation.replace('Premium');
-  }, [isPremium]);
+    if (userSynced && !isPremium) navigation.replace('Premium');
+  }, [userSynced, isPremium]);
 
   const { data: tripsData, isLoading, refetch, isFetching } = useObdTrips(vehicleId);
   const { data: dtcData } = useObdDtcEvents(vehicleId);

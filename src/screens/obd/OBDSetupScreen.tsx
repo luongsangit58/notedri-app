@@ -27,6 +27,7 @@ export default function OBDSetupScreen() {
   const t = useT();
   const colors = useColors();
   const isPremium = useAuthStore((s) => s.user?.is_premium ?? false);
+  const userSynced = useAuthStore((s) => s.userSynced);
   const {
     connectionState,
     foundDevices,
@@ -36,12 +37,13 @@ export default function OBDSetupScreen() {
     connect,
   } = useObdConnection(vehicleId);
 
-  // Guard: redirect to PremiumScreen if user is not premium
+  // Guard: redirect to PremiumScreen if user is not premium. Đợi userSynced để không đá nhầm
+  // user Premium thật ra màn nâng cấp chỉ vì cache lúc cold-start chưa kịp làm mới is_premium.
   useEffect(() => {
-    if (!isPremium) {
+    if (userSynced && !isPremium) {
       navigation.replace('Premium');
     }
-  }, [isPremium]);
+  }, [userSynced, isPremium]);
 
   useEffect(() => {
     if (!isPremium) return;
