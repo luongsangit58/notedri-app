@@ -111,7 +111,6 @@
           "speechRecognitionPermission": "NoteDri cần nhận dạng giọng nói để đọc số ODO và số tiền"
         }
       ],
-      "@react-native-google-signin/google-signin",
       [
         "react-native-google-mobile-ads",
         {

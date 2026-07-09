@@ -15,10 +15,6 @@ export const authApi = {
     const meta = await deviceMeta();
     return client.post('/auth/login', { email, password, ...meta });
   },
-  googleMobile: async (idToken: string) => {
-    const meta = await deviceMeta();
-    return client.post('/auth/google', { id_token: idToken, ...meta });
-  },
   logout: () => client.post('/auth/logout'),
   unlinkGoogle: () => client.post('/auth/google/unlink'),
   me: (bearerToken?: string) =>

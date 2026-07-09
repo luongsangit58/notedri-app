@@ -47,7 +47,6 @@ interface AuthState {
   isLoggingOut: boolean;
   error: string | null;
   login: (email: string, password: string) => Promise<void>;
-  loginWithGoogle: (idToken: string) => Promise<void>;
   logout: () => Promise<void>;
   initialize: () => Promise<void>;
   setUser: (user: User) => void;
@@ -105,26 +104,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       sendDeviceHeartbeat();
     } catch (error: any) {
       const message = error.response?.data?.message ?? useI18nStore.getState().t('auth.login_failed');
-      set({ isLoading: false, error: message });
-      throw error;
-    }
-  },
-
-  loginWithGoogle: async (idToken: string) => {
-    try {
-      set({ isLoading: true, error: null });
-      const response = await authApi.googleMobile(idToken);
-      // Bóc envelope giống me()/setSession (xem login).
-      const { token, user } = response.data?.data ?? response.data;
-      await storage.setToken(token);
-      await storage.setUser(JSON.stringify(user));
-      queryClient.clear(); // xoá cache user cũ để không lẫn dữ liệu khi đổi tài khoản
-      set({ token, user, isLoading: false });
-      adoptAccountLocale(user); // đồng bộ ngôn ngữ theo tài khoản
-      registerPushToken();
-      sendDeviceHeartbeat();
-    } catch (error: any) {
-      const message = error.response?.data?.message ?? useI18nStore.getState().t('auth.google_login_failed');
       set({ isLoading: false, error: message });
       throw error;
     }
