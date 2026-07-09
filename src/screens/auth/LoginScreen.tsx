@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, Alert, ActivityIndicator, Linking } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FontAwesome5 } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
 import { useAuthStore } from '../../store/authStore';
@@ -8,6 +9,13 @@ import { BASE_URL } from '../../utils/api';
 import { AuthContainer, C, INPUT_STYLE } from './_authLayout';
 
 const GOOGLE_MOBILE_URL = `${BASE_URL}/auth/google/mobile`;
+// Đánh dấu "đang chờ callback Google" TRƯỚC khi mở phiên OAuth. Nếu OS kill hẳn tiến trình
+// app trong lúc Custom Tab/ASWebAuthenticationSession còn mở (máy yếu RAM), openAuthSessionAsync()
+// không bao giờ resolve vì JS context đã mất. Cờ này nằm trong AsyncStorage (sống sót qua cold
+// start) để lần mở app kế tiếp biết cần đọc Linking.getInitialURL() thay vì bỏ qua token đến muộn.
+// CHỈ đọc getInitialURL khi cờ này đang bật -> không biến thành listener toàn cục chấp nhận
+// bất kỳ deep-link nào (giữ nguyên lý do bảo mật đã ghi ở finishGoogleLogin).
+const PENDING_KEY = 'google_auth_pending';
 
 export default function LoginScreen({ navigation }: { navigation: any }) {
   const t = useT();
@@ -45,6 +53,18 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
     return true;
   };
 
+  // Khôi phục sau khi OS kill app giữa lúc đang chờ Google callback (xem PENDING_KEY ở trên).
+  useEffect(() => {
+    (async () => {
+      const pending = await AsyncStorage.getItem(PENDING_KEY);
+      if (!pending) return;
+      await AsyncStorage.removeItem(PENDING_KEY); // dùng 1 lần, tránh xử lý lặp ở lần mở sau
+      const url = await Linking.getInitialURL().catch(() => null);
+      if (url) await finishGoogleLogin(url);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleLogin = async () => {
     if (!email || !password) {
       Alert.alert(t('common.error'), t('auth.enter_email_password'));
@@ -56,6 +76,7 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
   const handleGoogle = async () => {
     if (googleBusy) return;
     setGoogleBusy(true);
+    await AsyncStorage.setItem(PENDING_KEY, '1');
     try {
       // Web OAuth qua Custom Tab: backend redirect về notedri://auth?token=... và
       // openAuthSessionAsync bắt đúng URL đó rồi trả về cho lời gọi này (không phụ thuộc SHA-1).
@@ -70,6 +91,9 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
     } catch (e: any) {
       Alert.alert(t('common.error'), e?.message ?? t('auth.login_google_failed'));
     } finally {
+      // Luồng bình thường (app còn sống) đã xử lý xong callback -> không cần cờ nữa. Nếu app bị
+      // kill giữa chừng, dòng này không chạy và cờ vẫn còn cho effect ở trên xử lý lúc mở lại.
+      await AsyncStorage.removeItem(PENDING_KEY);
       setGoogleBusy(false);
     }
   };

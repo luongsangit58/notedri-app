@@ -113,7 +113,16 @@ export default function ProfileScreen() {
     ]);
   };
 
-  const handleDeletePress = () => {
+  const handleDeletePress = async () => {
+    // has_password có thể chưa có trong cache (user vừa mở app, background refresh /auth/me
+    // chưa kịp xong) -> hasPassword mặc định true sẽ đưa nhầm tài khoản Google-only vào luồng
+    // xác nhận bằng mật khẩu (backend luôn từ chối). Làm mới trước khi mở luồng xoá tài khoản.
+    if ((user as any)?.has_password === undefined) {
+      try {
+        const me = await authApi.me();
+        setUser({ ...(user ?? {}), ...(me.data?.data ?? me.data) });
+      } catch { /* offline - dùng cache hiện có */ }
+    }
     Alert.alert(
       t('auth.delete_account'),
       t('profile.delete_account_warning'),

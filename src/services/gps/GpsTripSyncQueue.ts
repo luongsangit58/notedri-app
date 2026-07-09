@@ -1,12 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { gpsTripsApi } from '../../api/gpsTrips';
 import { GpsTripSummary } from './GpsTripTracker';
+import { isPermanentSyncError } from '../syncRetryPolicy';
 
 const KEY = 'gps_pending_trips';
-// 401/403 được coi là tạm thời (token chưa nạp kịp lúc cold-start) nên được giữ lại retry,
-// nhưng nếu vẫn lỗi sau ngần này lần thử thì khả năng cao là vĩnh viễn (xe đã xoá, hết quyền...)
-// -> bỏ, tránh chiếm 1 slot trong hàng đợi 30 item mãi mãi.
-const MAX_AUTH_RETRIES = 5;
 
 type PendingTrip = GpsTripSummary & { retries: number; queuedAt: string };
 
@@ -59,17 +56,10 @@ export async function flushPendingGpsTrips(): Promise<{ synced: number; failed: 
         await gpsTripsApi.saveTrip(item);
         synced++;
       } catch (err: any) {
-        // Phân biệt lỗi tạm thời vs vĩnh viễn để không âm thầm mất chuyến:
-        // - 4xx (trừ 429/401/403) = lỗi client vĩnh viễn (payload sai, xe đã xoá...) -> BỎ, retry vô ích.
-        // - Mạng lỗi / 5xx / 429 / 401 / 403 = tạm thời -> GIỮ (401/403 có thể do token chưa nạp
-        //   lúc cold-start hoặc đang đổi phiên; bỏ sẽ mất chuyến thật user đã chạy).
         const status: number | undefined = err?.response?.status;
-        const isAuthStatus = status === 401 || status === 403;
         item.retries++;
-        // 401/403 tạm thời chỉ được thử tối đa MAX_AUTH_RETRIES lần - quá đó coi như vĩnh viễn.
-        const permanent = status !== undefined && status >= 400 && status < 500 && status !== 429
-          && (!isAuthStatus || item.retries >= MAX_AUTH_RETRIES);
-        if (!permanent) remaining.push(item);
+        // Phân biệt lỗi tạm thời vs vĩnh viễn để không âm thầm mất chuyến (xem syncRetryPolicy.ts).
+        if (!isPermanentSyncError(status, item.retries)) remaining.push(item);
         failed++;
       }
     }
