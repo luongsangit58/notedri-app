@@ -14,6 +14,7 @@ import { achievementsApi } from '../../api/achievements';
 import { BASE_URL } from '../../utils/api';
 import { useColors, useThemeStore } from '../../utils/theme';
 import { useI18nStore, useLang, useT } from '../../i18n';
+import { markGooglePending, clearGooglePending } from '../../services/googleAuthRecovery';
 
 function MenuItem({ icon, label, onPress, danger, right }: { icon: React.ReactNode; label: string; onPress?: () => void; danger?: boolean; right?: React.ReactNode }) {
   const colors = useColors();
@@ -43,13 +44,31 @@ export default function ProfileScreen() {
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState('');
   const [deleteError, setDeleteError] = useState('');
+  // Chặn double-tap khi đang làm mới has_password (xem refreshUserIfPasswordUnknown) - tránh mở
+  // Alert xoá tài khoản 2 lần hoặc gọi /auth/me 2 lần chồng nhau.
+  const [checkingAccountAction, setCheckingAccountAction] = useState(false);
 
   const hasGoogle: boolean = (user as any)?.has_google ?? false;
   const hasPassword: boolean = (user as any)?.has_password ?? true;
 
+  // has_password/has_google có thể chưa có trong cache (user vừa mở app, background refresh
+  // /auth/me ở authStore.initialize() chưa kịp xong) -> mặc định hasPassword=true có thể đưa
+  // nhầm tài khoản Google-only vào luồng cần mật khẩu (xoá tài khoản / gỡ liên kết Google).
+  // Dùng chung cho cả 2 nơi thay vì lặp lại.
+  const refreshUserIfPasswordUnknown = async (): Promise<void> => {
+    if ((user as any)?.has_password !== undefined) return;
+    try {
+      const me = await authApi.me();
+      setUser({ ...(user ?? {}), ...(me.data?.data ?? me.data) });
+    } catch { /* offline - dùng cache hiện có */ }
+  };
+
   // Liên kết Google: mở OAuth kèm link_token -> callback gắn Google vào tài khoản này.
   const handleLinkGoogle = async () => {
     try {
+      // Đánh dấu "đang chờ callback" TRƯỚC khi mở phiên - nếu OS kill app giữa chừng, App.tsx
+      // đọc cờ này lúc cold-start kế tiếp để khôi phục (xem services/googleAuthRecovery.ts).
+      await markGooglePending('link');
       const url = `${BASE_URL}/auth/google/mobile?link_token=${encodeURIComponent(token ?? '')}`;
       const result = await WebBrowser.openAuthSessionAsync(url, 'notedri://auth', { preferEphemeralSession: false });
       const urlStr = 'url' in result ? result.url ?? '' : '';
@@ -65,11 +84,21 @@ export default function ProfileScreen() {
       }
     } catch (e: any) {
       Alert.alert(t('common.error'), e?.message ?? t('common.error_generic'));
+    } finally {
+      await clearGooglePending();
     }
   };
 
-  const handleUnlinkGoogle = () => {
-    if (!hasPassword) {
+  const handleUnlinkGoogle = async () => {
+    if (checkingAccountAction) return;
+    setCheckingAccountAction(true);
+    await refreshUserIfPasswordUnknown();
+    setCheckingAccountAction(false);
+    // Đọc thẳng từ store (không dùng closure `hasPassword` ở trên) - setUser trong
+    // refreshUserIfPasswordUnknown() chỉ áp dụng ở lần render SAU, closure của lần gọi
+    // hàm này vẫn giữ giá trị cũ nếu đọc qua biến đã destructure lúc component render.
+    const freshHasPassword: boolean = (useAuthStore.getState().user as any)?.has_password ?? true;
+    if (!freshHasPassword) {
       Alert.alert(t('profile.google_unlink_need_pw_title'), t('profile.google_unlink_need_pw_msg'));
       return;
     }
@@ -114,15 +143,12 @@ export default function ProfileScreen() {
   };
 
   const handleDeletePress = async () => {
-    // has_password có thể chưa có trong cache (user vừa mở app, background refresh /auth/me
-    // chưa kịp xong) -> hasPassword mặc định true sẽ đưa nhầm tài khoản Google-only vào luồng
-    // xác nhận bằng mật khẩu (backend luôn từ chối). Làm mới trước khi mở luồng xoá tài khoản.
-    if ((user as any)?.has_password === undefined) {
-      try {
-        const me = await authApi.me();
-        setUser({ ...(user ?? {}), ...(me.data?.data ?? me.data) });
-      } catch { /* offline - dùng cache hiện có */ }
-    }
+    // Chặn double-tap: bấm nhanh 2 lần trong lúc đang chờ refreshUserIfPasswordUnknown() sẽ mở
+    // Alert xoá tài khoản 2 lần chồng nhau (native Alert xếp hàng đợi cái sau) + gọi /auth/me 2 lần.
+    if (checkingAccountAction) return;
+    setCheckingAccountAction(true);
+    await refreshUserIfPasswordUnknown();
+    setCheckingAccountAction(false);
     Alert.alert(
       t('auth.delete_account'),
       t('profile.delete_account_warning'),

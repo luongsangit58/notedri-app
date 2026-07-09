@@ -14,6 +14,7 @@ import { maybeAutoShutdownStale } from './src/services/gps/GpsTripTracker';
 import { sendDeviceHeartbeat } from './src/api/devices';
 import { useAuthStore } from './src/store/authStore';
 import { initializeAdMob } from './src/services/ads/admob';
+import { recoverPendingGoogleAuthIfAny } from './src/services/googleAuthRecovery';
 // Side-effect import: registers the GPS_TRIP_TRACKING background task at module load time
 import './src/services/gps/GpsTripTracker';
 
@@ -26,6 +27,11 @@ function AppLoader({ children }: { children: React.ReactNode }) {
     loadTheme();
     loadLang();
     void initializeAdMob();
+    // Khôi phục đăng nhập/liên kết Google nếu OS kill app giữa lúc đang chờ callback (xem
+    // src/services/googleAuthRecovery.ts). Đặt ở đây (không phải LoginScreen/ProfileScreen) vì
+    // AppLoader luôn mount lúc cold-start bất kể đã đăng nhập hay chưa - còn Login/Profile thì
+    // tuỳ trạng thái mà có thể không phải màn hình được mở lại.
+    void recoverPendingGoogleAuthIfAny();
   }, []);
 
   // Flush hàng đợi chuyến CHỈ khi đã có token (sau khi hydrate xong hoặc vừa login).
