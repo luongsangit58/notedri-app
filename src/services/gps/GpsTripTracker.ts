@@ -734,9 +734,11 @@ export async function openLocationSettings(): Promise<void> {
 // khi tắt màn hình dù code đã dùng foreground service đúng chuẩn.
 export async function openBatterySettings(): Promise<void> {
   if (Platform.OS === 'android') {
+    const IntentLauncher = await import('expo-intent-launcher');
+    // Bậc 1: hộp thoại 1-chạm xin miễn trừ thẳng cho app (nhanh nhất, nhưng vài ROM/đầu Android ô
+    // tô không hỗ trợ action này -> ActivityNotFoundException).
     try {
       const Constants = (await import('expo-constants')).default;
-      const IntentLauncher = await import('expo-intent-launcher');
       const packageName = Constants.expoConfig?.android?.package;
       if (packageName) {
         await IntentLauncher.startActivityAsync(
@@ -745,10 +747,14 @@ export async function openBatterySettings(): Promise<void> {
         );
         return;
       }
+    } catch { /* rơi xuống bậc 2 */ }
+    // Bậc 2: danh sách cài đặt tối ưu pin chung (cách cũ, luôn có sẵn trên mọi bản Android).
+    try {
       await IntentLauncher.startActivityAsync('android.settings.IGNORE_BATTERY_OPTIMIZATION_SETTINGS');
       return;
-    } catch { /* fallback */ }
+    } catch { /* rơi xuống bậc 3 */ }
   }
+  // Bậc 3: mở trang thông tin app chung (fallback cuối, kể cả iOS).
   const Linking = await import('react-native');
   await Linking.Linking.openSettings().catch(() => {});
 }
