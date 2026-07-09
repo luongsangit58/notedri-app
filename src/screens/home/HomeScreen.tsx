@@ -16,9 +16,10 @@ import { useT } from '../../i18n';
 import { vehicleIcon } from '../../utils/vehicleIcon';
 import { useNotifications } from '../../hooks/useNotifications';
 import { useAuthStore } from '../../store/authStore';
-import AppLovinBanner from '../../components/AppLovinBanner';
+import AdMobBanner from '../../components/AdMobBanner';
 import { useDashboard } from '../../hooks/useDashboard';
 import { formatVND, formatKm } from '../../utils/format';
+import { flattenReminders } from '../../utils/reminders';
 import client from '../../api/client';
 
 function VehicleSelector({ vehicles, selectedId, onSelect }: {
@@ -173,7 +174,7 @@ export default function HomeScreen() {
     queryFn: () => client.get(`/vehicles/${vehicleId}/reminders`).then((r) => r.data),
     enabled: !!vehicleId,
   });
-  const reminders: any[] = (remRaw?.data ?? []).map((x: any) => (x && x.reminder ? { ...x.reminder, ...x.eval } : x));
+  const reminders: any[] = flattenReminders(remRaw);
   const upcomingAll = reminders
     .filter((r) => r.remaining_days != null)
     .sort((a, b) => (a.remaining_days ?? 9999) - (b.remaining_days ?? 9999));
@@ -536,7 +537,7 @@ export default function HomeScreen() {
         </>
         )}
 
-        <AppLovinBanner />
+        <AdMobBanner />
 
       </ScrollView>
     </SafeAreaView>

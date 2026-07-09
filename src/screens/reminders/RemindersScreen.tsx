@@ -23,6 +23,7 @@ import { useVehicles } from '../../hooks/useVehicles';
 import ErrorView from '../../components/ErrorView';
 import { useColors } from '../../utils/theme';
 import { contentWide } from '../../utils/layout';
+import { flattenReminders } from '../../utils/reminders';
 import { useT } from '../../i18n';
 
 type LoaiKey = 'bao_duong' | 'dang_kiem' | 'bao_hiem' | 'giay_to' | 'khac';
@@ -436,7 +437,7 @@ export default function RemindersScreen() {
   const navigation = useNavigation<any>();
   const { vehicleId } = (route.params ?? {}) as { vehicleId?: number };
   const { data: vehiclesData0 } = useVehicles();
-  const vehicles0: any[] = vehiclesData0?.data ?? vehiclesData0 ?? [];
+  const vehicles0: any[] = Array.isArray(vehiclesData0?.data) ? vehiclesData0.data : Array.isArray(vehiclesData0) ? vehiclesData0 : [];
   const resolvedVehicleId: number = vehicleId ?? vehicles0.find((v: any) => v.is_default)?.id ?? vehicles0[0]?.id;
 
   const { data: remindersData, isLoading, isError, refetch, isFetching } = useReminders(resolvedVehicleId);
@@ -449,12 +450,9 @@ export default function RemindersScreen() {
   const vehicle = vehicles.find((v: any) => v.id === resolvedVehicleId);
   const vehicleName = vehicle?.ten_xe ?? vehicle?.ten ?? vehicle?.name ?? t('home.vehicle_fallback', { id: resolvedVehicleId });
 
-  // Backend trả mỗi item dạng { reminder: {...}, eval: {...} } (lồng nhau).
-  // Card đọc field phẳng (item.hang_muc, item.remaining_days...) nên phải gộp lại.
-  const rawReminders: any[] = remindersData?.data ?? remindersData ?? [];
-  const reminders: Reminder[] = rawReminders.map((x: any) =>
-    x && x.reminder ? { ...x.reminder, ...x.eval } : x,
-  );
+  // Backend trả mỗi item dạng { reminder: {...}, eval: {...} } (lồng nhau) -> gộp phẳng.
+  // flattenReminders đã guard Array.isArray (chống crash khi API trả non-array).
+  const reminders: Reminder[] = flattenReminders(remindersData);
   const reminderMeta = remindersData?.meta ?? null;
   const suggestions: any[] = reminderMeta?.suggestions ?? [];
   const canAdd: boolean = reminderMeta?.can_add_reminder ?? true;
@@ -604,7 +602,8 @@ export default function RemindersScreen() {
                   }}>
                   <FontAwesome5 name="plus-circle" size={16} color={colors.primary} solid style={{ marginTop: 2 }} />
                   <View style={{ flex: 1 }}>
-                    <Text style={{ color: colors.text, fontSize: 14, fontWeight: '600' }}>{s.hang_muc}</Text>
+                    {/* hang_muc_label = bản dịch theo ngôn ngữ tài khoản (web e3700dc); fallback raw VN */}
+                    <Text style={{ color: colors.text, fontSize: 14, fontWeight: '600' }}>{s.hang_muc_label ?? s.hang_muc}</Text>
                     {/* Chu kỳ khuyến nghị - tham khảo "nên làm mỗi bao lâu" */}
                     {(s.interval_km || s.interval_thang) ? (
                       <Text style={{ color: colors.primary, fontSize: 11.5, fontWeight: '600', marginTop: 2 }}>

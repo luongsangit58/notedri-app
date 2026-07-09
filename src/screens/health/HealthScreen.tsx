@@ -242,7 +242,7 @@ function HealthCard({ vehicle, health, loading, onAddReminder, onCta, history }:
   const scoreData = health?.score;
   const total = scoreData?.total ?? (health?.health_score != null ? Number(health.health_score) : null);
   const pillars = scoreData?.pillars;
-  const organs = (health?.organs ?? []).filter(o => o.status !== 'na');
+  const organs = (Array.isArray(health?.organs) ? health.organs : []).filter((o: any) => o.status !== 'na');
   const bandLabel = scoreData?.band?.label ?? (total != null ? scoreBand(total) : null);
 
   const needsAttention = health?.warn_count != null

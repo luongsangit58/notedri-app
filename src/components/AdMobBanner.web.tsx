@@ -1,5 +1,5 @@
 import React from 'react';
 
-export default function AppLovinBanner() {
+export default function AdMobBanner() {
   return null;
 }

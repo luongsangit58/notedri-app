@@ -1,7 +1,7 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Alert, Linking } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
-import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
+import * as WebBrowser from 'expo-web-browser';
 import { useAuthStore } from '../../store/authStore';
 import { useT } from '../../i18n';
 import { BASE_URL } from '../../utils/api';
@@ -15,55 +15,35 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
   const { login, isLoading, error, clearError } = useAuthStore();
-  const handledGoogleTokenRef = useRef<string | null>(null);
+  const [googleBusy, setGoogleBusy] = useState(false);
 
-  const finishGoogleLogin = useCallback(async (urlStr: string): Promise<boolean> => {
-    let query = '';
-    if (urlStr.includes('?')) {
-      query = urlStr.split('?')[1];
-    } else if (urlStr.includes('#')) {
-      query = urlStr.split('#')[1];
-    }
+  // Bóc token/lỗi từ URL callback do CHÍNH openAuthSessionAsync trả về (app tự khởi tạo phiên,
+  // đúng scheme notedri://auth). KHÔNG dùng listener Linking toàn cục -> tránh chèn token deep-link.
+  const finishGoogleLogin = async (urlStr: string): Promise<boolean> => {
+    const qIndex = urlStr.indexOf('?');
+    const hIndex = urlStr.indexOf('#');
+    const query = qIndex >= 0 ? urlStr.slice(qIndex + 1) : hIndex >= 0 ? urlStr.slice(hIndex + 1) : '';
+    const params = new URLSearchParams(query);
 
-    const params = new URLSearchParams(query ?? '');
-    const token = params.get('token');
     const googleError = params.get('error');
-
     if (googleError) {
       Alert.alert(t('common.error'), googleError);
       return true;
     }
 
+    const token = params.get('token');
     if (!token) return false;
-    if (handledGoogleTokenRef.current === token) return true;
 
-    handledGoogleTokenRef.current = token;
     try {
       const { authApi } = await import('../../api/auth');
       const me = await authApi.me(token);
       const userData = me.data?.data ?? me.data;
-      await useAuthStore.getState().setSession(token, userData);
+      await useAuthStore.getState().setSession(token, userData); // đổi token -> RootNavigator tự chuyển màn
     } catch (e: any) {
-      handledGoogleTokenRef.current = null;
-      Alert.alert(t('common.error'), e?.message ?? t('auth.login_google_failed'));
+      Alert.alert(t('common.error'), e?.response?.data?.message ?? e?.message ?? t('auth.login_google_failed'));
     }
-
     return true;
-  }, [t]);
-
-  useEffect(() => {
-    const sub = Linking.addEventListener('url', ({ url }) => {
-      void finishGoogleLogin(url);
-    });
-
-    Linking.getInitialURL()
-      .then((url) => {
-        if (url) void finishGoogleLogin(url);
-      })
-      .catch(() => {});
-
-    return () => sub.remove();
-  }, [finishGoogleLogin]);
+  };
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -74,29 +54,23 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
   };
 
   const handleGoogle = async () => {
+    if (googleBusy) return;
+    setGoogleBusy(true);
     try {
-      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
-      const userInfo = await GoogleSignin.signIn();
-      const tokens = await GoogleSignin.getTokens();
-      const idToken = tokens.idToken;
-      if (!idToken) throw new Error('No idToken returned from Google Sign-In');
-
-      // Dùng chung flow auth store để khớp response backend và tránh lệch shape giữa 2 nơi.
-      try {
-        await useAuthStore.getState().loginWithGoogle(idToken);
-      } catch (e: any) {
-        Alert.alert(t('common.error'), e?.message ?? t('auth.login_google_failed'));
+      // Web OAuth qua Custom Tab: backend redirect về notedri://auth?token=... và
+      // openAuthSessionAsync bắt đúng URL đó rồi trả về cho lời gọi này (không phụ thuộc SHA-1).
+      const result = await WebBrowser.openAuthSessionAsync(GOOGLE_MOBILE_URL, 'notedri://auth', {
+        preferEphemeralSession: false,
+      });
+      if (result.type === 'success' && result.url) {
+        const handled = await finishGoogleLogin(result.url);
+        if (!handled) Alert.alert(t('common.error'), t('auth.login_google_failed'));
       }
-    } catch (error: any) {
-      if (error.code === statusCodes.SIGN_IN_CANCELLED) {
-        // user cancelled
-      } else if (error.code === statusCodes.IN_PROGRESS) {
-        // operation in progress
-      } else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
-        Alert.alert(t('common.error'), 'Play services not available or outdated');
-      } else {
-        Alert.alert(t('common.error'), error?.message ?? t('auth.login_google_failed'));
-      }
+      // type 'cancel'/'dismiss' = user tự đóng trình duyệt -> im lặng, không kẹt màn hình.
+    } catch (e: any) {
+      Alert.alert(t('common.error'), e?.message ?? t('auth.login_google_failed'));
+    } finally {
+      setGoogleBusy(false);
     }
   };
 
@@ -179,9 +153,13 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
 
         <TouchableOpacity
           onPress={handleGoogle}
-          disabled={isLoading}
-          style={{ backgroundColor: '#ffffff', paddingVertical: 13, borderRadius: 12, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 10, opacity: isLoading ? 0.5 : 1 }}>
-          <FontAwesome5 name="google" size={16} color="#4285F4" />
+          disabled={isLoading || googleBusy}
+          style={{ backgroundColor: '#ffffff', paddingVertical: 13, borderRadius: 12, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 10, opacity: (isLoading || googleBusy) ? 0.5 : 1 }}>
+          {googleBusy ? (
+            <ActivityIndicator size="small" color="#4285F4" />
+          ) : (
+            <FontAwesome5 name="google" size={16} color="#4285F4" />
+          )}
           <Text style={{ color: '#1c1917', fontWeight: '600', fontSize: 14 }}>{t('auth.login_with_google')}</Text>
         </TouchableOpacity>
       </View>

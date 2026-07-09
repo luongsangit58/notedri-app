@@ -78,16 +78,22 @@ export async function flushPendingTrips(): Promise<{ synced: number; failed: num
     let failed = 0;
 
     for (const item of queue) {
+      // Đổi tài khoản (logout -> login) xen giữa flush: token gắn ở request-time nên item CÒN LẠI
+      // sẽ upload dưới tài khoản MỚI -> rò rỉ chéo. clearObdQueue() (logout) tăng epoch + xoá hàng
+      // đợi -> dừng ngay, không upload tiếp chuyến của user cũ.
+      if (obdClearEpoch !== epochAtStart) break;
       try {
         // obdApi.saveTrip accepts a StorableSummary - snapshots field is optional
         await obdApi.saveTrip(item.summary as TripSummary, item.deviceId);
         synced++;
       } catch (err: any) {
         // Phân biệt lỗi tạm thời vs vĩnh viễn để không âm thầm mất chuyến:
-        // - 4xx (trừ 429) = lỗi client vĩnh viễn (payload sai, xe đã xoá...) -> BỎ, retry vô ích.
-        // - Mạng lỗi / 5xx / 429 = tạm thời -> GIỮ vô thời hạn (không bỏ theo số lần thử).
+        // - 4xx (trừ 429/401/403) = lỗi client vĩnh viễn (payload sai, xe đã xoá...) -> BỎ.
+        // - Mạng lỗi / 5xx / 429 / 401 / 403 = tạm thời -> GIỮ (401/403 có thể do token chưa nạp
+        //   lúc cold-start hoặc đang đổi phiên; bỏ sẽ mất chuyến thật).
         const status: number | undefined = err?.response?.status;
-        const permanent = status !== undefined && status >= 400 && status < 500 && status !== 429;
+        const permanent = status !== undefined && status >= 400 && status < 500
+          && status !== 429 && status !== 401 && status !== 403;
         item.retries++;
         if (!permanent) remaining.push(item);
         failed++;

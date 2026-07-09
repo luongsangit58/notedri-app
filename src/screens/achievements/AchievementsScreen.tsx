@@ -396,12 +396,12 @@ export default function AchievementsScreen() {
     queryFn: () => achievementsApi.get().then((r) => r.data.data),
   });
 
-  const badges: Badge[] = data?.badges ?? [];
+  const badges: Badge[] = Array.isArray(data?.badges) ? data.badges : [];
   const earned = data?.earned ?? 0;
   const total = data?.total ?? badges.length;
   const tiers: Record<string, string> = data?.tiers ?? {};
   const level = data?.level ?? null;
-  const levels: LevelItem[] = data?.levels ?? [];
+  const levels: LevelItem[] = Array.isArray(data?.levels) ? data.levels : [];
   const is_premium = data?.is_premium ?? false;
   const free_ceiling_hit = data?.free_ceiling_hit ?? false;
 

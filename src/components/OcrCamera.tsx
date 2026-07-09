@@ -220,9 +220,18 @@ export default function OcrCamera({ visible, onClose, onResult, onReceiptResult,
   }, [visible]);
 
   const pickImage = useCallback(async (useCamera: boolean) => {
-    const picked = useCamera
-      ? await ImagePicker.launchCameraAsync({ quality: 1.0 })
-      : await ImagePicker.launchImageLibraryAsync({ quality: 1.0 });
+    let picked;
+    try {
+      picked = useCamera
+        ? await ImagePicker.launchCameraAsync({ quality: 1.0 })
+        : await ImagePicker.launchImageLibraryAsync({ quality: 1.0 });
+    } catch {
+      Alert.alert(
+        useCamera ? t('ocr.camera_unavailable_title') : t('ocr.pick_failed_title'),
+        useCamera ? t('ocr.camera_unavailable_body') : t('ocr.pick_failed_body'),
+      );
+      return;
+    }
 
     if (picked.canceled || !picked.assets[0]) return;
 

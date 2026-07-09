@@ -15,7 +15,7 @@ import { flushPendingGpsTrips } from './src/services/gps/GpsTripSyncQueue';
 import { maybeAutoShutdownStale } from './src/services/gps/GpsTripTracker';
 import { sendDeviceHeartbeat } from './src/api/devices';
 import { useAuthStore } from './src/store/authStore';
-import { initializeAppLovinAds } from './src/services/ads/appLovin';
+import { initializeAdMob } from './src/services/ads/admob';
 // Side-effect import: registers the GPS_TRIP_TRACKING background task at module load time
 import './src/services/gps/GpsTripTracker';
 
@@ -39,19 +39,30 @@ function AppLoader({ children }: { children: React.ReactNode }) {
     } catch (e) {
       // ignore in environments where native module isn't available
     }
-    void initializeAppLovinAds();
+    void initializeAdMob();
+  }, []);
+
+  // Flush hàng đợi chuyến CHỈ khi đã có token (sau khi hydrate xong hoặc vừa login).
+  // Nếu chạy lúc cold-start trước khi token nạp -> request không Authorization -> 401 ->
+  // chuyến bị bỏ (mất dữ liệu) + interceptor gọi logout() (đăng xuất giả). Gate theo token.
+  const token = useAuthStore((s) => s.token);
+  useEffect(() => {
+    if (!token) return;
     flushPendingTrips().catch(() => {});
     maybeAutoShutdownStale().catch(() => {}); // đóng chuyến bị kẹt từ phiên trước (app bị kill)
     flushPendingGpsTrips().catch(() => {});
-  }, []);
+  }, [token]);
 
   useEffect(() => {
     const sub = AppState.addEventListener('change', (next: AppStateStatus) => {
       if (appState.current.match(/inactive|background/) && next === 'active') {
-        flushPendingTrips().catch(() => {});
-        maybeAutoShutdownStale().catch(() => {});
-        flushPendingGpsTrips().catch(() => {});
-        if (useAuthStore.getState().token) sendDeviceHeartbeat(); // giữ last_seen_at tươi -> is_online đúng
+        // Chỉ flush/heartbeat khi còn phiên đăng nhập -> tránh gọi API không token (401).
+        if (useAuthStore.getState().token) {
+          flushPendingTrips().catch(() => {});
+          maybeAutoShutdownStale().catch(() => {});
+          flushPendingGpsTrips().catch(() => {});
+          sendDeviceHeartbeat(); // giữ last_seen_at tươi -> is_online đúng
+        }
       }
       appState.current = next;
     });

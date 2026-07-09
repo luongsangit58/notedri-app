@@ -577,7 +577,7 @@ function GpsPrimaryBanner() {
     queryFn: () => devicesApi.list().then((r) => r.data.data),
     staleTime: 30_000,
   });
-  const sessions: DeviceSession[] = data ?? [];
+  const sessions: DeviceSession[] = Array.isArray(data) ? data : [];
   const current = sessions.find((s) => s.is_current);
   const primary = sessions.find((s) => s.is_gps_primary);
   const isThisPrimary = !!current?.is_gps_primary;

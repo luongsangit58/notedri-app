@@ -245,6 +245,8 @@ export default function AddVehicleScreen() {
     if (spec.year_from) setNam(String(spec.year_from));
     setShowSpecSuggestions(false); setSpecQuery('');
   }, []);
+  // Guard: backend trả non-array (lỗi/shape lạ) -> tránh .map trên undefined khi render.
+  const specResults: any[] = Array.isArray(specSearch.data) ? specSearch.data : [];
 
   // ── Photo picker ──────────────────────────────────────────────────────────
   const pickPhoto = async () => {
@@ -479,7 +481,7 @@ export default function AddVehicleScreen() {
             {showSpecSuggestions && specQuery.length >= 2 && (
               <View style={{ backgroundColor: colors.surface, borderRadius: 10, marginBottom: 8, overflow: 'hidden' }}>
                 {specSearch.isLoading && <View style={{ padding: 12 }}><ActivityIndicator color={colors.primary} size="small" /></View>}
-                {(specSearch.data ?? []).map((s: any) => (
+                {specResults.map((s: any) => (
                   <TouchableOpacity key={s.id} onPress={() => applySpecFromSearch(s)} style={{ padding: 12, borderBottomWidth: 1, borderBottomColor: colors.border }}>
                     <Text style={{ color: colors.text, fontSize: 14 }}>{s.label}</Text>
                     <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 2 }}>
@@ -488,7 +490,7 @@ export default function AddVehicleScreen() {
                     </Text>
                   </TouchableOpacity>
                 ))}
-                {!specSearch.isLoading && (specSearch.data ?? []).length === 0 && specQuery.length >= 2 && (
+                {!specSearch.isLoading && specResults.length === 0 && specQuery.length >= 2 && (
                   <Text style={{ color: colors.textSecondary, padding: 12, fontSize: 13 }}>{t('add_vehicle.not_found_manual')}</Text>
                 )}
               </View>

@@ -81,7 +81,7 @@ export default function DevicesScreen() {
     return t('devices.last_seen_days', { n: Math.floor(diff / 86400) });
   }
 
-  const sessions: DeviceSession[] = data ?? [];
+  const sessions: DeviceSession[] = Array.isArray(data) ? data : [];
   const hasOthers = sessions.some(s => !s.is_current);
 
   return (

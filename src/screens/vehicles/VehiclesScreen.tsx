@@ -61,7 +61,8 @@ export default function VehiclesScreen() {
 
       {!canAddVehicle && vehicleLimit != null && (
         <View style={{
-          marginHorizontal: 16, marginBottom: 8,
+          // Đẩy lên trên FAB (bottom:24 + cao 56 = ~80) để nút "+" không che chữ cảnh báo.
+          marginHorizontal: 16, marginBottom: 92,
           backgroundColor: '#2C1B00', borderRadius: 10, padding: 12,
           borderWidth: 1, borderColor: '#F59E0B',
           flexDirection: 'row', alignItems: 'center', gap: 8,

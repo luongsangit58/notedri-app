@@ -61,17 +61,20 @@ export default function ExportDataScreen() {
     });
   };
 
-  const vehicleCount = preview?.vehicles?.length ?? 0;
-  const refuelCount = preview?.refuels?.length ?? 0;
-  const serviceCount = preview?.vehicles?.reduce(
+  // Guard Array.isArray: nếu /account/export trả vehicles dạng object (shape lạ) thì .reduce là
+  // undefined -> crash màn Xuất dữ liệu. Ép về mảng trước khi tính.
+  const previewVehicles: any[] = Array.isArray(preview?.vehicles) ? preview.vehicles : [];
+  const vehicleCount = previewVehicles.length;
+  const refuelCount = Array.isArray(preview?.refuels) ? preview.refuels.length : 0;
+  const serviceCount = previewVehicles.reduce(
     (acc: number, v: any) => acc + (v.service_logs?.length ?? 0), 0
-  ) ?? 0;
-  const odoCount = preview?.vehicles?.reduce(
+  );
+  const odoCount = previewVehicles.reduce(
     (acc: number, v: any) => acc + (v.odometer_readings?.length ?? 0), 0
-  ) ?? 0;
-  const reminderCount = preview?.vehicles?.reduce(
+  );
+  const reminderCount = previewVehicles.reduce(
     (acc: number, v: any) => acc + (v.reminders?.length ?? 0), 0
-  ) ?? 0;
+  );
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom']}>

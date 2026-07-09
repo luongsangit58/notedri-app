@@ -58,8 +58,9 @@ export default function RegisterScreen({ navigation }: { navigation: any }) {
       setTimeout(() => otpRef.current?.focus(), 300);
     } catch (err: any) {
       const data = err.response?.data;
-      if (data?.errors) {
-        setError((Object.values(data.errors)[0] as string[])[0]);
+      const first = data?.errors ? (Object.values(data.errors)[0] as string[] | undefined) : undefined;
+      if (Array.isArray(first) && first.length) {
+        setError(first[0]);
       } else {
         setError(data?.message ?? t('auth.register_failed'));
       }
