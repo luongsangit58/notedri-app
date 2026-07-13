@@ -1,0 +1,94 @@
+/**
+ * Diagnostic Rule Engine v2 (checklist giai đoạn D, thiết kế R7 trong
+ * knowledge-engine-architecture-review): rule là DATA, engine là HÀM THUẦN -
+ * không import React Native / DB / BLE nên test được bằng jest và chạy được ở
+ * bất kỳ đâu (app realtime, server phân tích trip, emulator).
+ *
+ * Kỷ luật nguồn (nới lại 13/7 theo góp ý Sang): ngưỡng lấy từ TÀI LIỆU CÔNG KHAI
+ * (ghi ở trường `source` của từng rule), cờ `beta` giữ nguyên tới khi dữ liệu
+ * chạy thật xác nhận tín hiệu ổn định. Xe Sang = bài test tích hợp, không phải
+ * nguồn tri thức.
+ */
+
+/** DTO snapshot - tách khỏi ObdSnapshot để engine không dính transport. */
+export type VehicleSnapshot = {
+  rpm: number | null;
+  speedKmh: number | null;
+  engineLoadPct: number | null;
+  coolantTempC: number | null;
+  throttlePct: number | null;
+  controlModuleVoltage: number | null;
+  /** Giây kể từ khi phiên kết nối bắt đầu - rules cần máy "đã chạy đủ lâu". */
+  sessionAgeSeconds: number;
+};
+
+export type RuleCondition = {
+  signal: keyof Omit<VehicleSnapshot, 'sessionAgeSeconds'>;
+  op: 'gt' | 'gte' | 'lt' | 'lte';
+  value: number;
+};
+
+export type DiagnosticRule = {
+  id: string;
+  title_vi: string;
+  action_vi: string;
+  severity: 'critical' | 'warn' | 'info';
+  can_drive: 'yes' | 'caution' | 'stop';
+  /** Mọi tín hiệu này phải KHÁC null thì rule mới được xét (capability gating). */
+  required_signals: Array<keyof Omit<VehicleSnapshot, 'sessionAgeSeconds'>>;
+  /** Chỉ xét khi phiên đã chạy đủ lâu (máy ấm/ổn định). */
+  min_session_seconds: number;
+  /** TẤT CẢ điều kiện phải đúng (AND). */
+  conditions: RuleCondition[];
+  /** Nguồn tài liệu của ngưỡng - BẮT BUỘC, không có nguồn không có rule. */
+  source: string;
+  beta: boolean;
+};
+
+export type Finding = {
+  ruleId: string;
+  title_vi: string;
+  action_vi: string;
+  severity: DiagnosticRule['severity'];
+  can_drive: DiagnosticRule['can_drive'];
+  beta: boolean;
+};
+
+function conditionMet(cond: RuleCondition, value: number): boolean {
+  switch (cond.op) {
+    case 'gt': return value > cond.value;
+    case 'gte': return value >= cond.value;
+    case 'lt': return value < cond.value;
+    case 'lte': return value <= cond.value;
+  }
+}
+
+/**
+ * Hàm thuần duy nhất của engine: rules + snapshot vào, findings ra.
+ * Rule bị BỎ QUA (không phải fail) khi thiếu tín hiệu hoặc phiên còn non -
+ * "không đủ dữ liệu" khác với "không có vấn đề".
+ */
+export function evaluate(rules: DiagnosticRule[], snapshot: VehicleSnapshot): Finding[] {
+  const findings: Finding[] = [];
+
+  for (const rule of rules) {
+    if (snapshot.sessionAgeSeconds < rule.min_session_seconds) continue;
+    if (rule.required_signals.some((sig) => snapshot[sig] === null)) continue;
+
+    const allMet = rule.conditions.every((cond) =>
+      conditionMet(cond, snapshot[cond.signal] as number),
+    );
+    if (!allMet) continue;
+
+    findings.push({
+      ruleId: rule.id,
+      title_vi: rule.title_vi,
+      action_vi: rule.action_vi,
+      severity: rule.severity,
+      can_drive: rule.can_drive,
+      beta: rule.beta,
+    });
+  }
+
+  return findings;
+}

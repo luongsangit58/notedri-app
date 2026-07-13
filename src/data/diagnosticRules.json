@@ -1,0 +1,82 @@
+{
+  "_note": "Rule chẩn đoán v2 - NGƯỠNG PHẢI CÓ NGUỒN (trường source). beta=true tới khi dữ liệu chạy thật xác nhận. Schema: xem diagnosticEngine.ts",
+  "version": 1,
+  "rules": [
+    {
+      "id": "charging-voltage-low",
+      "title_vi": "Điện áp sạc thấp - nghi máy phát yếu",
+      "action_vi": "Điện áp khi máy nổ dưới 13.2V: kiểm tra máy phát, dây curoa và cọc ắc-quy. Nguy cơ hết điện giữa đường.",
+      "severity": "warn",
+      "can_drive": "caution",
+      "required_signals": ["rpm", "controlModuleVoltage"],
+      "min_session_seconds": 120,
+      "conditions": [
+        { "signal": "rpm", "op": "gte", "value": 1000 },
+        { "signal": "controlModuleVoltage", "op": "lt", "value": 13.2 }
+      ],
+      "source": "Dải điện áp sạc chuẩn 13.5-14.7V khi động cơ chạy (SAE J537; Battery Council International; sổ tay bảo dưỡng Honda/Toyota)",
+      "beta": true
+    },
+    {
+      "id": "charging-voltage-high",
+      "title_vi": "Điện áp sạc quá cao - nghi tiết chế lỗi",
+      "action_vi": "Điện áp vượt 15.0V hại ắc-quy và thiết bị điện tử. Kiểm tra tiết chế/máy phát sớm.",
+      "severity": "critical",
+      "can_drive": "caution",
+      "required_signals": ["rpm", "controlModuleVoltage"],
+      "min_session_seconds": 60,
+      "conditions": [
+        { "signal": "rpm", "op": "gte", "value": 600 },
+        { "signal": "controlModuleVoltage", "op": "gt", "value": 15.0 }
+      ],
+      "source": "Ngưỡng quá áp >15V theo dải sạc chuẩn 13.5-14.7V (SAE J537; sổ tay kỹ thuật máy phát Bosch)",
+      "beta": true
+    },
+    {
+      "id": "engine-overheat",
+      "title_vi": "Động cơ quá nhiệt",
+      "action_vi": "Nước làm mát vượt 105°C: dừng xe an toàn, KHÔNG mở nắp két nước khi máy nóng. Kiểm tra nước làm mát, quạt, van hằng nhiệt.",
+      "severity": "critical",
+      "can_drive": "stop",
+      "required_signals": ["coolantTempC"],
+      "min_session_seconds": 0,
+      "conditions": [
+        { "signal": "coolantTempC", "op": "gte", "value": 105 }
+      ],
+      "source": "Vùng vận hành chuẩn 82-100°C, cảnh báo quá nhiệt từ 105°C (sổ tay bảo dưỡng Honda/Toyota; ngưỡng bật quạt két nước ~97-102°C)",
+      "beta": true
+    },
+    {
+      "id": "thermostat-stuck-open-suspect",
+      "title_vi": "Máy lâu nóng - nghi van hằng nhiệt kẹt mở",
+      "action_vi": "Chạy hơn 10 phút mà nước làm mát chưa tới 70°C: kiểm tra van hằng nhiệt (triệu chứng của mã P0128). Hao xăng, mòn máy nhanh hơn.",
+      "severity": "warn",
+      "can_drive": "yes",
+      "required_signals": ["rpm", "coolantTempC"],
+      "min_session_seconds": 600,
+      "conditions": [
+        { "signal": "rpm", "op": "gte", "value": 600 },
+        { "signal": "coolantTempC", "op": "lt", "value": 70 }
+      ],
+      "source": "Logic giám sát P0128 chuẩn OBD-II: ECT phải đạt nhiệt độ điều tiết (~76-85°C tuỳ hãng) trong thời gian quy định (SAE J1979; điều kiện monitor Honda/GM)",
+      "beta": true
+    },
+    {
+      "id": "high-idle-warm",
+      "title_vi": "Vòng tua không tải cao bất thường khi máy đã ấm",
+      "action_vi": "Máy ấm, xe đứng yên mà vòng tua vượt 1200: nghi rò khí nạp sau bướm ga hoặc van không tải bẩn (triệu chứng P0507). Vệ sinh bướm ga/kiểm tra ống chân không.",
+      "severity": "warn",
+      "can_drive": "yes",
+      "required_signals": ["rpm", "speedKmh", "coolantTempC", "throttlePct"],
+      "min_session_seconds": 180,
+      "conditions": [
+        { "signal": "speedKmh", "op": "lte", "value": 0 },
+        { "signal": "coolantTempC", "op": "gte", "value": 80 },
+        { "signal": "rpm", "op": "gt", "value": 1200 },
+        { "signal": "throttlePct", "op": "lte", "value": 20 }
+      ],
+      "source": "Vòng tua không tải chuẩn khi máy ấm 650-850 rpm (xe phổ thông, sổ tay Honda City ~700±50); ngưỡng chẩn P0507 thường +200 rpm so với mục tiêu ECU",
+      "beta": true
+    }
+  ]
+}

@@ -18,6 +18,9 @@ export type ObdSnapshot = {
   fuelLevelPct: number | null;
   oilTempC: number | null;
   throttlePct: number | null;
+  // PID 42 - điện áp hệ thống từ ECU (xe Sang hỗ trợ, xác nhận fixture #3):
+  // tín hiệu cho rule máy phát/ắc-quy của Diagnostic Engine
+  controlModuleVoltage: number | null;
   timestamp: number;
 };
 
@@ -132,6 +135,12 @@ export async function readThrottle(): Promise<number | null> {
   return Math.round((bytes[0] * 100) / 255);
 }
 
+export async function readVoltage(): Promise<number | null> {
+  const bytes = await readPid('42');
+  if (!bytes || bytes.length < 2) return null;
+  return Math.round(((bytes[0] * 256 + bytes[1]) / 1000) * 100) / 100;
+}
+
 // Reads all PIDs sequentially (BleService serializes via queue, but explicit
 // sequential order avoids interleaving with DTC reads or AT commands).
 export async function readSnapshot(): Promise<ObdSnapshot> {
@@ -142,6 +151,7 @@ export async function readSnapshot(): Promise<ObdSnapshot> {
   const fuelLevelPct  = await readFuelLevel();
   const oilTempC      = await readOilTemp();
   const throttlePct   = await readThrottle();
+  const controlModuleVoltage = await readVoltage();
 
   return {
     rpm,
@@ -151,6 +161,7 @@ export async function readSnapshot(): Promise<ObdSnapshot> {
     fuelLevelPct,
     oilTempC,
     throttlePct,
+    controlModuleVoltage,
     timestamp: Date.now(),
   };
 }
