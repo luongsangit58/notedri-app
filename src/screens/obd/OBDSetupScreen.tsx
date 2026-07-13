@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useObdConnection } from '../../hooks/useObd';
+import { bleService } from '../../services/obd/BleService';
 import { getPairingForVehicle } from '../../services/obd/pairedDevices';
 import AppBgPattern from '../../components/AppBgPattern';
 import { useColors } from '../../utils/theme';
@@ -56,14 +57,30 @@ export default function OBDSetupScreen() {
 
   useEffect(() => {
     if (!isPremium) return;
+    // Đang kết nối sẵn (user quay lại màn này khi phiên trước còn sống) → vào thẳng
+    // Dashboard. Nếu quét lại lúc này sẽ KHÔNG bao giờ thấy adapter: thiết bị BLE
+    // đang bị giữ kết nối thì ngừng quảng bá tên - nguồn cơn lỗi "connect được 1 lần".
+    if (bleService.isConnected()) {
+      navigation.replace('OBDDashboard', {
+        vehicleId,
+        vehicleName,
+        deviceName: bleService.getDeviceName() ?? 'OBD2',
+        consumptionOfficial,
+      });
+      return;
+    }
     startScan(showAllDevices);
     return () => stopScan();
   }, [isPremium, showAllDevices]);
 
   async function handleConnect(deviceId: string, deviceName: string) {
     stopScan();
-    await connect(deviceId);
-    navigation.replace('OBDDashboard', { vehicleId, vehicleName, deviceName, consumptionOfficial });
+    const ok = await connect(deviceId);
+    // Chỉ vào Dashboard khi kết nối THÀNH CÔNG - lỗi thì ở lại màn này cho user
+    // thấy thông báo và quét lại (trước đây nhảy vào Dashboard kể cả khi lỗi).
+    if (ok) {
+      navigation.replace('OBDDashboard', { vehicleId, vehicleName, deviceName, consumptionOfficial });
+    }
   }
 
   // Auto-connect foreground (ý #17): thiết bị đã từng ghép với XE NÀY xuất hiện

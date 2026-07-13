@@ -477,6 +477,10 @@ class BleService {
     return this.connectedDevice?.id ?? null;
   }
 
+  getDeviceName(): string | null {
+    return this.connectedDevice?.name ?? this.sessionDeviceName;
+  }
+
   destroy() {
     if (this._manager) {
       this._manager.destroy();

@@ -154,7 +154,9 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
 
   // --- Connect ---
 
-  const connect = useCallback(async (deviceId: string) => {
+  // Trả về true/false để caller CHỈ điều hướng khi kết nối thật sự thành công -
+  // trước đây Setup nhảy vào Dashboard kể cả khi init lỗi (fixture #1).
+  const connect = useCallback(async (deviceId: string): Promise<boolean> => {
     stopScan();
     setConnectionState('connecting');
     setErrorMessage(null);
@@ -194,10 +196,16 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
       // Ghi nhớ thiết bị này thuộc xe nào - để BLE restore (iOS background) và
       // NFC tag sau này tự nhận diện đúng xe mà không cần user chọn lại.
       savePairing({ bleDeviceId: deviceId, vehicleId, vehicleName: vehicleName ?? '' }).catch(() => {});
+      return true;
     } catch (e: any) {
       bleService.onDisconnect = null;
+      // NHẢ kết nối BLE dở dang: adapter đang bị app giữ sẽ NGỪNG quảng bá tên,
+      // mọi lần quét sau sẽ không bao giờ thấy nó nữa (phải rút cắm lại mới hiện).
+      // Đây chính là lỗi "chỉ connect được đúng 1 lần" - fixture #1.
+      await bleService.disconnect().catch(() => {});
       setConnectionState('error');
       setErrorMessage(e.message);
+      return false;
     }
   }, [stopScan, vehicleId, vehicleName, reportSessionEnd]);
 
