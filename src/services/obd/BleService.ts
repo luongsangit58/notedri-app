@@ -66,13 +66,28 @@ class BleService {
     return this.sessionLog;
   }
 
-  // Callback fired when device unexpectedly disconnects AND reconnect grace failed
-  onDisconnect: (() => void) | null = null;
+  // Listener set (C5 tầng 2): NHIỀU bên cùng nghe sự kiện kết nối - UI hook của
+  // từng màn + obdTripManager toàn cục. Trước đây là callback đơn (gán đè nhau).
+  private disconnectListeners = new Set<() => void>();
+  private reconnectingListeners = new Set<(attempt: number) => void>();
+  private reconnectedListeners = new Set<() => void>();
 
-  // Reconnect grace (ý #15): BLE chớp vài giây không được giết cả phiên OBD.
-  // onReconnecting bắn theo từng lần thử; onReconnected khi nối lại thành công.
-  onReconnecting: ((attempt: number) => void) | null = null;
-  onReconnected: (() => void) | null = null;
+  /** Nghe sự kiện mất kết nối HẲN (sau reconnect grace / ngắt chủ động). Trả về unsubscribe. */
+  addDisconnectListener(fn: () => void): () => void {
+    this.disconnectListeners.add(fn);
+    return () => this.disconnectListeners.delete(fn);
+  }
+
+  addReconnectingListener(fn: (attempt: number) => void): () => void {
+    this.reconnectingListeners.add(fn);
+    return () => this.reconnectingListeners.delete(fn);
+  }
+
+  addReconnectedListener(fn: () => void): () => void {
+    this.reconnectedListeners.add(fn);
+    return () => this.reconnectedListeners.delete(fn);
+  }
+
   private reconnecting = false;
   private intentionalDisconnect = false;
 
@@ -255,7 +270,11 @@ class BleService {
     // không được thử reconnect khi user cố tình ngắt. Cũng chặn re-entry
     // khi một attempt reconnect vừa attach xong lại rớt ngay (vòng lặp lo).
     if (this.intentionalDisconnect || this.reconnecting) {
-      if (!this.reconnecting) this.onDisconnect?.();
+      if (!this.reconnecting) {
+        // Fire listener TRƯỚC khi clear store: telemetry cần đọc vehicleId
+        this.disconnectListeners.forEach((fn) => fn());
+        useObdSessionStore.getState().clear();
+      }
       return;
     }
 
@@ -268,7 +287,7 @@ class BleService {
 
     for (let attempt = 1; attempt <= RECONNECT_DELAYS_MS.length; attempt++) {
       useObdSessionStore.getState().patch({ connected: false, reconnecting: true });
-      this.onReconnecting?.(attempt);
+      this.reconnectingListeners.forEach((fn) => fn(attempt));
       await delay(RECONNECT_DELAYS_MS[attempt - 1]);
 
       // User có thể đã chủ động ngắt trong lúc chờ backoff
@@ -287,7 +306,7 @@ class BleService {
         this.reconnecting = false;
         this.logSession('#reconnect', `ok attempt ${attempt}`);
         useObdSessionStore.getState().patch({ connected: true, reconnecting: false });
-        this.onReconnected?.();
+        this.reconnectedListeners.forEach((fn) => fn());
         return;
       } catch {
         this.logSession('#reconnect', `attempt ${attempt} failed`);
@@ -295,8 +314,9 @@ class BleService {
     }
 
     this.reconnecting = false;
+    // Fire listener TRƯỚC khi clear store (telemetry đọc vehicleId từ store)
+    this.disconnectListeners.forEach((fn) => fn());
     useObdSessionStore.getState().clear();
-    this.onDisconnect?.();
   }
 
   async requestPermissions(): Promise<boolean> {
@@ -479,9 +499,10 @@ class BleService {
   }
 
   async disconnect(): Promise<void> {
-    // Chặn reconnect grace: đây là ngắt CHỦ ĐỘNG của user
+    // Chặn reconnect grace: đây là ngắt CHỦ ĐỘNG của user. KHÔNG clear store ở
+    // đây - handleDeviceDisconnected (do cancelConnection kích) fire listener
+    // trước rồi mới clear, để telemetry còn đọc được vehicleId.
     this.intentionalDisconnect = true;
-    useObdSessionStore.getState().clear();
     if (this.connectedDevice) {
       try {
         await this.connectedDevice.cancelConnection();
@@ -489,9 +510,11 @@ class BleService {
         // Already disconnected — ignore
       }
       this.connectedDevice = null;
+    } else {
+      // Không có kết nối nào (gọi thừa) - dọn store cho chắc
+      useObdSessionStore.getState().clear();
     }
     this.commandQueue = Promise.resolve();
-    this.onDisconnect = null;
   }
 
   isConnected(): boolean {

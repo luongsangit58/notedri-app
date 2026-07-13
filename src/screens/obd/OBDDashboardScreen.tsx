@@ -62,7 +62,7 @@ export default function OBDDashboardScreen() {
     connectionState,
     liveSnapshot,
     isTripActive,
-    currentTripRef,
+    getTripDistanceKm,
     lastTripSummary,
     warning,
     capability,
@@ -255,9 +255,9 @@ export default function OBDDashboardScreen() {
         {/* Trip control */}
         <View style={[styles.tripCard, { backgroundColor: colors.card }]}>
           <Text style={[styles.tripTitle, { color: colors.text }]}>{t('obd.trip_title')}</Text>
-          {isTripActive && currentTripRef.current && (
+          {isTripActive && (
             <Text style={[styles.tripKm, { color: '#3B82F6' }]}>
-              {currentTripRef.current.getCurrentDistanceKm()} km
+              {getTripDistanceKm()} km
             </Text>
           )}
           {!isTripActive && lastTripSummary && (
