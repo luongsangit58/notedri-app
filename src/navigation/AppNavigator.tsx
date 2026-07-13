@@ -47,6 +47,7 @@ import OBDSetupScreen from '../screens/obd/OBDSetupScreen';
 import OBDDashboardScreen from '../screens/obd/OBDDashboardScreen';
 import OBDTripsScreen from '../screens/obd/OBDTripsScreen';
 import NfcSetupScreen from '../screens/obd/NfcSetupScreen';
+import DtcLookupScreen from '../screens/obd/DtcLookupScreen';
 import GpsTripsScreen from '../screens/trips/GpsTripsScreen';
 import DevicesScreen from '../screens/profile/DevicesScreen';
 
@@ -278,6 +279,8 @@ export default function AppNavigator() {
       <RootStack.Screen name="OBDTrips" component={OBDTripsScreen}
         options={{ headerShown: false }} />
       <RootStack.Screen name="NfcSetup" component={NfcSetupScreen}
+        options={{ headerShown: false }} />
+      <RootStack.Screen name="DtcLookup" component={DtcLookupScreen}
         options={{ headerShown: false }} />
 
       {/* Year Review */}

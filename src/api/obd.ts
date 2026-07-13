@@ -28,6 +28,19 @@ export type DtcEventRecord = {
   resolved_at: string | null;
 };
 
+export type DtcLookupResult = {
+  code: string;
+  known: boolean;
+  group?: string | null;
+  severity?: 'critical' | 'warn' | 'info' | null;
+  can_drive?: 'yes' | 'caution' | 'stop' | null;
+  title_vi?: string | null;
+  title_en?: string | null;
+  action_vi?: string | null;
+  cost_min?: number | null;
+  cost_max?: number | null;
+};
+
 export const obdApi = {
   saveTrip: (summary: TripSummary, deviceId: string | null) =>
     client.post('/obd2/trips', {
@@ -55,4 +68,8 @@ export const obdApi = {
 
   resolveDtc: (dtcEventId: number) =>
     client.post(`/obd2/dtc/${dtcEventId}/resolve`),
+
+  // Tra cứu tay 1 mã lỗi từ từ điển server (route Free, không cần thiết bị OBD)
+  lookupDtc: (code: string) =>
+    client.get<{ data: DtcLookupResult }>(`/dtc-codes/${encodeURIComponent(code)}`),
 };
