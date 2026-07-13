@@ -450,6 +450,10 @@ const en = {
   "obd.scan_retry": "Scan again",
   "obd.connected": "Connected",
   "obd.disconnected": "Disconnected",
+  "obd.reconnecting": "Reconnecting...",
+  "obd.link_fair": "Unstable link",
+  "obd.link_poor": "Weak link",
+  "obd.auto_connect_hint": "Will auto-connect to your paired device when found",
   "obd.disconnect_title": "Disconnect",
   "obd.disconnect_confirm": "Disconnect from OBD2?",
   // "OBD-II" is intentional here (unlike "OBD2" elsewhere) - this sentence refers

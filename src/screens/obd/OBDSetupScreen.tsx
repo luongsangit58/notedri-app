@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useObdConnection } from '../../hooks/useObd';
+import { getPairingForVehicle } from '../../services/obd/pairedDevices';
 import AppBgPattern from '../../components/AppBgPattern';
 import { useColors } from '../../utils/theme';
 import { useAuthStore } from '../../store/authStore';
@@ -65,13 +66,21 @@ export default function OBDSetupScreen() {
     navigation.replace('OBDDashboard', { vehicleId, vehicleName, deviceName, consumptionOfficial });
   }
 
-  // One Tap Connect: tự bấm connect ngay khi quét thấy đúng thiết bị đã ghép NFC,
-  // không chờ user chạm vào danh sách.
+  // Auto-connect foreground (ý #17): thiết bị đã từng ghép với XE NÀY xuất hiện
+  // trong kết quả quét là tự kết nối luôn, không bắt user chạm danh sách mỗi lần.
+  // User vẫn "thắng" được auto: chạm thiết bị khác trước khi thiết bị ghép lộ diện.
+  const [pairedDeviceId, setPairedDeviceId] = useState<string | null>(null);
   useEffect(() => {
-    if (!autoConnectDeviceId || connectionState !== 'scanning') return;
-    const match = foundDevices.find((d) => d.id === autoConnectDeviceId);
+    getPairingForVehicle(vehicleId).then((p) => setPairedDeviceId(p?.bleDeviceId ?? null));
+  }, [vehicleId]);
+
+  // One Tap Connect: NFC (biết trước deviceId) ưu tiên hơn bộ nhớ ghép thiết bị.
+  useEffect(() => {
+    const targetId = autoConnectDeviceId ?? pairedDeviceId;
+    if (!targetId || connectionState !== 'scanning') return;
+    const match = foundDevices.find((d) => d.id === targetId);
     if (match) handleConnect(match.id, match.name);
-  }, [autoConnectDeviceId, foundDevices, connectionState]);
+  }, [autoConnectDeviceId, pairedDeviceId, foundDevices, connectionState]);
 
   const isScanning = connectionState === 'scanning';
   const isConnecting = connectionState === 'connecting';
@@ -104,6 +113,11 @@ export default function OBDSetupScreen() {
               ? t('obd.no_device_found')
               : t('obd.devices_found', { n: foundDevices.length })}
           </Text>
+          {isScanning && pairedDeviceId && !autoConnectDeviceId && (
+            <Text style={{ color: colors.textSecondary, fontSize: 12, textAlign: 'center' }}>
+              {t('obd.auto_connect_hint')}
+            </Text>
+          )}
           {(isScanning || isConnecting) && (
             <ActivityIndicator color="#3B82F6" style={{ marginTop: 8 }} />
           )}

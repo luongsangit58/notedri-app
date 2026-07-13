@@ -139,6 +139,10 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
       setConnectionState('disconnected');
       setLiveSnapshot(null);
     };
+    // Reconnect grace: rớt BLE thoáng qua thì báo 'reconnecting' thay vì giết phiên -
+    // trip đang chạy giữ nguyên (TripSession tự bỏ qua các lần đọc lỗi).
+    bleService.onReconnecting = () => setConnectionState('reconnecting');
+    bleService.onReconnected = () => setConnectionState('connected');
 
     try {
       await bleService.connect(deviceId);
@@ -172,6 +176,8 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
       setIsTripActive(false);
     }
     bleService.onDisconnect = null;
+    bleService.onReconnecting = null;
+    bleService.onReconnected = null;
     await bleService.disconnect();
     setConnectionState('disconnected');
     setLiveSnapshot(null);
@@ -234,6 +240,8 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
         setConnectionState('disconnected');
         setLiveSnapshot(null);
       };
+      bleService.onReconnecting = () => setConnectionState('reconnecting');
+      bleService.onReconnected = () => setConnectionState('connected');
     }
     // Chỉ chạy 1 lần khi mount - trạng thái thật nằm ở singleton, không phải deps.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -247,6 +255,8 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
       // Stop trip (triggers onTripEnd → saves data) rather than discarding
       currentTripRef.current?.stop();
       bleService.onDisconnect = null;
+      bleService.onReconnecting = null;
+      bleService.onReconnected = null;
     };
   }, [clearAutoStopTimer]);
 

@@ -1,4 +1,5 @@
 import { AppState, AppStateStatus } from 'react-native';
+import { bleService } from './BleService';
 import { readSnapshot, readDtcCodes, ObdSnapshot, DtcCode } from './ObdReader';
 
 const POLL_INTERVAL_MS = 3000;
@@ -86,8 +87,21 @@ export class TripSession {
     }
   };
 
+  // Đường truyền kém → poll thưa đi một nửa (ý #16): BLE chập chờn thường tự hồi
+  // khi bớt tải; dồn lệnh lúc yếu sóng chỉ làm chuỗi timeout dài thêm.
+  private skipBeat = false;
+
   private async poll() {
     if (this.state !== 'running') return;
+
+    if (bleService.getLinkQuality() === 'poor') {
+      this.skipBeat = !this.skipBeat;
+      if (this.skipBeat) return;
+      // Nhịp bị bỏ vẫn được tính đúng khoảng cách: elapsedMs đo theo lastTimestamp
+      // thật và bị chặn trần 2x POLL_INTERVAL_MS ở dưới.
+    } else {
+      this.skipBeat = false;
+    }
 
     try {
       const snapshot = await readSnapshot();

@@ -11,8 +11,16 @@ const VGATE_WRITE_UUID = 'be781a71-0000-1000-8000-00805f9b34fb';
 const VGATE_NOTIFY_UUID = 'be781a71-0001-1000-8000-00805f9b34fb';
 
 export type ObdDevice = { id: string; name: string };
-export type ConnectionState = 'disconnected' | 'scanning' | 'connecting' | 'connected' | 'error';
+export type ConnectionState =
+  | 'disconnected' | 'scanning' | 'connecting' | 'reconnecting' | 'connected' | 'error';
 export type SessionLogEntry = { t: number; cmd: string; res: string };
+export type LinkQuality = 'good' | 'fair' | 'poor' | 'unknown';
+
+const RECONNECT_DELAYS_MS = [1000, 3000, 6000];
+
+function delay(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
+}
 
 class BleService {
   private _manager: BleManager | null = null;
@@ -44,8 +52,35 @@ class BleService {
     return this.sessionLog;
   }
 
-  // Callback fired when device unexpectedly disconnects
+  // Callback fired when device unexpectedly disconnects AND reconnect grace failed
   onDisconnect: (() => void) | null = null;
+
+  // Reconnect grace (ý #15): BLE chớp vài giây không được giết cả phiên OBD.
+  // onReconnecting bắn theo từng lần thử; onReconnected khi nối lại thành công.
+  onReconnecting: ((attempt: number) => void) | null = null;
+  onReconnected: (() => void) | null = null;
+  private reconnecting = false;
+  private intentionalDisconnect = false;
+
+  // Chất lượng đường truyền (ý #16): cửa sổ trượt kết quả lệnh 60s gần nhất.
+  private linkResults: Array<{ t: number; ok: boolean }> = [];
+
+  private recordLinkResult(ok: boolean): void {
+    const now = Date.now();
+    this.linkResults.push({ t: now, ok });
+    // Giữ gọn: chỉ cần 60s gần nhất, tối đa 100 mẫu
+    this.linkResults = this.linkResults.filter((r) => now - r.t <= 60000).slice(-100);
+  }
+
+  getLinkQuality(): LinkQuality {
+    const now = Date.now();
+    const recent = this.linkResults.filter((r) => now - r.t <= 60000);
+    if (recent.length < 4) return 'unknown';
+    const failRate = recent.filter((r) => !r.ok).length / recent.length;
+    if (failRate > 0.4) return 'poor';
+    if (failRate > 0.15) return 'fair';
+    return 'good';
+  }
 
   // Callback fired when iOS relaunches the app in the background and CoreBluetooth
   // hands back a peripheral we were already connected to (state restoration) -
@@ -135,22 +170,66 @@ class BleService {
       }
     ) as unknown as Characteristic;
 
-    // Propagate unexpected disconnect to callers (e.g. useObd hook)
-    device.onDisconnected(() => {
-      this.connectedDevice = null;
-      this.notifyCharacteristic = null;
-      this.responseBuffer = '';
-      this.commandQueue = Promise.resolve(); // Drain queue
+    // Unexpected disconnect → reconnect grace trước, chỉ báo onDisconnect khi hết cửa
+    device.onDisconnected(() => this.handleDeviceDisconnected(device.id));
+  }
 
-      // Reject any in-flight command
-      if (this.responseRejecter) {
-        this.responseRejecter(new Error('BLE disconnected'));
-        this.responseResolver = null;
-        this.responseRejecter = null;
+  private handleDeviceDisconnected(deviceId: string): void {
+    this.connectedDevice = null;
+    this.notifyCharacteristic = null;
+    this.responseBuffer = '';
+    this.commandQueue = Promise.resolve(); // Drain queue
+
+    // Reject any in-flight command
+    if (this.responseRejecter) {
+      this.responseRejecter(new Error('BLE disconnected'));
+      this.responseResolver = null;
+      this.responseRejecter = null;
+    }
+
+    // disconnect() chủ động gọi cancelConnection -> callback này vẫn bắn:
+    // không được thử reconnect khi user cố tình ngắt. Cũng chặn re-entry
+    // khi một attempt reconnect vừa attach xong lại rớt ngay (vòng lặp lo).
+    if (this.intentionalDisconnect || this.reconnecting) {
+      if (!this.reconnecting) this.onDisconnect?.();
+      return;
+    }
+
+    void this.attemptReconnect(deviceId);
+  }
+
+  private async attemptReconnect(deviceId: string): Promise<void> {
+    this.reconnecting = true;
+    this.logSession('#disconnect', 'unexpected - reconnect grace start');
+
+    for (let attempt = 1; attempt <= RECONNECT_DELAYS_MS.length; attempt++) {
+      this.onReconnecting?.(attempt);
+      await delay(RECONNECT_DELAYS_MS[attempt - 1]);
+
+      // User có thể đã chủ động ngắt trong lúc chờ backoff
+      if (this.intentionalDisconnect) {
+        this.reconnecting = false;
+        return;
       }
 
-      this.onDisconnect?.();
-    });
+      try {
+        const device = await this.manager.connectToDevice(deviceId, {
+          autoConnect: false,
+          requestMTU: 512,
+          timeout: 8000,
+        });
+        await this.attachToDevice(device);
+        this.reconnecting = false;
+        this.logSession('#reconnect', `ok attempt ${attempt}`);
+        this.onReconnected?.();
+        return;
+      } catch {
+        this.logSession('#reconnect', `attempt ${attempt} failed`);
+      }
+    }
+
+    this.reconnecting = false;
+    this.onDisconnect?.();
   }
 
   async requestPermissions(): Promise<boolean> {
@@ -222,6 +301,8 @@ class BleService {
 
   async connect(deviceId: string): Promise<void> {
     this.manager.stopDeviceScan();
+    this.intentionalDisconnect = false;
+    this.linkResults = [];
     // Phiên mới = log mới; log phiên cũ giữ nguyên tới lúc này để user kịp xuất sau khi ngắt.
     this.sessionLog = [];
 
@@ -277,12 +358,14 @@ class BleService {
         this.responseResolver = null;
         this.responseRejecter = null;
         this.logSession(command, '<<TIMEOUT>>');
+        this.recordLinkResult(false);
         reject(new Error(`OBD timeout: ${command}`));
       }, timeoutMs);
 
       this.responseResolver = (value) => {
         clearTimeout(timer);
         this.logSession(command, value);
+        this.recordLinkResult(true);
         resolve(value);
       };
       this.responseRejecter = (err) => {
@@ -300,12 +383,15 @@ class BleService {
         this.responseResolver = null;
         this.responseRejecter = null;
         this.logSession(command, `<<WRITE_ERROR: ${err?.message ?? 'unknown'}>>`);
+        this.recordLinkResult(false);
         reject(err);
       });
     });
   }
 
   async disconnect(): Promise<void> {
+    // Chặn reconnect grace: đây là ngắt CHỦ ĐỘNG của user
+    this.intentionalDisconnect = true;
     if (this.connectedDevice) {
       try {
         await this.connectedDevice.cancelConnection();

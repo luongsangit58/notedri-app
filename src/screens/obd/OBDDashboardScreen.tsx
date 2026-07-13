@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -12,7 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useObdConnection } from '../../hooks/useObd';
-import { bleService } from '../../services/obd/BleService';
+import { bleService, LinkQuality } from '../../services/obd/BleService';
 import AppBgPattern from '../../components/AppBgPattern';
 import { useColors } from '../../utils/theme';
 import { useT } from '../../i18n';
@@ -104,6 +104,15 @@ export default function OBDDashboardScreen() {
 
   const snap = liveSnapshot;
   const isConnected = connectionState === 'connected';
+  const isReconnecting = connectionState === 'reconnecting';
+
+  // Badge chất lượng kết nối (ý #16): chỉ hiện khi có vấn đề, sóng tốt thì im lặng
+  const [linkQuality, setLinkQuality] = useState<LinkQuality>('unknown');
+  useEffect(() => {
+    if (!isConnected) { setLinkQuality('unknown'); return; }
+    const timer = setInterval(() => setLinkQuality(bleService.getLinkQuality()), 5000);
+    return () => clearInterval(timer);
+  }, [isConnected]);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -126,23 +135,37 @@ export default function OBDDashboardScreen() {
         <View
           style={[
             styles.statusBadge,
-            { backgroundColor: isConnected ? '#22C55E22' : '#EF444422' },
+            { backgroundColor: isConnected ? '#22C55E22' : isReconnecting ? '#F59E0B22' : '#EF444422' },
           ]}
         >
           <View
             style={[
               styles.statusDot,
-              { backgroundColor: isConnected ? '#22C55E' : '#EF4444' },
+              { backgroundColor: isConnected ? '#22C55E' : isReconnecting ? '#F59E0B' : '#EF4444' },
             ]}
           />
           <Text
             style={[
               styles.statusText,
-              { color: isConnected ? '#22C55E' : '#EF4444' },
+              { color: isConnected ? '#22C55E' : isReconnecting ? '#F59E0B' : '#EF4444' },
             ]}
           >
-            {isConnected ? t('obd.connected') : t('obd.disconnected')}
+            {isConnected
+              ? t('obd.connected')
+              : isReconnecting
+              ? t('obd.reconnecting')
+              : t('obd.disconnected')}
           </Text>
+          {isConnected && (linkQuality === 'fair' || linkQuality === 'poor') && (
+            <Text
+              style={[
+                styles.statusText,
+                { color: linkQuality === 'poor' ? '#EF4444' : '#F59E0B', marginLeft: 8 },
+              ]}
+            >
+              {t(linkQuality === 'poor' ? 'obd.link_poor' : 'obd.link_fair')}
+            </Text>
+          )}
         </View>
 
         {/* No-data warning: adapter connected but ECU not responding */}
