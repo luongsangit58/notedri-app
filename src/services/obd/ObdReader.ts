@@ -1,4 +1,14 @@
 import { bleService } from './BleService';
+import { extractPayload, isNoData } from './obdParser';
+
+// Capability-aware polling (ý #18): PID xe không hỗ trợ (Honda City: 2F fuel,
+// 5C oil temp đều NO DATA - fixture #2) bị bỏ qua ngay, không tốn round-trip BLE.
+// null = chưa dò được capability → poll đủ như cũ.
+let activePidWhitelist: Set<string> | null = null;
+
+export function setActivePidWhitelist(pids: string[] | null): void {
+  activePidWhitelist = pids ? new Set(pids.map((p) => p.toUpperCase())) : null;
+}
 
 export type ObdSnapshot = {
   rpm: number | null;
@@ -16,40 +26,19 @@ export type DtcCode = {
   description: string | null;
 };
 
-function parseHexByte(hex: string): number {
-  if (!hex || !/^[0-9A-Fa-f]+$/.test(hex)) return NaN;
-  return parseInt(hex, 16);
-}
-
-function extractBytes(response: string, mode: string, pid: string): number[] | null {
-  const lines = response
-    .split('\n')
-    .map((l) => l.trim())
-    .filter((l) => l.length > 0 && !l.startsWith('SEARCHING'));
-
-  for (const line of lines) {
-    const parts = line.replace(/\s+/g, ' ').toUpperCase().split(' ');
-    const expectedHeader = (parseInt(mode, 16) + 0x40).toString(16).toUpperCase().padStart(2, '0');
-    const pidUpper = pid.toUpperCase();
-
-    const headerIdx = parts.findIndex((p) => p === expectedHeader);
-    if (headerIdx !== -1 && parts[headerIdx + 1] === pidUpper) {
-      const bytes = parts.slice(headerIdx + 2).map((h) => parseHexByte(h));
-      // Drop NaN values from malformed hex
-      if (bytes.some((b) => isNaN(b))) return null;
-      return bytes;
-    }
-  }
-  return null;
-}
-
 async function readPid(pid: string): Promise<number[] | null> {
+  // Capability đã dò được và PID này không nằm trong đó → khỏi hỏi xe
+  if (activePidWhitelist && !activePidWhitelist.has(pid.toUpperCase())) return null;
+
   try {
     const response = await bleService.sendCommand(`01${pid}`);
-    if (response.includes('NO DATA') || response.includes('ERROR') || response.includes('?')) {
+    if (isNoData(response) || response.includes('ERROR') || response.includes('?')) {
       return null;
     }
-    return extractBytes(response, '01', pid);
+    // extractPayload (obdParser) xử lý cả response dính liền do ATS0 ("410C1034"),
+    // dòng phụ ngăn bằng \r ("SEARCHING...\r410C1034") lẫn định dạng có dấu cách -
+    // parser cũ tách theo space nên null toàn bộ (fixture #2, màn hình toàn "-").
+    return extractPayload(response, '01', pid);
   } catch {
     return null;
   }
@@ -74,12 +63,11 @@ export async function initializeElm327(): Promise<InitResult> {
     const [rpm, speed] = await Promise.all([readRpm(), readSpeed()]);
     const dataAvailable = rpm !== null || speed !== null;
 
-    // Dò best-effort CHỈ ĐỂ GHI LOG PHIÊN (không parse, không dùng kết quả):
-    // phiên bản adapter, protocol, bitmask PID hỗ trợ, VIN. Fixture xuất ra từ
-    // log này là nguồn duy nhất để viết parser capability/VIN chính xác về sau -
-    // cố tình KHÔNG đoán format ở đây (kỷ luật "chính xác trước" của checklist).
+    // Dò best-effort CHỈ ĐỂ GHI LOG PHIÊN: phiên bản adapter, protocol, VIN thô
+    // (mode 09 multi-frame chưa có parser - chờ mẫu thật từ log để viết chính xác).
+    // Bitmap 0100/0120/... KHÔNG probe ở đây nữa - capabilityService dò + parse thật.
     if (dataAvailable) {
-      for (const probe of ['ATI', 'ATDPN', '0100', '0120', '0140', '0160', '0902']) {
+      for (const probe of ['ATI', 'ATDPN', '0902']) {
         await bleService.sendCommand(probe, 3000).catch(() => {});
       }
     }
@@ -165,6 +153,13 @@ export async function readSnapshot(): Promise<ObdSnapshot> {
     throttlePct,
     timestamp: Date.now(),
   };
+}
+
+// Chỉ còn dùng cho readDtcCodes - phần này giữ nguyên chờ mẫu mode 03 thật
+// (checklist: parser DTC nghi bug byte đếm trên CAN, không đoán-sửa).
+function parseHexByte(hex: string): number {
+  if (!hex || !/^[0-9A-Fa-f]+$/.test(hex)) return NaN;
+  return parseInt(hex, 16);
 }
 
 export async function readDtcCodes(): Promise<DtcCode[]> {

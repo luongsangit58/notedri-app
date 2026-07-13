@@ -5,7 +5,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useI18nStore } from '../i18n';
 import { obdApi } from '../api/obd';
 import { bleService, ConnectionState, ObdDevice } from '../services/obd/BleService';
-import { initializeElm327, readSnapshot, ObdSnapshot } from '../services/obd/ObdReader';
+import { initializeElm327, readSnapshot, setActivePidWhitelist, ObdSnapshot } from '../services/obd/ObdReader';
+import { getCachedCapability, discoverCapability, VehicleCapability } from '../services/obd/capabilityService';
 import { TripSession, TripSummary } from '../services/obd/TripSession';
 import { enqueueTripSync } from '../services/obd/TripSyncQueue';
 import { savePairing } from '../services/obd/pairedDevices';
@@ -66,6 +67,18 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
   const [lastTripSummary, setLastTripSummary] = useState<TripSummary | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [warning, setWarning] = useState<ObdWarning>(null);
+  const [capability, setCapability] = useState<VehicleCapability | null>(null);
+
+  // Capability (R8): cache có sẵn thì dùng ngay, chưa có thì dò 1 lần sau kết nối.
+  // Nạp whitelist cho ObdReader để poll bỏ qua PID xe không hỗ trợ (ý #18).
+  const loadCapability = useCallback(async (allowDiscover: boolean) => {
+    let cap = await getCachedCapability(vehicleId).catch(() => null);
+    if (!cap && allowDiscover) {
+      cap = await discoverCapability(vehicleId).catch(() => null);
+    }
+    setActivePidWhitelist(cap?.supportedPids ?? null);
+    setCapability(cap);
+  }, [vehicleId]);
 
   // Keep trip session in a ref (not state) so cleanup effects always see the
   // latest instance without stale closure problems.
@@ -190,6 +203,10 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
           : { type: 'no_data', rawResponse: result.rawRpmResponse },
       );
 
+      // Dò capability TRƯỚC snapshot đầu tiên để whitelist kịp áp dụng
+      // (chỉ dò khi xe đang trả dữ liệu - xe tắt máy thì bitmap cũng NO DATA)
+      await loadCapability(result.dataAvailable);
+
       const snap = await readSnapshot();
       setLiveSnapshot(snap);
 
@@ -207,7 +224,7 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
       setErrorMessage(e.message);
       return false;
     }
-  }, [stopScan, vehicleId, vehicleName, reportSessionEnd]);
+  }, [stopScan, vehicleId, vehicleName, reportSessionEnd, loadCapability]);
 
   const disconnect = useCallback(async () => {
     if (currentTripRef.current) {
@@ -269,6 +286,8 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
   useEffect(() => {
     if (bleService.isConnected()) {
       setConnectionState('connected');
+      // Nạp lại capability từ cache (Setup đã dò xong lúc connect) rồi mới snapshot
+      loadCapability(false).catch(() => {});
       // Rehydrate snapshot sống để lưới số liệu không hiện "-"
       readSnapshot().then((snap) => setLiveSnapshot(snap)).catch(() => {});
       // Đăng ký lại callback mất kết nối (Setup unmount đã set bleService.onDisconnect = null)
@@ -311,6 +330,7 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
     lastTripSummary,
     errorMessage,
     warning,
+    capability,
     isConnected: connectionState === 'connected',
     isTripActive,
     startScan,

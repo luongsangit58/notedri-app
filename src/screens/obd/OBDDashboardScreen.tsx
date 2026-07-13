@@ -65,6 +65,7 @@ export default function OBDDashboardScreen() {
     currentTripRef,
     lastTripSummary,
     warning,
+    capability,
     disconnect,
     startTrip,
     stopTrip,
@@ -183,20 +184,31 @@ export default function OBDDashboardScreen() {
           </View>
         )}
 
-        {/* Live stats grid */}
+        {/* Live stats grid - ẩn ô của PID xe không hỗ trợ (capability R8).
+            Chưa dò được capability (null) thì hiện đủ như cũ. */}
         <View style={styles.statsGrid}>
-          <View style={styles.statsRow}>
-            <StatBox label={t('obd.stat_speed')} value={snap?.speedKmh ?? null} unit=" km/h" icon="tachometer-alt" color="#3B82F6" />
-            <StatBox label="RPM" value={snap?.rpm !== null ? Math.round(snap?.rpm ?? 0) : null} icon="cogs" color="#8B5CF6" />
-          </View>
-          <View style={styles.statsRow}>
-            <StatBox label={t('obd.stat_engine_load')} value={snap?.engineLoadPct ?? null} unit="%" icon="fire" color="#F59E0B" />
-            <StatBox label={t('obd.stat_coolant')} value={snap?.coolantTempC ?? null} unit="°C" icon="thermometer-half" color="#EF4444" />
-          </View>
-          <View style={styles.statsRow}>
-            <StatBox label={t('obd.stat_fuel')} value={snap?.fuelLevelPct ?? null} unit="%" icon="gas-pump" color="#10B981" />
-            <StatBox label={t('obd.stat_oil_temp')} value={snap?.oilTempC ?? null} unit="°C" icon="oil-can" color="#F97316" />
-          </View>
+          {(() => {
+            const tiles = [
+              { pid: '0D', el: <StatBox key="0D" label={t('obd.stat_speed')} value={snap?.speedKmh ?? null} unit=" km/h" icon="tachometer-alt" color="#3B82F6" /> },
+              { pid: '0C', el: <StatBox key="0C" label="RPM" value={snap?.rpm !== null ? Math.round(snap?.rpm ?? 0) : null} icon="cogs" color="#8B5CF6" /> },
+              { pid: '04', el: <StatBox key="04" label={t('obd.stat_engine_load')} value={snap?.engineLoadPct ?? null} unit="%" icon="fire" color="#F59E0B" /> },
+              { pid: '05', el: <StatBox key="05" label={t('obd.stat_coolant')} value={snap?.coolantTempC ?? null} unit="°C" icon="thermometer-half" color="#EF4444" /> },
+              { pid: '2F', el: <StatBox key="2F" label={t('obd.stat_fuel')} value={snap?.fuelLevelPct ?? null} unit="%" icon="gas-pump" color="#10B981" /> },
+              { pid: '5C', el: <StatBox key="5C" label={t('obd.stat_oil_temp')} value={snap?.oilTempC ?? null} unit="°C" icon="oil-can" color="#F97316" /> },
+            ];
+            const supported = capability
+              ? tiles.filter((tile) => capability.supportedPids.includes(tile.pid))
+              : tiles;
+            const rows = [];
+            for (let i = 0; i < supported.length; i += 2) {
+              rows.push(
+                <View key={i} style={styles.statsRow}>
+                  {supported.slice(i, i + 2).map((tile) => tile.el)}
+                </View>,
+              );
+            }
+            return rows;
+          })()}
         </View>
 
         {/* Trip history link */}
