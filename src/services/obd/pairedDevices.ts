@@ -45,3 +45,18 @@ export async function getPairingForVehicle(vehicleId: number): Promise<PairedDev
   const devices = await readAll();
   return devices.find((d) => d.vehicleId === vehicleId) ?? null;
 }
+
+// Thiết bị này đang ghép với xe nào - nuôi hộp thoại "chuyển Vgate sang xe khác?"
+export async function getPairingForDevice(bleDeviceId: string): Promise<PairedDevice | null> {
+  const devices = await readAll();
+  return devices.find((d) => d.bleDeviceId === bleDeviceId) ?? null;
+}
+
+// Pairing dùng gần nhất - nuôi thẻ "Kết nối OBD2" ở Home (chỉ hiện khi có pairing)
+export async function getMostRecentPairing(): Promise<PairedDevice | null> {
+  const devices = await readAll();
+  if (devices.length === 0) return null;
+  return devices
+    .slice()
+    .sort((a, b) => (b.lastConnectedAt ?? 0) - (a.lastConnectedAt ?? 0))[0];
+}

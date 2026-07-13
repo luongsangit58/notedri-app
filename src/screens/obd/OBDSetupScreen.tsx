@@ -14,7 +14,7 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useObdConnection } from '../../hooks/useObd';
 import { bleService } from '../../services/obd/BleService';
-import { getPairingForVehicle } from '../../services/obd/pairedDevices';
+import { getPairingForVehicle, getPairingForDevice } from '../../services/obd/pairedDevices';
 import AppBgPattern from '../../components/AppBgPattern';
 import { useColors } from '../../utils/theme';
 import { useAuthStore } from '../../store/authStore';
@@ -73,14 +73,32 @@ export default function OBDSetupScreen() {
     return () => stopScan();
   }, [isPremium, showAllDevices]);
 
-  async function handleConnect(deviceId: string, deviceName: string) {
-    stopScan();
+  async function doConnect(deviceId: string, deviceName: string) {
     const ok = await connect(deviceId);
     // Chỉ vào Dashboard khi kết nối THÀNH CÔNG - lỗi thì ở lại màn này cho user
     // thấy thông báo và quét lại (trước đây nhảy vào Dashboard kể cả khi lỗi).
     if (ok) {
       navigation.replace('OBDDashboard', { vehicleId, vehicleName, deviceName, consumptionOfficial });
     }
+  }
+
+  async function handleConnect(deviceId: string, deviceName: string) {
+    stopScan();
+    // 1 thiết bị - 1 xe: Vgate đang ghép xe KHÁC thì hỏi trước khi chuyển
+    // (savePairing sau khi connect thành công sẽ ghi đè pairing cũ).
+    const existing = await getPairingForDevice(deviceId).catch(() => null);
+    if (existing && existing.vehicleId !== vehicleId && existing.vehicleName) {
+      Alert.alert(
+        t('obd.pair_switch_title'),
+        t('obd.pair_switch_body', { old: existing.vehicleName, new: vehicleName || t('obd.pair_this_vehicle') }),
+        [
+          { text: t('common.cancel'), style: 'cancel', onPress: () => startScan(showAllDevices) },
+          { text: t('obd.pair_switch_ok'), onPress: () => void doConnect(deviceId, deviceName) },
+        ],
+      );
+      return;
+    }
+    await doConnect(deviceId, deviceName);
   }
 
   // Auto-connect foreground (ý #17): thiết bị đã từng ghép với XE NÀY xuất hiện
