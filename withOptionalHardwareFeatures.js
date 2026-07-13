@@ -35,10 +35,18 @@ module.exports = function withOptionalHardwareFeatures(config) {
       manifest['uses-feature'] = [];
     }
     for (const name of OPTIONAL_FEATURES) {
-      const exists = manifest['uses-feature'].some(
+      const existing = manifest['uses-feature'].find(
         (f) => f.$?.['android:name'] === name
       );
-      if (!exists) {
+      if (existing) {
+        // Plugin này chạy CUỐI (xem thứ tự trong app.json) để làm lớp bảo vệ cuối
+        // cùng - nhưng nếu chỉ bỏ qua khi entry đã tồn tại thì 1 plugin khác chạy
+        // trước (vd react-native-ble-plx khi isBackgroundEnabled=true) có thể đã
+        // ghi required="true" và không bao giờ được sửa lại. Phải GHI ĐÈ, không
+        // chỉ thêm-nếu-thiếu, để đảm bảo luôn required="false" bất kể plugin nào
+        // chạy trước.
+        existing.$['android:required'] = 'false';
+      } else {
         manifest['uses-feature'].push({
           $: { 'android:name': name, 'android:required': 'false' },
         });

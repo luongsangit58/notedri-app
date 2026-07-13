@@ -416,13 +416,18 @@ const vi = {
   "health.high_risk": "Rủi ro cao",
 
   // OBD
-  "obd.setup_title": "Kết nối OBD",
+  "obd.setup_title": "Kết nối OBD2",
+  "obd.dashboard_title": "OBD2 Live",
+  "obd.entry_desc": "Đọc dữ liệu xe theo thời gian thực qua adapter OBD2",
   "obd.connecting": "Đang kết nối...",
-  "obd.scanning": "Đang tìm thiết bị OBD...",
+  "obd.scanning": "Đang tìm thiết bị OBD2...",
   "obd.no_device_found": "Chưa tìm thấy thiết bị",
   "obd.devices_found": "Tìm thấy {{n}} thiết bị",
+  "obd.show_all_devices": "Hiện tất cả thiết bị",
+  "obd.export_log": "Xuất log phiên (gỡ lỗi)",
+  "obd.export_log_empty": "Chưa có dữ liệu trong phiên này. Kết nối với xe trước rồi xuất lại.",
   "obd.guide_title": "Hướng dẫn",
-  "obd.guide_step1": "1. Cắm adapter BLE ELM327 vào cổng OBD trên xe (thường ở góc lái, dưới dashboard)",
+  "obd.guide_step1": "1. Cắm adapter BLE ELM327 vào cổng OBD2 trên xe (thường ở góc lái, dưới dashboard)",
   "obd.guide_step2": "2. Nổ máy xe (hoặc bật contact)",
   "obd.guide_step3": "3. Bật Bluetooth trên điện thoại và nhấn \"Quét lại\"",
   "obd.guide_recommended": "Khuyên dùng: Vgate iCar Pro Bluetooth 4.0 (BLE) - tương thích Android & iOS. Lưu ý: bản Bluetooth 3.0 (BT3.0) chỉ dùng được Android, KHÔNG kết nối được với NoteDri.",
@@ -430,7 +435,9 @@ const vi = {
   "obd.connected": "Đã kết nối",
   "obd.disconnected": "Mất kết nối",
   "obd.disconnect_title": "Ngắt kết nối",
-  "obd.disconnect_confirm": "Bạn có muốn ngắt kết nối OBD?",
+  "obd.disconnect_confirm": "Bạn có muốn ngắt kết nối OBD2?",
+  // "OBD-II" cố ý giữ nguyên ở đây (khác "OBD2" các chỗ khác) - đây là câu nói về
+  // chuẩn kỹ thuật, khớp quy ước web (OBD2 = tên tính năng, OBD-II = tên chuẩn).
   "obd.no_data_warning": "Kết nối được nhưng không đọc được dữ liệu xe. Thử nổ máy và kết nối lại, hoặc kiểm tra xe có hỗ trợ OBD-II (2005+).",
   "obd.stat_speed": "Tốc độ",
   "obd.stat_engine_load": "Tải động cơ",
@@ -448,10 +455,10 @@ const vi = {
   "obd.summary_total_km": "tổng km",
   "obd.summary_fuel_estimate": "ước tính xăng",
   "obd.summary_idle_time": "thời gian chờ",
-  "obd.trips_empty": "Chưa có chuyến đi nào được ghi lại.\nKết nối OBD và bắt đầu lái xe.",
+  "obd.trips_empty": "Chưa có chuyến đi nào được ghi lại.\nKết nối OBD2 và bắt đầu lái xe.",
   "obd.idle_pct": "{{pct}}% chờ",
   "obd.fuel_bar": "Xăng: {{start}}% - {{end}}%",
-  "obd.connect_btn": "Kết nối OBD",
+  "obd.connect_btn": "Kết nối OBD2",
   "obd.premium_desc": "Nâng cấp để đọc dữ liệu xe qua Bluetooth",
   "obd.dtc_count_desc": "{{n}} mã lỗi chưa xử lý",
   "obd.read_data_desc": "Đọc dữ liệu xe tự động qua Bluetooth",
@@ -604,7 +611,7 @@ const vi = {
   "dossier.tank_label": "Bình {{size}}L",
 
   // VehicleDetail (new)
-  "vehicle_detail.obd_title": "Kết nối OBD",
+  "vehicle_detail.obd_title": "Kết nối OBD2",
   "vehicle_detail.obd_premium_desc": "Nâng cấp để đọc dữ liệu xe qua Bluetooth",
   "vehicle_detail.obd_dtc_desc": "{{n}} mã lỗi chưa xử lý",
   "vehicle_detail.obd_connected_desc": "Đọc dữ liệu xe tự động qua Bluetooth",
@@ -630,7 +637,7 @@ const vi = {
   "about.features_title": "Tính năng chính",
   "about.feature_ocr": "Quét đồng hồ ODO & hoá đơn bằng camera",
   "about.feature_gps": "Tự động ghi hành trình bằng GPS",
-  "about.feature_obd": "Chẩn đoán sức khoẻ xe qua OBD",
+  "about.feature_obd": "Chẩn đoán sức khoẻ xe qua OBD2",
   "about.feature_refuel": "Theo dõi đổ xăng & mức tiêu hao",
   "about.feature_service": "Bảo dưỡng & nhắc hạn đăng kiểm, bảo hiểm",
   "about.feature_stations": "Tìm trạm sạc & cây xăng gần bạn",
@@ -653,7 +660,7 @@ const vi = {
   "onboarding.s3_title": "Quét là xong, khỏi gõ tay",
   "onboarding.s3_desc": "Chụp đồng hồ ODO hay hoá đơn, camera tự đọc số và điền vào - nhanh và chính xác.",
   "onboarding.s4_title": "Hiểu sức khoẻ chiếc xe",
-  "onboarding.s4_desc": "Chẩn đoán qua OBD, nhắc hạn đăng kiểm và bảo dưỡng trước khi trễ.",
+  "onboarding.s4_desc": "Chẩn đoán qua OBD2, nhắc hạn đăng kiểm và bảo dưỡng trước khi trễ.",
   "onboarding.s5_title": "Nói là xong, khỏi gõ tay",
   "onboarding.s5_desc": "Bấm micro và đọc số lít, số tiền hay ODO bằng giọng nói - app tự điền vào.",
   "onboarding.lang_switch": "EN",
@@ -1208,7 +1215,19 @@ const vi = {
   "auth.login_failed": "Đăng nhập thất bại",
   "auth.google_login_failed": "Đăng nhập Google thất bại",
   "obd.bluetooth_unavailable": "Bluetooth không khả dụng",
-  "obd.not_connected": "Chưa kết nối thiết bị OBD",
+  "obd.not_connected": "Chưa kết nối thiết bị OBD2",
+
+  // NFC
+  "nfc.setup_title": "Ghép thẻ NFC",
+  "nfc.pair_link": "Ghép thẻ NFC để chạm là kết nối",
+  "nfc.setup_instruction": "Chạm điện thoại vào thẻ NFC để lần sau chỉ cần chạm là tự kết nối OBD2 cho {{vehicleName}}.",
+  "nfc.start_write": "Chạm thẻ NFC để ghép",
+  "nfc.write_again": "Ghép lại thẻ khác",
+  "nfc.writing": "Đang ghi vào thẻ NFC...",
+  "nfc.write_success": "Ghép thẻ thành công! Lần sau chỉ cần chạm thẻ để kết nối.",
+  "nfc.write_error": "Ghi thẻ thất bại. Thử chạm lại gần thẻ hơn.",
+  "nfc.unsupported": "Điện thoại này không hỗ trợ NFC.",
+  "nfc.disabled": "NFC đang tắt. Vào Cài đặt để bật NFC rồi thử lại.",
 
 
   // ==== i18n audit: hardcoded strings wrapped ====

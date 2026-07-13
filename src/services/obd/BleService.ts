@@ -1,4 +1,4 @@
-import { BleManager, Device, State, Characteristic } from 'react-native-ble-plx';
+import { BleManager, Device, State, Characteristic, BleRestoredState } from 'react-native-ble-plx';
 import { Platform, PermissionsAndroid } from 'react-native';
 import { useI18nStore } from '../../i18n';
 
@@ -12,6 +12,7 @@ const VGATE_NOTIFY_UUID = 'be781a71-0001-1000-8000-00805f9b34fb';
 
 export type ObdDevice = { id: string; name: string };
 export type ConnectionState = 'disconnected' | 'scanning' | 'connecting' | 'connected' | 'error';
+export type SessionLogEntry = { t: number; cmd: string; res: string };
 
 class BleService {
   private _manager: BleManager | null = null;
@@ -27,96 +28,78 @@ class BleService {
   // commands are guaranteed to execute one at a time.
   private commandQueue: Promise<void> = Promise.resolve();
 
+  // Nhật ký thô lệnh/response của phiên kết nối hiện tại (xoá khi connect mới).
+  // Mục đích: phiên chạy thật đầu tiên trên xe xuất ra được fixture (loạt ATZ/0100/
+  // 0902/03... và response nguyên văn) để viết unit test parser + capability profile
+  // mà không cần ngồi trên xe. Entry bắt đầu bằng '#' là ghi chú sự kiện, không phải lệnh.
+  private sessionLog: SessionLogEntry[] = [];
+  private static readonly SESSION_LOG_MAX = 1000;
+
+  private logSession(cmd: string, res: string): void {
+    if (this.sessionLog.length >= BleService.SESSION_LOG_MAX) return;
+    this.sessionLog.push({ t: Date.now(), cmd, res });
+  }
+
+  getSessionLog(): ReadonlyArray<SessionLogEntry> {
+    return this.sessionLog;
+  }
+
   // Callback fired when device unexpectedly disconnects
   onDisconnect: (() => void) | null = null;
+
+  // Callback fired when iOS relaunches the app in the background and CoreBluetooth
+  // hands back a peripheral we were already connected to (state restoration) -
+  // lets AutoDriveManager pick up the trip without any user interaction.
+  onAutoRestore: (() => void) | null = null;
 
   // Lazy: BleManager is only instantiated the first time BLE is actually needed.
   // Creating it at module load time triggers NativeEventEmitter before the
   // native layer is ready, causing "EventEmitter" warnings on every app start.
   private get manager(): BleManager {
     if (!this._manager) {
-      this._manager = new BleManager();
+      this._manager = new BleManager({
+        // iOS only (Android ignores these options): lets CoreBluetooth relaunch
+        // the app in the background when a peripheral we were connected to before
+        // the app was suspended/killed-by-system reconnects. Requires
+        // isBackgroundEnabled in the react-native-ble-plx app.json plugin.
+        restoreStateIdentifier: 'notedri-obd-restore',
+        restoreStateFunction: (restoredState) => this.handleRestoredState(restoredState),
+      });
     }
     return this._manager;
   }
 
-  async requestPermissions(): Promise<boolean> {
-    if (Platform.OS === 'android') {
-      const result = await PermissionsAndroid.requestMultiple([
-        PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
-        PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
-        PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-      ]);
-      return Object.values(result).every(
-        (r) => r === PermissionsAndroid.RESULTS.GRANTED
-      );
-    }
-    return true;
+  // Ép khởi tạo BleManager sớm (App root, không phải khi 1 màn hình OBD mount) -
+  // restoreStateIdentifier chỉ nhận được callback từ iOS nếu manager cùng
+  // identifier đã tồn tại lúc app được CoreBluetooth đánh thức nền. Nếu chờ đến
+  // khi user tự mở màn OBD mới tạo manager, restore không bao giờ kịp nối vào.
+  ensureInitialized(): void {
+    void this.manager;
   }
 
-  async waitForBleReady(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      // Timeout: các state như Unknown/Resetting không phát PoweredOn/Off -> nếu không
-      // có mốc thời gian thì promise treo mãi mãi. Sau 5s coi như Bluetooth không sẵn sàng.
-      let timer: ReturnType<typeof setTimeout>;
-      const subscription = this.manager.onStateChange((state) => {
-        if (state === State.PoweredOn) {
-          clearTimeout(timer);
-          subscription.remove();
-          resolve();
-        } else if (state === State.PoweredOff || state === State.Unsupported) {
-          clearTimeout(timer);
-          subscription.remove();
-          reject(new Error(useI18nStore.getState().t('obd.bluetooth_unavailable')));
-        }
-      }, true);
-      timer = setTimeout(() => {
-        subscription.remove();
-        reject(new Error(useI18nStore.getState().t('obd.bluetooth_unavailable')));
-      }, 5000);
-    });
+  private handleRestoredState(restoredState: BleRestoredState | null) {
+    const device = restoredState?.connectedPeripherals?.[0];
+    if (!device) return;
+    this.attachToDevice(device)
+      .then(() => this.onAutoRestore?.())
+      .catch(() => {
+        // Restoration race: peripheral disconnected again before we finished
+        // re-subscribing to notifications. Nothing to recover here - the
+        // normal scan/connect flow (manual or AutoDrive) will retry later.
+      });
   }
 
-  scanForDevices(
-    onFound: (device: ObdDevice) => void,
-    onError: (error: Error) => void
-  ): () => void {
-    const found = new Set<string>();
-    this.manager.startDeviceScan(null, { allowDuplicates: false }, (error, device) => {
-      if (error) { onError(error); return; }
-      if (!device || !device.name) return;
-      const name = device.name.toUpperCase();
-      if (
-        name.includes('OBD') || name.includes('ELM') ||
-        name.includes('VGATE') || name.includes('VEEPEAK') ||
-        name.includes('OBD2') || name.includes('OBDII') || name.includes('ICAR')
-      ) {
-        if (!found.has(device.id)) {
-          found.add(device.id);
-          onFound({ id: device.id, name: device.name });
-        }
-      }
-    });
-    return () => this.manager.stopDeviceScan();
-  }
-
-  stopScan() {
-    this.manager.stopDeviceScan();
-  }
-
-  async connect(deviceId: string): Promise<void> {
-    this.manager.stopDeviceScan();
-
-    const device = await this.manager.connectToDevice(deviceId, {
-      autoConnect: false,
-      requestMTU: 512,
-    });
-
+  // Shared by connect() (manual, user-initiated) and handleRestoredState()
+  // (automatic, iOS background relaunch) - both need the exact same
+  // discover -> pick UUID set -> subscribe notify -> watch disconnect sequence.
+  private async attachToDevice(device: Device): Promise<void> {
     await device.discoverAllServicesAndCharacteristics();
     this.connectedDevice = device;
 
     const services = await device.services();
     const serviceUuids = services.map((s) => s.uuid.toLowerCase());
+    this.logSession('#device', `${device.name ?? '?'} ${device.id}`);
+    this.logSession('#services', serviceUuids.join(','));
 
     let serviceUuid: string;
     let notifyUuid: string;
@@ -170,6 +153,86 @@ class BleService {
     });
   }
 
+  async requestPermissions(): Promise<boolean> {
+    if (Platform.OS === 'android') {
+      const result = await PermissionsAndroid.requestMultiple([
+        PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
+        PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
+        PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+      ]);
+      return Object.values(result).every(
+        (r) => r === PermissionsAndroid.RESULTS.GRANTED
+      );
+    }
+    return true;
+  }
+
+  async waitForBleReady(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      // Timeout: các state như Unknown/Resetting không phát PoweredOn/Off -> nếu không
+      // có mốc thời gian thì promise treo mãi mãi. Sau 5s coi như Bluetooth không sẵn sàng.
+      let timer: ReturnType<typeof setTimeout>;
+      const subscription = this.manager.onStateChange((state) => {
+        if (state === State.PoweredOn) {
+          clearTimeout(timer);
+          subscription.remove();
+          resolve();
+        } else if (state === State.PoweredOff || state === State.Unsupported) {
+          clearTimeout(timer);
+          subscription.remove();
+          reject(new Error(useI18nStore.getState().t('obd.bluetooth_unavailable')));
+        }
+      }, true);
+      timer = setTimeout(() => {
+        subscription.remove();
+        reject(new Error(useI18nStore.getState().t('obd.bluetooth_unavailable')));
+      }, 5000);
+    });
+  }
+
+  scanForDevices(
+    onFound: (device: ObdDevice) => void,
+    onError: (error: Error) => void,
+    showAll = false
+  ): () => void {
+    const found = new Set<string>();
+    this.manager.startDeviceScan(null, { allowDuplicates: false }, (error, device) => {
+      if (error) { onError(error); return; }
+      if (!device || !device.name) return;
+      const name = device.name.toUpperCase();
+      // 'VLINK' bắt buộc phải có: Vgate iCar Pro BLE 4.0 quảng bá tên "IOS-Vlink",
+      // không chứa OBD/ELM/VGATE/ICAR - thiếu nó là quét không bao giờ thấy adapter.
+      const isKnownAdapter =
+        name.includes('OBD') || name.includes('ELM') ||
+        name.includes('VGATE') || name.includes('VEEPEAK') ||
+        name.includes('VLINK') || name.includes('ICAR');
+      if (showAll || isKnownAdapter) {
+        if (!found.has(device.id)) {
+          found.add(device.id);
+          onFound({ id: device.id, name: device.name });
+        }
+      }
+    });
+    return () => this.manager.stopDeviceScan();
+  }
+
+  stopScan() {
+    this.manager.stopDeviceScan();
+  }
+
+  async connect(deviceId: string): Promise<void> {
+    this.manager.stopDeviceScan();
+    // Phiên mới = log mới; log phiên cũ giữ nguyên tới lúc này để user kịp xuất sau khi ngắt.
+    this.sessionLog = [];
+
+    const device = await this.manager.connectToDevice(deviceId, {
+      autoConnect: false,
+      requestMTU: 512,
+    });
+
+    await this.attachToDevice(device);
+  }
+
   // All callers go through this single entry point.
   // Commands are serialized via the promise chain — safe to call concurrently.
   async sendCommand(command: string, timeoutMs = 2000): Promise<string> {
@@ -213,11 +276,13 @@ class BleService {
         this.responseBuffer = '';
         this.responseResolver = null;
         this.responseRejecter = null;
+        this.logSession(command, '<<TIMEOUT>>');
         reject(new Error(`OBD timeout: ${command}`));
       }, timeoutMs);
 
       this.responseResolver = (value) => {
         clearTimeout(timer);
+        this.logSession(command, value);
         resolve(value);
       };
       this.responseRejecter = (err) => {
@@ -234,6 +299,7 @@ class BleService {
         clearTimeout(timer);
         this.responseResolver = null;
         this.responseRejecter = null;
+        this.logSession(command, `<<WRITE_ERROR: ${err?.message ?? 'unknown'}>>`);
         reject(err);
       });
     });

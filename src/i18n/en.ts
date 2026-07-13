@@ -415,13 +415,18 @@ const en = {
   "health.high_risk": "High risk",
 
   // OBD
-  "obd.setup_title": "Connect OBD",
+  "obd.setup_title": "Connect OBD2",
+  "obd.dashboard_title": "OBD2 Live",
+  "obd.entry_desc": "Read real-time vehicle data via an OBD2 adapter",
   "obd.connecting": "Connecting...",
-  "obd.scanning": "Scanning for OBD devices...",
+  "obd.scanning": "Scanning for OBD2 devices...",
   "obd.no_device_found": "No device found",
   "obd.devices_found": "Found {{n}} device(s)",
+  "obd.show_all_devices": "Show all devices",
+  "obd.export_log": "Export session log (debug)",
+  "obd.export_log_empty": "No data in this session yet. Connect to the car first, then export again.",
   "obd.guide_title": "Setup guide",
-  "obd.guide_step1": "1. Plug the BLE ELM327 adapter into the OBD port on your car (usually under the dashboard near the steering column)",
+  "obd.guide_step1": "1. Plug the BLE ELM327 adapter into the OBD2 port on your car (usually under the dashboard near the steering column)",
   "obd.guide_step2": "2. Start the engine (or turn on ignition)",
   "obd.guide_step3": "3. Enable Bluetooth on your phone and tap \"Scan again\"",
   "obd.guide_recommended": "Recommended: Vgate iCar Pro Bluetooth 4.0 (BLE) - works with Android & iOS. Note: the Bluetooth 3.0 (BT3.0) version is Android-only and will NOT connect to NoteDri.",
@@ -429,7 +434,9 @@ const en = {
   "obd.connected": "Connected",
   "obd.disconnected": "Disconnected",
   "obd.disconnect_title": "Disconnect",
-  "obd.disconnect_confirm": "Disconnect from OBD?",
+  "obd.disconnect_confirm": "Disconnect from OBD2?",
+  // "OBD-II" is intentional here (unlike "OBD2" elsewhere) - this sentence refers
+  // to the technical standard, matching web's convention (OBD2 = feature name, OBD-II = standard name).
   "obd.no_data_warning": "Connected but cannot read vehicle data. Try restarting the engine and reconnecting, or check that your car supports OBD-II (2005+).",
   "obd.stat_speed": "Speed",
   "obd.stat_engine_load": "Engine load",
@@ -447,10 +454,10 @@ const en = {
   "obd.summary_total_km": "total km",
   "obd.summary_fuel_estimate": "est. fuel",
   "obd.summary_idle_time": "idle time",
-  "obd.trips_empty": "No trips recorded yet.\nConnect OBD and start driving.",
+  "obd.trips_empty": "No trips recorded yet.\nConnect OBD2 and start driving.",
   "obd.idle_pct": "{{pct}}% idle",
   "obd.fuel_bar": "Fuel: {{start}}% - {{end}}%",
-  "obd.connect_btn": "Connect OBD",
+  "obd.connect_btn": "Connect OBD2",
   "obd.premium_desc": "Upgrade to read vehicle data via Bluetooth",
   "obd.dtc_count_desc": "{{n}} fault codes unresolved",
   "obd.read_data_desc": "Automatically read vehicle data via Bluetooth",
@@ -604,7 +611,7 @@ const en = {
   "dossier.tank_label": "{{size}}L tank",
 
   // VehicleDetail (new)
-  "vehicle_detail.obd_title": "Connect OBD",
+  "vehicle_detail.obd_title": "Connect OBD2",
   "vehicle_detail.obd_premium_desc": "Upgrade to read vehicle data via Bluetooth",
   "vehicle_detail.obd_dtc_desc": "{{n}} fault codes unresolved",
   "vehicle_detail.obd_connected_desc": "Automatically read vehicle data via Bluetooth",
@@ -630,7 +637,7 @@ const en = {
   "about.features_title": "Key features",
   "about.feature_ocr": "Scan odometer & receipts with your camera",
   "about.feature_gps": "Auto-log trips with GPS",
-  "about.feature_obd": "Diagnose vehicle health via OBD",
+  "about.feature_obd": "Diagnose vehicle health via OBD2",
   "about.feature_refuel": "Track fuel fills & consumption",
   "about.feature_service": "Service log & registration/insurance reminders",
   "about.feature_stations": "Find charging & fuel stations near you",
@@ -653,7 +660,7 @@ const en = {
   "onboarding.s3_title": "Scan it, skip the typing",
   "onboarding.s3_desc": "Snap your odometer or a receipt and the camera reads the numbers for you.",
   "onboarding.s4_title": "Know your car's health",
-  "onboarding.s4_desc": "OBD diagnostics plus reminders for inspection and service before they're overdue.",
+  "onboarding.s4_desc": "OBD2 diagnostics plus reminders for inspection and service before they're overdue.",
   "onboarding.s5_title": "Just speak, skip the typing",
   "onboarding.s5_desc": "Tap the mic and say the liters, amount or ODO by voice - it fills in for you.",
   "onboarding.lang_switch": "VI",
@@ -1208,7 +1215,19 @@ const en = {
   "auth.login_failed": "Login failed",
   "auth.google_login_failed": "Google login failed",
   "obd.bluetooth_unavailable": "Bluetooth is unavailable",
-  "obd.not_connected": "OBD device not connected",
+  "obd.not_connected": "OBD2 device not connected",
+
+  // NFC
+  "nfc.setup_title": "Pair NFC tag",
+  "nfc.pair_link": "Pair an NFC tag for tap-to-connect",
+  "nfc.setup_instruction": "Hold your phone against an NFC tag so next time you just tap to connect OBD2 for {{vehicleName}}.",
+  "nfc.start_write": "Tap the NFC tag to pair",
+  "nfc.write_again": "Pair a different tag",
+  "nfc.writing": "Writing to NFC tag...",
+  "nfc.write_success": "Tag paired! Next time, just tap it to connect.",
+  "nfc.write_error": "Failed to write tag. Try holding it closer.",
+  "nfc.unsupported": "This phone does not support NFC.",
+  "nfc.disabled": "NFC is turned off. Enable it in Settings and try again.",
 
 
   // ==== i18n audit: hardcoded strings wrapped ====

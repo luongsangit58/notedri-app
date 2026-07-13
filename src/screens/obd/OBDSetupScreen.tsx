@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   StyleSheet,
+  Switch,
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -23,6 +24,9 @@ export default function OBDSetupScreen() {
   const vehicleId: number = route.params?.vehicleId ?? 0;
   const vehicleName: string = route.params?.vehicleName ?? '';
   const consumptionOfficial: number | null = route.params?.consumptionOfficial ?? null;
+  // Đến từ chạm NFC (xem NfcService/App.tsx deep link listener) - biết trước đúng
+  // thiết bị BLE cần kết nối nên bỏ qua bước user tự chọn trong danh sách quét.
+  const autoConnectDeviceId: string | null = route.params?.autoConnectDeviceId ?? null;
 
   const t = useT();
   const colors = useColors();
@@ -35,7 +39,7 @@ export default function OBDSetupScreen() {
     startScan,
     stopScan,
     connect,
-  } = useObdConnection(vehicleId);
+  } = useObdConnection(vehicleId, vehicleName);
 
   // Guard: redirect to PremiumScreen if user is not premium. Đợi userSynced để không đá nhầm
   // user Premium thật ra màn nâng cấp chỉ vì cache lúc cold-start chưa kịp làm mới is_premium.
@@ -45,17 +49,29 @@ export default function OBDSetupScreen() {
     }
   }, [userSynced, isPremium]);
 
+  // Toggle "hiện tất cả thiết bị": một số adapter quảng bá tên lạ (không chứa
+  // OBD/ELM/VLINK...) sẽ bị bộ lọc mặc định bỏ qua - bật lên để hiện mọi thiết bị BLE có tên.
+  const [showAllDevices, setShowAllDevices] = useState(false);
+
   useEffect(() => {
     if (!isPremium) return;
-    startScan();
+    startScan(showAllDevices);
     return () => stopScan();
-  }, [isPremium]);
+  }, [isPremium, showAllDevices]);
 
   async function handleConnect(deviceId: string, deviceName: string) {
     stopScan();
     await connect(deviceId);
     navigation.replace('OBDDashboard', { vehicleId, vehicleName, deviceName, consumptionOfficial });
   }
+
+  // One Tap Connect: tự bấm connect ngay khi quét thấy đúng thiết bị đã ghép NFC,
+  // không chờ user chạm vào danh sách.
+  useEffect(() => {
+    if (!autoConnectDeviceId || connectionState !== 'scanning') return;
+    const match = foundDevices.find((d) => d.id === autoConnectDeviceId);
+    if (match) handleConnect(match.id, match.name);
+  }, [autoConnectDeviceId, foundDevices, connectionState]);
 
   const isScanning = connectionState === 'scanning';
   const isConnecting = connectionState === 'connecting';
@@ -122,12 +138,25 @@ export default function OBDSetupScreen() {
         {!isScanning && !isConnecting && (
           <TouchableOpacity
             style={[styles.scanBtn, { borderColor: '#3B82F6' }]}
-            onPress={startScan}
+            onPress={() => startScan(showAllDevices)}
           >
             <FontAwesome5 name="sync" size={14} color="#3B82F6" />
             <Text style={[styles.scanBtnText, { color: '#3B82F6' }]}>{t('obd.scan_retry')}</Text>
           </TouchableOpacity>
         )}
+
+        {/* Show-all toggle */}
+        <View style={[styles.showAllRow, { backgroundColor: colors.card }]}>
+          <Text style={[styles.showAllLabel, { color: colors.text }]}>
+            {t('obd.show_all_devices')}
+          </Text>
+          <Switch
+            value={showAllDevices}
+            onValueChange={setShowAllDevices}
+            disabled={isConnecting}
+            trackColor={{ true: '#3B82F6' }}
+          />
+        </View>
 
         {/* Hint */}
         <View style={[styles.hintCard, { backgroundColor: colors.card }]}>
@@ -190,6 +219,16 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   scanBtnText: { fontSize: 15, fontWeight: '600' },
+  showAllRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    marginTop: 12,
+  },
+  showAllLabel: { fontSize: 14, fontWeight: '500' },
   hintCard: {
     borderRadius: 12,
     padding: 16,

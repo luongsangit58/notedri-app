@@ -20,7 +20,7 @@
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
-        "NSBluetoothAlwaysUsageDescription": "NoteDri cần Bluetooth để kết nối với thiết bị OBD của xe bạn",
+        "NSBluetoothAlwaysUsageDescription": "NoteDri cần Bluetooth để kết nối với thiết bị OBD2 của xe bạn",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "NoteDri cần vị trí để tự động ghi hành trình khi bạn lái xe",
         "NSLocationAlwaysUsageDescription": "NoteDri cần vị trí nền để ghi hành trình ngay cả khi app đang đóng",
         "UIBackgroundModes": [
@@ -100,7 +100,13 @@
           "modes": [
             "central"
           ],
-          "bluetoothAlwaysPermission": "NoteDri cần Bluetooth để kết nối với thiết bị OBD của xe bạn"
+          "bluetoothAlwaysPermission": "NoteDri cần Bluetooth để kết nối với thiết bị OBD2 của xe bạn"
+        }
+      ],
+      [
+        "react-native-nfc-manager",
+        {
+          "nfcPermission": "NoteDri cần NFC để nhận diện xe khi bạn chạm thẻ NFC"
         }
       ],
       "expo-web-browser",

@@ -5,6 +5,7 @@ import { bleService, ConnectionState, ObdDevice } from '../services/obd/BleServi
 import { initializeElm327, readSnapshot, ObdSnapshot } from '../services/obd/ObdReader';
 import { TripSession, TripSummary } from '../services/obd/TripSession';
 import { enqueueTripSync } from '../services/obd/TripSyncQueue';
+import { savePairing } from '../services/obd/pairedDevices';
 import { useAuthStore } from '../store/authStore';
 
 export type ObdWarning = { type: 'no_data'; rawResponse?: string } | null;
@@ -39,7 +40,7 @@ export const useResolveDtc = () => {
 
 // ---- BLE connection + trip management ----
 
-export function useObdConnection(vehicleId: number) {
+export function useObdConnection(vehicleId: number, vehicleName?: string) {
   const qc = useQueryClient();
 
   const [connectionState, setConnectionState] = useState<ConnectionState>('disconnected');
@@ -68,7 +69,7 @@ export function useObdConnection(vehicleId: number) {
 
   // --- Scan ---
 
-  const startScan = useCallback(async () => {
+  const startScan = useCallback(async (showAll = false) => {
     // Stop any previous scan before starting a new one to avoid listener leaks
     stopScanRef.current?.();
     bleService.stopScan();
@@ -101,7 +102,8 @@ export function useObdConnection(vehicleId: number) {
       (error) => {
         setConnectionState('error');
         setErrorMessage(error.message);
-      }
+      },
+      showAll
     );
 
     autoStopTimerRef.current = setTimeout(() => {
@@ -152,12 +154,16 @@ export function useObdConnection(vehicleId: number) {
 
       const snap = await readSnapshot();
       setLiveSnapshot(snap);
+
+      // Ghi nhớ thiết bị này thuộc xe nào - để BLE restore (iOS background) và
+      // NFC tag sau này tự nhận diện đúng xe mà không cần user chọn lại.
+      savePairing({ bleDeviceId: deviceId, vehicleId, vehicleName: vehicleName ?? '' }).catch(() => {});
     } catch (e: any) {
       bleService.onDisconnect = null;
       setConnectionState('error');
       setErrorMessage(e.message);
     }
-  }, [stopScan]);
+  }, [stopScan, vehicleId, vehicleName]);
 
   const disconnect = useCallback(async () => {
     if (currentTripRef.current) {

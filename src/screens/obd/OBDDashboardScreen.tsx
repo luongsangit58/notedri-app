@@ -5,12 +5,14 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
+  Share,
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useObdConnection } from '../../hooks/useObd';
+import { bleService } from '../../services/obd/BleService';
 import AppBgPattern from '../../components/AppBgPattern';
 import { useColors } from '../../utils/theme';
 import { useT } from '../../i18n';
@@ -66,7 +68,7 @@ export default function OBDDashboardScreen() {
     disconnect,
     startTrip,
     stopTrip,
-  } = useObdConnection(vehicleId);
+  } = useObdConnection(vehicleId, vehicleName);
 
   async function handleDisconnect() {
     Alert.alert(t('obd.disconnect_title'), t('obd.disconnect_confirm'), [
@@ -82,6 +84,24 @@ export default function OBDDashboardScreen() {
     ]);
   }
 
+  // Xuất log thô lệnh/response của phiên (JSON) qua Share sheet - user gửi cho chính mình
+  // (Zalo/email/Drive) rồi thả vào repo notedri-app/obd-fixtures/ làm fixture test parser.
+  async function handleExportLog() {
+    const log = bleService.getSessionLog();
+    if (log.length === 0) {
+      Alert.alert(t('obd.export_log'), t('obd.export_log_empty'));
+      return;
+    }
+    await Share.share({
+      title: 'notedri-obd-session.json',
+      message: JSON.stringify(
+        { exported_at: new Date().toISOString(), device: deviceName, entries: log },
+        null,
+        1,
+      ),
+    });
+  }
+
   const snap = liveSnapshot;
   const isConnected = connectionState === 'connected';
 
@@ -93,7 +113,7 @@ export default function OBDDashboardScreen() {
           <FontAwesome5 name="arrow-left" size={18} color={colors.text} />
         </TouchableOpacity>
         <View>
-          <Text style={[styles.title, { color: colors.text }]}>OBD Live</Text>
+          <Text style={[styles.title, { color: colors.text }]}>{t('obd.dashboard_title')}</Text>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{deviceName}</Text>
         </View>
         <TouchableOpacity onPress={handleDisconnect} style={styles.disconnectBtn}>
@@ -162,6 +182,31 @@ export default function OBDDashboardScreen() {
           onPress={() => navigation.navigate('OBDTrips', { vehicleId, vehicleName, consumptionOfficial })}>
           <FontAwesome5 name="route" size={14} color={colors.primary} />
           <Text style={[styles.historyBtnText, { color: colors.primary }]}>{t('obd.trip_history')}</Text>
+          <FontAwesome5 name="chevron-right" size={12} color={colors.textSecondary} />
+        </TouchableOpacity>
+
+        {/* NFC pairing link - chỉ hiện khi đang thực sự kết nối, tránh bấm vào im
+            lặng không phản hồi nếu xe vừa mất kết nối giữa chừng */}
+        {isConnected && (
+        <TouchableOpacity
+          style={[styles.historyBtn, { backgroundColor: colors.card }]}
+          onPress={() => {
+            const bleDeviceId = bleService.getDeviceId();
+            if (!bleDeviceId) return;
+            navigation.navigate('NfcSetup', { vehicleId, vehicleName, bleDeviceId });
+          }}>
+          <FontAwesome5 name="wifi" size={14} color={colors.primary} />
+          <Text style={[styles.historyBtnText, { color: colors.primary }]}>{t('nfc.pair_link')}</Text>
+          <FontAwesome5 name="chevron-right" size={12} color={colors.textSecondary} />
+        </TouchableOpacity>
+        )}
+
+        {/* Session log export - nguồn fixture cho việc phát triển parser/capability profile */}
+        <TouchableOpacity
+          style={[styles.historyBtn, { backgroundColor: colors.card }]}
+          onPress={handleExportLog}>
+          <FontAwesome5 name="file-export" size={14} color={colors.primary} />
+          <Text style={[styles.historyBtnText, { color: colors.primary }]}>{t('obd.export_log')}</Text>
           <FontAwesome5 name="chevron-right" size={12} color={colors.textSecondary} />
         </TouchableOpacity>
 
