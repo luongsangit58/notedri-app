@@ -8,6 +8,8 @@ import {
   StyleSheet,
   Switch,
   Alert,
+  Linking,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
@@ -164,6 +166,20 @@ export default function OBDSetupScreen() {
           )}
           {errorMessage && (
             <Text style={styles.errorText}>{errorMessage}</Text>
+          )}
+          {/* Bluetooth tắt và không tự bật được (Android 13+/iOS) → dẫn thẳng vào cài đặt */}
+          {errorMessage === t('obd.bluetooth_unavailable') && (
+            <TouchableOpacity
+              style={{ marginTop: 8, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8, backgroundColor: '#3B82F6' }}
+              onPress={() => {
+                if (Platform.OS === 'android') {
+                  Linking.sendIntent('android.settings.BLUETOOTH_SETTINGS').catch(() => Linking.openSettings());
+                } else {
+                  Linking.openSettings();
+                }
+              }}>
+              <Text style={{ color: '#fff', fontWeight: '600', fontSize: 13 }}>{t('obd.open_bt_settings')}</Text>
+            </TouchableOpacity>
           )}
         </View>
 

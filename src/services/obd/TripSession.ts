@@ -91,8 +91,14 @@ export class TripSession {
   // khi bớt tải; dồn lệnh lúc yếu sóng chỉ làm chuỗi timeout dài thêm.
   private skipBeat = false;
 
+  // Khoá chống chồng lấn: một vòng đọc chậm hơn 3s (BLE trễ) mà setInterval vẫn
+  // bắn tiếp → 2 luồng readSnapshot chạy song song, lệnh gửi ĐÔI (bằng chứng
+  // fixture #4: 010C,010C,010D,010D...). Vòng trước chưa xong thì bỏ nhịp này.
+  private pollInFlight = false;
+
   private async poll() {
     if (this.state !== 'running') return;
+    if (this.pollInFlight) return;
 
     if (bleService.getLinkQuality() === 'poor') {
       this.skipBeat = !this.skipBeat;
@@ -103,6 +109,7 @@ export class TripSession {
       this.skipBeat = false;
     }
 
+    this.pollInFlight = true;
     try {
       const snapshot = await readSnapshot();
       this.snapshots.push(snapshot);
@@ -144,7 +151,12 @@ export class TripSession {
         }
       }
 
-      if (this.snapshots.length % Math.round(300000 / POLL_INTERVAL_MS) === 0) {
+      // DTC: đọc SỚM ở vòng thứ 2 (user thấy lỗi ngay đầu chuyến + log phiên nào
+      // cũng có mẫu mode 03), sau đó lặp lại mỗi 5 phút.
+      if (
+        this.snapshots.length === 2 ||
+        this.snapshots.length % Math.round(300000 / POLL_INTERVAL_MS) === 0
+      ) {
         const codes = await readDtcCodes();
         if (codes.length > 0) {
           this.dtcCodes = codes;
@@ -153,6 +165,8 @@ export class TripSession {
       }
     } catch {
       // Swallow poll errors - connection may have briefly dropped
+    } finally {
+      this.pollInFlight = false;
     }
   }
 

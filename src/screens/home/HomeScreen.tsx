@@ -163,10 +163,15 @@ export default function HomeScreen() {
 
   // Thẻ OBD quick-connect (C4): CHỈ hiện khi user có thiết bị đã ghép - user chưa
   // có adapter không bị spam; pairing dùng gần nhất quyết định xe mặc định.
+  // Refresh mỗi lần tab Home được focus: Home mount TRƯỚC lần ghép đầu tiên nên
+  // chỉ load lúc mount là thẻ không bao giờ xuất hiện trong phiên đó (bug Sang báo).
   const [obdPairing, setObdPairing] = useState<PairedDevice | null>(null);
   useEffect(() => {
-    getMostRecentPairing().then(setObdPairing).catch(() => {});
-  }, []);
+    const refresh = () => getMostRecentPairing().then(setObdPairing).catch(() => {});
+    refresh();
+    const unsubscribe = nav.addListener('focus', refresh);
+    return unsubscribe;
+  }, [nav]);
 
   // Dashboard data for quick stats strip
   // Note: useDashboard returns r.data (Axios), but the actual fields are at r.data.data

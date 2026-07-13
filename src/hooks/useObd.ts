@@ -133,9 +133,22 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
     try {
       await bleService.waitForBleReady();
     } catch (e: any) {
-      setConnectionState('error');
-      setErrorMessage(e.message);
-      return;
+      // Bluetooth đang tắt: thử bật hộ (Android ≤12) rồi chờ lại một lần -
+      // user không phải tự mò vào cài đặt (bug Sang báo 13/7).
+      const enabled = await bleService.tryEnableBluetooth();
+      if (enabled) {
+        try {
+          await bleService.waitForBleReady();
+        } catch (e2: any) {
+          setConnectionState('error');
+          setErrorMessage(e2.message);
+          return;
+        }
+      } else {
+        setConnectionState('error');
+        setErrorMessage(e.message);
+        return;
+      }
     }
 
     stopScanRef.current = bleService.scanForDevices(

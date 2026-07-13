@@ -457,6 +457,7 @@ const en = {
   "obd.link_poor": "Weak link",
   "obd.auto_connect_hint": "Will auto-connect to your paired device when found",
   "obd.no_serial_channel": "This device has no command channel (not an OBD2 adapter?). Rescan or pick another device.",
+  "obd.open_bt_settings": "Open Bluetooth settings",
   "obd.pair_switch_title": "Move Vgate to this vehicle?",
   "obd.pair_switch_body": "This device is paired with {{old}}. Switch it to {{new}}?",
   "obd.pair_switch_ok": "Switch",

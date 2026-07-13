@@ -458,6 +458,7 @@ const vi = {
   "obd.link_poor": "Sóng kém",
   "obd.auto_connect_hint": "Sẽ tự kết nối với thiết bị đã ghép khi tìm thấy",
   "obd.no_serial_channel": "Thiết bị không có kênh truyền lệnh (không phải adapter OBD2?). Thử quét lại hoặc chọn thiết bị khác.",
+  "obd.open_bt_settings": "Mở cài đặt Bluetooth",
   "obd.pair_switch_title": "Chuyển Vgate sang xe này?",
   "obd.pair_switch_body": "Thiết bị đang ghép với {{old}}. Chuyển sang {{new}}?",
   "obd.pair_switch_ok": "Chuyển",

@@ -309,6 +309,21 @@ class BleService {
     return true;
   }
 
+  /**
+   * Android: thử bật Bluetooth hộ user (BluetoothAdapter.enable - chạy tới
+   * Android 12; Android 13+ bị OS chặn thì trả false để UI hướng dẫn mở cài đặt).
+   * iOS không cho app bật Bluetooth - luôn false.
+   */
+  async tryEnableBluetooth(): Promise<boolean> {
+    if (Platform.OS !== 'android') return false;
+    try {
+      await this.manager.enable();
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   async waitForBleReady(): Promise<void> {
     return new Promise((resolve, reject) => {
       // Timeout: các state như Unknown/Resetting không phát PoweredOn/Off -> nếu không

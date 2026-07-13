@@ -1,5 +1,5 @@
 import { bleService } from './BleService';
-import { extractPayload, isNoData } from './obdParser';
+import { extractPayload, isNoData, parseDtcCodes } from './obdParser';
 
 // Capability-aware polling (ý #18): PID xe không hỗ trợ (Honda City: 2F fuel,
 // 5C oil temp đều NO DATA - fixture #2) bị bỏ qua ngay, không tốn round-trip BLE.
@@ -155,52 +155,13 @@ export async function readSnapshot(): Promise<ObdSnapshot> {
   };
 }
 
-// Chỉ còn dùng cho readDtcCodes - phần này giữ nguyên chờ mẫu mode 03 thật
-// (checklist: parser DTC nghi bug byte đếm trên CAN, không đoán-sửa).
-function parseHexByte(hex: string): number {
-  if (!hex || !/^[0-9A-Fa-f]+$/.test(hex)) return NaN;
-  return parseInt(hex, 16);
-}
-
 export async function readDtcCodes(): Promise<DtcCode[]> {
   try {
-    await bleService.sendCommand('ATH1');
-    let response: string;
-    try {
-      response = await bleService.sendCommand('03', 5000);
-    } finally {
-      // Always restore headers-off even if command times out
-      await bleService.sendCommand('ATH0').catch(() => {});
-    }
-
-    if (response.includes('NO DATA') || response.includes('NODATA')) return [];
-
-    const codes: DtcCode[] = [];
-    const lines = response.split('\n').map((l) => l.trim()).filter(Boolean);
-
-    for (const line of lines) {
-      const parts = line.replace(/\s+/g, ' ').toUpperCase().split(' ');
-      const startIdx = parts.findIndex((p) => p === '43');
-      if (startIdx === -1) continue;
-
-      const data = parts.slice(startIdx + 1);
-      for (let i = 0; i + 1 < data.length; i += 2) {
-        const byte1 = parseHexByte(data[i]);
-        const byte2 = parseHexByte(data[i + 1]);
-        if (isNaN(byte1) || isNaN(byte2) || (byte1 === 0 && byte2 === 0)) continue;
-
-        const typeChar = ['P', 'C', 'B', 'U'][(byte1 >> 6) & 0x03];
-        const digit1 = (byte1 >> 4) & 0x03;
-        const digit2 = byte1 & 0x0f;
-        const digit3 = (byte2 >> 4) & 0x0f;
-        const digit4 = byte2 & 0x0f;
-
-        const code = `${typeChar}${digit1}${digit2.toString(16).toUpperCase()}${digit3.toString(16).toUpperCase()}${digit4.toString(16).toUpperCase()}`;
-        codes.push({ code, description: null });
-      }
-    }
-
-    return codes;
+    // Giữ nguyên ATH0/ATS0 như mọi lệnh khác - format multi-frame khi nhiều mã
+    // đã đo thật qua 0902 (VIN) và parseDtcCodes xử lý được. Bỏ trò bật/tắt ATH1
+    // cũ: đổi state adapter giữa chừng là nguồn lỗi (bài học fixture #1/#2).
+    const response = await bleService.sendCommand('03', 5000);
+    return parseDtcCodes(response).map((code) => ({ code, description: null }));
   } catch {
     return [];
   }

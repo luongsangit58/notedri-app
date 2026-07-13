@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { bleService } from './BleService';
-import { parseSupportedPids } from './obdParser';
+import { parseSupportedPids, parseVin } from './obdParser';
 
 const KEY = 'obd_vehicle_capabilities';
 
@@ -15,6 +15,7 @@ const KEY = 'obd_vehicle_capabilities';
 export type VehicleCapability = {
   vehicleId: number;
   supportedPids: string[];
+  vin: string | null;
   discoveredAt: string;
 };
 
@@ -68,9 +69,19 @@ export async function discoverCapability(vehicleId: number): Promise<VehicleCapa
 
   if (supported.length === 0) return null;
 
+  // VIN (mode 09 02): định danh xe thật - nuôi prefill "Thêm xe từ OBD" và
+  // sau này thay vehicleId làm khoá cache. Đọc lỗi thì null, không chặn discovery.
+  let vin: string | null = null;
+  try {
+    vin = parseVin(await bleService.sendCommand('0902', 4000));
+  } catch {
+    vin = null;
+  }
+
   const capability: VehicleCapability = {
     vehicleId,
     supportedPids: supported,
+    vin,
     discoveredAt: new Date().toISOString(),
   };
 

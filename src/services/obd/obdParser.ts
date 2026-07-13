@@ -49,6 +49,114 @@ export function isNoData(response: string): boolean {
 }
 
 /**
+ * Ghép response ISO-TP nhiều frame của ELM327 (ATH0+ATS0) thành 1 chuỗi hex.
+ * Format thật từ fixture #3 (0902 VIN):
+ *   "014\r0:4902014D5248\r1:474B353833304A\r2:54303430303035"
+ * Dòng đầu = tổng độ dài (hex, bỏ qua); các dòng "n:HEX" ghép theo index.
+ * Trả null nếu không phải dạng multi-frame.
+ */
+export function assembleIsoTpFrames(response: string): string | null {
+  const lines = response
+    .toUpperCase()
+    .split(/[\r\n]+/)
+    .map((l) => l.replace(/\s+/g, ''))
+    .filter((l) => l.length > 0);
+
+  const frames: Array<[number, string]> = [];
+  for (const line of lines) {
+    const m = line.match(/^([0-9A-F]):([0-9A-F]+)$/);
+    if (m) frames.push([parseInt(m[1], 16), m[2]]);
+  }
+  if (frames.length === 0) return null;
+
+  frames.sort((a, b) => a[0] - b[0]);
+  return frames.map((f) => f[1]).join('');
+}
+
+/** Chuỗi hex của response: multi-frame thì ghép, không thì lấy dòng hex đầu tiên. */
+function responseHex(response: string): string | null {
+  const assembled = assembleIsoTpFrames(response);
+  if (assembled) return assembled;
+
+  const line = response
+    .toUpperCase()
+    .split(/[\r\n]+/)
+    .map((l) => l.replace(/\s+/g, ''))
+    .find((l) => l.length > 0 && /^[0-9A-F]+$/.test(l));
+  return line ?? null;
+}
+
+/**
+ * Parse VIN từ response mode 09 02. Payload sau "490201" (01 = số bản ghi)
+ * là 17 byte ASCII. Fixture #3: → "MRHGK5830JT040005".
+ */
+export function parseVin(response: string): string | null {
+  const hex = responseHex(response);
+  if (!hex) return null;
+
+  const idx = hex.indexOf('4902');
+  if (idx === -1) return null;
+
+  // Bỏ "4902" + 1 byte số-bản-ghi, phần còn lại là ASCII
+  const payload = hex.slice(idx + 6);
+  let vin = '';
+  for (let i = 0; i + 1 < payload.length; i += 2) {
+    const byte = parseInt(payload.slice(i, i + 2), 16);
+    if (byte === 0) continue; // padding
+    vin += String.fromCharCode(byte);
+  }
+  vin = vin.trim().toUpperCase();
+
+  // VIN chuẩn: 17 ký tự, không dùng I/O/Q
+  return /^[A-HJ-NPR-Z0-9]{17}$/.test(vin) ? vin : null;
+}
+
+/**
+ * Parse mã lỗi từ response mode 03 (CAN - ISO 15765-4, protocol xe đã xác nhận
+ * qua ATDPN=A7): "43" + 1 byte SỐ MÃ + từng cặp 2 byte/mã. Xe khoẻ: "4300".
+ * Nhiều mã (>2) sẽ về dạng multi-frame như VIN - responseHex ghép sẵn.
+ * LƯU Ý: format này viết theo chuẩn SAE J1979 CAN + transport đã đo thật;
+ * chưa có mẫu mode 03 thật từ xe (xe khoẻ) - fixture sau sẽ xác nhận "4300".
+ */
+export function parseDtcCodes(response: string): string[] {
+  if (isNoData(response)) return [];
+
+  const hex = responseHex(response);
+  if (!hex) return [];
+
+  const idx = hex.indexOf('43');
+  if (idx === -1) return [];
+
+  const afterMode = hex.slice(idx + 2);
+  if (afterMode.length < 2) return [];
+
+  const count = parseInt(afterMode.slice(0, 2), 16);
+  if (isNaN(count) || count === 0) return [];
+
+  // Đủ dữ liệu cho count mã (mỗi mã 4 ký tự hex) thì tin byte đếm;
+  // thiếu thì fallback đọc mọi cặp (phòng adapter non-CAN không có byte đếm).
+  const hasCountByte = afterMode.length - 2 >= count * 4;
+  const codesHex = hasCountByte ? afterMode.slice(2, 2 + count * 4) : afterMode;
+
+  const codes: string[] = [];
+  for (let i = 0; i + 3 < codesHex.length; i += 4) {
+    const byte1 = parseInt(codesHex.slice(i, i + 2), 16);
+    const byte2 = parseInt(codesHex.slice(i + 2, i + 4), 16);
+    if (isNaN(byte1) || isNaN(byte2) || (byte1 === 0 && byte2 === 0)) continue;
+
+    const typeChar = ['P', 'C', 'B', 'U'][(byte1 >> 6) & 0x03];
+    const digit1 = (byte1 >> 4) & 0x03;
+    const digit2 = byte1 & 0x0f;
+    const digit3 = (byte2 >> 4) & 0x0f;
+    const digit4 = byte2 & 0x0f;
+    codes.push(
+      `${typeChar}${digit1}${digit2.toString(16).toUpperCase()}${digit3.toString(16).toUpperCase()}${digit4.toString(16).toUpperCase()}`,
+    );
+  }
+  return codes;
+}
+
+/**
  * Parse bitmap "PID hỗ trợ" (0100/0120/0140/...): 4 byte payload, bit MSB-first,
  * bit thứ i (1-based) = PID (base + i). Ví dụ 4100 BE3FA813 → 01,02,03,04,06,07,08...
  */

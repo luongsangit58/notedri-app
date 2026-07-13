@@ -4,7 +4,7 @@
  * Đây là hồi quy cho bug "màn hình toàn dấu -": ATS0 làm response dính liền
  * ("410C1034") trong khi parser cũ tách token theo dấu cách.
  */
-import { extractPayload, isNoData, parseSupportedPids, PID_REGISTRY } from '../obdParser';
+import { extractPayload, isNoData, parseSupportedPids, parseVin, parseDtcCodes, PID_REGISTRY } from '../obdParser';
 
 describe('extractPayload - format thật từ fixture #2 (ATS0, không dấu cách)', () => {
   it('parse RPM 410C1034 → 1037 rpm', () => {
@@ -58,6 +58,65 @@ describe('isNoData - PID xe không hỗ trợ (Honda City: 012F, 015C)', () => {
     expect(isNoData('NO DATA')).toBe(true);
     expect(isNoData('NODATA')).toBe(true);
     expect(isNoData('410C1034')).toBe(false);
+  });
+});
+
+describe('parseVin - format multi-frame thật từ fixture #3', () => {
+  it('ghép ISO-TP và ra đúng VIN xe Honda City', () => {
+    const raw = '014\r0:4902014D5248\r1:474B353833304A\r2:54303430303035';
+    expect(parseVin(raw)).toBe('MRHGK5830JT040005');
+  });
+
+  it('NO DATA / rác → null', () => {
+    expect(parseVin('NO DATA')).toBeNull();
+    expect(parseVin('ELM327 v2.3')).toBeNull();
+  });
+});
+
+describe('parseDtcCodes - mode 03 chuẩn CAN (chờ mẫu thật xác nhận thêm)', () => {
+  it('xe khoẻ 4300 → không mã nào', () => {
+    expect(parseDtcCodes('4300')).toEqual([]);
+  });
+
+  it('2 mã có byte đếm: 430201710420 → P0171 + P0420 (hồi quy bug byte đếm bị decode nhầm)', () => {
+    expect(parseDtcCodes('430201710420')).toEqual(['P0171', 'P0420']);
+  });
+
+  it('mã hệ khung gầm/mạng decode đúng chữ đầu', () => {
+    // 43 01 4035 → C0035 ; 43 01 C100 → U0100
+    expect(parseDtcCodes('43014035')).toEqual(['C0035']);
+    expect(parseDtcCodes('4301C100')).toEqual(['U0100']);
+  });
+
+  it('multi-frame nhiều mã (format như VIN)', () => {
+    const raw = '00A\r0:430401710420\r1:014034350000';
+    // 43 04: P0171, C0420? -> giải: 0171 P0171; 0420 -> 04>>6=0 P0420; 0140 P0140; 3435 -> 34>>6=0 P3435
+    expect(parseDtcCodes(raw)).toEqual(['P0171', 'P0420', 'P0140', 'P3435']);
+  });
+
+  it('NO DATA → rỗng', () => {
+    expect(parseDtcCodes('NO DATA')).toEqual([]);
+  });
+});
+
+describe('parseSupportedPids - bitmap THẬT từ fixture #3 (Honda City)', () => {
+  it('trang 0100 thật: có 0C/0D/04/05/11, có bit trang sau (20)', () => {
+    const pids = parseSupportedPids('4100BC3EA803', 0x00);
+    expect(pids).toEqual(expect.arrayContaining(['04', '05', '0C', '0D', '11', '20']));
+  });
+
+  it('trang 0120 thật: KHÔNG có 2F (fuel level) - khớp NO DATA thực tế', () => {
+    const pids = parseSupportedPids('4120801DB001', 0x20);
+    expect(pids).not.toContain('2F');
+    expect(pids).toContain('40'); // bit trang sau
+  });
+
+  it('trang 0140 thật: có 42 (điện áp - battery guardian) và 51 (fuel type - prefill)', () => {
+    const pids = parseSupportedPids('41407AD08000', 0x40);
+    expect(pids).toContain('42');
+    expect(pids).toContain('51');
+    expect(pids).not.toContain('5C'); // oil temp - khớp NO DATA thực tế
+    expect(pids).not.toContain('60'); // không có trang sau → discovery dừng đúng chỗ
   });
 });
 
