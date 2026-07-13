@@ -74,6 +74,16 @@ export async function initializeElm327(): Promise<InitResult> {
     const [rpm, speed] = await Promise.all([readRpm(), readSpeed()]);
     const dataAvailable = rpm !== null || speed !== null;
 
+    // Dò best-effort CHỈ ĐỂ GHI LOG PHIÊN (không parse, không dùng kết quả):
+    // phiên bản adapter, protocol, bitmask PID hỗ trợ, VIN. Fixture xuất ra từ
+    // log này là nguồn duy nhất để viết parser capability/VIN chính xác về sau -
+    // cố tình KHÔNG đoán format ở đây (kỷ luật "chính xác trước" của checklist).
+    if (dataAvailable) {
+      for (const probe of ['ATI', 'ATDPN', '0100', '0120', '0140', '0160', '0902']) {
+        await bleService.sendCommand(probe, 3000).catch(() => {});
+      }
+    }
+
     if (!dataAvailable) {
       // Capture raw RPM response for compatibility debugging.
       // Shown in the warning banner so users can report it.
