@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, RefreshControl, Switch, ImageBackground } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useVehicle, useVehicleHealth, useVehicleReminders, useToggleVehicleRest } from '../../hooks/useVehicles';
 import { useObdDtcEvents } from '../../hooks/useObd';
+import { getPairingForVehicle } from '../../services/obd/pairedDevices';
 import LoadingView from '../../components/LoadingView';
 import ErrorView from '../../components/ErrorView';
 import AppBgPattern from '../../components/AppBgPattern';
@@ -244,6 +245,17 @@ export default function VehicleDetailScreen() {
   const { data: dtcData } = useObdDtcEvents(vehicleId);
   const { mutate: toggleRest, isPending: togglingRest } = useToggleVehicleRest();
 
+  // Decay state OBD (ý #12/#13): xe từng ghép Vgate nhưng lâu không kết nối →
+  // phụ đề thẻ OBD tự nhắc nhẹ, không bắn push. 14 ngày mới coi là "lâu".
+  const [obdLastSeenDays, setObdLastSeenDays] = useState<number | null>(null);
+  useEffect(() => {
+    getPairingForVehicle(vehicleId).then((p) => {
+      if (p?.lastConnectedAt) {
+        setObdLastSeenDays(Math.floor((Date.now() - p.lastConnectedAt) / 86400000));
+      }
+    }).catch(() => {});
+  }, [vehicleId]);
+
   if (isLoading) return <LoadingView />;
   if (isError) return <ErrorView message={t('vehicles.cannot_load_detail')} onRetry={refetch} />;
 
@@ -459,7 +471,9 @@ export default function VehicleDetailScreen() {
               )}
             </View>
             <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 1 }}>
-              {t('obd.entry_desc')}
+              {obdLastSeenDays !== null && obdLastSeenDays >= 14
+                ? t('obd.entry_last_seen', { n: obdLastSeenDays })
+                : t('obd.entry_desc')}
             </Text>
           </View>
           <FontAwesome5 name="chevron-right" size={13} color={colors.textSecondary} />

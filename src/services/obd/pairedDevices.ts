@@ -6,6 +6,9 @@ export type PairedDevice = {
   bleDeviceId: string;
   vehicleId: number;
   vehicleName: string;
+  // Mốc kết nối thành công gần nhất (ms epoch) - nuôi trạng thái "lâu không thấy
+  // thiết bị" ở màn chi tiết xe (ý #12/#13: nudge passive, không bắn push làm phiền).
+  lastConnectedAt?: number;
 };
 
 async function readAll(): Promise<PairedDevice[]> {
@@ -26,7 +29,7 @@ async function writeAll(devices: PairedDevice[]): Promise<void> {
 export async function savePairing(pairing: PairedDevice): Promise<void> {
   const devices = await readAll();
   const next = devices.filter((d) => d.bleDeviceId !== pairing.bleDeviceId);
-  next.push(pairing);
+  next.push({ ...pairing, lastConnectedAt: pairing.lastConnectedAt ?? Date.now() });
   await writeAll(next);
 }
 

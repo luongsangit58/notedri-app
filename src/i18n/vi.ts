@@ -419,6 +419,8 @@ const vi = {
   "obd.setup_title": "Kết nối OBD2",
   "obd.dashboard_title": "OBD2 Live",
   "obd.entry_desc": "Đọc dữ liệu xe theo thời gian thực qua adapter OBD2",
+  "obd.entry_last_seen": "Đã {{n}} ngày chưa kết nối - cắm lại adapter khi tiện nhé",
+  "obd.no_device_reassure": "Không có adapter vẫn dùng được: chuyến GPS, tra mã lỗi, sức khoẻ xe.",
   "obd.connecting": "Đang kết nối...",
   "obd.scanning": "Đang tìm thiết bị OBD2...",
   "obd.no_device_found": "Chưa tìm thấy thiết bị",

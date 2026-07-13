@@ -418,6 +418,8 @@ const en = {
   "obd.setup_title": "Connect OBD2",
   "obd.dashboard_title": "OBD2 Live",
   "obd.entry_desc": "Read real-time vehicle data via an OBD2 adapter",
+  "obd.entry_last_seen": "Not connected for {{n}} days - plug the adapter back in when convenient",
+  "obd.no_device_reassure": "No adapter? GPS trips, DTC lookup and vehicle health still work.",
   "obd.connecting": "Connecting...",
   "obd.scanning": "Scanning for OBD2 devices...",
   "obd.no_device_found": "No device found",

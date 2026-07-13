@@ -118,6 +118,12 @@ export default function OBDSetupScreen() {
               {t('obd.auto_connect_hint')}
             </Text>
           )}
+          {/* Decay/empty state (ý #13): không có thiết bị không có nghĩa là mất app */}
+          {!isScanning && !isConnecting && foundDevices.length === 0 && (
+            <Text style={{ color: colors.textSecondary, fontSize: 12, textAlign: 'center' }}>
+              {t('obd.no_device_reassure')}
+            </Text>
+          )}
           {(isScanning || isConnecting) && (
             <ActivityIndicator color="#3B82F6" style={{ marginTop: 8 }} />
           )}
