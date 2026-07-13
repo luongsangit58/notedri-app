@@ -10,6 +10,7 @@ import {
   Alert,
   Linking,
   Platform,
+  Share,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
@@ -82,6 +83,22 @@ export default function OBDSetupScreen() {
     if (ok) {
       navigation.replace('OBDDashboard', { vehicleId, vehicleName, deviceName, consumptionOfficial });
     }
+  }
+
+  async function handleExportLog() {
+    const log = bleService.getSessionLog();
+    if (log.length === 0) {
+      Alert.alert(t('obd.export_log'), t('obd.export_log_empty'));
+      return;
+    }
+    await Share.share({
+      title: 'notedri-obd-session.json',
+      message: JSON.stringify(
+        { exported_at: new Date().toISOString(), vehicle: vehicleName, entries: log },
+        null,
+        1,
+      ),
+    });
   }
 
   async function handleConnect(deviceId: string, deviceName: string) {
@@ -202,8 +219,28 @@ export default function OBDSetupScreen() {
                 <FontAwesome5 name="chevron-right" size={14} color={colors.textSecondary} />
               </TouchableOpacity>
             )}
-          />
+            />
         )}
+
+        {/* Quick actions: vẫn xem lại lịch sử / debug log được ngay trên màn kết nối,
+            kể cả vừa disconnect xong và chưa vào dashboard nữa. */}
+        <View style={{ flexDirection: 'row', gap: 12, marginTop: 16 }}>
+          <TouchableOpacity
+            style={[styles.actionBtn, { borderColor: colors.primary, flex: 1 }]}
+            onPress={() => navigation.navigate('OBDTrips', { vehicleId, vehicleName, consumptionOfficial })}
+            disabled={!vehicleId}
+          >
+            <FontAwesome5 name="route" size={14} color={colors.primary} />
+            <Text style={[styles.actionBtnText, { color: colors.primary }]}>{t('obd.trip_history')}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.actionBtn, { borderColor: colors.primary, flex: 1 }]}
+            onPress={handleExportLog}
+          >
+            <FontAwesome5 name="file-export" size={14} color={colors.primary} />
+            <Text style={[styles.actionBtnText, { color: colors.primary }]}>{t('obd.export_log')}</Text>
+          </TouchableOpacity>
+        </View>
 
         {/* Retry scan */}
         {!isScanning && !isConnecting && (
@@ -290,6 +327,17 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   scanBtnText: { fontSize: 15, fontWeight: '600' },
+  actionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderWidth: 1.5,
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+  },
+  actionBtnText: { fontSize: 13, fontWeight: '600' },
   showAllRow: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -4,6 +4,7 @@ import { readSnapshot, readDtcCodes, ObdSnapshot, DtcCode } from './ObdReader';
 
 const POLL_INTERVAL_MS = 3000;
 const IDLE_RPM_THRESHOLD = 200;
+const IDLE_SPEED_THRESHOLD_KMH = 3;
 const IDLE_STOP_DELAY_MS = 30000;
 
 export type TripSummary = {
@@ -123,21 +124,32 @@ export class TripSession {
         this.fuelLevelStart = snapshot.fuelLevelPct;
       }
 
-      if (snapshot.speedKmh !== null && snapshot.speedKmh > 0) {
+      const speedKmh = snapshot.speedKmh;
+      const rpm = snapshot.rpm;
+      const hasSpeedSignal = speedKmh !== null;
+      const hasRpmSignal = rpm !== null;
+      const movingBySpeed = hasSpeedSignal && speedKmh > 0;
+
+      if (movingBySpeed) {
         // Cap elapsedMs at 2x poll interval to guard against any remaining
         // timing edge cases (e.g. device sleep that slips through AppState).
         const safeElapsedMs = Math.min(elapsedMs, POLL_INTERVAL_MS * 2);
-        const distanceThisInterval = (snapshot.speedKmh / 3600) * (safeElapsedMs / 1000);
+        const distanceThisInterval = (speedKmh / 3600) * (safeElapsedMs / 1000);
         this.distanceKm += distanceThisInterval;
-        this.lastSpeedReading = snapshot.speedKmh;
+        this.lastSpeedReading = speedKmh;
         this.idleStartTime = null;
       }
 
-      // Chỉ đánh giá idle khi ĐỌC RPM THÀNH CÔNG. Snapshot đọc lỗi (rpm null vì adapter
-      // rớt tạm thời) KHÔNG được coi là idle - nếu không một loạt đọc lỗi 30s sẽ tự kết
-      // thúc chuyến giữa chừng. Đọc lỗi = thoáng qua: bỏ qua, giữ nguyên bộ đếm, vẫn ghi.
-      if (snapshot.rpm !== null) {
-        if (snapshot.rpm < IDLE_RPM_THRESHOLD) {
+      // Idle detection: ưu tiên RPM khi có, fallback sang tốc độ xe nếu RPM bị
+      // chập chờn/adapter không trả về. Nếu cả hai đều mất, giữ nguyên trạng thái
+      // thay vì kết luận idle sai và tự chốt chuyến.
+      const idleSignal =
+        hasRpmSignal ? rpm < IDLE_RPM_THRESHOLD
+          : hasSpeedSignal ? speedKmh < IDLE_SPEED_THRESHOLD_KMH
+          : null;
+
+      if (idleSignal !== null) {
+        if (idleSignal) {
           if (this.idleStartTime === null) {
             this.idleStartTime = now;
           } else if (now - this.idleStartTime >= IDLE_STOP_DELAY_MS) {

@@ -78,8 +78,12 @@ export default function OBDDashboardScreen() {
         text: t('obd.disconnect_title'),
         style: 'destructive',
         onPress: async () => {
-          await disconnect();
-          navigation.goBack();
+          await disconnect().catch(() => {});
+          navigation.replace('OBDSetup', {
+            vehicleId,
+            vehicleName,
+            consumptionOfficial,
+          });
         },
       },
     ]);
@@ -202,6 +206,8 @@ export default function OBDDashboardScreen() {
               { pid: '05', el: <StatBox key="05" label={t('obd.stat_coolant')} value={snap?.coolantTempC ?? null} unit="°C" icon="thermometer-half" color="#EF4444" /> },
               { pid: '2F', el: <StatBox key="2F" label={t('obd.stat_fuel')} value={snap?.fuelLevelPct ?? null} unit="%" icon="gas-pump" color="#10B981" /> },
               { pid: '5C', el: <StatBox key="5C" label={t('obd.stat_oil_temp')} value={snap?.oilTempC ?? null} unit="°C" icon="oil-can" color="#F97316" /> },
+              { pid: '11', el: <StatBox key="11" label={t('obd.stat_throttle')} value={snap?.throttlePct ?? null} unit="%" icon="sliders-h" color="#14B8A6" /> },
+              { pid: '42', el: <StatBox key="42" label={t('obd.stat_voltage')} value={snap?.controlModuleVoltage ?? null} unit="V" icon="battery-full" color="#6366F1" /> },
             ];
             const supported = capability
               ? tiles.filter((tile) => capability.supportedPids.includes(tile.pid))
@@ -216,6 +222,27 @@ export default function OBDDashboardScreen() {
             }
             return rows;
           })()}
+        </View>
+
+        <View style={[styles.infoCard, { backgroundColor: colors.card }]}>
+          <Text style={[styles.infoTitle, { color: colors.text }]}>{t('obd.live_data_title')}</Text>
+          <Text style={[styles.infoText, { color: colors.textSecondary }]}>
+            {t('obd.live_data_subtitle')}
+          </Text>
+          <View style={{ gap: 6, marginTop: 10 }}>
+            <Text style={[styles.infoBullet, { color: colors.textSecondary }]}>
+              {t('obd.live_data_item_speed')}
+            </Text>
+            <Text style={[styles.infoBullet, { color: colors.textSecondary }]}>
+              {t('obd.live_data_item_rpm')}
+            </Text>
+            <Text style={[styles.infoBullet, { color: colors.textSecondary }]}>
+              {t('obd.live_data_item_temp')}
+            </Text>
+            <Text style={[styles.infoBullet, { color: colors.textSecondary }]}>
+              {t('obd.live_data_item_voltage')}
+            </Text>
+          </View>
         </View>
 
         {/* Trip history link */}
@@ -349,4 +376,12 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   historyBtnText: { flex: 1, fontWeight: '600', fontSize: 14 },
+  infoCard: {
+    borderRadius: 12,
+    padding: 14,
+    gap: 4,
+  },
+  infoTitle: { fontSize: 15, fontWeight: '700' },
+  infoText: { fontSize: 12.5, lineHeight: 18 },
+  infoBullet: { fontSize: 12, lineHeight: 18 },
 });
