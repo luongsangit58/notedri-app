@@ -20,12 +20,13 @@ export default function OnboardingScreen({ navigation }: { navigation: any }) {
   const listRef = useRef<FlatList<Slide>>(null);
   const [index, setIndex] = useState(0);
 
+  // OBD-II mở màn (định vị chủ đạo của NoteDri), rồi mới tới các tiện ích khác
   const slides: Slide[] = [
-    { icon: 'bolt',              title: t('onboarding.s1_title'), desc: t('onboarding.s1_desc') },
-    { icon: 'route',            title: t('onboarding.s2_title'), desc: t('onboarding.s2_desc') },
-    { icon: 'camera',           title: t('onboarding.s3_title'), desc: t('onboarding.s3_desc') },
-    { icon: 'microphone',       title: t('onboarding.s5_title'), desc: t('onboarding.s5_desc') },
-    { icon: 'heartbeat',        title: t('onboarding.s4_title'), desc: t('onboarding.s4_desc') },
+    { icon: 'microchip',   title: t('onboarding.s1_title'), desc: t('onboarding.s1_desc') },
+    { icon: 'stethoscope', title: t('onboarding.s2_title'), desc: t('onboarding.s2_desc') },
+    { icon: 'heartbeat',   title: t('onboarding.s3_title'), desc: t('onboarding.s3_desc') },
+    { icon: 'route',       title: t('onboarding.s4_title'), desc: t('onboarding.s4_desc') },
+    { icon: 'bolt',        title: t('onboarding.s5_title'), desc: t('onboarding.s5_desc') },
   ];
   const isLast = index === slides.length - 1;
 
