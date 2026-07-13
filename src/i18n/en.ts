@@ -441,6 +441,7 @@ const en = {
   "dtc.action_title": "What to do",
   "dtc.cost_estimate": "Estimated cost",
   "dtc.disclaimer": "Costs are Vietnam reference estimates and vary by model and garage.",
+  "dtc.offline_note": "Result from on-device offline data (no connection).",
   "obd.guide_title": "Setup guide",
   "obd.guide_step1": "1. Plug the BLE ELM327 adapter into the OBD2 port on your car (usually under the dashboard near the steering column)",
   "obd.guide_step2": "2. Start the engine (or turn on ignition)",

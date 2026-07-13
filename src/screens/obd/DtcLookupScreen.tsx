@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { obdApi, DtcLookupResult } from '../../api/obd';
+import { lookupDtcOffline } from '../../services/obd/dtcOfflineDictionary';
 import AppBgPattern from '../../components/AppBgPattern';
 import { useColors } from '../../utils/theme';
 import { formatVNDShort } from '../../utils/format';
@@ -48,6 +49,7 @@ export default function DtcLookupScreen() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<DtcLookupResult | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [isOffline, setIsOffline] = useState(false);
 
   const normalized = input.trim().toUpperCase();
   const isValidFormat = DTC_FORMAT.test(normalized);
@@ -57,11 +59,20 @@ export default function DtcLookupScreen() {
     setLoading(true);
     setErrorMsg(null);
     setResult(null);
+    setIsOffline(false);
     try {
       const res = await obdApi.lookupDtc(normalized);
       setResult(res.data.data);
     } catch (e: any) {
-      setErrorMsg(e?.response?.data?.message ?? t('dtc.lookup_error'));
+      // 422 = mã sai định dạng theo server - hiện thông báo. Mọi lỗi khác (mất mạng,
+      // server down) rơi về snapshot offline đóng gói trong app: trong hầm gửi xe
+      // không có sóng chính là lúc cần tra mã nhất.
+      if (e?.response?.status === 422) {
+        setErrorMsg(e.response.data?.message ?? t('dtc.invalid_format'));
+      } else {
+        setResult(lookupDtcOffline(normalized));
+        setIsOffline(true);
+      }
     } finally {
       setLoading(false);
     }
@@ -172,6 +183,11 @@ export default function DtcLookupScreen() {
             )}
 
             <Text style={[styles.disclaimer, { color: colors.textSecondary }]}>{t('dtc.disclaimer')}</Text>
+            {isOffline && (
+              <Text style={[styles.disclaimer, { color: colors.textSecondary, marginTop: 4 }]}>
+                {t('dtc.offline_note')}
+              </Text>
+            )}
           </View>
         )}
 
