@@ -72,4 +72,12 @@ export const obdApi = {
   // Tra cứu tay 1 mã lỗi từ từ điển server (route Free, không cần thiết bị OBD)
   lookupDtc: (code: string) =>
     client.get<{ data: DtcLookupResult }>(`/dtc-codes/${encodeURIComponent(code)}`),
+
+  // Telemetry retention: 1 dòng mỗi phiên kết nối đã kết thúc (fire-and-forget)
+  reportSession: (payload: {
+    vehicle_id: number;
+    device_name: string | null;
+    connected_at: string;
+    duration_seconds: number;
+  }) => client.post('/obd2/sessions', payload),
 };

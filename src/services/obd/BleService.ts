@@ -62,6 +62,20 @@ class BleService {
   private reconnecting = false;
   private intentionalDisconnect = false;
 
+  // Telemetry retention (ý #14): mốc phiên nằm ở singleton vì hook useObd bị
+  // tạo mới khi chuyển màn (Setup → Dashboard) - ref trong hook sẽ mất mốc.
+  // Reconnect grace thành công không reset mốc: vẫn là một phiên.
+  private sessionStartedAt: number | null = null;
+  private sessionDeviceName: string | null = null;
+
+  /** Trả mốc phiên hiện tại rồi XOÁ - đảm bảo mỗi phiên chỉ report đúng 1 lần. */
+  consumeSessionInfo(): { startedAt: number; deviceName: string | null } | null {
+    if (this.sessionStartedAt === null) return null;
+    const info = { startedAt: this.sessionStartedAt, deviceName: this.sessionDeviceName };
+    this.sessionStartedAt = null;
+    return info;
+  }
+
   // Chất lượng đường truyền (ý #16): cửa sổ trượt kết quả lệnh 60s gần nhất.
   private linkResults: Array<{ t: number; ok: boolean }> = [];
 
@@ -312,6 +326,8 @@ class BleService {
     });
 
     await this.attachToDevice(device);
+    this.sessionStartedAt = Date.now();
+    this.sessionDeviceName = device.name ?? null;
   }
 
   // All callers go through this single entry point.

@@ -454,6 +454,8 @@ const en = {
   "obd.link_fair": "Unstable link",
   "obd.link_poor": "Weak link",
   "obd.auto_connect_hint": "Will auto-connect to your paired device when found",
+  "obd.disconnect_notify_title": "OBD2 connection lost",
+  "obd.disconnect_notify_body": "Your trip has been saved. Check the adapter if you are still driving.",
   "obd.disconnect_title": "Disconnect",
   "obd.disconnect_confirm": "Disconnect from OBD2?",
   // "OBD-II" is intentional here (unlike "OBD2" elsewhere) - this sentence refers

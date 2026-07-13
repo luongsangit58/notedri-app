@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { AppState } from 'react-native';
+import * as Notifications from 'expo-notifications';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useI18nStore } from '../i18n';
 import { obdApi } from '../api/obd';
 import { bleService, ConnectionState, ObdDevice } from '../services/obd/BleService';
 import { initializeElm327, readSnapshot, ObdSnapshot } from '../services/obd/ObdReader';
@@ -9,6 +12,20 @@ import { savePairing } from '../services/obd/pairedDevices';
 import { useAuthStore } from '../store/authStore';
 
 export type ObdWarning = { type: 'no_data'; rawResponse?: string } | null;
+
+// Mất kết nối OBD khi ĐANG có chuyến và app ở NỀN → 1 notification local để user biết
+// chuyến đã được chốt (đang mở app thì UI hiện trạng thái đỏ rồi, không làm phiền thêm).
+function notifyTripInterruptedIfBackground(): void {
+  if (AppState.currentState === 'active') return;
+  const t = useI18nStore.getState().t;
+  Notifications.scheduleNotificationAsync({
+    content: {
+      title: t('obd.disconnect_notify_title'),
+      body: t('obd.disconnect_notify_body'),
+    },
+    trigger: null,
+  }).catch(() => {});
+}
 
 // ---- Data queries ----
 
@@ -54,6 +71,20 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
   // latest instance without stale closure problems.
   const currentTripRef = useRef<TripSession | null>(null);
   const [isTripActive, setIsTripActive] = useState(false);
+
+  // Telemetry retention (ý #14): mốc phiên đọc từ singleton BleService
+  // (consumeSessionInfo xoá mốc sau khi đọc → mỗi phiên report đúng 1 lần).
+  const reportSessionEnd = useCallback(() => {
+    const s = bleService.consumeSessionInfo();
+    if (!s || !vehicleId) return;
+    // Fire-and-forget: telemetry không được ảnh hưởng UX, lỗi thì bỏ qua.
+    obdApi.reportSession({
+      vehicle_id: vehicleId,
+      device_name: s.deviceName,
+      connected_at: new Date(s.startedAt).toISOString(),
+      duration_seconds: Math.max(0, Math.round((Date.now() - s.startedAt) / 1000)),
+    }).catch(() => {});
+  }, [vehicleId]);
 
   const stopScanRef = useRef<(() => void) | null>(null);
   const autoStopTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -136,6 +167,7 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
         currentTripRef.current = null;
         setIsTripActive(false);
       }
+      reportSessionEnd();
       setConnectionState('disconnected');
       setLiveSnapshot(null);
     };
@@ -167,7 +199,7 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
       setConnectionState('error');
       setErrorMessage(e.message);
     }
-  }, [stopScan, vehicleId, vehicleName]);
+  }, [stopScan, vehicleId, vehicleName, reportSessionEnd]);
 
   const disconnect = useCallback(async () => {
     if (currentTripRef.current) {
@@ -178,10 +210,11 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
     bleService.onDisconnect = null;
     bleService.onReconnecting = null;
     bleService.onReconnected = null;
+    reportSessionEnd();
     await bleService.disconnect();
     setConnectionState('disconnected');
     setLiveSnapshot(null);
-  }, []);
+  }, [reportSessionEnd]);
 
   // --- Trip ---
 
@@ -236,7 +269,9 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
           currentTripRef.current.stop();
           currentTripRef.current = null;
           setIsTripActive(false);
+          notifyTripInterruptedIfBackground();
         }
+        reportSessionEnd();
         setConnectionState('disconnected');
         setLiveSnapshot(null);
       };

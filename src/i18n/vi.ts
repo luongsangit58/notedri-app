@@ -455,6 +455,8 @@ const vi = {
   "obd.link_fair": "Sóng chập chờn",
   "obd.link_poor": "Sóng kém",
   "obd.auto_connect_hint": "Sẽ tự kết nối với thiết bị đã ghép khi tìm thấy",
+  "obd.disconnect_notify_title": "Mất kết nối OBD2",
+  "obd.disconnect_notify_body": "Chuyến đi đã được lưu lại. Kiểm tra adapter nếu bạn vẫn đang lái.",
   "obd.disconnect_title": "Ngắt kết nối",
   "obd.disconnect_confirm": "Bạn có muốn ngắt kết nối OBD2?",
   // "OBD-II" cố ý giữ nguyên ở đây (khác "OBD2" các chỗ khác) - đây là câu nói về
