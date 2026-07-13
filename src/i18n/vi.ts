@@ -457,6 +457,7 @@ const vi = {
   "obd.link_fair": "Sóng chập chờn",
   "obd.link_poor": "Sóng kém",
   "obd.auto_connect_hint": "Sẽ tự kết nối với thiết bị đã ghép khi tìm thấy",
+  "obd.no_serial_channel": "Thiết bị không có kênh truyền lệnh (không phải adapter OBD2?). Thử quét lại hoặc chọn thiết bị khác.",
   "obd.disconnect_notify_title": "Mất kết nối OBD2",
   "obd.disconnect_notify_body": "Chuyến đi đã được lưu lại. Kiểm tra adapter nếu bạn vẫn đang lái.",
   "obd.disconnect_title": "Ngắt kết nối",

@@ -456,6 +456,7 @@ const en = {
   "obd.link_fair": "Unstable link",
   "obd.link_poor": "Weak link",
   "obd.auto_connect_hint": "Will auto-connect to your paired device when found",
+  "obd.no_serial_channel": "This device has no command channel (not an OBD2 adapter?). Rescan or pick another device.",
   "obd.disconnect_notify_title": "OBD2 connection lost",
   "obd.disconnect_notify_body": "Your trip has been saved. Check the adapter if you are still driving.",
   "obd.disconnect_title": "Disconnect",

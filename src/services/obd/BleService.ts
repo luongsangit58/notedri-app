@@ -2,13 +2,24 @@ import { BleManager, Device, State, Characteristic, BleRestoredState } from 'rea
 import { Platform, PermissionsAndroid } from 'react-native';
 import { useI18nStore } from '../../i18n';
 
-const OBD_SERVICE_UUID = '0000fff0-0000-1000-8000-00805f9b34fb';
-const OBD_WRITE_UUID = '0000fff2-0000-1000-8000-00805f9b34fb';
-const OBD_NOTIFY_UUID = '0000fff1-0000-1000-8000-00805f9b34fb';
+// KHÔNG hardcode characteristic UUID (bài học fixture 13/7: Vgate iCar Pro thật
+// có service e7810a71 nhưng KHÔNG có characteristic be781a71-... từng hardcode -
+// mọi lệnh WRITE_ERROR). TX/RX được DÒ ĐỘNG từ GATT: TX = char ghi được,
+// RX = char notify/indicate. Danh sách dưới chỉ để XẾP HẠNG ưu tiên khi adapter
+// quảng bá nhiều service serial cùng lúc - không phải điều kiện bắt buộc.
+const PREFERRED_SERIAL_SERVICE_PREFIXES = [
+  '000018f0', // chuẩn serial ELM327 BLE phổ biến nhất (Vgate iCar Pro dùng cái này)
+  '0000fff0',
+  '0000ffe0',
+  'e7810a71', // Vgate custom
+];
 
-const VGATE_SERVICE_UUID = 'e7810a71-73ae-499d-8c15-faa9aef0c3f2';
-const VGATE_WRITE_UUID = 'be781a71-0000-1000-8000-00805f9b34fb';
-const VGATE_NOTIFY_UUID = 'be781a71-0001-1000-8000-00805f9b34fb';
+// Service hệ thống GATT - không bao giờ là kênh serial
+const GENERIC_GATT_SERVICES = new Set([
+  '00001800-0000-1000-8000-00805f9b34fb', // Generic Access
+  '00001801-0000-1000-8000-00805f9b34fb', // Generic Attribute
+  '0000180a-0000-1000-8000-00805f9b34fb', // Device Information
+]);
 
 export type ObdDevice = { id: string; name: string };
 export type ConnectionState =
@@ -26,8 +37,10 @@ class BleService {
   private _manager: BleManager | null = null;
   private connectedDevice: Device | null = null;
   private notifyCharacteristic: Characteristic | null = null;
-  private writeCharUuid: string = OBD_WRITE_UUID;
-  private activeServiceUuid: string = OBD_SERVICE_UUID;
+  // TX/RX được gán trong attachToDevice() sau khi dò GATT - không có giá trị mặc định
+  private writeCharUuid = '';
+  private activeServiceUuid = '';
+  private writeWithResponse = true;
   private responseBuffer: string = '';
   private responseResolver: ((value: string) => void) | null = null;
   private responseRejecter: ((err: Error) => void) | null = null;
@@ -146,27 +159,63 @@ class BleService {
     this.connectedDevice = device;
 
     const services = await device.services();
-    const serviceUuids = services.map((s) => s.uuid.toLowerCase());
     this.logSession('#device', `${device.name ?? '?'} ${device.id}`);
-    this.logSession('#services', serviceUuids.join(','));
+    this.logSession('#services', services.map((s) => s.uuid.toLowerCase()).join(','));
 
-    let serviceUuid: string;
-    let notifyUuid: string;
+    // Dò GATT động: liệt kê MỌI characteristic + properties (log = bản đồ GATT
+    // đầy đủ kiểu nRF Connect trong file export), rồi tự chọn kênh serial:
+    // TX = char ghi được (ưu tiên write-with-response), RX = char notify/indicate.
+    type SerialCandidate = {
+      serviceUuid: string;
+      tx: Characteristic;
+      rx: Characteristic;
+    };
+    const candidates: SerialCandidate[] = [];
 
-    if (serviceUuids.includes(VGATE_SERVICE_UUID.toLowerCase())) {
-      serviceUuid = VGATE_SERVICE_UUID;
-      notifyUuid = VGATE_NOTIFY_UUID;
-      this.writeCharUuid = VGATE_WRITE_UUID;
-    } else {
-      serviceUuid = OBD_SERVICE_UUID;
-      notifyUuid = OBD_NOTIFY_UUID;
-      this.writeCharUuid = OBD_WRITE_UUID;
+    for (const service of services) {
+      const svcUuid = service.uuid.toLowerCase();
+      if (GENERIC_GATT_SERVICES.has(svcUuid)) continue;
+
+      const chars = await service.characteristics();
+      for (const c of chars) {
+        const props = [
+          c.isReadable ? 'read' : null,
+          c.isWritableWithResponse ? 'write' : null,
+          c.isWritableWithoutResponse ? 'writeNoResp' : null,
+          c.isNotifiable ? 'notify' : null,
+          c.isIndicatable ? 'indicate' : null,
+        ].filter(Boolean).join('|');
+        this.logSession('#char', `${svcUuid} ${c.uuid.toLowerCase()} [${props}]`);
+      }
+
+      const tx = chars.find((c) => c.isWritableWithResponse)
+        ?? chars.find((c) => c.isWritableWithoutResponse);
+      const rx = chars.find((c) => c.isNotifiable) ?? chars.find((c) => c.isIndicatable);
+      if (tx && rx) candidates.push({ serviceUuid: svcUuid, tx, rx });
     }
-    this.activeServiceUuid = serviceUuid;
+
+    if (candidates.length === 0) {
+      this.logSession('#error', 'no serial channel (no service with writable + notifiable chars)');
+      throw new Error(useI18nStore.getState().t('obd.no_serial_channel'));
+    }
+
+    // Nhiều service đủ điều kiện → ưu tiên service serial quen thuộc trước
+    const rank = (uuid: string) => {
+      const i = PREFERRED_SERIAL_SERVICE_PREFIXES.findIndex((p) => uuid.startsWith(p));
+      return i === -1 ? PREFERRED_SERIAL_SERVICE_PREFIXES.length : i;
+    };
+    candidates.sort((a, b) => rank(a.serviceUuid) - rank(b.serviceUuid));
+
+    const chosen = candidates[0];
+    this.activeServiceUuid = chosen.serviceUuid;
+    this.writeCharUuid = chosen.tx.uuid;
+    this.writeWithResponse = chosen.tx.isWritableWithResponse;
+    this.logSession('#tx', `${chosen.tx.uuid} (${this.writeWithResponse ? 'write' : 'writeNoResp'})`);
+    this.logSession('#rx', `${chosen.rx.uuid} (${chosen.rx.isNotifiable ? 'notify' : 'indicate'})`);
 
     this.notifyCharacteristic = await device.monitorCharacteristicForService(
-      serviceUuid,
-      notifyUuid,
+      chosen.serviceUuid,
+      chosen.rx.uuid,
       (error, characteristic) => {
         if (error || !characteristic?.value) return;
         const chunk = atob(characteristic.value);
@@ -390,11 +439,11 @@ class BleService {
       };
 
       const encoded = btoa(command + '\r');
-      device.writeCharacteristicWithResponseForService(
-        this.activeServiceUuid,
-        this.writeCharUuid,
-        encoded
-      ).catch((err) => {
+      // Dùng đúng kiểu ghi mà characteristic TX hỗ trợ (dò được lúc attach)
+      const writePromise = this.writeWithResponse
+        ? device.writeCharacteristicWithResponseForService(this.activeServiceUuid, this.writeCharUuid, encoded)
+        : device.writeCharacteristicWithoutResponseForService(this.activeServiceUuid, this.writeCharUuid, encoded);
+      writePromise.catch((err) => {
         clearTimeout(timer);
         this.responseResolver = null;
         this.responseRejecter = null;
