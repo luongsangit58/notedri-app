@@ -1,6 +1,7 @@
 import { BleManager, Device, State, Characteristic, BleRestoredState } from 'react-native-ble-plx';
 import { Platform, PermissionsAndroid } from 'react-native';
 import { useI18nStore } from '../../i18n';
+import { useObdSessionStore } from '../../store/obdSessionStore';
 
 // KHÔNG hardcode characteristic UUID (bài học fixture 13/7: Vgate iCar Pro thật
 // có service e7810a71 nhưng KHÔNG có characteristic be781a71-... từng hardcode -
@@ -266,6 +267,7 @@ class BleService {
     this.logSession('#disconnect', 'unexpected - reconnect grace start');
 
     for (let attempt = 1; attempt <= RECONNECT_DELAYS_MS.length; attempt++) {
+      useObdSessionStore.getState().patch({ connected: false, reconnecting: true });
       this.onReconnecting?.(attempt);
       await delay(RECONNECT_DELAYS_MS[attempt - 1]);
 
@@ -284,6 +286,7 @@ class BleService {
         await this.attachToDevice(device);
         this.reconnecting = false;
         this.logSession('#reconnect', `ok attempt ${attempt}`);
+        useObdSessionStore.getState().patch({ connected: true, reconnecting: false });
         this.onReconnected?.();
         return;
       } catch {
@@ -292,6 +295,7 @@ class BleService {
     }
 
     this.reconnecting = false;
+    useObdSessionStore.getState().clear();
     this.onDisconnect?.();
   }
 
@@ -392,6 +396,11 @@ class BleService {
     await this.attachToDevice(device);
     this.sessionStartedAt = Date.now();
     this.sessionDeviceName = device.name ?? null;
+    useObdSessionStore.getState().patch({
+      connected: true,
+      reconnecting: false,
+      deviceName: this.sessionDeviceName,
+    });
   }
 
   // All callers go through this single entry point.
@@ -472,6 +481,7 @@ class BleService {
   async disconnect(): Promise<void> {
     // Chặn reconnect grace: đây là ngắt CHỦ ĐỘNG của user
     this.intentionalDisconnect = true;
+    useObdSessionStore.getState().clear();
     if (this.connectedDevice) {
       try {
         await this.connectedDevice.cancelConnection();

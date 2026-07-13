@@ -21,6 +21,7 @@ import { useDashboard } from '../../hooks/useDashboard';
 import { formatVND, formatKm } from '../../utils/format';
 import { flattenReminders } from '../../utils/reminders';
 import { getMostRecentPairing, PairedDevice } from '../../services/obd/pairedDevices';
+import { useObdSessionStore } from '../../store/obdSessionStore';
 import client from '../../api/client';
 
 function VehicleSelector({ vehicles, selectedId, onSelect }: {
@@ -166,6 +167,7 @@ export default function HomeScreen() {
   // Refresh mỗi lần tab Home được focus: Home mount TRƯỚC lần ghép đầu tiên nên
   // chỉ load lúc mount là thẻ không bao giờ xuất hiện trong phiên đó (bug Sang báo).
   const [obdPairing, setObdPairing] = useState<PairedDevice | null>(null);
+  const obdSession = useObdSessionStore();
   useEffect(() => {
     const refresh = () => getMostRecentPairing().then(setObdPairing).catch(() => {});
     refresh();
@@ -359,30 +361,38 @@ export default function HomeScreen() {
           </LinearGradient>
         </TouchableOpacity>
 
-        {/* OBD quick-connect - chỉ khi có thiết bị đã ghép (C4) */}
-        {obdPairing && (
+        {/* OBD quick-connect - chỉ khi có thiết bị đã ghép (C4); nhận biết trạng thái
+            phiên sống (C5): đang kết nối thì chấm xanh + chạm là mở thẳng Dashboard */}
+        {(obdPairing || obdSession.connected) && (
           <TouchableOpacity
             activeOpacity={0.85}
             onPress={() => nav.navigate('OBDSetup', {
-              vehicleId: obdPairing.vehicleId,
-              vehicleName: obdPairing.vehicleName,
+              vehicleId: obdSession.connected ? obdSession.vehicleId : obdPairing!.vehicleId,
+              vehicleName: (obdSession.connected ? obdSession.vehicleName : obdPairing!.vehicleName) ?? '',
               consumptionOfficial: null,
             })}
             style={{
               flexDirection: 'row', alignItems: 'center', gap: 12,
               backgroundColor: colors.surface, borderRadius: 14, padding: 14, marginBottom: 12,
-              borderWidth: 1, borderColor: colors.border,
+              borderWidth: 1, borderColor: obdSession.connected ? '#22C55E66' : colors.border,
             }}>
             <View style={{
               width: 40, height: 40, borderRadius: 20,
               backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center',
             }}>
-              <FontAwesome5 name="microchip" size={16} color={colors.primary} solid />
+              <FontAwesome5 name="microchip" size={16} color={obdSession.connected ? '#22C55E' : colors.primary} solid />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14 }}>{t('obd.setup_title')}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                {obdSession.connected && (
+                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#22C55E' }} />
+                )}
+                <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14 }}>{t('obd.setup_title')}</Text>
+              </View>
               <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 1 }} numberOfLines={1}>
-                {t('home.obd_quick_sub', { name: obdPairing.vehicleName })}
+                {obdSession.connected
+                  ? t('home.obd_quick_connected', { name: obdSession.vehicleName ?? 'OBD2' })
+                  : t('home.obd_quick_sub', { name: obdPairing!.vehicleName })}
               </Text>
             </View>
             <FontAwesome5 name="chevron-right" size={13} color={colors.textSecondary} />

@@ -6,6 +6,7 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import { useVehicle, useVehicleHealth, useVehicleReminders, useToggleVehicleRest } from '../../hooks/useVehicles';
 import { useObdDtcEvents } from '../../hooks/useObd';
 import { getPairingForVehicle } from '../../services/obd/pairedDevices';
+import { useObdSessionStore } from '../../store/obdSessionStore';
 import LoadingView from '../../components/LoadingView';
 import ErrorView from '../../components/ErrorView';
 import AppBgPattern from '../../components/AppBgPattern';
@@ -248,6 +249,8 @@ export default function VehicleDetailScreen() {
   // Decay state OBD (ý #12/#13): xe từng ghép Vgate nhưng lâu không kết nối →
   // phụ đề thẻ OBD tự nhắc nhẹ, không bắn push. 14 ngày mới coi là "lâu".
   const [obdLastSeenDays, setObdLastSeenDays] = useState<number | null>(null);
+  const obdSession = useObdSessionStore();
+  const obdConnectedThisVehicle = obdSession.connected && obdSession.vehicleId === vehicleId;
   useEffect(() => {
     getPairingForVehicle(vehicleId).then((p) => {
       if (p?.lastConnectedAt) {
@@ -470,8 +473,14 @@ export default function VehicleDetailScreen() {
                 <FontAwesome5 name="crown" size={11} color={colors.warning} solid />
               )}
             </View>
-            <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 1 }}>
-              {obdLastSeenDays !== null && obdLastSeenDays >= 14
+            <Text
+              style={{
+                color: obdConnectedThisVehicle ? '#22C55E' : colors.textSecondary,
+                fontSize: 12, marginTop: 1, fontWeight: obdConnectedThisVehicle ? '700' : '400',
+              }}>
+              {obdConnectedThisVehicle
+                ? t('obd.entry_connected')
+                : obdLastSeenDays !== null && obdLastSeenDays >= 14
                 ? t('obd.entry_last_seen', { n: obdLastSeenDays })
                 : t('obd.entry_desc')}
             </Text>

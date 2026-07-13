@@ -169,6 +169,13 @@ export default function OBDDashboardScreen() {
           )}
         </View>
 
+        {/* Giải thích back ≠ ngắt (C5): user không còn phải đoán 2 nút thoát khác nhau */}
+        {isConnected && (
+          <Text style={{ color: colors.textSecondary, fontSize: 11, textAlign: 'center', marginTop: -8 }}>
+            {t('obd.leave_hint')}
+          </Text>
+        )}
+
         {/* No-data warning: adapter connected but ECU not responding */}
         {warning?.type === 'no_data' && (
           <View style={styles.warningBanner}>

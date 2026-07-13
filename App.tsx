@@ -7,6 +7,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import RootNavigator from './src/navigation/RootNavigator';
 import { navigationRef } from './src/navigation/navigationRef';
+import ObdSessionBanner from './src/components/ObdSessionBanner';
 import { useThemeStore } from './src/utils/theme';
 import { useI18nStore } from './src/i18n';
 import { flushPendingTrips } from './src/services/obd/TripSyncQueue';
@@ -107,6 +108,7 @@ export default function App() {
           <AppLoader>
             <NavigationContainer ref={navigationRef}>
               <RootNavigator />
+              <ObdSessionBanner />
             </NavigationContainer>
           </AppLoader>
         </QueryClientProvider>

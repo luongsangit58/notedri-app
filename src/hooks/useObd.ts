@@ -11,6 +11,7 @@ import { TripSession, TripSummary } from '../services/obd/TripSession';
 import { enqueueTripSync } from '../services/obd/TripSyncQueue';
 import { savePairing } from '../services/obd/pairedDevices';
 import { useAuthStore } from '../store/authStore';
+import { useObdSessionStore } from '../store/obdSessionStore';
 
 export type ObdWarning = { type: 'no_data'; rawResponse?: string } | null;
 
@@ -220,6 +221,9 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
       // (chỉ dò khi xe đang trả dữ liệu - xe tắt máy thì bitmap cũng NO DATA)
       await loadCapability(result.dataAvailable);
 
+      // Trạng thái toàn cục (C5): thẻ Home/chi tiết xe + banner biết đang nối xe nào
+      useObdSessionStore.getState().patch({ vehicleId, vehicleName: vehicleName ?? null });
+
       const snap = await readSnapshot();
       setLiveSnapshot(snap);
 
@@ -270,6 +274,7 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
     session.onTripEnd = async (summary) => {
       currentTripRef.current = null;
       setIsTripActive(false);
+      useObdSessionStore.getState().patch({ tripActive: false });
       setLastTripSummary(summary);
 
       const deviceId = bleService.getDeviceId();
@@ -287,6 +292,7 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
     session.start();
     currentTripRef.current = session;
     setIsTripActive(true);
+    useObdSessionStore.getState().patch({ tripActive: true });
   }, [vehicleId, qc]);
 
   const stopTrip = useCallback(() => {
@@ -301,6 +307,7 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
       setConnectionState('connected');
       // Nạp lại capability từ cache (Setup đã dò xong lúc connect) rồi mới snapshot
       loadCapability(false).catch(() => {});
+      useObdSessionStore.getState().patch({ vehicleId, vehicleName: vehicleName ?? null });
       // Rehydrate snapshot sống để lưới số liệu không hiện "-"
       readSnapshot().then((snap) => setLiveSnapshot(snap)).catch(() => {});
       // Đăng ký lại callback mất kết nối (Setup unmount đã set bleService.onDisconnect = null)
