@@ -3,9 +3,10 @@ import { View, Text, ScrollView, TouchableOpacity, RefreshControl, Switch, Image
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
-import { useVehicle, useVehicleHealth, useVehicleReminders, useToggleVehicleRest } from '../../hooks/useVehicles';
+import { useVehicle, useVehicleHealth, useVehicleReminders, useToggleVehicleRest, useUpdateVehicle } from '../../hooks/useVehicles';
 import { useObdDtcEvents } from '../../hooks/useObd';
 import { getPairingForVehicle } from '../../services/obd/pairedDevices';
+import { getCachedCapability } from '../../services/obd/capabilityService';
 import { useObdSessionStore } from '../../store/obdSessionStore';
 import LoadingView from '../../components/LoadingView';
 import ErrorView from '../../components/ErrorView';
@@ -245,6 +246,14 @@ export default function VehicleDetailScreen() {
   const { data: remindersData } = useVehicleReminders(vehicleId);
   const { data: dtcData } = useObdDtcEvents(vehicleId);
   const { mutate: toggleRest, isPending: togglingRest } = useToggleVehicleRest();
+  const { mutate: updateVehicle, isPending: savingVin } = useUpdateVehicle();
+
+  // VIN prefill (checklist C4): VIN đọc được qua OBD (mode 09, chính xác 100% -
+  // không phải suy đoán như hãng/model) - chỉ đề nghị lưu khi hồ sơ xe CHƯA có VIN.
+  const [obdDecodedVin, setObdDecodedVin] = useState<string | null>(null);
+  useEffect(() => {
+    getCachedCapability(vehicleId).then((cap) => setObdDecodedVin(cap?.vin ?? null)).catch(() => {});
+  }, [vehicleId]);
 
   // Decay state OBD (ý #12/#13): xe từng ghép Vgate nhưng lâu không kết nối →
   // phụ đề thẻ OBD tự nhắc nhẹ, không bắn push. 14 ngày mới coi là "lâu".
@@ -263,6 +272,7 @@ export default function VehicleDetailScreen() {
   if (isError) return <ErrorView message={t('vehicles.cannot_load_detail')} onRetry={refetch} />;
 
   const v = vehicle?.data ?? vehicle;
+  const showVinPrefill = !!obdDecodedVin && !v?.vin;
 
   // API returns { data: { vehicle, overall, warn_count, organs, score } }
   // useVehicleHealth does .then(r => r.data), so health = the axios response body = { data: {...} }
@@ -532,6 +542,31 @@ export default function VehicleDetailScreen() {
             </View>
             <FontAwesome5 name="chevron-right" size={13} color={colors.textSecondary} />
           </TouchableOpacity>
+        )}
+
+        {/* VIN prefill (checklist C4): VIN đọc qua OBD chính xác 100%, chỉ đề
+            nghị lưu khi hồ sơ xe chưa có - không tự động ghi đè im lặng */}
+        {showVinPrefill && (
+          <View style={{
+            flexDirection: 'row', alignItems: 'center', gap: 12,
+            backgroundColor: colors.surface, borderRadius: 12, padding: 14, marginBottom: 12,
+            borderWidth: 1, borderColor: colors.primary + '55',
+          }}>
+            <FontAwesome5 name="fingerprint" size={16} color={colors.primary} solid />
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: colors.text, fontWeight: '700', fontSize: 13 }}>{t('vehicle_detail.vin_prefill_title')}</Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 1 }}>{obdDecodedVin}</Text>
+            </View>
+            <TouchableOpacity
+              disabled={savingVin}
+              // 'ten' bắt buộc trong validation update kể cả khi không đổi (backend yêu cầu)
+              onPress={() => updateVehicle({ id: vehicleId, data: { ten: v?.ten ?? v?.name, vin: obdDecodedVin } })}
+              style={{ backgroundColor: colors.primary, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 7 }}>
+              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 12 }}>
+                {savingVin ? t('common.loading') : t('common.save')}
+              </Text>
+            </TouchableOpacity>
+          </View>
         )}
 
         {/* Sức khoẻ xe — breakdown card */}

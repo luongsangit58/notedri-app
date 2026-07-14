@@ -489,6 +489,7 @@ const vi = {
   "obd.toast_reconnected": "Đã kết nối lại OBD2",
   "obd.toast_disconnected": "Mất kết nối OBD2",
   "home.obd_quick_setup": "Kết nối adapter OBD-II cho xe của bạn",
+  "vehicle_detail.vin_prefill_title": "Đã đọc được số khung xe (VIN) qua OBD",
   "obd.disconnect_notify_title": "Mất kết nối OBD2",
   "obd.disconnect_notify_body": "Chuyến đi đã được lưu lại. Kiểm tra adapter nếu bạn vẫn đang lái.",
   "obd.disconnect_title": "Ngắt kết nối",
