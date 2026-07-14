@@ -61,6 +61,8 @@ export type ObdSessionSummary = {
   harsh_brake_count?: number;
   harsh_accel_count?: number;
   driving_score?: number;
+  // Optional: giây máy chạy thật (E5 core) - phiên cũ không có, fallback duration.
+  engine_run_seconds?: number;
 };
 
 export type ObdSessionRecord = {

@@ -18,12 +18,18 @@ export type VehicleSnapshot = {
   coolantTempC: number | null;
   throttlePct: number | null;
   controlModuleVoltage: number | null;
-  /** Giây kể từ khi phiên kết nối bắt đầu - rules cần máy "đã chạy đủ lâu". */
-  sessionAgeSeconds: number;
+  /**
+   * Giây MÁY ĐÃ CHẠY (rpm>0), KHÔNG phải giây kể từ khi BLE kết nối (sửa 14/7
+   * theo rà soát): adapter cắm cổng OBD luôn có điện có thể connect trước khi
+   * nổ máy - dùng thời gian BLE khiến rule van hằng nhiệt (đòi 600s) báo nhầm
+   * ngay sau khi mới đề máy nguội. Mọi rule đều là chẩn đoán ĐỘNG CƠ nên đều
+   * cần thời gian máy chạy thật.
+   */
+  engineRunSeconds: number;
 };
 
 export type RuleCondition = {
-  signal: keyof Omit<VehicleSnapshot, 'sessionAgeSeconds'>;
+  signal: keyof Omit<VehicleSnapshot, 'engineRunSeconds'>;
   op: 'gt' | 'gte' | 'lt' | 'lte';
   value: number;
 };
@@ -35,8 +41,8 @@ export type DiagnosticRule = {
   severity: 'critical' | 'warn' | 'info';
   can_drive: 'yes' | 'caution' | 'stop';
   /** Mọi tín hiệu này phải KHÁC null thì rule mới được xét (capability gating). */
-  required_signals: Array<keyof Omit<VehicleSnapshot, 'sessionAgeSeconds'>>;
-  /** Chỉ xét khi phiên đã chạy đủ lâu (máy ấm/ổn định). */
+  required_signals: Array<keyof Omit<VehicleSnapshot, 'engineRunSeconds'>>;
+  /** Ngưỡng giây MÁY CHẠY tối thiểu (so với engineRunSeconds, không phải thời gian BLE). */
   min_session_seconds: number;
   /** TẤT CẢ điều kiện phải đúng (AND). */
   conditions: RuleCondition[];
@@ -90,7 +96,7 @@ export function evaluate(rules: DiagnosticRule[], snapshot: VehicleSnapshot): Fi
   const findings: Finding[] = [];
 
   for (const rule of rules) {
-    if (snapshot.sessionAgeSeconds < rule.min_session_seconds) continue;
+    if (snapshot.engineRunSeconds < rule.min_session_seconds) continue;
     if (rule.required_signals.some((sig) => snapshot[sig] === null)) continue;
 
     const allMet = rule.conditions.every((cond) =>

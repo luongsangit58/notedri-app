@@ -10,6 +10,9 @@ import { getActiveRules } from './diagnosticRulesStore';
  * không cần sửa engine, chỉ khác cách nạp input.
  */
 export function evaluateSession(summary: ObdSessionSummary, durationSeconds: number): Finding[] {
+  // Thời gian MÁY CHẠY (sửa 14/7): dùng engine_run_seconds nếu có (phiên mới),
+  // fallback durationSeconds cho phiên cũ trước khi có trường này.
+  const engineRunSeconds = summary.engine_run_seconds ?? durationSeconds;
   // Base "đứng yên" - CHỈ dùng cho rule cần đúng ngữ cảnh garanti (high-idle-warm):
   // rpm/throttle tích luỹ lúc speedKmh===0 (xem obdLiveMonitor aggIdleRpm/aggIdleThrottle).
   const idleBase: Omit<VehicleSnapshot, 'controlModuleVoltage'> = {
@@ -18,7 +21,7 @@ export function evaluateSession(summary: ObdSessionSummary, durationSeconds: num
     engineLoadPct: summary.load_avg,
     coolantTempC: summary.coolant_max, // cực trị: đủ cho cả 2 chiều (quá nhiệt / không đạt nhiệt)
     throttlePct: summary.throttle_idle_avg ?? null,
-    sessionAgeSeconds: durationSeconds,
+    engineRunSeconds,
   };
   // Base "máy đang nổ" (mọi tốc độ, không riêng lúc đứng yên) - cho rule chỉ cần
   // xác nhận máy đang chạy (sạc điện, van hằng nhiệt): dùng rpm_avg thay vì
@@ -32,7 +35,7 @@ export function evaluateSession(summary: ObdSessionSummary, durationSeconds: num
     engineLoadPct: summary.load_avg,
     coolantTempC: summary.coolant_max,
     throttlePct: null,
-    sessionAgeSeconds: durationSeconds,
+    engineRunSeconds,
   };
   const rules = getActiveRules();
   const results = [idleBase, runningBase].flatMap((base) => [

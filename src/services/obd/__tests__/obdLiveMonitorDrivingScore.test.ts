@@ -65,6 +65,8 @@ describe('obdLiveMonitor - chấm điểm lái xe từ tốc độ ECU', () => {
     expect(summary!.harsh_brake_count).toBe(1);
     expect(summary!.harsh_accel_count).toBe(0);
     expect(typeof summary!.driving_score).toBe('number');
+    // 3 vòng poll, mọi snapshot có rpm>0 -> 3s máy chạy/vòng (POLL_INTERVAL) = 9s.
+    expect(summary!.engine_run_seconds).toBe(9);
   });
 
   it('đổi xe giữa phiên reset luôn bộ đếm phanh gấp (không rò rỉ sang xe mới)', async () => {

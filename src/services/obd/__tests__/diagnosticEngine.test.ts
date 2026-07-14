@@ -15,7 +15,7 @@ const healthyIdle: VehicleSnapshot = {
   coolantTempC: 55,
   throttlePct: 16,
   controlModuleVoltage: 14.34, // giá trị thật từ ảnh Car Scanner 13/7
-  sessionAgeSeconds: 120,
+  engineRunSeconds: 120,
 };
 
 describe('bộ rule diagnosticRules.json - kỷ luật schema', () => {
@@ -51,7 +51,7 @@ describe('evaluate - hàm thuần', () => {
     const findings = evaluate(RULES, {
       ...healthyIdle,
       coolantTempC: 107,
-      sessionAgeSeconds: 5,
+      engineRunSeconds: 5,
     });
     expect(findings.map((f) => f.ruleId)).toContain('engine-overheat');
     expect(findings.find((f) => f.ruleId === 'engine-overheat')!.can_drive).toBe('stop');
@@ -61,7 +61,7 @@ describe('evaluate - hàm thuần', () => {
     const findings = evaluate(RULES, {
       ...healthyIdle,
       coolantTempC: 62,
-      sessionAgeSeconds: 660,
+      engineRunSeconds: 660,
     });
     expect(findings.map((f) => f.ruleId)).toEqual(['thermostat-stuck-open-suspect']);
   });
@@ -79,7 +79,7 @@ describe('evaluate - hàm thuần', () => {
     const findings = evaluate(RULES, {
       ...healthyIdle,
       coolantTempC: 62,
-      sessionAgeSeconds: 60,
+      engineRunSeconds: 60,
     });
     expect(findings).toEqual([]);
   });
@@ -90,7 +90,7 @@ describe('evaluate - hàm thuần', () => {
       rpm: 1350,
       coolantTempC: 88,
       throttlePct: 10,
-      sessionAgeSeconds: 300,
+      engineRunSeconds: 300,
     });
     expect(findings.map((f) => f.ruleId)).toEqual(['high-idle-warm']);
   });

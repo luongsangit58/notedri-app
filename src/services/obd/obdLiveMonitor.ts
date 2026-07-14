@@ -62,6 +62,12 @@ let lastSpeedSample: SpeedSample | null = null;
 let harshBrakeCount = 0;
 let harshAccelCount = 0;
 
+// Giây MÁY ĐÃ CHẠY (rpm>0) trong phiên (E5 core + sửa bug rule van hằng nhiệt
+// 14/7): cộng dồn POLL_INTERVAL mỗi vòng poll có rpm>0. Dùng làm ngưỡng cho rule
+// engine thay vì thời gian BLE (adapter cắm cổng luôn có điện, connect trước khi
+// nổ máy - thời gian BLE khiến rule báo nhầm ngay sau đề máy nguội).
+let engineRunSeconds = 0;
+
 function feed(agg: Agg, v: number | null): void {
   if (v === null) return;
   agg.sum += v; agg.n += 1;
@@ -74,6 +80,7 @@ function resetSessionStats(): void {
   aggRpmAll = newAgg(); aggIdleThrottle = newAgg();
   maxSpeed = null; sessionDtcCount = 0; sessionFindingIds = new Set();
   lastSpeedSample = null; harshBrakeCount = 0; harshAccelCount = 0;
+  engineRunSeconds = 0;
 }
 
 /** Snapshot chuẩn hoá cuối phiên - null khi phiên không có dữ liệu nào. */
@@ -94,6 +101,7 @@ export function buildSessionSummary(): Record<string, unknown> | null {
     speed_max: maxSpeed,
     dtc_count: sessionDtcCount,
     findings: [...sessionFindingIds],
+    engine_run_seconds: engineRunSeconds,
     harsh_brake_count: harshBrakeCount,
     harsh_accel_count: harshAccelCount,
     // Thời lượng phiên (không phải quãng đường - OBD live-monitor không theo dõi
@@ -128,6 +136,8 @@ async function poll(): Promise<void> {
     feed(aggVoltage, snapshot.controlModuleVoltage);
     feed(aggLoad, snapshot.engineLoadPct);
     feed(aggRpmAll, snapshot.rpm);
+    // Máy đang chạy (rpm>0) -> cộng dồn thời gian máy chạy cho ngưỡng rule.
+    if (snapshot.rpm !== null && snapshot.rpm > 0) engineRunSeconds += POLL_INTERVAL_MS / 1000;
     if (snapshot.speedKmh !== null) {
       if (maxSpeed === null || snapshot.speedKmh > maxSpeed) maxSpeed = snapshot.speedKmh;
       if (snapshot.speedKmh === 0) {
@@ -153,7 +163,7 @@ async function poll(): Promise<void> {
       coolantTempC: snapshot.coolantTempC,
       throttlePct: snapshot.throttlePct,
       controlModuleVoltage: snapshot.controlModuleVoltage,
-      sessionAgeSeconds: bleService.getSessionAgeSeconds(),
+      engineRunSeconds,
     });
     findingListeners.forEach((fn) => fn(findings));
     findings.forEach((f) => sessionFindingIds.add(f.ruleId));
