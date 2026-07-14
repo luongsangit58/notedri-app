@@ -152,6 +152,67 @@ export async function readVoltage(): Promise<number | null> {
   return Math.round(((bytes[0] * 256 + bytes[1]) / 1000) * 100) / 100;
 }
 
+// 5 PID sau đây đã có decoder trong obdParser.PID_REGISTRY nhưng trước 14/7
+// CHƯA từng được đọc ở đâu cả - chỉ dùng cho màn "Xem tất cả thông số" (kỹ
+// thuật), KHÔNG gọi trong readSnapshot()/vòng poll 3s của obdLiveMonitor để
+// không kéo dài round-trip BLE của live monitor cho dữ liệu ít dùng.
+export async function readFuelTrimShortB1(): Promise<number | null> {
+  const bytes = await readPid('06');
+  if (!bytes || bytes.length < 1) return null;
+  return Math.round((((bytes[0] - 128) * 100) / 128) * 10) / 10;
+}
+
+export async function readIntakeManifoldPressure(): Promise<number | null> {
+  const bytes = await readPid('0B');
+  if (!bytes || bytes.length < 1) return null;
+  return bytes[0];
+}
+
+export async function readIntakeAirTemp(): Promise<number | null> {
+  const bytes = await readPid('0F');
+  if (!bytes || bytes.length < 1) return null;
+  return bytes[0] - 40;
+}
+
+export async function readAmbientAirTemp(): Promise<number | null> {
+  const bytes = await readPid('46');
+  if (!bytes || bytes.length < 1) return null;
+  return bytes[0] - 40;
+}
+
+export async function readFuelRate(): Promise<number | null> {
+  const bytes = await readPid('5E');
+  if (!bytes || bytes.length < 2) return null;
+  return Math.round(((bytes[0] * 256 + bytes[1]) / 20) * 10) / 10;
+}
+
+export type ObdExtendedSnapshot = {
+  fuelTrimShortB1Pct: number | null;
+  intakeManifoldPressureKpa: number | null;
+  intakeAirTempC: number | null;
+  ambientAirTempC: number | null;
+  fuelRateLPerHour: number | null;
+  timestamp: number;
+};
+
+/** Chỉ dùng cho màn kỹ thuật - 5 PID KHÔNG nằm trong readSnapshot() của live monitor. */
+export async function readExtendedSnapshot(): Promise<ObdExtendedSnapshot> {
+  const fuelTrimShortB1Pct = await readFuelTrimShortB1();
+  const intakeManifoldPressureKpa = await readIntakeManifoldPressure();
+  const intakeAirTempC = await readIntakeAirTemp();
+  const ambientAirTempC = await readAmbientAirTemp();
+  const fuelRateLPerHour = await readFuelRate();
+
+  return {
+    fuelTrimShortB1Pct,
+    intakeManifoldPressureKpa,
+    intakeAirTempC,
+    ambientAirTempC,
+    fuelRateLPerHour,
+    timestamp: Date.now(),
+  };
+}
+
 // Reads all PIDs sequentially (BleService serializes via queue, but explicit
 // sequential order avoids interleaving with DTC reads or AT commands).
 export async function readSnapshot(): Promise<ObdSnapshot> {

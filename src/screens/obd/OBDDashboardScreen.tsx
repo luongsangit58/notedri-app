@@ -270,6 +270,17 @@ export default function OBDDashboardScreen() {
           </View>
         </View>
 
+        {/* Trang kỹ thuật: xem hết 13 PID (kể cả 5 PID chưa hiện ở grid trên) -
+            dành cho user muốn xem số liệu thô, không giới hạn Premium (đã ở
+            trong khu vực Premium-gated OBD rồi). */}
+        <TouchableOpacity
+          style={[styles.historyBtn, { backgroundColor: colors.card }]}
+          onPress={() => navigation.navigate('OBDTechnical', { vehicleId })}>
+          <FontAwesome5 name="table" size={14} color={colors.primary} />
+          <Text style={[styles.historyBtnText, { color: colors.primary }]}>{t('obd.tech_link')}</Text>
+          <FontAwesome5 name="chevron-right" size={12} color={colors.textSecondary} />
+        </TouchableOpacity>
+
         {/* Trip history link */}
         <TouchableOpacity
           style={[styles.historyBtn, { backgroundColor: colors.card }]}
