@@ -1,13 +1,13 @@
 {
  "_generated": "sync-diagnostic-rules.mjs - DO NOT EDIT BY HAND (offline fallback only)",
- "source_hash": "6480ef491e32",
- "synced_at": "2026-07-14T02:55:40.178Z",
+ "source_hash": "f54fa60ce78c",
+ "synced_at": "2026-07-14T08:29:11.405Z",
  "version": 2,
  "rules": [
   {
    "id": "charging-voltage-low",
    "title_vi": "Điện áp sạc thấp - nghi máy phát yếu",
-   "action_vi": "Điện áp khi máy nổ dưới 13.2V: kiểm tra máy phát, dây curoa và cọc ắc-quy. Nguy cơ hết điện giữa đường.",
+   "action_vi": "Điện áp khi máy nổ trong khoảng 12.4-13.2V: máy phát sạc YẾU. Kiểm tra máy phát, dây curoa và cọc ắc-quy. Nguy cơ hết điện giữa đường.",
    "severity": "warn",
    "can_drive": "caution",
    "required_signals": [
@@ -23,11 +23,42 @@
     },
     {
      "signal": "controlModuleVoltage",
+     "op": "gte",
+     "value": 12.4
+    },
+    {
+     "signal": "controlModuleVoltage",
      "op": "lt",
      "value": 13.2
     }
    ],
-   "source": "Dải điện áp sạc chuẩn 13.5-14.7V khi động cơ chạy (SAE J537; Battery Council International; sổ tay bảo dưỡng Honda/Toyota). Ngưỡng rpm hạ từ 1000 xuống 400 (14/7, phát hiện qua Daily Report): máy phát sạc điện ngay từ garanti (~700-800rpm), rpm>=1000 khiến rule không bao giờ kích trên dữ liệu garanti thực tế - 400 vẫn đủ loại trừ số đọc nhất thời lúc mới đề máy/chết máy.",
+   "source": "Dải điện áp sạc chuẩn 13.5-14.7V khi động cơ chạy (SAE J537; Battery Council International; sổ tay bảo dưỡng Honda/Toyota). Ngưỡng rpm hạ từ 1000 xuống 400 (14/7, phát hiện qua Daily Report): máy phát sạc điện ngay từ garanti (~700-800rpm), rpm>=1000 khiến rule không bao giờ kích trên dữ liệu garanti thực tế - 400 vẫn đủ loại trừ số đọc nhất thời lúc mới đề máy/chết máy. Thêm cận dưới 12.4V (14/7 tối) để TÁCH 'sạc yếu' (warn) khỏi 'không sạc' (critical, rule charging-voltage-critical-low).",
+   "beta": true
+  },
+  {
+   "id": "charging-voltage-critical-low",
+   "title_vi": "Điện áp sạc rất thấp - nghi máy phát KHÔNG sạc",
+   "action_vi": "Điện áp khi máy nổ dưới 12.4V (thấp hơn cả điện áp ắc-quy lúc nghỉ): máy phát gần như không phát điện, ắc-quy đang cạn dần - xe có thể chết máy và KHÔNG đề lại được. Về nơi an toàn hoặc gọi cứu hộ, kiểm tra máy phát + curoa ngay.",
+   "severity": "critical",
+   "can_drive": "caution",
+   "required_signals": [
+    "rpm",
+    "controlModuleVoltage"
+   ],
+   "min_session_seconds": 60,
+   "conditions": [
+    {
+     "signal": "rpm",
+     "op": "gte",
+     "value": 400
+    },
+    {
+     "signal": "controlModuleVoltage",
+     "op": "lt",
+     "value": 12.4
+    }
+   ],
+   "source": "Ắc-quy nghỉ (máy tắt) khoẻ = 12.2-12.6V; máy nổ mà điện áp <13.0V nghĩa là máy phát không đủ sạc, xuống dưới ~12.4V (bằng/thấp hơn điện áp nghỉ) khi máy ĐANG chạy = máy phát gần như không phát điện, ắc-quy chỉ đang xả -> nguy cơ chết máy/không đề lại (Firestone Complete Auto Care - car battery voltage; underhoodservice.com - alternator low voltage; AA1Car battery-runs-down). Ngưỡng critical đặt DƯỚI mức warn 13.2V để tách 'sạc yếu' với 'không sạc'.",
    "beta": true
   },
   {

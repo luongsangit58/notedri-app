@@ -40,11 +40,18 @@ describe('evaluate - hàm thuần', () => {
     expect(evaluate(RULES, healthyIdle)).toEqual([]);
   });
 
-  it('điện áp sạc 12.4V khi máy nổ → cảnh báo máy phát', () => {
+  it('điện áp sạc 12.4V khi máy nổ → cảnh báo máy phát YẾU (warn), KHÔNG kích critical', () => {
     const findings = evaluate(RULES, { ...healthyIdle, controlModuleVoltage: 12.4 });
     expect(findings.map((f) => f.ruleId)).toEqual(['charging-voltage-low']);
     expect(findings[0].can_drive).toBe('caution');
     expect(findings[0].beta).toBe(true);
+  });
+
+  it('điện áp 12.0V khi máy nổ → CRITICAL máy phát không sạc, KHÔNG kích warn (banding)', () => {
+    const findings = evaluate(RULES, { ...healthyIdle, controlModuleVoltage: 12.0 });
+    // Banding: warn chỉ trong 12.4-13.2, critical dưới 12.4 -> chỉ 1 finding critical.
+    expect(findings.map((f) => f.ruleId)).toEqual(['charging-voltage-critical-low']);
+    expect(findings[0].severity).toBe('critical');
   });
 
   it('quá nhiệt 107°C → dừng xe, bất kể phiên mới', () => {
