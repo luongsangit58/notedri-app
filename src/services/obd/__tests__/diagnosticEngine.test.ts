@@ -54,6 +54,12 @@ describe('evaluate - hàm thuần', () => {
     expect(findings[0].severity).toBe('critical');
   });
 
+  it('finding van hằng nhiệt mang related_dtc P0128 (để hiện chi phí từ từ điển - C2)', () => {
+    const findings = evaluate(RULES, { ...healthyIdle, coolantTempC: 62, engineRunSeconds: 660 });
+    const thermostat = findings.find((f) => f.ruleId === 'thermostat-stuck-open-suspect');
+    expect(thermostat?.related_dtc).toBe('P0128');
+  });
+
   it('quá nhiệt 107°C → dừng xe, bất kể phiên mới', () => {
     const findings = evaluate(RULES, {
       ...healthyIdle,

@@ -48,6 +48,8 @@ export type DiagnosticRule = {
   conditions: RuleCondition[];
   /** Nguồn tài liệu của ngưỡng - BẮT BUỘC, không có nguồn không có rule. */
   source: string;
+  /** Mã DTC tương ứng (nếu có) - để hiện chi phí sửa từ từ điển cho finding (C2). */
+  related_dtc?: string;
   beta: boolean;
 };
 
@@ -57,6 +59,7 @@ export type Finding = {
   action_vi: string;
   severity: DiagnosticRule['severity'];
   can_drive: DiagnosticRule['can_drive'];
+  related_dtc?: string;
   beta: boolean;
 };
 
@@ -110,6 +113,7 @@ export function evaluate(rules: DiagnosticRule[], snapshot: VehicleSnapshot): Fi
       action_vi: rule.action_vi,
       severity: rule.severity,
       can_drive: rule.can_drive,
+      related_dtc: rule.related_dtc,
       beta: rule.beta,
     });
   }

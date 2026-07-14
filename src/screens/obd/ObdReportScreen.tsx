@@ -7,6 +7,7 @@ import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { obdApi } from '../../api/obd';
 import { evaluateSession } from '../../services/obd/sessionReport';
+import { findingCostLabel } from '../../services/obd/findingCost';
 import { refreshRulesFromServer } from '../../services/obd/diagnosticRulesStore';
 import AppBgPattern from '../../components/AppBgPattern';
 import { useColors } from '../../utils/theme';
@@ -95,7 +96,9 @@ export default function ObdReportScreen() {
               <Text style={[styles.okText, { color: '#22C55E' }]}>{t('obd.report_all_good')}</Text>
             </View>
           ) : (
-            findings.map((f) => (
+            findings.map((f) => {
+              const cost = findingCostLabel(f.related_dtc);
+              return (
               <View
                 key={f.ruleId}
                 style={[styles.warningBanner, { backgroundColor: f.severity === 'critical' ? '#B91C1C' : '#B45309' }]}>
@@ -106,9 +109,15 @@ export default function ObdReportScreen() {
                 <View style={{ flex: 1 }}>
                   <Text style={styles.warningTitle}>{f.title_vi} ({t('obd.finding_beta')})</Text>
                   <Text style={styles.warningAction}>{f.action_vi}</Text>
+                  {cost && (
+                    <Text style={[styles.warningAction, { fontStyle: 'italic', opacity: 0.85 }]}>
+                      {t('obd.finding_cost', { range: cost })}
+                    </Text>
+                  )}
                 </View>
               </View>
-            ))
+              );
+            })
           )}
 
           <View style={styles.vitalsGrid}>

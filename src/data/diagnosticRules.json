@@ -1,7 +1,7 @@
 {
  "_generated": "sync-diagnostic-rules.mjs - DO NOT EDIT BY HAND (offline fallback only)",
- "source_hash": "f54fa60ce78c",
- "synced_at": "2026-07-14T08:29:11.405Z",
+ "source_hash": "6a55f1b2a7bc",
+ "synced_at": "2026-07-14T09:08:28.053Z",
  "version": 2,
  "rules": [
   {
@@ -105,6 +105,7 @@
     }
    ],
    "source": "Vùng vận hành chuẩn 82-100°C, cảnh báo quá nhiệt từ 105°C (sổ tay bảo dưỡng Honda/Toyota; ngưỡng bật quạt két nước ~97-102°C)",
+   "related_dtc": "P0217",
    "beta": true
   },
   {
@@ -131,6 +132,7 @@
     }
    ],
    "source": "Logic giám sát P0128 chuẩn OBD-II: ECT phải đạt nhiệt độ điều tiết (~76-85°C tuỳ hãng) trong thời gian quy định (SAE J1979; điều kiện monitor Honda/GM)",
+   "related_dtc": "P0128",
    "beta": true
   },
   {
@@ -169,6 +171,7 @@
     }
    ],
    "source": "Vòng tua không tải chuẩn khi máy ấm 650-850 rpm (xe phổ thông, sổ tay Honda City ~700±50); ngưỡng chẩn P0507 thường +200 rpm so với mục tiêu ECU",
+   "related_dtc": "P0507",
    "beta": true
   }
  ]

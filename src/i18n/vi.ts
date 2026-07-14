@@ -505,6 +505,7 @@ const vi = {
   "obd.banner_reconnecting": "OBD2 · đang kết nối lại...",
   "obd.trips_via_gps": "Hành trình ghi tự động bằng GPS - xem tại đây",
   "obd.finding_beta": "thử nghiệm",
+  "obd.finding_cost": "Chi phí sửa tham khảo: {{range}} đ",
   "obd.vin_mismatch_title": "VIN không khớp với {{name}}",
   "obd.vin_mismatch_desc": "Số khung (VIN) đọc được khác với lần trước. Nếu bạn đang cắm Vgate sang XE KHÁC, dữ liệu sẽ bị ghi nhầm vào xe này - hãy ngắt kết nối và mở đúng xe.",
   "obd.live_all_good": "Mọi chỉ số đang trong giới hạn bình thường",

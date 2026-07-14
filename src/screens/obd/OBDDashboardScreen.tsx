@@ -13,6 +13,7 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useObdConnection } from '../../hooks/useObd';
 import { bleService, LinkQuality } from '../../services/obd/BleService';
+import { findingCostLabel } from '../../services/obd/findingCost';
 import AppBgPattern from '../../components/AppBgPattern';
 import { useColors } from '../../utils/theme';
 import { useT } from '../../i18n';
@@ -225,7 +226,9 @@ export default function OBDDashboardScreen() {
 
         {/* Cảnh báo từ Diagnostic Engine (rule beta có nguồn dẫn) - hiện khi
             evaluate() bắt được bất thường trên snapshot sống */}
-        {findings.map((f) => (
+        {findings.map((f) => {
+          const cost = findingCostLabel(f.related_dtc);
+          return (
           <View
             key={f.ruleId}
             style={[
@@ -245,9 +248,15 @@ export default function OBDDashboardScreen() {
               <Text style={[styles.warningText, { fontSize: 11, opacity: 0.9, marginTop: 2 }]}>
                 {f.action_vi}
               </Text>
+              {cost && (
+                <Text style={[styles.warningText, { fontSize: 11, opacity: 0.85, marginTop: 3, fontStyle: 'italic' }]}>
+                  {t('obd.finding_cost', { range: cost })}
+                </Text>
+              )}
             </View>
           </View>
-        ))}
+          );
+        })}
 
         {/* Dấu "số liệu đang tạm dừng cập nhật" khi mất sóng/đang nối lại
             (rà soát 14/7: trước đây các ô vẫn hiện số CŨ y như đang live -
