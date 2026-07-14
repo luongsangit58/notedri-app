@@ -168,6 +168,7 @@ export default function HomeScreen() {
   // chỉ load lúc mount là thẻ không bao giờ xuất hiện trong phiên đó (bug Sang báo).
   const [obdPairing, setObdPairing] = useState<PairedDevice | null>(null);
   const obdSession = useObdSessionStore();
+  const isPremiumUser = useAuthStore((s) => s.user?.is_premium ?? false);
   useEffect(() => {
     const refresh = () => getMostRecentPairing().then(setObdPairing).catch(() => {});
     refresh();
@@ -361,14 +362,19 @@ export default function HomeScreen() {
           </LinearGradient>
         </TouchableOpacity>
 
-        {/* OBD quick-connect - chỉ khi có thiết bị đã ghép (C4); nhận biết trạng thái
-            phiên sống (C5): đang kết nối thì chấm xanh + chạm là mở thẳng Dashboard */}
-        {(obdPairing || obdSession.connected) && (
+        {/* OBD quick-connect (C4/C5): hiện khi có thiết bị đã ghép, ĐANG kết nối,
+            hoặc user Premium có xe (Sang góp ý 14/7: gỡ app cài lại là mất pairing,
+            thẻ biến mất - Premium là đối tượng của OBD nên luôn có lối vào từ Home) */}
+        {(obdPairing || obdSession.connected || (isPremiumUser && vehicleId)) && (
           <TouchableOpacity
             activeOpacity={0.85}
             onPress={() => nav.navigate('OBDSetup', {
-              vehicleId: obdSession.connected ? obdSession.vehicleId : obdPairing!.vehicleId,
-              vehicleName: (obdSession.connected ? obdSession.vehicleName : obdPairing!.vehicleName) ?? '',
+              vehicleId: obdSession.connected
+                ? obdSession.vehicleId
+                : obdPairing?.vehicleId ?? vehicleId,
+              vehicleName: (obdSession.connected
+                ? obdSession.vehicleName
+                : obdPairing?.vehicleName ?? vehicleName) ?? '',
               consumptionOfficial: null,
             })}
             style={{
@@ -392,7 +398,9 @@ export default function HomeScreen() {
               <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 1 }} numberOfLines={1}>
                 {obdSession.connected
                   ? t('home.obd_quick_connected', { name: obdSession.vehicleName ?? 'OBD2' })
-                  : t('home.obd_quick_sub', { name: obdPairing!.vehicleName })}
+                  : obdPairing
+                  ? t('home.obd_quick_sub', { name: obdPairing.vehicleName })
+                  : t('home.obd_quick_setup')}
               </Text>
             </View>
             <FontAwesome5 name="chevron-right" size={13} color={colors.textSecondary} />

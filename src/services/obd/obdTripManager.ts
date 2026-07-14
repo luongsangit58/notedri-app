@@ -1,7 +1,7 @@
 import { AppState } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { TripSession, TripSummary } from './TripSession';
-import { ObdSnapshot, DtcCode } from './ObdReader';
+import { ObdSnapshot, DtcCode, reinitElm327AfterReconnect } from './ObdReader';
 import { obdApi } from '../../api/obd';
 import { enqueueTripSync } from './TripSyncQueue';
 import { bleService } from './BleService';
@@ -103,6 +103,12 @@ export const obdTripManager = {
 };
 
 // ---- Đăng ký 1 lần ở module level: các việc phải chạy dù KHÔNG màn hình nào mở ----
+
+// Sau reconnect grace: adapter thường vừa tự reboot (fixture #5) → cài đặt ELM
+// về mặc định (echo/dấu cách bật lại). Nắn lại ngay để mọi phiên đồng nhất.
+bleService.addReconnectedListener(() => {
+  reinitElm327AfterReconnect().catch(() => {});
+});
 
 bleService.addDisconnectListener(() => {
   // 1) Telemetry retention (ý #14): report phiên vừa kết thúc. Đọc vehicleId

@@ -244,8 +244,9 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
   useEffect(() => {
     if (bleService.isConnected()) {
       setConnectionState('connected');
-      // Nạp lại capability từ cache (Setup đã dò xong lúc connect) rồi mới snapshot
-      loadCapability(false).catch(() => {});
+      // Nạp capability từ cache; CHO PHÉP dò lại nếu cache trống (fixture #5:
+      // gỡ app cài lại là mất cache → cả phiên poll thừa 2 PID NO DATA mỗi vòng)
+      loadCapability(true).catch(() => {});
       useObdSessionStore.getState().patch({ vehicleId, vehicleName: vehicleName ?? null });
       // Chuyến đang chạy toàn cục (bắt đầu từ lần vào Dashboard trước) → đồng bộ lại
       setIsTripActive(obdTripManager.isActive());

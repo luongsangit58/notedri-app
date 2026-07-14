@@ -47,6 +47,17 @@ async function readPid(pid: string): Promise<number[] | null> {
   }
 }
 
+/**
+ * Init nhẹ chạy lại SAU reconnect grace: fixture #5 cho thấy adapter tự reboot
+ * (nguyên nhân rớt BLE) → mất hết cài đặt, echo + dấu cách quay lại. Không ATZ
+ * (adapter vừa reset rồi, đỡ 1 giây), chỉ nắn lại 4 cài đặt parser phụ thuộc.
+ */
+export async function reinitElm327AfterReconnect(): Promise<void> {
+  for (const cmd of ['ATE0', 'ATL0', 'ATH0', 'ATS0']) {
+    await bleService.sendCommand(cmd, 2000).catch(() => {});
+  }
+}
+
 export type InitResult =
   | { ok: true; dataAvailable: boolean; rawRpmResponse?: string }
   | { ok: false; dataAvailable: false };

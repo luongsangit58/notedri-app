@@ -79,10 +79,13 @@ export default function OBDDashboardScreen() {
         style: 'destructive',
         onPress: async () => {
           await disconnect().catch(() => {});
+          // suppressAutoConnect: user vừa CHỦ ĐỘNG ngắt - không để màn Setup
+          // quét thấy thiết bị đã ghép rồi tự nối lại ngay (vòng lặp ngắt-nối)
           navigation.replace('OBDSetup', {
             vehicleId,
             vehicleName,
             consumptionOfficial,
+            suppressAutoConnect: true,
           });
         },
       },

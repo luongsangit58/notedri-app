@@ -32,6 +32,8 @@ export default function OBDSetupScreen() {
   // Đến từ chạm NFC (xem NfcService/App.tsx deep link listener) - biết trước đúng
   // thiết bị BLE cần kết nối nên bỏ qua bước user tự chọn trong danh sách quét.
   const autoConnectDeviceId: string | null = route.params?.autoConnectDeviceId ?? null;
+  // Đến từ nút "Ngắt kết nối" - không auto-connect lại thiết bị đã ghép ngay
+  const suppressAutoConnect: boolean = route.params?.suppressAutoConnect ?? false;
 
   const t = useT();
   const colors = useColors();
@@ -130,7 +132,7 @@ export default function OBDSetupScreen() {
 
   // One Tap Connect: NFC (biết trước deviceId) ưu tiên hơn bộ nhớ ghép thiết bị.
   useEffect(() => {
-    const targetId = autoConnectDeviceId ?? pairedDeviceId;
+    const targetId = autoConnectDeviceId ?? (suppressAutoConnect ? null : pairedDeviceId);
     if (!targetId || connectionState !== 'scanning') return;
     const match = foundDevices.find((d) => d.id === targetId);
     if (match) handleConnect(match.id, match.name);
