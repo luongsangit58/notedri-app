@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { AppState, AppStateStatus, Appearance, Linking } from 'react-native';
+import { AppState, AppStateStatus, Appearance } from 'react-native';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './src/api/queryClient';
 import { NavigationContainer } from '@react-navigation/native';
@@ -15,7 +15,7 @@ import { bleService } from './src/services/obd/BleService';
 import { hasAnyPairing } from './src/services/obd/pairedDevices';
 import { flushPendingGpsTrips } from './src/services/gps/GpsTripSyncQueue';
 import { maybeAutoShutdownStale } from './src/services/gps/GpsTripTracker';
-import { handleAutoDriveLink } from './src/services/nfc/handleAutoDriveLink';
+import { initDeepLinkService } from './src/services/nfc/DeepLinkService';
 import { sendDeviceHeartbeat } from './src/api/devices';
 import { useAuthStore } from './src/store/authStore';
 import { initializeAdMob } from './src/services/ads/admob';
@@ -86,16 +86,11 @@ function AppLoader({ children }: { children: React.ReactNode }) {
     return () => sub.remove();
   }, []);
 
-  // notedri://autodrive deep link - đến từ chạm NFC (xem NfcService) hoặc bất kỳ
-  // nguồn nào khác mở app bằng URL scheme này. Cold start (app đã đóng) đi qua
-  // getInitialURL(); app đang chạy nền/foreground đi qua sự kiện 'url'.
-  useEffect(() => {
-    Linking.getInitialURL().then(handleAutoDriveLink).catch(() => {});
-    const sub = Linking.addEventListener('url', ({ url }) => {
-      handleAutoDriveLink(url).catch(() => {});
-    });
-    return () => sub.remove();
-  }, []);
+  // Deep link NFC/OBD - notedri://autodrive (thẻ đã ghi sẵn vehicleId+deviceId) và
+  // https://notedri.com/connect (App Link, tự suy ra adapter từ pairing gần nhất).
+  // Cold start (app đã đóng) đi qua getInitialURL(); app đang chạy nền/foreground đi
+  // qua sự kiện 'url'. Xem DeepLinkService để biết cách 2 dạng URL này được phân biệt.
+  useEffect(() => initDeepLinkService(), []);
 
   return <>{children}</>;
 }
