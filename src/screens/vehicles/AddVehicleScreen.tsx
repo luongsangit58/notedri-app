@@ -38,6 +38,28 @@ type VModel = { id: number; brand_id: number; name: string; type: string };
 type Spec   = { id: number; model_id: number; version?: string; year_from?: number; year_to?: number;
                  is_ev: boolean; is_hybrid?: boolean; tank?: number; comb?: number; battery?: number; range_km?: number };
 
+// #26 (brainstorm 14/7): sắp hãng phổ biến ở VN lên đầu danh sách thay vì thứ
+// tự DB (alphabet/insertion) - giảm thời gian cuộn/tìm cho phần lớn user. Hãng
+// KHÔNG nằm trong danh sách vẫn hiển thị đầy đủ, chỉ xếp SAU theo alphabet -
+// đây là thứ tự tham khảo thông thường, không phải số liệu thị phần chính xác.
+const POPULAR_BRANDS_OTO = [
+  'Toyota', 'Honda', 'Hyundai', 'Kia', 'Mazda', 'Mitsubishi', 'Ford', 'VinFast',
+  'Suzuki', 'Isuzu', 'Chevrolet', 'Nissan', 'Peugeot', 'Mercedes-Benz', 'BMW', 'Audi', 'Lexus', 'Subaru',
+];
+const POPULAR_BRANDS_XEMAY = ['Honda', 'Yamaha', 'SYM', 'Piaggio', 'Suzuki', 'VinFast', 'Kymco'];
+
+function sortByPopularity(brands: Brand[], popularList: string[]): Brand[] {
+  const rank = (name: string) => {
+    const idx = popularList.findIndex((p) => p.toLowerCase() === name.toLowerCase());
+    return idx === -1 ? Infinity : idx;
+  };
+  return [...brands].sort((a, b) => {
+    const ra = rank(a.name);
+    const rb = rank(b.name);
+    return ra !== rb ? ra - rb : a.name.localeCompare(b.name);
+  });
+}
+
 // ── Picker Modal ────────────────────────────────────────────────────────────
 function PickerModal<T extends { id: number; name: string }>({
   visible, title, items, onSelect, onClose,
@@ -176,7 +198,8 @@ export default function AddVehicleScreen() {
   const brandsForType = useMemo(() => {
     const dbType = dbVehicleType(vehicleType);
     const brandIds = new Set(allModels.filter(m => (m.type || 'oto') === dbType).map(m => m.brand_id));
-    return allBrands.filter(b => brandIds.has(b.id));
+    const filtered = allBrands.filter(b => brandIds.has(b.id));
+    return sortByPopularity(filtered, dbType === 'xemay' ? POPULAR_BRANDS_XEMAY : POPULAR_BRANDS_OTO);
   }, [allBrands, allModels, vehicleType]);
 
   const modelsForBrand = useMemo(() => {
