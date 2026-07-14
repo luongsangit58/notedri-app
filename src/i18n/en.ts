@@ -1283,6 +1283,9 @@ const en = {
   "auth.google_login_failed": "Google login failed",
   "obd.bluetooth_unavailable": "Bluetooth is unavailable",
   "obd.not_connected": "OBD2 device not connected",
+  "obd.connect_in_progress": "Already connecting to another device, please wait",
+  "obd.premium_expired_title": "Premium subscription expired",
+  "obd.premium_expired_body": "The OBD2 connection was disconnected because your Premium subscription is no longer active. Renew to keep monitoring your vehicle.",
 
   // NFC
   "nfc.setup_title": "Pair NFC tag",

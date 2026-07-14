@@ -54,3 +54,44 @@ describe('evaluateSession - thermostat kẹt mở dùng coolant_max làm cực t
     expect(findings.map((f) => f.ruleId)).toContain('thermostat-stuck-open-suspect');
   });
 });
+
+describe('evaluateSession - chuyến chạy thuần cao tốc (không hề dừng đèn đỏ)', () => {
+  // Bug phát hiện 14/7: rpm_idle_avg chỉ tích luỹ lúc xe đứng yên - một chuyến
+  // không hề dừng có rpm_idle_avg=null, khiến 3 rule dùng "rpm" bị bỏ qua ÂM THẦM
+  // dù voltage/coolant vẫn đủ dữ liệu để đánh giá. rpm_avg (mọi tốc độ) phải cứu
+  // được các rule này.
+  const highwayOnly: ObdSessionSummary = {
+    ...baseSummary,
+    rpm_idle_avg: null, // chưa từng đứng yên
+    rpm_avg: 2400, // trung bình cả chuyến, đủ xác nhận máy đang chạy
+  };
+
+  it('điện áp lệch thấp vẫn báo được dù chưa từng đứng yên', () => {
+    const findings = evaluateSession({ ...highwayOnly, voltage_min: 12.4, voltage_max: 12.6 }, 3348);
+    expect(findings.map((f) => f.ruleId)).toContain('charging-voltage-low');
+  });
+
+  it('thermostat kẹt mở vẫn báo được dù chưa từng đứng yên', () => {
+    const findings = evaluateSession({ ...highwayOnly, coolant_max: 62 }, 700);
+    expect(findings.map((f) => f.ruleId)).toContain('thermostat-stuck-open-suspect');
+  });
+
+  it('high-idle-warm KHÔNG báo (đúng - rule này cần đúng ngữ cảnh đứng yên, không có dữ liệu để đánh giá)', () => {
+    const findings = evaluateSession(highwayOnly, 3348);
+    expect(findings.map((f) => f.ruleId)).not.toContain('high-idle-warm');
+  });
+});
+
+describe('evaluateSession - throttle_idle_avg cho rule high-idle-warm', () => {
+  // Bug phát hiện 14/7: throttlePct từng bị hardcode null trong sessionReport,
+  // khiến high-idle-warm (đòi throttlePct) không bao giờ kích được qua Daily Report.
+  it('tua garanti cao + bướm ga đóng (throttle thấp) + máy ấm -> báo nghi rò khí nạp', () => {
+    const findings = evaluateSession({
+      ...baseSummary,
+      rpm_idle_avg: 1400,
+      throttle_idle_avg: 10,
+      coolant_max: 85,
+    }, 3348);
+    expect(findings.map((f) => f.ruleId)).toContain('high-idle-warm');
+  });
+});

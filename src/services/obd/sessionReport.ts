@@ -10,16 +10,34 @@ import { getActiveRules } from './diagnosticRulesStore';
  * không cần sửa engine, chỉ khác cách nạp input.
  */
 export function evaluateSession(summary: ObdSessionSummary, durationSeconds: number): Finding[] {
-  const base: Omit<VehicleSnapshot, 'controlModuleVoltage'> = {
+  // Base "đứng yên" - CHỈ dùng cho rule cần đúng ngữ cảnh garanti (high-idle-warm):
+  // rpm/throttle tích luỹ lúc speedKmh===0 (xem obdLiveMonitor aggIdleRpm/aggIdleThrottle).
+  const idleBase: Omit<VehicleSnapshot, 'controlModuleVoltage'> = {
     rpm: summary.rpm_idle_avg,
-    speedKmh: 0, // rpm_idle_avg chỉ tích luỹ lúc xe đứng yên - đại diện đúng ngữ cảnh garanti
+    speedKmh: 0,
     engineLoadPct: summary.load_avg,
     coolantTempC: summary.coolant_max, // cực trị: đủ cho cả 2 chiều (quá nhiệt / không đạt nhiệt)
+    throttlePct: summary.throttle_idle_avg ?? null,
+    sessionAgeSeconds: durationSeconds,
+  };
+  // Base "máy đang nổ" (mọi tốc độ, không riêng lúc đứng yên) - cho rule chỉ cần
+  // xác nhận máy đang chạy (sạc điện, van hằng nhiệt): dùng rpm_avg thay vì
+  // rpm_idle_avg để KHÔNG bị bỏ qua oan trên 1 chuyến chạy thuần cao tốc không hề
+  // dừng đèn đỏ - rpm_idle_avg null trong trường hợp đó dù voltage/coolant vẫn có
+  // đủ dữ liệu để đánh giá (phát hiện qua rà soát 14/7). speedKmh để null (không
+  // phải 0) để rule high-idle-warm (đòi hỏi speedKmh) không bị lẫn vào nhánh này.
+  const runningBase: Omit<VehicleSnapshot, 'controlModuleVoltage'> = {
+    rpm: summary.rpm_avg ?? summary.rpm_idle_avg,
+    speedKmh: null,
+    engineLoadPct: summary.load_avg,
+    coolantTempC: summary.coolant_max,
     throttlePct: null,
     sessionAgeSeconds: durationSeconds,
   };
   const rules = getActiveRules();
-  const lowFindings = evaluate(rules, { ...base, controlModuleVoltage: summary.voltage_min });
-  const highFindings = evaluate(rules, { ...base, controlModuleVoltage: summary.voltage_max });
-  return dedupeFindings(lowFindings, highFindings);
+  const results = [idleBase, runningBase].flatMap((base) => [
+    evaluate(rules, { ...base, controlModuleVoltage: summary.voltage_min }),
+    evaluate(rules, { ...base, controlModuleVoltage: summary.voltage_max }),
+  ]);
+  return dedupeFindings(...results);
 }

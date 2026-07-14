@@ -1283,6 +1283,9 @@ const vi = {
   "auth.google_login_failed": "Đăng nhập Google thất bại",
   "obd.bluetooth_unavailable": "Bluetooth không khả dụng",
   "obd.not_connected": "Chưa kết nối thiết bị OBD2",
+  "obd.connect_in_progress": "Đang kết nối thiết bị khác, vui lòng đợi",
+  "obd.premium_expired_title": "Gói Premium đã hết hạn",
+  "obd.premium_expired_body": "Kết nối OBD2 đã bị ngắt vì gói Premium không còn hiệu lực. Gia hạn để tiếp tục theo dõi xe.",
 
   // NFC
   "nfc.setup_title": "Ghép thẻ NFC",

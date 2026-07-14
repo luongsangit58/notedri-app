@@ -49,6 +49,10 @@ export type ObdSessionSummary = {
   voltage_max: number | null;
   voltage_avg: number | null;
   rpm_idle_avg: number | null;
+  // Optional: phiên lưu trước khi thêm 2 trường này sẽ không có key - fallback
+  // undefined phải xử lý như null (xem sessionReport.evaluateSession).
+  rpm_avg?: number | null;
+  throttle_idle_avg?: number | null;
   load_avg: number | null;
   speed_max: number | null;
   dtc_count: number;

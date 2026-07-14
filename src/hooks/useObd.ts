@@ -205,10 +205,17 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
       savePairing({ bleDeviceId: deviceId, vehicleId, vehicleName: vehicleName ?? '' }).catch(() => {});
       return true;
     } catch (e: any) {
-      // NHẢ kết nối BLE dở dang: adapter đang bị app giữ sẽ NGỪNG quảng bá tên,
-      // mọi lần quét sau sẽ không bao giờ thấy nó nữa (phải rút cắm lại mới hiện).
-      // Đây chính là lỗi "chỉ connect được đúng 1 lần" - fixture #1.
-      await bleService.disconnect().catch(() => {});
+      // "Thua" trong 1 cặp double-tap (BleService.connect() phát hiện đã có
+      // luồng khác đang connecting/connected): KHÔNG được disconnect() - phiên
+      // đó không thuộc về lời gọi này, dọn dẹp nhầm sẽ ngắt kết nối vừa thành
+      // công của luồng kia + set nhầm intentionalDisconnect khiến rớt sóng thật
+      // sau đó không còn tự reconnect được nữa.
+      if (e?.code !== 'CONNECT_IN_PROGRESS') {
+        // NHẢ kết nối BLE dở dang: adapter đang bị app giữ sẽ NGỪNG quảng bá tên,
+        // mọi lần quét sau sẽ không bao giờ thấy nó nữa (phải rút cắm lại mới hiện).
+        // Đây chính là lỗi "chỉ connect được đúng 1 lần" - fixture #1.
+        await bleService.disconnect().catch(() => {});
+      }
       setConnectionState('error');
       setErrorMessage(e.message);
       return false;

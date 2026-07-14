@@ -41,6 +41,12 @@ let aggCoolant = newAgg();
 let aggVoltage = newAgg();
 let aggLoad = newAgg();
 let aggIdleRpm = newAgg(); // rpm khi xe đứng yên
+// rpm TOÀN phiên (mọi tốc độ) - cần cho rule chỉ đòi hỏi "máy đang chạy" (sạc
+// điện, van hằng nhiệt): dùng riêng aggIdleRpm cho các rule đó sẽ khiến chúng bị
+// BỎ QUA oan trên 1 chuyến chạy thuần cao tốc không hề dừng đèn đỏ (rpm_idle_avg
+// null dù voltage/coolant vẫn có đủ dữ liệu để đánh giá) - phát hiện 14/7.
+let aggRpmAll = newAgg();
+let aggIdleThrottle = newAgg(); // throttle khi xe đứng yên - cho rule high-idle-warm ở Daily Report
 let maxSpeed: number | null = null;
 let sessionDtcCount = 0;
 let sessionFindingIds = new Set<string>();
@@ -54,12 +60,13 @@ function feed(agg: Agg, v: number | null): void {
 
 function resetSessionStats(): void {
   aggCoolant = newAgg(); aggVoltage = newAgg(); aggLoad = newAgg(); aggIdleRpm = newAgg();
+  aggRpmAll = newAgg(); aggIdleThrottle = newAgg();
   maxSpeed = null; sessionDtcCount = 0; sessionFindingIds = new Set();
 }
 
 /** Snapshot chuẩn hoá cuối phiên - null khi phiên không có dữ liệu nào. */
 export function buildSessionSummary(): Record<string, unknown> | null {
-  if (aggCoolant.n === 0 && aggVoltage.n === 0 && aggIdleRpm.n === 0) return null;
+  if (aggCoolant.n === 0 && aggVoltage.n === 0 && aggIdleRpm.n === 0 && aggRpmAll.n === 0) return null;
   const avg = (a: Agg, digits = 0) => (a.n ? Number((a.sum / a.n).toFixed(digits)) : null);
   return {
     samples: pollCount,
@@ -69,6 +76,8 @@ export function buildSessionSummary(): Record<string, unknown> | null {
     voltage_max: aggVoltage.n ? Number(aggVoltage.max.toFixed(2)) : null,
     voltage_avg: avg(aggVoltage, 2),
     rpm_idle_avg: avg(aggIdleRpm),
+    rpm_avg: avg(aggRpmAll),
+    throttle_idle_avg: avg(aggIdleThrottle),
     load_avg: avg(aggLoad),
     speed_max: maxSpeed,
     dtc_count: sessionDtcCount,
@@ -101,9 +110,13 @@ async function poll(): Promise<void> {
     feed(aggCoolant, snapshot.coolantTempC);
     feed(aggVoltage, snapshot.controlModuleVoltage);
     feed(aggLoad, snapshot.engineLoadPct);
+    feed(aggRpmAll, snapshot.rpm);
     if (snapshot.speedKmh !== null) {
       if (maxSpeed === null || snapshot.speedKmh > maxSpeed) maxSpeed = snapshot.speedKmh;
-      if (snapshot.speedKmh === 0) feed(aggIdleRpm, snapshot.rpm);
+      if (snapshot.speedKmh === 0) {
+        feed(aggIdleRpm, snapshot.rpm);
+        feed(aggIdleThrottle, snapshot.throttlePct);
+      }
     }
 
     // Rule engine trên từng snapshot (hàm thuần, rẻ)
@@ -152,8 +165,15 @@ export const obdLiveMonitor = {
   /** Bắt đầu theo phiên kết nối - gọi sau khi connect thành công. */
   start(vehicleId: number): void {
     if (timer) {
-      // Đổi xe giữa chừng (hiếm): reset bộ nhớ mã đã báo
-      if (activeVehicleId !== vehicleId) reportedCodes = new Set();
+      // Đổi xe giữa chừng (hiếm): coi như phiên MỚI cho xe mới - phải reset TOÀN
+      // BỘ thống kê tích luỹ (không chỉ reportedCodes), nếu không coolant/voltage/
+      // idle-rpm/findings đang tích cho xe CŨ sẽ bị báo cáo nhầm gắn vào lịch sử
+      // của xe MỚI khi phiên kết thúc (buildSessionSummary không phân biệt xe).
+      if (activeVehicleId !== vehicleId) {
+        reportedCodes = new Set();
+        pollCount = 0;
+        resetSessionStats();
+      }
       activeVehicleId = vehicleId;
       return;
     }

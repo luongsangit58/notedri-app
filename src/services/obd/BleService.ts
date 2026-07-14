@@ -308,6 +308,19 @@ class BleService {
           timeout: 8000,
         });
         await this.attachToDevice(device);
+
+        // User có thể đã bấm "Ngắt kết nối" TRONG LÚC connectToDevice/attachToDevice
+        // ở trên đang chạy (connectedDevice lúc đó là null nên disconnect() không có
+        // gì để cancelConnection - chỉ set cờ này) - nếu không kiểm tra lại ở đây,
+        // phiên vừa bị user ngắt sẽ "tự hồi sinh" ngay sau khi attach xong.
+        if (this.intentionalDisconnect) {
+          try { await device.cancelConnection(); } catch {}
+          this.connectedDevice = null;
+          this.notifyCharacteristic = null;
+          this.reconnecting = false;
+          return;
+        }
+
         this.reconnecting = false;
         this.logSession('#reconnect', `ok attempt ${attempt}`);
         useObdSessionStore.getState().patch({ connected: true, reconnecting: false });
@@ -406,26 +419,44 @@ class BleService {
     this.manager.stopDeviceScan();
   }
 
+  // Chặn double-tap/2 lời gọi connect() chồng lấn (vd bấm 2 dòng thiết bị liên
+  // tiếp trước khi UI kịp disable): nếu không, 2 luồng dò GATT chạy song song
+  // sẽ cùng ghi vào responseBuffer dùng chung -> dữ liệu lẫn lộn giữa 2 phiên.
+  private connecting = false;
+
   async connect(deviceId: string): Promise<void> {
-    this.manager.stopDeviceScan();
-    this.intentionalDisconnect = false;
-    this.linkResults = [];
-    // Phiên mới = log mới; log phiên cũ giữ nguyên tới lúc này để user kịp xuất sau khi ngắt.
-    this.sessionLog = [];
+    if (this.connecting || this.connectedDevice) {
+      // Gắn .code để caller (useObd) phân biệt được: đây là lời gọi "thua" trong
+      // 1 cặp double-tap, KHÔNG PHẢI lỗi kết nối thật - không được dọn dẹp
+      // (disconnect()) phiên đang được luồng kia xử lý.
+      const err = new Error(useI18nStore.getState().t('obd.connect_in_progress'));
+      (err as Error & { code?: string }).code = 'CONNECT_IN_PROGRESS';
+      throw err;
+    }
+    this.connecting = true;
+    try {
+      this.manager.stopDeviceScan();
+      this.intentionalDisconnect = false;
+      this.linkResults = [];
+      // Phiên mới = log mới; log phiên cũ giữ nguyên tới lúc này để user kịp xuất sau khi ngắt.
+      this.sessionLog = [];
 
-    const device = await this.manager.connectToDevice(deviceId, {
-      autoConnect: false,
-      requestMTU: 512,
-    });
+      const device = await this.manager.connectToDevice(deviceId, {
+        autoConnect: false,
+        requestMTU: 512,
+      });
 
-    await this.attachToDevice(device);
-    this.sessionStartedAt = Date.now();
-    this.sessionDeviceName = device.name ?? null;
-    useObdSessionStore.getState().patch({
-      connected: true,
-      reconnecting: false,
-      deviceName: this.sessionDeviceName,
-    });
+      await this.attachToDevice(device);
+      this.sessionStartedAt = Date.now();
+      this.sessionDeviceName = device.name ?? null;
+      useObdSessionStore.getState().patch({
+        connected: true,
+        reconnecting: false,
+        deviceName: this.sessionDeviceName,
+      });
+    } finally {
+      this.connecting = false;
+    }
   }
 
   // All callers go through this single entry point.

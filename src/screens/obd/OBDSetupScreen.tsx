@@ -103,7 +103,17 @@ export default function OBDSetupScreen() {
     });
   }
 
+  // Chặn double-tap ngay từ đầu: connectionState chỉ chuyển 'connecting' BÊN
+  // TRONG connect() (hook), tức là SAU await getPairingForDevice() phía dưới -
+  // trong khoảng chờ đó `disabled={isConnecting}` ở danh sách thiết bị vẫn là
+  // false, 2 lần chạm liên tiếp (cùng dòng hoặc khác dòng) đều lọt qua được.
+  // Ref này chặn NGAY LẬP TỨC (đồng bộ), không đợi state re-render.
+  const handlingTapRef = React.useRef(false);
+
   async function handleConnect(deviceId: string, deviceName: string) {
+    if (handlingTapRef.current) return;
+    handlingTapRef.current = true;
+    const release = () => { handlingTapRef.current = false; };
     stopScan();
     // 1 thiết bị - 1 xe: Vgate đang ghép xe KHÁC thì hỏi trước khi chuyển
     // (savePairing sau khi connect thành công sẽ ghi đè pairing cũ).
@@ -113,13 +123,13 @@ export default function OBDSetupScreen() {
         t('obd.pair_switch_title'),
         t('obd.pair_switch_body', { old: existing.vehicleName, new: vehicleName || t('obd.pair_this_vehicle') }),
         [
-          { text: t('common.cancel'), style: 'cancel', onPress: () => startScan(showAllDevices) },
-          { text: t('obd.pair_switch_ok'), onPress: () => void doConnect(deviceId, deviceName) },
+          { text: t('common.cancel'), style: 'cancel', onPress: () => { release(); startScan(showAllDevices); } },
+          { text: t('obd.pair_switch_ok'), onPress: () => { void doConnect(deviceId, deviceName).finally(release); } },
         ],
       );
       return;
     }
-    await doConnect(deviceId, deviceName);
+    await doConnect(deviceId, deviceName).finally(release);
   }
 
   // Auto-connect foreground (ý #17): thiết bị đã từng ghép với XE NÀY xuất hiện
