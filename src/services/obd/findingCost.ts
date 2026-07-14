@@ -1,5 +1,5 @@
 import { lookupDtcOffline } from './dtcOfflineDictionary';
-import { formatVNDShort } from '../../utils/format';
+import { formatVND } from '../../utils/format';
 
 /**
  * C2 (rà soát kiến trúc 14/7): khi rule finding có mã DTC tương ứng
@@ -11,5 +11,6 @@ export function findingCostLabel(relatedDtc?: string): string | null {
   if (!relatedDtc) return null;
   const e = lookupDtcOffline(relatedDtc);
   if (e.cost_min == null || e.cost_max == null) return null;
-  return `${formatVNDShort(e.cost_min)} - ${formatVNDShort(e.cost_max)}`;
+  // formatVND: "300.000đ" (đầy đủ, chuyên nghiệp) thay vì "300k-2,4tr" viết tắt.
+  return `${formatVND(e.cost_min)} - ${formatVND(e.cost_max)}`;
 }

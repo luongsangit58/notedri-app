@@ -16,7 +16,7 @@ import { obdApi, DtcLookupResult } from '../../api/obd';
 import { lookupDtcOffline } from '../../services/obd/dtcOfflineDictionary';
 import AppBgPattern from '../../components/AppBgPattern';
 import { useColors } from '../../utils/theme';
-import { formatVNDShort } from '../../utils/format';
+import { formatVND } from '../../utils/format';
 import { BASE_URL } from '../../utils/api';
 import { useT } from '../../i18n';
 
@@ -185,7 +185,7 @@ export default function DtcLookupScreen() {
               <View style={styles.section}>
                 <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>{t('dtc.cost_estimate')}</Text>
                 <Text style={[styles.sectionText, { color: colors.text }]}>
-                  {formatVNDShort(result.cost_min)} - {formatVNDShort(result.cost_max)}
+                  {formatVND(result.cost_min)} - {formatVND(result.cost_max)}
                 </Text>
               </View>
             )}

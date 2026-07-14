@@ -19,8 +19,15 @@ function toStr(y: number, m: number, d: number) {
   return `${y}-${pad(m)}-${pad(d)}`;
 }
 
+// Chuẩn hoá về đúng phần ngày "YYYY-MM-DD": backend cast kiểu `date` serialize
+// ra ISO đầy đủ ("2026-07-14T00:00:00.000000Z") - nếu không cắt phần giờ thì
+// displayDate tách theo '-' sẽ hiện "14T00:00:00.000000Z/07/2026" (lỗi Sang báo).
+function datePart(str: string): string {
+  return (str || '').split('T')[0];
+}
+
 function displayDate(str: string): string {
-  const parts = str.split('-');
+  const parts = datePart(str).split('-');
   if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
   return str;
 }
@@ -34,7 +41,7 @@ function daysInMonth(year: number, month: number) {
 }
 
 function parseDateStr(str: string): [number, number, number] {
-  const parts = str.split('-');
+  const parts = datePart(str).split('-');
   if (parts.length === 3) {
     const y = parseInt(parts[0], 10);
     const m = parseInt(parts[1], 10);

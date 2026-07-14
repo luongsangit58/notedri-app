@@ -86,8 +86,10 @@ export default function EditReminderScreen() {
         setIntervalKm(found.interval_km != null ? String(found.interval_km) : '');
         setIntervalThang(found.interval_thang != null ? String(found.interval_thang) : '');
         setLastDoneOdo(found.last_done_odo != null ? String(found.last_done_odo) : '');
-        setLastDoneDate(found.last_done_date ?? '');
-        setDueDate(found.due_date ?? '');
+        // Cắt phần giờ của ISO datetime backend trả (cast `date`) về "YYYY-MM-DD"
+        // để DatePickerField hiện đúng + payload lưu lại sạch (như EditVehicle).
+        setLastDoneDate(found.last_done_date ? String(found.last_done_date).slice(0, 10) : '');
+        setDueDate(found.due_date ? String(found.due_date).slice(0, 10) : '');
         setGhiChu(found.ghi_chu ?? '');
         setNotifyEmail(found.notify_email ?? true);
       })
