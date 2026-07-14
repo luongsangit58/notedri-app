@@ -124,15 +124,23 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
     try {
       await bleService.waitForBleReady();
     } catch (e: any) {
-      // Bluetooth đang tắt: thử bật hộ (Android ≤12) rồi chờ lại một lần -
-      // user không phải tự mò vào cài đặt (bug Sang báo 13/7).
-      const enabled = await bleService.tryEnableBluetooth();
-      if (enabled) {
-        try {
-          await bleService.waitForBleReady();
-        } catch (e2: any) {
+      // CHỈ thử bật hộ khi Bluetooth TẮT (BT_OFF) - máy không hỗ trợ BLE
+      // (BT_UNSUPPORTED) thì bật cũng vô ích, hiện thẳng thông báo. Android ≤12
+      // manager.enable() hiện hộp thoại hệ thống; Android 13+ chặn -> false ->
+      // hiện nút "Mở cài đặt Bluetooth" (OBDSetupScreen).
+      if (e?.code === 'BT_OFF') {
+        const enabled = await bleService.tryEnableBluetooth();
+        if (enabled) {
+          try {
+            await bleService.waitForBleReady();
+          } catch (e2: any) {
+            setConnectionState('error');
+            setErrorMessage(e2.message);
+            return;
+          }
+        } else {
           setConnectionState('error');
-          setErrorMessage(e2.message);
+          setErrorMessage(e.message);
           return;
         }
       } else {

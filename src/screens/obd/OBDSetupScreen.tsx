@@ -196,8 +196,8 @@ export default function OBDSetupScreen() {
           {errorMessage && (
             <Text style={styles.errorText}>{errorMessage}</Text>
           )}
-          {/* Bluetooth tắt và không tự bật được (Android 13+/iOS) → dẫn thẳng vào cài đặt */}
-          {errorMessage === t('obd.bluetooth_unavailable') && (
+          {/* Bluetooth tắt/chưa sẵn sàng và không tự bật được (Android 13+/iOS) → dẫn thẳng vào cài đặt */}
+          {(errorMessage === t('obd.bluetooth_unavailable') || errorMessage === t('obd.bluetooth_off')) && (
             <TouchableOpacity
               style={{ marginTop: 8, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8, backgroundColor: '#3B82F6' }}
               onPress={() => {

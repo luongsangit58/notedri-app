@@ -366,25 +366,63 @@ class BleService {
     }
   }
 
+  /** Đọc trạng thái Bluetooth hiện tại (tức thì) - cho UI check sớm trước khi quét. */
+  async getBluetoothState(): Promise<State> {
+    try {
+      return await this.manager.state();
+    } catch {
+      return State.Unknown;
+    }
+  }
+
+  /**
+   * Lỗi có .code để UI phân biệt: BT_OFF (tắt - bật được), BT_UNSUPPORTED (máy
+   * không có BLE), BT_TIMEOUT (state kẹt Unknown/Resetting). Trước đây mọi
+   * trường hợp trả CHUNG "Bluetooth không khả dụng" - user không biết là do
+   * TẮT (bật lên là xong) hay máy không hỗ trợ (Sang phản hồi 14/7: app không
+   * rõ có kiểm tra trạng thái Bluetooth máy hay không).
+   */
+  private bleError(code: 'BT_OFF' | 'BT_UNSUPPORTED' | 'BT_TIMEOUT'): Error {
+    const t = useI18nStore.getState().t;
+    const msg =
+      code === 'BT_OFF' ? t('obd.bluetooth_off')
+      : code === 'BT_UNSUPPORTED' ? t('obd.bluetooth_unsupported')
+      : t('obd.bluetooth_unavailable');
+    const err = new Error(msg) as Error & { code?: string };
+    err.code = code;
+    return err;
+  }
+
   async waitForBleReady(): Promise<void> {
+    // Kiểm tra TỨC THÌ trước (manager.state()) thay vì chỉ chờ onStateChange -
+    // trạng thái TẮT/không-hỗ-trợ được phát hiện ngay, không phụ thuộc thời điểm
+    // adapter phát sự kiện (nguồn cơn "app không kiểm tra được trạng thái BT").
+    const current = await this.getBluetoothState();
+    if (current === State.PoweredOn) return;
+    if (current === State.PoweredOff) throw this.bleError('BT_OFF');
+    if (current === State.Unsupported) throw this.bleError('BT_UNSUPPORTED');
+
+    // Unknown/Resetting: state đang chuyển tiếp -> chờ ngắn qua onStateChange.
     return new Promise((resolve, reject) => {
-      // Timeout: các state như Unknown/Resetting không phát PoweredOn/Off -> nếu không
-      // có mốc thời gian thì promise treo mãi mãi. Sau 5s coi như Bluetooth không sẵn sàng.
       let timer: ReturnType<typeof setTimeout>;
       const subscription = this.manager.onStateChange((state) => {
         if (state === State.PoweredOn) {
           clearTimeout(timer);
           subscription.remove();
           resolve();
-        } else if (state === State.PoweredOff || state === State.Unsupported) {
+        } else if (state === State.PoweredOff) {
           clearTimeout(timer);
           subscription.remove();
-          reject(new Error(useI18nStore.getState().t('obd.bluetooth_unavailable')));
+          reject(this.bleError('BT_OFF'));
+        } else if (state === State.Unsupported) {
+          clearTimeout(timer);
+          subscription.remove();
+          reject(this.bleError('BT_UNSUPPORTED'));
         }
       }, true);
       timer = setTimeout(() => {
         subscription.remove();
-        reject(new Error(useI18nStore.getState().t('obd.bluetooth_unavailable')));
+        reject(this.bleError('BT_TIMEOUT'));
       }, 5000);
     });
   }
