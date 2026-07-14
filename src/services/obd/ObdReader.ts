@@ -1,5 +1,5 @@
 import { bleService } from './BleService';
-import { extractPayload, isNoData, parseDtcCodes } from './obdParser';
+import { extractPayload, isNoData, isPlausibleValue, parseDtcCodes } from './obdParser';
 
 // Capability-aware polling (ý #18): PID xe không hỗ trợ (Honda City: 2F fuel,
 // 5C oil temp đều NO DATA - fixture #2) bị bỏ qua ngay, không tốn round-trip BLE.
@@ -107,49 +107,56 @@ export async function initializeElm327(): Promise<InitResult> {
 export async function readRpm(): Promise<number | null> {
   const bytes = await readPid('0C');
   if (!bytes || bytes.length < 2) return null;
-  return ((bytes[0] * 256) + bytes[1]) / 4;
+  const rpm = ((bytes[0] * 256) + bytes[1]) / 4;
+  return isPlausibleValue('0C', rpm) ? rpm : null;
 }
 
 export async function readSpeed(): Promise<number | null> {
   const bytes = await readPid('0D');
   if (!bytes || bytes.length < 1) return null;
-  return bytes[0];
+  return isPlausibleValue('0D', bytes[0]) ? bytes[0] : null;
 }
 
 export async function readEngineLoad(): Promise<number | null> {
   const bytes = await readPid('04');
   if (!bytes || bytes.length < 1) return null;
-  return Math.round((bytes[0] * 100) / 255);
+  const load = Math.round((bytes[0] * 100) / 255);
+  return isPlausibleValue('04', load) ? load : null;
 }
 
 export async function readCoolantTemp(): Promise<number | null> {
   const bytes = await readPid('05');
   if (!bytes || bytes.length < 1) return null;
-  return bytes[0] - 40;
+  const tempC = bytes[0] - 40;
+  return isPlausibleValue('05', tempC) ? tempC : null;
 }
 
 export async function readFuelLevel(): Promise<number | null> {
   const bytes = await readPid('2F');
   if (!bytes || bytes.length < 1) return null;
-  return Math.round((bytes[0] * 100) / 255);
+  const pct = Math.round((bytes[0] * 100) / 255);
+  return isPlausibleValue('2F', pct) ? pct : null;
 }
 
 export async function readOilTemp(): Promise<number | null> {
   const bytes = await readPid('5C');
   if (!bytes || bytes.length < 1) return null;
-  return bytes[0] - 40;
+  const tempC = bytes[0] - 40;
+  return isPlausibleValue('5C', tempC) ? tempC : null;
 }
 
 export async function readThrottle(): Promise<number | null> {
   const bytes = await readPid('11');
   if (!bytes || bytes.length < 1) return null;
-  return Math.round((bytes[0] * 100) / 255);
+  const pct = Math.round((bytes[0] * 100) / 255);
+  return isPlausibleValue('11', pct) ? pct : null;
 }
 
 export async function readVoltage(): Promise<number | null> {
   const bytes = await readPid('42');
   if (!bytes || bytes.length < 2) return null;
-  return Math.round(((bytes[0] * 256 + bytes[1]) / 1000) * 100) / 100;
+  const volts = Math.round(((bytes[0] * 256 + bytes[1]) / 1000) * 100) / 100;
+  return isPlausibleValue('42', volts) ? volts : null;
 }
 
 // 5 PID sau đây đã có decoder trong obdParser.PID_REGISTRY nhưng trước 14/7
@@ -159,31 +166,35 @@ export async function readVoltage(): Promise<number | null> {
 export async function readFuelTrimShortB1(): Promise<number | null> {
   const bytes = await readPid('06');
   if (!bytes || bytes.length < 1) return null;
-  return Math.round((((bytes[0] - 128) * 100) / 128) * 10) / 10;
+  const pct = Math.round((((bytes[0] - 128) * 100) / 128) * 10) / 10;
+  return isPlausibleValue('06', pct) ? pct : null;
 }
 
 export async function readIntakeManifoldPressure(): Promise<number | null> {
   const bytes = await readPid('0B');
   if (!bytes || bytes.length < 1) return null;
-  return bytes[0];
+  return isPlausibleValue('0B', bytes[0]) ? bytes[0] : null;
 }
 
 export async function readIntakeAirTemp(): Promise<number | null> {
   const bytes = await readPid('0F');
   if (!bytes || bytes.length < 1) return null;
-  return bytes[0] - 40;
+  const tempC = bytes[0] - 40;
+  return isPlausibleValue('0F', tempC) ? tempC : null;
 }
 
 export async function readAmbientAirTemp(): Promise<number | null> {
   const bytes = await readPid('46');
   if (!bytes || bytes.length < 1) return null;
-  return bytes[0] - 40;
+  const tempC = bytes[0] - 40;
+  return isPlausibleValue('46', tempC) ? tempC : null;
 }
 
 export async function readFuelRate(): Promise<number | null> {
   const bytes = await readPid('5E');
   if (!bytes || bytes.length < 2) return null;
-  return Math.round(((bytes[0] * 256 + bytes[1]) / 20) * 10) / 10;
+  const rate = Math.round(((bytes[0] * 256 + bytes[1]) / 20) * 10) / 10;
+  return isPlausibleValue('5E', rate) ? rate : null;
 }
 
 export type ObdExtendedSnapshot = {

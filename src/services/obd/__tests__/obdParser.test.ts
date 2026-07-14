@@ -4,7 +4,7 @@
  * Đây là hồi quy cho bug "màn hình toàn dấu -": ATS0 làm response dính liền
  * ("410C1034") trong khi parser cũ tách token theo dấu cách.
  */
-import { extractPayload, isNoData, parseSupportedPids, parseVin, parseDtcCodes, assembleIsoTpFrames, PID_REGISTRY } from '../obdParser';
+import { extractPayload, isNoData, parseSupportedPids, parseVin, parseDtcCodes, assembleIsoTpFrames, PID_REGISTRY, PID_PLAUSIBLE_RANGE, isPlausibleValue } from '../obdParser';
 
 describe('extractPayload - format thật từ fixture #2 (ATS0, không dấu cách)', () => {
   it('parse RPM 410C1034 → 1037 rpm', () => {
@@ -186,5 +186,45 @@ describe('parseSupportedPids - bitmap chuẩn SAE', () => {
 
   it('NO DATA → mảng rỗng', () => {
     expect(parseSupportedPids('NO DATA', 0x00)).toEqual([]);
+  });
+});
+
+describe('isPlausibleValue - chặn giá trị ngoài dải vật lý hợp lý (bài học fixture #5)', () => {
+  it('null luôn hợp lệ (chưa đọc được ≠ đọc sai)', () => {
+    expect(isPlausibleValue('0C', null)).toBe(true);
+  });
+
+  it('PID chưa khai ngưỡng mặc định hợp lệ - không chặn oan PID mới', () => {
+    expect(isPlausibleValue('99', 999999)).toBe(true);
+  });
+
+  it('RPM trong dải (0-8000) hợp lệ, ngoài dải bị chặn', () => {
+    expect(isPlausibleValue('0C', 800)).toBe(true);
+    expect(isPlausibleValue('0C', 8000)).toBe(true); // biên trên
+    expect(isPlausibleValue('0C', 0)).toBe(true); // biên dưới
+    expect(isPlausibleValue('0C', 8001)).toBe(false);
+    expect(isPlausibleValue('0C', -1)).toBe(false);
+  });
+
+  it('Coolant temp: -40 đến 150°C hợp lệ, byte rác (vd 215°C) bị chặn', () => {
+    expect(isPlausibleValue('05', -40)).toBe(true);
+    expect(isPlausibleValue('05', 150)).toBe(true);
+    expect(isPlausibleValue('05', 215)).toBe(false);
+  });
+
+  it('Control module voltage: 0-30V hợp lệ (hệ 12V kể cả sạc lỗi), quá tải bị chặn', () => {
+    expect(isPlausibleValue('42', 14.2)).toBe(true);
+    expect(isPlausibleValue('42', 30)).toBe(true);
+    expect(isPlausibleValue('42', 65)).toBe(false); // byte rác dạng 0xFFFF/1000=65.535V
+  });
+
+  it('PID case-insensitive (khớp cách gọi thực tế "0c"/"0C")', () => {
+    expect(isPlausibleValue('0c', -1)).toBe(false);
+  });
+
+  it('mọi PID trong PID_REGISTRY đều có ngưỡng khai báo trong PID_PLAUSIBLE_RANGE - tránh lệch bảng âm thầm khi thêm PID mới', () => {
+    for (const pid of Object.keys(PID_REGISTRY)) {
+      expect(PID_PLAUSIBLE_RANGE).toHaveProperty(pid);
+    }
   });
 });

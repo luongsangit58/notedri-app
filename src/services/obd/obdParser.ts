@@ -202,6 +202,45 @@ export function parseSupportedPids(response: string, basePid: number): string[] 
   return pids;
 }
 
+export type PidRange = { min: number; max: number };
+
+// Ngưỡng vật lý hợp lý cho xe con (bài học fixture #5: parser tin tuyệt đối giá
+// trị giải mã, không phân biệt được cảm biến thật với byte rác do rớt/lệch gói).
+// Giá trị ngoài dải này bị coi là hỏng và trả null thay vì hiển thị số liệu sai.
+export const PID_PLAUSIBLE_RANGE: Record<string, PidRange> = {
+  '04': { min: 0, max: 100 },     // Engine load %
+  '05': { min: -40, max: 150 },   // Coolant temperature °C
+  '06': { min: -100, max: 100 },  // Short term fuel trim %
+  // 0B/0D: PID 1-byte KHÔNG hệ số - dải khai báo trùng đúng dải byte thô (0-255)
+  // vì bất kỳ ngưỡng thấp hơn nào cũng loại oan xe tăng áp (MAP kPa boost thật)
+  // hoặc tốc độ cao thật (0D là max mà chuẩn J1979 1-byte có thể biểu diễn).
+  // Check này KHÔNG bắt được byte rác cho riêng 2 PID này - chỉ có tác dụng
+  // khi ghép với check tổng hợp khác (vd so khớp nhiều PID cùng lúc), rà soát
+  // Blind Hunter xác nhận đây là no-op cho 2 PID này, chấp nhận đánh đổi.
+  '0B': { min: 0, max: 255 },     // Intake manifold pressure kPa
+  '0C': { min: 0, max: 8000 },    // Engine RPM - xe con phổ thông không vượt ngưỡng này
+  '0D': { min: 0, max: 255 },     // Vehicle speed km/h
+  '0F': { min: -40, max: 150 },   // Intake air temperature °C
+  '11': { min: 0, max: 100 },     // Throttle position %
+  '2F': { min: 0, max: 100 },     // Fuel level %
+  '42': { min: 0, max: 30 },      // Control module voltage V (hệ 12V, kể cả sạc lỗi)
+  '46': { min: -40, max: 100 },   // Ambient air temperature °C
+  '5C': { min: -40, max: 150 },   // Engine oil temperature °C
+  '5E': { min: 0, max: 3276.75 }, // Fuel rate L/h
+};
+
+/**
+ * Giá trị đã giải mã có nằm trong dải vật lý hợp lý không. PID chưa khai báo
+ * ngưỡng (chưa có trong PID_PLAUSIBLE_RANGE) mặc định hợp lệ - không chặn oan
+ * PID mới thêm mà quên khai ngưỡng.
+ */
+export function isPlausibleValue(pid: string, value: number | null): boolean {
+  if (value === null) return true;
+  const range = PID_PLAUSIBLE_RANGE[pid.toUpperCase()];
+  if (!range) return true;
+  return value >= range.min && value <= range.max;
+}
+
 // ---- PID Registry: PID mode 01 mà NoteDri có thể poll ----
 // Chỉ giữ PID thực sự dùng/sắp dùng (YAGNI) - thêm dần khi tính năng cần.
 

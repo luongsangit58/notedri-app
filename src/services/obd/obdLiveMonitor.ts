@@ -26,12 +26,29 @@ import { useObdSessionStore } from '../../store/obdSessionStore';
 const POLL_INTERVAL_MS = 3000;
 const DTC_EVERY_N_POLLS = 100; // ~5 phút
 
+// Khoảng cách giữa 2 lần poll vượt xa nhịp 3s bình thường = JS timer bị OS đóng
+// băng khi app vào nền (bài học fixture #5: gap 144s/1700s/980s không hề bị BLE
+// coi là mất kết nối - sessionLog vẫn liền mạch). Không tự suy ra ngưỡng từ
+// POLL_INTERVAL_MS vì link kém (skipBeat) đã khiến nhịp thưa gấp đôi bình
+// thường; 15s bao dung cả trường hợp đó mà vẫn bắt được các gap phút/chục-phút.
+const BACKGROUND_GAP_THRESHOLD_MS = 15000;
+
+// Toàn bộ PID hiển thị null liên tiếp N lần (~ N*3s) = xe đã tắt máy/ECU ngủ
+// trong khi adapter vẫn giữ BLE (đúng đuôi fixture #5: 9s NO DATA rồi phiên
+// dừng) - KHÔNG phải app/adapter lỗi. 3 lần vừa đủ để loại nhiễu 1 lần đọc lẻ.
+const VEHICLE_UNRESPONSIVE_THRESHOLD = 3;
+
 let timer: ReturnType<typeof setInterval> | null = null;
 let inFlight = false;
 let skipBeat = false;
 let pollCount = 0;
 let activeVehicleId: number | null = null;
 let reportedCodes = new Set<string>();
+let lastPollAt: number | null = null;
+let backgroundGapCount = 0;
+let backgroundGapSecondsTotal = 0;
+let consecutiveAllNullPolls = 0;
+let vehicleUnresponsiveNotified = false;
 
 // E1 - Session Timeline: tích luỹ thống kê chuẩn hoá trong phiên, gửi kèm
 // telemetry khi phiên kết thúc (trước đây snapshot hiển thị xong là VỨT -
@@ -81,6 +98,8 @@ function resetSessionStats(): void {
   maxSpeed = null; sessionDtcCount = 0; sessionFindingIds = new Set();
   lastSpeedSample = null; harshBrakeCount = 0; harshAccelCount = 0;
   engineRunSeconds = 0;
+  lastPollAt = null; backgroundGapCount = 0; backgroundGapSecondsTotal = 0;
+  consecutiveAllNullPolls = 0; vehicleUnresponsiveNotified = false;
 }
 
 /** Snapshot chuẩn hoá cuối phiên - null khi phiên không có dữ liệu nào. */
@@ -104,6 +123,11 @@ export function buildSessionSummary(): Record<string, unknown> | null {
     engine_run_seconds: engineRunSeconds,
     harsh_brake_count: harshBrakeCount,
     harsh_accel_count: harshAccelCount,
+    // Số lần / tổng giây "khoảng trống nền" (fixture #5) trong phiên - phân biệt
+    // phiên liền mạch với phiên bị JS timer đóng băng nhiều lần, để trend
+    // analysis/QA không hiểu lầm rpm_avg v.v. là tính trên dữ liệu liên tục.
+    background_gap_count: backgroundGapCount,
+    background_gap_seconds_total: backgroundGapSecondsTotal,
     // Thời lượng phiên (không phải quãng đường - OBD live-monitor không theo dõi
     // quãng đường, GPS là nguồn chuyến duy nhất) làm đơn vị chuẩn hoá mật độ.
     driving_score: scoreFromCounts(harshBrakeCount, harshAccelCount, bleService.getSessionAgeSeconds() / 60),
@@ -113,6 +137,7 @@ export function buildSessionSummary(): Record<string, unknown> | null {
 const snapshotListeners = new Set<(s: ObdSnapshot) => void>();
 const dtcListeners = new Set<(codes: DtcCode[]) => void>();
 const findingListeners = new Set<(findings: Finding[]) => void>();
+const vehicleUnresponsiveListeners = new Set<() => void>();
 
 async function poll(): Promise<void> {
   if (inFlight || !bleService.isConnected()) return;
@@ -128,8 +153,44 @@ async function poll(): Promise<void> {
   inFlight = true;
   try {
     pollCount += 1;
+
+    // Gap nền (fixture #5): so mốc THỰC (Date.now()) với lần poll trước, KHÔNG
+    // dựa vào setInterval - chính setInterval là thứ bị OS đóng băng nên không
+    // tự báo được độ trễ của chính nó.
+    const now = Date.now();
+    if (lastPollAt !== null) {
+      const gapMs = now - lastPollAt;
+      if (gapMs > BACKGROUND_GAP_THRESHOLD_MS) {
+        backgroundGapCount += 1;
+        backgroundGapSecondsTotal += Math.round(gapMs / 1000);
+      }
+    }
+    lastPollAt = now;
+
     const snapshot = await readSnapshot();
     snapshotListeners.forEach((fn) => fn(snapshot));
+
+    // Toàn bộ PID null liên tiếp = xe đã tắt máy/ECU ngủ trong khi BLE vẫn sống
+    // (đuôi fixture #5) - báo tầng trên để hiển thị thông báo phù hợp thay vì
+    // loading vô thời hạn. KHÔNG tự ngắt BLE: máy có thể sắp nổ lại.
+    // CHỈ xét 6 PID lõi (rpm/speed/load/coolant/throttle/voltage) - CỐ Ý bỏ
+    // fuelLevelPct/oilTempC: fixture #2 xác nhận nhiều xe (Honda City) không hỗ
+    // trợ 2 PID này nên chúng null VĨNH VIỄN dù xe hoàn toàn bình thường; null
+    // của chúng không nói lên gì về việc ECU còn phản hồi hay không, đưa vào
+    // "allNull" sẽ là nhiễu chứ không phải tín hiệu.
+    const allNull =
+      snapshot.rpm === null && snapshot.speedKmh === null && snapshot.engineLoadPct === null &&
+      snapshot.coolantTempC === null && snapshot.throttlePct === null && snapshot.controlModuleVoltage === null;
+    if (allNull) {
+      consecutiveAllNullPolls += 1;
+      if (consecutiveAllNullPolls >= VEHICLE_UNRESPONSIVE_THRESHOLD && !vehicleUnresponsiveNotified) {
+        vehicleUnresponsiveNotified = true;
+        vehicleUnresponsiveListeners.forEach((fn) => fn());
+      }
+    } else {
+      consecutiveAllNullPolls = 0;
+      vehicleUnresponsiveNotified = false;
+    }
 
     // E1: tích luỹ thống kê phiên
     feed(aggCoolant, snapshot.coolantTempC);
@@ -241,6 +302,12 @@ export const obdLiveMonitor = {
   onFindings(fn: (findings: Finding[]) => void): () => void {
     findingListeners.add(fn);
     return () => findingListeners.delete(fn);
+  },
+
+  /** Xe có vẻ đã tắt máy/ECU không phản hồi (toàn bộ PID null liên tiếp) - không phải mất BLE. */
+  onVehicleUnresponsive(fn: () => void): () => void {
+    vehicleUnresponsiveListeners.add(fn);
+    return () => vehicleUnresponsiveListeners.delete(fn);
   },
 };
 
