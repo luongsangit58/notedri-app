@@ -7,6 +7,7 @@ import {
   ScrollView,
   ActivityIndicator,
   StyleSheet,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
@@ -16,7 +17,14 @@ import { lookupDtcOffline } from '../../services/obd/dtcOfflineDictionary';
 import AppBgPattern from '../../components/AppBgPattern';
 import { useColors } from '../../utils/theme';
 import { formatVNDShort } from '../../utils/format';
+import { BASE_URL } from '../../utils/api';
 import { useT } from '../../i18n';
+
+// Nối DTC → blog (checklist "E - nối mã DTC → bài blog"): chỉ 1 bài blog VN
+// hiện thực sự khớp mọi mã DTC (giải thích đèn Check Engine + mã P0xxx +
+// mức khẩn cấp) - dùng làm liên kết chung thay vì gán bừa cho từng mã khi
+// chưa có bài viết riêng theo từng nhóm lỗi.
+const GENERAL_DTC_BLOG_SLUG = 'cach-doc-den-bao-loi-dong-co';
 
 // Màu theo mức nghiêm trọng - khớp bảng màu severity đang dùng ở web (critical/warn/info)
 const SEVERITY_COLOR: Record<string, string> = {
@@ -182,6 +190,15 @@ export default function DtcLookupScreen() {
               </View>
             )}
 
+            {!isOffline && (
+              <TouchableOpacity
+                style={styles.blogLink}
+                onPress={() => Linking.openURL(`${BASE_URL}/blog/${GENERAL_DTC_BLOG_SLUG}`)}>
+                <FontAwesome5 name="book-open" size={12} color={colors.primary} />
+                <Text style={[styles.blogLinkText, { color: colors.primary }]}>{t('dtc.related_blog')}</Text>
+              </TouchableOpacity>
+            )}
+
             <Text style={[styles.disclaimer, { color: colors.textSecondary }]}>{t('dtc.disclaimer')}</Text>
             {isOffline && (
               <Text style={[styles.disclaimer, { color: colors.textSecondary, marginTop: 4 }]}>
@@ -256,4 +273,6 @@ const styles = StyleSheet.create({
   sectionLabel: { fontSize: 11, fontWeight: '700', textTransform: 'uppercase', marginBottom: 3 },
   sectionText: { fontSize: 14, lineHeight: 20 },
   disclaimer: { fontSize: 11, lineHeight: 16, marginTop: 14, fontStyle: 'italic' },
+  blogLink: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 14 },
+  blogLinkText: { fontSize: 12, fontWeight: '600' },
 });

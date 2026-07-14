@@ -444,6 +444,7 @@ const vi = {
   "dtc.action_title": "Nên làm gì",
   "dtc.cost_estimate": "Chi phí tham khảo",
   "dtc.disclaimer": "Chi phí chỉ mang tính tham khảo tại Việt Nam, thay đổi theo dòng xe và garage.",
+  "dtc.related_blog": "Đọc thêm: Đèn Check Engine sáng nói lên điều gì?",
   "dtc.offline_note": "Kết quả từ dữ liệu ngoại tuyến trong máy (không có mạng).",
   "obd.guide_title": "Hướng dẫn",
   "obd.guide_step1": "1. Cắm adapter BLE ELM327 vào cổng OBD2 trên xe (thường ở góc lái, dưới dashboard)",
