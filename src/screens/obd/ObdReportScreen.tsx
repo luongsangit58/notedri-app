@@ -35,7 +35,7 @@ export default function ObdReportScreen() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['obd', 'sessions-recent', vehicleId],
-    queryFn: () => obdApi.recentSessions(vehicleId).then((r) => r.data.data),
+    queryFn: () => obdApi.recentSessions(vehicleId).then((r) => r.data),
     enabled: !!vehicleId,
   });
 
@@ -44,7 +44,8 @@ export default function ObdReportScreen() {
     refreshRulesFromServer().catch(() => {});
   }, []);
 
-  const sessions = data ?? [];
+  const sessions = data?.data ?? [];
+  const totalEngineHours = data?.meta?.total_engine_hours ?? 0;
   const latest = sessions[0];
   const previous = sessions[1];
 
@@ -89,6 +90,17 @@ export default function ObdReportScreen() {
           <Text style={[styles.sessionMeta, { color: colors.textSecondary }]}>
             {dayjs(latest.connected_at).format('DD/MM/YYYY HH:mm')} · {latest.device_name ?? 'OBD2'}
           </Text>
+
+          {/* C1: tổng giờ máy tích luỹ từ OBD - metric mới, nền cho bảo dưỡng
+              theo giờ máy (chính xác hơn km với xe chạy phố nhiều garanti). */}
+          {totalEngineHours > 0 && (
+            <View style={[styles.trendCard, { backgroundColor: colors.card }]}>
+              <FontAwesome5 name="hourglass-half" size={13} color={colors.primary} />
+              <Text style={[styles.trendText, { color: colors.text }]}>
+                {t('obd.total_engine_hours', { hours: totalEngineHours })}
+              </Text>
+            </View>
+          )}
 
           {findings.length === 0 ? (
             <View style={[styles.okBanner, { backgroundColor: '#16653422' }]}>

@@ -109,9 +109,11 @@ export const obdApi = {
   reportDtc: (vehicleId: number, codes: Array<{ code: string; description: string | null }>) =>
     client.post('/obd2/dtc', { vehicle_id: vehicleId, codes }),
 
-  // Lịch sử phiên gần nhất (đã có summary) cho Daily Report - app tự đánh giá
+  // Lịch sử phiên gần nhất (đã có summary) cho Daily Report - app tự đánh giá.
+  // meta.total_engine_hours (C1): tổng giờ máy tích luỹ mọi phiên.
   recentSessions: (vehicleId: number) =>
-    client.get<{ data: ObdSessionRecord[] }>('/obd2/sessions/recent', { params: { vehicle_id: vehicleId } }),
+    client.get<{ data: ObdSessionRecord[]; meta?: { total_engine_hours: number } }>(
+      '/obd2/sessions/recent', { params: { vehicle_id: vehicleId } }),
 
   // Telemetry retention: 1 dòng mỗi phiên kết nối đã kết thúc (fire-and-forget)
   reportSession: (payload: {

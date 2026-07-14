@@ -505,6 +505,7 @@ const en = {
   "obd.trips_via_gps": "Trips are recorded automatically via GPS - view here",
   "obd.finding_beta": "beta",
   "obd.finding_cost": "Est. repair cost: {{range}} đ",
+  "obd.total_engine_hours": "Total engine run time (from OBD): {{hours}} h - useful for hours-based maintenance (city driving).",
   "obd.vin_mismatch_title": "VIN does not match {{name}}",
   "obd.vin_mismatch_desc": "The VIN read differs from last time. If you plugged the Vgate into a DIFFERENT car, its data will be saved to this vehicle by mistake - disconnect and open the correct vehicle.",
   "obd.live_all_good": "All readings within normal range",
