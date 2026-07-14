@@ -194,6 +194,18 @@ export default function OBDDashboardScreen() {
           </View>
         )}
 
+        {/* Trạng thái "mọi chỉ số bình thường" khi ĐANG kết nối + không có
+            cảnh báo nào (rà soát 14/7: trước đây 0 finding hiển thị y như "chưa
+            tải xong" - user không phân biệt được xe khoẻ với app treo). */}
+        {isConnected && findings.length === 0 && warning?.type !== 'no_data' && snap && (
+          <View style={[styles.warningBanner, { backgroundColor: '#16653422' }]}>
+            <FontAwesome5 name="check-circle" size={14} color="#22C55E" solid />
+            <Text style={[styles.warningText, { color: '#22C55E', fontWeight: '600' }]}>
+              {t('obd.live_all_good')}
+            </Text>
+          </View>
+        )}
+
         {/* Cảnh báo từ Diagnostic Engine (rule beta có nguồn dẫn) - hiện khi
             evaluate() bắt được bất thường trên snapshot sống */}
         {findings.map((f) => (
@@ -220,9 +232,22 @@ export default function OBDDashboardScreen() {
           </View>
         ))}
 
+        {/* Dấu "số liệu đang tạm dừng cập nhật" khi mất sóng/đang nối lại
+            (rà soát 14/7: trước đây các ô vẫn hiện số CŨ y như đang live -
+            tài xế liếc màn hình tưởng là số thật lúc này). */}
+        {!isConnected && snap && (
+          <View style={[styles.warningBanner, { backgroundColor: '#78716C22' }]}>
+            <FontAwesome5 name="pause-circle" size={13} color="#A8A29E" solid />
+            <Text style={[styles.warningText, { color: '#A8A29E', fontSize: 12 }]}>
+              {t('obd.data_paused')}
+            </Text>
+          </View>
+        )}
+
         {/* Live stats grid - ẩn ô của PID xe không hỗ trợ (capability R8).
-            Chưa dò được capability (null) thì hiện đủ như cũ. */}
-        <View style={styles.statsGrid}>
+            Chưa dò được capability (null) thì hiện đủ như cũ. Mờ đi khi số liệu
+            không còn cập nhật (mất sóng) để phân biệt với dữ liệu sống. */}
+        <View style={[styles.statsGrid, !isConnected && snap ? { opacity: 0.5 } : null]}>
           {(() => {
             const tiles = [
               { pid: '0D', el: <StatBox key="0D" label={t('obd.stat_speed')} value={snap?.speedKmh ?? null} unit=" km/h" icon="tachometer-alt" color="#3B82F6" /> },

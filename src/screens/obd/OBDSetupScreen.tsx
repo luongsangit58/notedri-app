@@ -210,6 +210,15 @@ export default function OBDSetupScreen() {
               <Text style={{ color: '#fff', fontWeight: '600', fontSize: 13 }}>{t('obd.open_bt_settings')}</Text>
             </TouchableOpacity>
           )}
+          {/* Từ chối quyền Bluetooth (Android "don't ask again") → chỉ mở lại được
+              từ trang Cài đặt ứng dụng (rà soát 14/7). */}
+          {errorMessage === t('obd.permission_denied') && (
+            <TouchableOpacity
+              style={{ marginTop: 8, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8, backgroundColor: '#3B82F6' }}
+              onPress={() => Linking.openSettings()}>
+              <Text style={{ color: '#fff', fontWeight: '600', fontSize: 13 }}>{t('obd.open_app_settings')}</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Device list */}

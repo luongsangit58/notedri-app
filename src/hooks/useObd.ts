@@ -9,6 +9,7 @@ import { Finding } from '../services/obd/diagnosticEngine';
 import { savePairing } from '../services/obd/pairedDevices';
 import { useAuthStore } from '../store/authStore';
 import { useObdSessionStore } from '../store/obdSessionStore';
+import { useI18nStore } from '../i18n';
 
 export type ObdWarning = { type: 'no_data'; rawResponse?: string } | null;
 
@@ -110,7 +111,11 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
 
     const granted = await bleService.requestPermissions();
     if (!granted) {
-      setErrorMessage('Can khong co quyen Bluetooth');
+      // Rà soát 14/7: trước đây message tiếng Việt không dấu hardcode + không có
+      // đường khắc phục. Giờ dịch + set state 'error' để OBDSetupScreen hiện nút
+      // "Mở cài đặt" (Android "don't ask again" chỉ mở được từ Cài đặt hệ thống).
+      setConnectionState('error');
+      setErrorMessage(useI18nStore.getState().t('obd.permission_denied'));
       return;
     }
 
