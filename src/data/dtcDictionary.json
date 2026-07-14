@@ -1,8 +1,8 @@
 {
  "_generated": "sync-dtc-dictionary.mjs - DO NOT EDIT BY HAND",
- "source_hash": "d3f64ed7e9c2",
- "synced_at": "2026-07-13T03:28:34.949Z",
- "count": 136,
+ "source_hash": "2d81cef64ef6",
+ "synced_at": "2026-07-14T03:43:23.663Z",
+ "count": 200,
  "entries": [
   {
    "code": "P0011",
@@ -49,6 +49,50 @@
    "cost_max": 6000000
   },
   {
+   "code": "P0017",
+   "group": "powertrain",
+   "severity": "critical",
+   "can_drive": "caution",
+   "en": "Crankshaft/Camshaft Position Correlation (Bank 1 Sensor B)",
+   "vi": "Lệch đồng bộ trục cơ - trục cam, cảm biến B (nghi xích cam giãn/nhảy răng)",
+   "action_vi": "Kiểm tra xích cam/dây curoa cam sớm; tránh chạy đường dài khi chưa rõ nguyên nhân.",
+   "cost_min": 500000,
+   "cost_max": 6000000
+  },
+  {
+   "code": "P0021",
+   "group": "powertrain",
+   "severity": "warn",
+   "can_drive": "caution",
+   "en": "Camshaft Position - Timing Over-Advanced (Bank 2)",
+   "vi": "Sai pha phối khí trục cam (bank 2) - thường do dầu bẩn hoặc van VVT kẹt",
+   "action_vi": "Kiểm tra mức và chất lượng dầu máy, vệ sinh van điều khiển VVT bank 2.",
+   "cost_min": 300000,
+   "cost_max": 2500000
+  },
+  {
+   "code": "P0022",
+   "group": "powertrain",
+   "severity": "warn",
+   "can_drive": "caution",
+   "en": "Camshaft Position - Timing Over-Retarded (Bank 2)",
+   "vi": "Pha phối khí trục cam trễ (bank 2) - máy yếu, rung ở tua thấp",
+   "action_vi": "Kiểm tra dầu máy và van điều khiển pha cam bank 2; thay dầu đúng cấp.",
+   "cost_min": 300000,
+   "cost_max": 2500000
+  },
+  {
+   "code": "P0068",
+   "group": "powertrain",
+   "severity": "warn",
+   "can_drive": "caution",
+   "en": "MAP/MAF - Throttle Position Correlation",
+   "vi": "Tín hiệu áp suất/lưu lượng khí nạp không khớp với vị trí bướm ga",
+   "action_vi": "Kiểm tra rò khí nạp, cảm biến MAP/MAF và bướm ga.",
+   "cost_min": 300000,
+   "cost_max": 2000000
+  },
+  {
    "code": "P0087",
    "group": "powertrain",
    "severity": "critical",
@@ -69,6 +113,17 @@
    "action_vi": "Kiểm tra van điều áp và cảm biến áp suất nhiên liệu tại gara.",
    "cost_min": 500000,
    "cost_max": 5000000
+  },
+  {
+   "code": "P0089",
+   "group": "powertrain",
+   "severity": "warn",
+   "can_drive": "caution",
+   "en": "Fuel Pressure Regulator Performance",
+   "vi": "Van điều áp nhiên liệu hoạt động sai - hao xăng hoặc hụt ga",
+   "action_vi": "Kiểm tra van điều áp và lọc xăng; đo áp suất nhiên liệu tại gara.",
+   "cost_min": 400000,
+   "cost_max": 3000000
   },
   {
    "code": "P0100",
@@ -288,7 +343,7 @@
    "vi": "Van hằng nhiệt mở sớm - máy lâu nóng, hao xăng nhẹ",
    "action_vi": "Kiểm tra/thay van hằng nhiệt (thermostat) và mức nước làm mát.",
    "cost_min": 300000,
-   "cost_max": 1500000
+   "cost_max": 2400000
   },
   {
    "code": "P0130",
@@ -412,6 +467,28 @@
    "cost_max": 2500000
   },
   {
+   "code": "P0148",
+   "group": "powertrain",
+   "severity": "critical",
+   "can_drive": "caution",
+   "en": "Fuel Delivery Error",
+   "vi": "Lỗi cấp nhiên liệu - máy có thể hụt ga hoặc khó nổ khi tải nặng",
+   "action_vi": "Kiểm tra bơm xăng, lọc xăng và áp suất nhiên liệu.",
+   "cost_min": 400000,
+   "cost_max": 3000000
+  },
+  {
+   "code": "P0150",
+   "group": "powertrain",
+   "severity": "warn",
+   "can_drive": "yes",
+   "en": "O2 Sensor Circuit Malfunction (Bank 2 Sensor 1)",
+   "vi": "Lỗi mạch cảm biến oxy trước bộ xúc tác (bank 2)",
+   "action_vi": "Kiểm tra giắc và cảm biến oxy bank 2 số 1; kiểm tra rò khí xả.",
+   "cost_min": 400000,
+   "cost_max": 2500000
+  },
+  {
    "code": "P0151",
    "group": "powertrain",
    "severity": "warn",
@@ -423,6 +500,39 @@
    "cost_max": 2500000
   },
   {
+   "code": "P0152",
+   "group": "powertrain",
+   "severity": "warn",
+   "can_drive": "yes",
+   "en": "O2 Sensor Circuit High Voltage (Bank 2 Sensor 1)",
+   "vi": "Cảm biến oxy bank 2 (trước xúc tác) điện áp cao - máy chạy giàu xăng",
+   "action_vi": "Kiểm tra cảm biến oxy bank 2 số 1 và kim phun rò xăng.",
+   "cost_min": 400000,
+   "cost_max": 2500000
+  },
+  {
+   "code": "P0153",
+   "group": "powertrain",
+   "severity": "warn",
+   "can_drive": "yes",
+   "en": "O2 Sensor Circuit Slow Response (Bank 2 Sensor 1)",
+   "vi": "Cảm biến oxy bank 2 phản hồi chậm - chai cảm biến",
+   "action_vi": "Cân nhắc thay cảm biến oxy bank 2 số 1; kiểm tra rò khí xả.",
+   "cost_min": 400000,
+   "cost_max": 2500000
+  },
+  {
+   "code": "P0154",
+   "group": "powertrain",
+   "severity": "warn",
+   "can_drive": "yes",
+   "en": "O2 Sensor Circuit No Activity Detected (Bank 2 Sensor 1)",
+   "vi": "Cảm biến oxy bank 2 (trước xúc tác) không có tín hiệu",
+   "action_vi": "Kiểm tra giắc, mạch sấy; thay cảm biến oxy bank 2 số 1 nếu hỏng.",
+   "cost_min": 400000,
+   "cost_max": 2500000
+  },
+  {
    "code": "P0155",
    "group": "powertrain",
    "severity": "warn",
@@ -430,6 +540,72 @@
    "en": "O2 Sensor Heater Circuit Malfunction (Bank 2 Sensor 1)",
    "vi": "Hỏng mạch sấy cảm biến oxy trước (bank 2)",
    "action_vi": "Kiểm tra cầu chì, giắc mạch sấy; thay cảm biến nếu cần.",
+   "cost_min": 400000,
+   "cost_max": 2500000
+  },
+  {
+   "code": "P0156",
+   "group": "powertrain",
+   "severity": "warn",
+   "can_drive": "yes",
+   "en": "O2 Sensor Circuit Malfunction (Bank 2 Sensor 2)",
+   "vi": "Lỗi mạch cảm biến oxy sau bộ xúc tác (bank 2)",
+   "action_vi": "Kiểm tra cảm biến oxy bank 2 số 2 và dây dẫn; ảnh hưởng chủ yếu tới giám sát khí thải.",
+   "cost_min": 400000,
+   "cost_max": 2500000
+  },
+  {
+   "code": "P0157",
+   "group": "powertrain",
+   "severity": "warn",
+   "can_drive": "yes",
+   "en": "O2 Sensor Circuit Low Voltage (Bank 2 Sensor 2)",
+   "vi": "Cảm biến oxy sau xúc tác (bank 2) điện áp thấp",
+   "action_vi": "Kiểm tra cảm biến oxy bank 2 số 2 và rò khí xả gần vị trí cảm biến.",
+   "cost_min": 400000,
+   "cost_max": 2500000
+  },
+  {
+   "code": "P0158",
+   "group": "powertrain",
+   "severity": "warn",
+   "can_drive": "yes",
+   "en": "O2 Sensor Circuit High Voltage (Bank 2 Sensor 2)",
+   "vi": "Cảm biến oxy sau xúc tác (bank 2) điện áp cao",
+   "action_vi": "Kiểm tra cảm biến oxy bank 2 số 2 và tình trạng chập dây tín hiệu.",
+   "cost_min": 400000,
+   "cost_max": 2500000
+  },
+  {
+   "code": "P0159",
+   "group": "powertrain",
+   "severity": "warn",
+   "can_drive": "yes",
+   "en": "O2 Sensor Circuit Slow Response (Bank 2 Sensor 2)",
+   "vi": "Cảm biến oxy sau xúc tác (bank 2) phản hồi chậm",
+   "action_vi": "Cân nhắc thay cảm biến oxy bank 2 số 2.",
+   "cost_min": 400000,
+   "cost_max": 2500000
+  },
+  {
+   "code": "P0160",
+   "group": "powertrain",
+   "severity": "warn",
+   "can_drive": "yes",
+   "en": "O2 Sensor Circuit No Activity Detected (Bank 2 Sensor 2)",
+   "vi": "Cảm biến oxy sau xúc tác (bank 2) không có tín hiệu",
+   "action_vi": "Kiểm tra giắc, cầu chì mạch sấy; thay cảm biến oxy bank 2 số 2 nếu hỏng.",
+   "cost_min": 400000,
+   "cost_max": 2500000
+  },
+  {
+   "code": "P0161",
+   "group": "powertrain",
+   "severity": "warn",
+   "can_drive": "yes",
+   "en": "O2 Sensor Heater Circuit Malfunction (Bank 2 Sensor 2)",
+   "vi": "Hỏng mạch sấy cảm biến oxy sau (bank 2)",
+   "action_vi": "Kiểm tra cầu chì, giắc mạch sấy; thay cảm biến oxy bank 2 số 2 nếu cần.",
    "cost_min": 400000,
    "cost_max": 2500000
   },
@@ -533,6 +709,61 @@
    "cost_max": 2000000
   },
   {
+   "code": "P0205",
+   "group": "powertrain",
+   "severity": "critical",
+   "can_drive": "caution",
+   "en": "Injector Circuit Malfunction - Cylinder 5",
+   "vi": "Lỗi mạch kim phun máy số 5",
+   "action_vi": "Kiểm tra giắc/dây kim phun máy 5; vệ sinh hoặc thay kim phun.",
+   "cost_min": 400000,
+   "cost_max": 2000000
+  },
+  {
+   "code": "P0206",
+   "group": "powertrain",
+   "severity": "critical",
+   "can_drive": "caution",
+   "en": "Injector Circuit Malfunction - Cylinder 6",
+   "vi": "Lỗi mạch kim phun máy số 6",
+   "action_vi": "Kiểm tra giắc/dây kim phun máy 6; vệ sinh hoặc thay kim phun.",
+   "cost_min": 400000,
+   "cost_max": 2000000
+  },
+  {
+   "code": "P0207",
+   "group": "powertrain",
+   "severity": "critical",
+   "can_drive": "caution",
+   "en": "Injector Circuit Malfunction - Cylinder 7",
+   "vi": "Lỗi mạch kim phun máy số 7",
+   "action_vi": "Kiểm tra giắc/dây kim phun máy 7; vệ sinh hoặc thay kim phun.",
+   "cost_min": 400000,
+   "cost_max": 2000000
+  },
+  {
+   "code": "P0208",
+   "group": "powertrain",
+   "severity": "critical",
+   "can_drive": "caution",
+   "en": "Injector Circuit Malfunction - Cylinder 8",
+   "vi": "Lỗi mạch kim phun máy số 8",
+   "action_vi": "Kiểm tra giắc/dây kim phun máy 8; vệ sinh hoặc thay kim phun.",
+   "cost_min": 400000,
+   "cost_max": 2000000
+  },
+  {
+   "code": "P0217",
+   "group": "powertrain",
+   "severity": "critical",
+   "can_drive": "stop",
+   "en": "Engine Overtemperature Condition",
+   "vi": "ECU ghi nhận động cơ từng quá nhiệt nghiêm trọng",
+   "action_vi": "Dừng xe an toàn, kiểm tra nước làm mát, quạt và bơm nước ngay; nguy cơ hỏng máy nếu tiếp tục chạy.",
+   "cost_min": 500000,
+   "cost_max": 15000000
+  },
+  {
    "code": "P0230",
    "group": "powertrain",
    "severity": "critical",
@@ -621,6 +852,39 @@
    "cost_max": 2000000
   },
   {
+   "code": "P0307",
+   "group": "powertrain",
+   "severity": "critical",
+   "can_drive": "caution",
+   "en": "Cylinder 7 Misfire Detected",
+   "vi": "Xi-lanh số 7 bỏ máy",
+   "action_vi": "Kiểm tra bugi/mobin/kim phun máy số 7; xử lý sớm tránh hư catalyst.",
+   "cost_min": 250000,
+   "cost_max": 2000000
+  },
+  {
+   "code": "P0308",
+   "group": "powertrain",
+   "severity": "critical",
+   "can_drive": "caution",
+   "en": "Cylinder 8 Misfire Detected",
+   "vi": "Xi-lanh số 8 bỏ máy",
+   "action_vi": "Kiểm tra bugi/mobin/kim phun máy số 8; xử lý sớm tránh hư catalyst.",
+   "cost_min": 250000,
+   "cost_max": 2000000
+  },
+  {
+   "code": "P0316",
+   "group": "powertrain",
+   "severity": "warn",
+   "can_drive": "caution",
+   "en": "Rough/Misfire Detected on Startup (First 1000 Revolutions)",
+   "vi": "Bỏ máy/rung giật ngay lúc mới đề - thường do bugi/dây cao áp yếu khi máy lạnh",
+   "action_vi": "Kiểm tra bugi, dây cao áp và mobin; hay gặp khi trời lạnh hoặc bugi mòn.",
+   "cost_min": 250000,
+   "cost_max": 1500000
+  },
+  {
    "code": "P0320",
    "group": "powertrain",
    "severity": "critical",
@@ -632,6 +896,28 @@
    "cost_max": 2000000
   },
   {
+   "code": "P0321",
+   "group": "powertrain",
+   "severity": "critical",
+   "can_drive": "caution",
+   "en": "Ignition/Distributor Engine Speed Input Circuit Range/Performance",
+   "vi": "Tín hiệu tốc độ động cơ cho hệ đánh lửa sai dải đo",
+   "action_vi": "Kiểm tra cảm biến trục cơ/vành răng và dây tín hiệu đánh lửa.",
+   "cost_min": 300000,
+   "cost_max": 2000000
+  },
+  {
+   "code": "P0322",
+   "group": "powertrain",
+   "severity": "critical",
+   "can_drive": "stop",
+   "en": "Ignition/Distributor Engine Speed Input Circuit No Signal",
+   "vi": "Mất tín hiệu tốc độ động cơ cho hệ đánh lửa - xe có thể chết máy, khó nổ lại",
+   "action_vi": "Kiểm tra cảm biến trục cơ và giắc nối ngay; hạn chế di chuyển.",
+   "cost_min": 300000,
+   "cost_max": 2000000
+  },
+  {
    "code": "P0325",
    "group": "powertrain",
    "severity": "warn",
@@ -639,6 +925,72 @@
    "en": "Knock Sensor Circuit Malfunction (Bank 1)",
    "vi": "Lỗi cảm biến kích nổ - ECU giảm góc đánh lửa, máy yếu",
    "action_vi": "Kiểm tra cảm biến kích nổ; tránh chở nặng/leo dốc dài khi chưa sửa.",
+   "cost_min": 400000,
+   "cost_max": 2000000
+  },
+  {
+   "code": "P0326",
+   "group": "powertrain",
+   "severity": "warn",
+   "can_drive": "caution",
+   "en": "Knock Sensor 1 Circuit Range/Performance (Bank 1)",
+   "vi": "Cảm biến kích nổ (bank 1) sai dải đo",
+   "action_vi": "Kiểm tra giắc và cảm biến kích nổ; ECU có thể giảm góc đánh lửa gây yếu máy.",
+   "cost_min": 400000,
+   "cost_max": 2000000
+  },
+  {
+   "code": "P0327",
+   "group": "powertrain",
+   "severity": "warn",
+   "can_drive": "caution",
+   "en": "Knock Sensor 1 Circuit Low Input (Bank 1)",
+   "vi": "Tín hiệu cảm biến kích nổ (bank 1) quá thấp",
+   "action_vi": "Kiểm tra dây và giắc cảm biến kích nổ bank 1.",
+   "cost_min": 400000,
+   "cost_max": 2000000
+  },
+  {
+   "code": "P0328",
+   "group": "powertrain",
+   "severity": "warn",
+   "can_drive": "caution",
+   "en": "Knock Sensor 1 Circuit High Input (Bank 1)",
+   "vi": "Tín hiệu cảm biến kích nổ (bank 1) quá cao",
+   "action_vi": "Kiểm tra dây chập mass cảm biến kích nổ bank 1.",
+   "cost_min": 400000,
+   "cost_max": 2000000
+  },
+  {
+   "code": "P0330",
+   "group": "powertrain",
+   "severity": "warn",
+   "can_drive": "caution",
+   "en": "Knock Sensor 2 Circuit Malfunction (Bank 2)",
+   "vi": "Lỗi mạch cảm biến kích nổ (bank 2)",
+   "action_vi": "Kiểm tra cảm biến kích nổ bank 2; ECU có thể giảm góc đánh lửa gây yếu máy.",
+   "cost_min": 400000,
+   "cost_max": 2000000
+  },
+  {
+   "code": "P0332",
+   "group": "powertrain",
+   "severity": "warn",
+   "can_drive": "caution",
+   "en": "Knock Sensor 2 Circuit Low Input (Bank 2)",
+   "vi": "Tín hiệu cảm biến kích nổ (bank 2) quá thấp",
+   "action_vi": "Kiểm tra dây và giắc cảm biến kích nổ bank 2.",
+   "cost_min": 400000,
+   "cost_max": 2000000
+  },
+  {
+   "code": "P0333",
+   "group": "powertrain",
+   "severity": "warn",
+   "can_drive": "caution",
+   "en": "Knock Sensor 2 Circuit High Input (Bank 2)",
+   "vi": "Tín hiệu cảm biến kích nổ (bank 2) quá cao",
+   "action_vi": "Kiểm tra dây chập mass cảm biến kích nổ bank 2.",
    "cost_min": 400000,
    "cost_max": 2000000
   },
@@ -753,6 +1105,50 @@
    "cost_max": 1500000
   },
   {
+   "code": "P0355",
+   "group": "powertrain",
+   "severity": "critical",
+   "can_drive": "caution",
+   "en": "Ignition Coil E Primary/Secondary Circuit Malfunction",
+   "vi": "Lỗi mobin đánh lửa máy số 5",
+   "action_vi": "Kiểm tra/hoán đổi mobin máy 5 với máy khác để xác nhận; thay nếu hỏng.",
+   "cost_min": 300000,
+   "cost_max": 1500000
+  },
+  {
+   "code": "P0356",
+   "group": "powertrain",
+   "severity": "critical",
+   "can_drive": "caution",
+   "en": "Ignition Coil F Primary/Secondary Circuit Malfunction",
+   "vi": "Lỗi mobin đánh lửa máy số 6",
+   "action_vi": "Kiểm tra/hoán đổi mobin máy 6 với máy khác để xác nhận; thay nếu hỏng.",
+   "cost_min": 300000,
+   "cost_max": 1500000
+  },
+  {
+   "code": "P0357",
+   "group": "powertrain",
+   "severity": "critical",
+   "can_drive": "caution",
+   "en": "Ignition Coil G Primary/Secondary Circuit Malfunction",
+   "vi": "Lỗi mobin đánh lửa máy số 7",
+   "action_vi": "Kiểm tra/hoán đổi mobin máy 7 với máy khác để xác nhận; thay nếu hỏng.",
+   "cost_min": 300000,
+   "cost_max": 1500000
+  },
+  {
+   "code": "P0358",
+   "group": "powertrain",
+   "severity": "critical",
+   "can_drive": "caution",
+   "en": "Ignition Coil H Primary/Secondary Circuit Malfunction",
+   "vi": "Lỗi mobin đánh lửa máy số 8",
+   "action_vi": "Kiểm tra/hoán đổi mobin máy 8 với máy khác để xác nhận; thay nếu hỏng.",
+   "cost_min": 300000,
+   "cost_max": 1500000
+  },
+  {
    "code": "P0400",
    "group": "powertrain",
    "severity": "warn",
@@ -761,7 +1157,7 @@
    "vi": "Lỗi lưu lượng tuần hoàn khí xả (EGR)",
    "action_vi": "Vệ sinh van EGR và đường ống; kiểm tra van kẹt.",
    "cost_min": 300000,
-   "cost_max": 2000000
+   "cost_max": 5000000
   },
   {
    "code": "P0401",
@@ -772,7 +1168,7 @@
    "vi": "Lưu lượng tuần hoàn khí xả (EGR) không đủ - nóng máy, NOx cao",
    "action_vi": "Vệ sinh van EGR và đường ống; kiểm tra nghẹt muội than.",
    "cost_min": 300000,
-   "cost_max": 2000000
+   "cost_max": 5000000
   },
   {
    "code": "P0402",
@@ -783,7 +1179,7 @@
    "vi": "Van EGR mở quá mức/kẹt mở - máy rung ở không tải",
    "action_vi": "Vệ sinh hoặc thay van EGR; kiểm tra van kẹt do muội than.",
    "cost_min": 300000,
-   "cost_max": 2000000
+   "cost_max": 5000000
   },
   {
    "code": "P0403",
@@ -794,7 +1190,7 @@
    "vi": "Lỗi mạch điều khiển van EGR",
    "action_vi": "Kiểm tra giắc và dây điều khiển van EGR.",
    "cost_min": 300000,
-   "cost_max": 2000000
+   "cost_max": 5000000
   },
   {
    "code": "P0404",
@@ -817,6 +1213,28 @@
    "action_vi": "Kiểm tra giắc và cảm biến vị trí van EGR.",
    "cost_min": 300000,
    "cost_max": 1500000
+  },
+  {
+   "code": "P0406",
+   "group": "powertrain",
+   "severity": "warn",
+   "can_drive": "yes",
+   "en": "Exhaust Gas Recirculation Sensor A Circuit High",
+   "vi": "Tín hiệu cảm biến vị trí van EGR quá cao",
+   "action_vi": "Kiểm tra giắc và cảm biến vị trí van EGR.",
+   "cost_min": 300000,
+   "cost_max": 1500000
+  },
+  {
+   "code": "P0410",
+   "group": "powertrain",
+   "severity": "info",
+   "can_drive": "yes",
+   "en": "Secondary Air Injection System Malfunction",
+   "vi": "Lỗi hệ thống bơm khí phụ (giảm khí thải lúc lạnh máy)",
+   "action_vi": "Kiểm tra bơm khí phụ và van một chiều; ít ảnh hưởng vận hành hàng ngày.",
+   "cost_min": 300000,
+   "cost_max": 2000000
   },
   {
    "code": "P0420",
@@ -848,6 +1266,17 @@
    "en": "Catalyst System Efficiency Below Threshold (Bank 2)",
    "vi": "Bộ xúc tác khí thải kém hiệu quả (bank 2)",
    "action_vi": "Kiểm tra cảm biến oxy sau catalyst; có thể cần thay bầu xúc tác.",
+   "cost_min": 500000,
+   "cost_max": 8000000
+  },
+  {
+   "code": "P0431",
+   "group": "powertrain",
+   "severity": "warn",
+   "can_drive": "yes",
+   "en": "Warm Up Catalyst Efficiency Below Threshold (Bank 2)",
+   "vi": "Bộ xúc tác sơ cấp kém hiệu quả khi máy nguội (bank 2)",
+   "action_vi": "Kiểm tra cảm biến oxy và bầu xúc tác sơ cấp bank 2.",
    "cost_min": 500000,
    "cost_max": 8000000
   },
@@ -929,6 +1358,39 @@
    "cost_max": 1500000
   },
   {
+   "code": "P0447",
+   "group": "powertrain",
+   "severity": "info",
+   "can_drive": "yes",
+   "en": "EVAP Vent Control Circuit Open",
+   "vi": "Mạch van thông hơi hệ thống EVAP bị hở",
+   "action_vi": "Kiểm tra giắc và dây van thông hơi (vent); thay van nếu hỏng.",
+   "cost_min": 300000,
+   "cost_max": 1500000
+  },
+  {
+   "code": "P0448",
+   "group": "powertrain",
+   "severity": "info",
+   "can_drive": "yes",
+   "en": "EVAP Vent Control Circuit Shorted",
+   "vi": "Mạch van thông hơi hệ thống EVAP bị chập",
+   "action_vi": "Kiểm tra dây chập mass/nguồn; thay van thông hơi nếu cần.",
+   "cost_min": 300000,
+   "cost_max": 1500000
+  },
+  {
+   "code": "P0449",
+   "group": "powertrain",
+   "severity": "info",
+   "can_drive": "yes",
+   "en": "EVAP Vent Valve/Solenoid Circuit Malfunction",
+   "vi": "Lỗi mạch van/solenoid thông hơi hệ thống EVAP",
+   "action_vi": "Kiểm tra giắc và van thông hơi EVAP; thường nghẹt do bụi bẩn.",
+   "cost_min": 300000,
+   "cost_max": 1500000
+  },
+  {
    "code": "P0450",
    "group": "powertrain",
    "severity": "info",
@@ -1006,6 +1468,28 @@
    "cost_max": 900000
   },
   {
+   "code": "P0458",
+   "group": "powertrain",
+   "severity": "info",
+   "can_drive": "yes",
+   "en": "EVAP Purge Control Valve Circuit Low",
+   "vi": "Mạch van xả hơi xăng (purge) báo tín hiệu thấp",
+   "action_vi": "Kiểm tra giắc và dây van purge; thay van nếu hỏng.",
+   "cost_min": 300000,
+   "cost_max": 1500000
+  },
+  {
+   "code": "P0459",
+   "group": "powertrain",
+   "severity": "info",
+   "can_drive": "yes",
+   "en": "EVAP Purge Control Valve Circuit High",
+   "vi": "Mạch van xả hơi xăng (purge) báo tín hiệu cao",
+   "action_vi": "Kiểm tra chập dây van purge; thay van nếu cần.",
+   "cost_min": 300000,
+   "cost_max": 1500000
+  },
+  {
    "code": "P0460",
    "group": "powertrain",
    "severity": "info",
@@ -1039,6 +1523,17 @@
    "cost_max": 2000000
   },
   {
+   "code": "P0480",
+   "group": "powertrain",
+   "severity": "warn",
+   "can_drive": "caution",
+   "en": "Cooling Fan 1 Control Circuit Malfunction",
+   "vi": "Lỗi mạch điều khiển quạt làm mát số 1 - nguy cơ quá nhiệt khi kẹt xe",
+   "action_vi": "Kiểm tra rơ-le, cầu chì và mô-tơ quạt làm mát; theo dõi kim nhiệt độ.",
+   "cost_min": 300000,
+   "cost_max": 2500000
+  },
+  {
    "code": "P0500",
    "group": "powertrain",
    "severity": "critical",
@@ -1046,6 +1541,28 @@
    "en": "Vehicle Speed Sensor Malfunction",
    "vi": "Hỏng cảm biến tốc độ xe - đồng hồ tốc độ và hộp số có thể lỗi",
    "action_vi": "Kiểm tra cảm biến tốc độ và dây tín hiệu; xử lý sớm.",
+   "cost_min": 300000,
+   "cost_max": 2000000
+  },
+  {
+   "code": "P0501",
+   "group": "powertrain",
+   "severity": "warn",
+   "can_drive": "caution",
+   "en": "Vehicle Speed Sensor Range/Performance",
+   "vi": "Cảm biến tốc độ xe sai dải đo - đồng hồ tốc độ/hộp số có thể sai",
+   "action_vi": "Kiểm tra cảm biến tốc độ và dây tín hiệu.",
+   "cost_min": 300000,
+   "cost_max": 2000000
+  },
+  {
+   "code": "P0503",
+   "group": "powertrain",
+   "severity": "warn",
+   "can_drive": "caution",
+   "en": "Vehicle Speed Sensor Intermittent/Erratic/High",
+   "vi": "Tín hiệu cảm biến tốc độ xe chập chờn",
+   "action_vi": "Kiểm tra giắc, dây và cảm biến tốc độ xe.",
    "cost_min": 300000,
    "cost_max": 2000000
   },
@@ -1090,6 +1607,39 @@
    "en": "Engine Oil Pressure Sensor/Switch Circuit Malfunction",
    "vi": "Lỗi cảm biến áp suất dầu máy - không giám sát được áp suất dầu thật",
    "action_vi": "Kiểm tra mức dầu NGAY; kiểm tra cảm biến/công tắc áp suất dầu sớm.",
+   "cost_min": 300000,
+   "cost_max": 1500000
+  },
+  {
+   "code": "P0521",
+   "group": "powertrain",
+   "severity": "warn",
+   "can_drive": "caution",
+   "en": "Engine Oil Pressure Sensor/Switch Range/Performance",
+   "vi": "Cảm biến áp suất dầu máy sai dải đo",
+   "action_vi": "Kiểm tra mức dầu; kiểm tra cảm biến áp suất dầu tại gara.",
+   "cost_min": 300000,
+   "cost_max": 1500000
+  },
+  {
+   "code": "P0522",
+   "group": "powertrain",
+   "severity": "critical",
+   "can_drive": "caution",
+   "en": "Engine Oil Pressure Sensor/Switch Low Voltage",
+   "vi": "Tín hiệu cảm biến áp suất dầu thấp - có thể báo sai áp suất dầu thật đang thấp",
+   "action_vi": "Kiểm tra mức dầu NGAY; nếu đèn áp suất dầu thật cũng sáng, dừng xe kiểm tra.",
+   "cost_min": 300000,
+   "cost_max": 1500000
+  },
+  {
+   "code": "P0523",
+   "group": "powertrain",
+   "severity": "warn",
+   "can_drive": "caution",
+   "en": "Engine Oil Pressure Sensor/Switch High Voltage",
+   "vi": "Tín hiệu cảm biến áp suất dầu cao bất thường",
+   "action_vi": "Kiểm tra cảm biến áp suất dầu và giắc nối.",
    "cost_min": 300000,
    "cost_max": 1500000
   },
@@ -1193,6 +1743,17 @@
    "cost_max": 15000000
   },
   {
+   "code": "P0615",
+   "group": "powertrain",
+   "severity": "critical",
+   "can_drive": "caution",
+   "en": "Starter Relay Circuit Malfunction",
+   "vi": "Lỗi mạch rơ-le đề máy - có thể khó đề hoặc không đề được",
+   "action_vi": "Kiểm tra rơ-le đề, cầu chì và dây khởi động.",
+   "cost_min": 200000,
+   "cost_max": 1500000
+  },
+  {
    "code": "P0620",
    "group": "powertrain",
    "severity": "warn",
@@ -1246,6 +1807,17 @@
    "action_vi": "Kiểm tra/chỉnh lại công tắc vị trí cần số.",
    "cost_min": 500000,
    "cost_max": 3000000
+  },
+  {
+   "code": "P0710",
+   "group": "powertrain",
+   "severity": "warn",
+   "can_drive": "caution",
+   "en": "Transmission Fluid Temperature Sensor Circuit Malfunction",
+   "vi": "Lỗi mạch cảm biến nhiệt độ dầu hộp số",
+   "action_vi": "Kiểm tra cảm biến nhiệt dầu hộp số; kiểm tra mức và chất lượng dầu.",
+   "cost_min": 400000,
+   "cost_max": 2500000
   },
   {
    "code": "P0711",
@@ -1336,6 +1908,28 @@
    "cost_max": 15000000
   },
   {
+   "code": "P0733",
+   "group": "powertrain",
+   "severity": "critical",
+   "can_drive": "caution",
+   "en": "Gear 3 Incorrect Ratio",
+   "vi": "Tỉ số truyền số 3 sai - hộp số trượt ở số 3",
+   "action_vi": "Kiểm tra mức/chất lượng dầu hộp số; tới gara chuyên hộp số sớm.",
+   "cost_min": 500000,
+   "cost_max": 15000000
+  },
+  {
+   "code": "P0734",
+   "group": "powertrain",
+   "severity": "critical",
+   "can_drive": "caution",
+   "en": "Gear 4 Incorrect Ratio",
+   "vi": "Tỉ số truyền số 4 sai - hộp số trượt ở số 4",
+   "action_vi": "Kiểm tra mức/chất lượng dầu hộp số; tới gara chuyên hộp số sớm.",
+   "cost_min": 500000,
+   "cost_max": 15000000
+  },
+  {
    "code": "P0740",
    "group": "powertrain",
    "severity": "warn",
@@ -1380,6 +1974,83 @@
    "cost_max": 5000000
   },
   {
+   "code": "P0751",
+   "group": "powertrain",
+   "severity": "critical",
+   "can_drive": "caution",
+   "en": "Shift Solenoid A Performance",
+   "vi": "Van điện từ sang số A hoạt động sai - vào số giật hoặc trễ số",
+   "action_vi": "Kiểm tra van điện từ sang số A và dầu hộp số.",
+   "cost_min": 600000,
+   "cost_max": 5000000
+  },
+  {
+   "code": "P0756",
+   "group": "powertrain",
+   "severity": "critical",
+   "can_drive": "caution",
+   "en": "Shift Solenoid B Performance",
+   "vi": "Van điện từ sang số B hoạt động sai - vào số giật hoặc trễ số",
+   "action_vi": "Kiểm tra van điện từ sang số B và dầu hộp số.",
+   "cost_min": 600000,
+   "cost_max": 5000000
+  },
+  {
+   "code": "P1000",
+   "group": "powertrain",
+   "severity": "info",
+   "can_drive": "yes",
+   "en": "OBD System Readiness Test Not Complete",
+   "vi": "Chưa hoàn tất chu trình tự kiểm tra sau khi xoá lỗi/tháo ắc-quy - không phải lỗi thật",
+   "action_vi": "Lái xe theo chu trình hỗn hợp (đô thị + cao tốc) vài ngày để ECU tự hoàn tất giám sát; không cần sửa chữa.",
+   "cost_min": 0,
+   "cost_max": 0
+  },
+  {
+   "code": "P2096",
+   "group": "powertrain",
+   "severity": "warn",
+   "can_drive": "yes",
+   "en": "Post Catalyst Fuel Trim System Too Lean (Bank 1)",
+   "vi": "Hỗn hợp xăng sau bộ xúc tác quá nghèo (bank 1) - mã hiện đại, hay gặp xe đời mới",
+   "action_vi": "Kiểm tra rò khí nạp/khí xả sau xúc tác, cảm biến oxy sau xúc tác.",
+   "cost_min": 300000,
+   "cost_max": 2500000
+  },
+  {
+   "code": "P2097",
+   "group": "powertrain",
+   "severity": "warn",
+   "can_drive": "yes",
+   "en": "Post Catalyst Fuel Trim System Too Rich (Bank 1)",
+   "vi": "Hỗn hợp xăng sau bộ xúc tác quá giàu (bank 1) - mã hiện đại, hay gặp xe đời mới",
+   "action_vi": "Kiểm tra kim phun rò và cảm biến oxy sau xúc tác.",
+   "cost_min": 300000,
+   "cost_max": 2500000
+  },
+  {
+   "code": "P2101",
+   "group": "powertrain",
+   "severity": "warn",
+   "can_drive": "caution",
+   "en": "Throttle Actuator Control Motor Circuit Range/Performance",
+   "vi": "Mô-tơ điều khiển bướm ga điện tử hoạt động sai - ga phản ứng bất thường",
+   "action_vi": "Vệ sinh cụm bướm ga điện tử; kiểm tra tại gara nếu vẫn tái diễn.",
+   "cost_min": 500000,
+   "cost_max": 3000000
+  },
+  {
+   "code": "P2135",
+   "group": "powertrain",
+   "severity": "critical",
+   "can_drive": "caution",
+   "en": "Throttle/Pedal Position Sensor Correlation",
+   "vi": "Hai tín hiệu cảm biến vị trí bướm ga/chân ga không khớp nhau - mã hiện đại",
+   "action_vi": "Kiểm tra giắc cảm biến bướm ga/chân ga; xe có thể vào chế độ ga hạn chế (limp mode).",
+   "cost_min": 400000,
+   "cost_max": 2500000
+  },
+  {
    "code": "C0035",
    "group": "chassis",
    "severity": "critical",
@@ -1422,6 +2093,17 @@
    "action_vi": "Kiểm tra cảm biến ABS bánh sau phải; ảnh hưởng an toàn phanh.",
    "cost_min": 300000,
    "cost_max": 2500000
+  },
+  {
+   "code": "U0001",
+   "group": "network",
+   "severity": "critical",
+   "can_drive": "stop",
+   "en": "High Speed CAN Communication Bus",
+   "vi": "Lỗi tổng quát bus CAN tốc độ cao - nhiều hệ thống có thể mất kết nối cùng lúc",
+   "action_vi": "Kiểm tra dây CAN chính, giắc bị ẩm/oxy hoá tại gara điện; tránh chạy xa khi nhiều đèn báo cùng sáng.",
+   "cost_min": 300000,
+   "cost_max": 5000000
   },
   {
    "code": "U0073",
@@ -1488,6 +2170,28 @@
    "action_vi": "Kiểm tra giắc và nguồn bảng đồng hồ, mạng CAN.",
    "cost_min": 300000,
    "cost_max": 3000000
+  },
+  {
+   "code": "U0300",
+   "group": "network",
+   "severity": "warn",
+   "can_drive": "caution",
+   "en": "Internal Control Module Software Incompatibility",
+   "vi": "Phần mềm giữa các hộp điều khiển không tương thích - thường sau khi thay hộp/nạp phần mềm",
+   "action_vi": "Đưa xe tới hãng/gara có thiết bị nạp phần mềm phù hợp.",
+   "cost_min": 500000,
+   "cost_max": 5000000
+  },
+  {
+   "code": "U0401",
+   "group": "network",
+   "severity": "warn",
+   "can_drive": "caution",
+   "en": "Invalid Data Received From ECM/PCM",
+   "vi": "Dữ liệu nhận từ hộp điều khiển động cơ không hợp lệ - nghi mạng CAN nhiễu",
+   "action_vi": "Kiểm tra mạng CAN, giắc nối và nguồn hộp ECU.",
+   "cost_min": 300000,
+   "cost_max": 4000000
   },
   {
    "code": "B1318",
