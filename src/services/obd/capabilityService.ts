@@ -35,6 +35,19 @@ export async function getCachedCapability(vehicleId: number): Promise<VehicleCap
   return map[String(vehicleId)] ?? null;
 }
 
+/**
+ * Đọc VIN xe ĐANG cắm (mode 09, 1 lệnh) - dùng để phát hiện "cắm Vgate sang xe
+ * KHÁC vào cùng bản ghi" (toàn vẹn dữ liệu, Sang duyệt 14/7). Null nếu xe không
+ * hỗ trợ đọc VIN hoặc lỗi.
+ */
+export async function readCurrentVin(): Promise<string | null> {
+  try {
+    return parseVin(await bleService.sendCommand('0902', 4000));
+  } catch {
+    return null;
+  }
+}
+
 export async function clearCapability(vehicleId: number): Promise<void> {
   const map = await readMap();
   delete map[String(vehicleId)];

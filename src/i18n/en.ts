@@ -504,6 +504,8 @@ const en = {
   "obd.banner_reconnecting": "OBD2 · reconnecting...",
   "obd.trips_via_gps": "Trips are recorded automatically via GPS - view here",
   "obd.finding_beta": "beta",
+  "obd.vin_mismatch_title": "VIN does not match {{name}}",
+  "obd.vin_mismatch_desc": "The VIN read differs from last time. If you plugged the Vgate into a DIFFERENT car, its data will be saved to this vehicle by mistake - disconnect and open the correct vehicle.",
   "obd.live_all_good": "All readings within normal range",
   "obd.data_paused": "Data paused (connection lost) - this is the last reading",
   "obd.permission_denied": "Bluetooth permission not granted. Open Settings to enable it.",

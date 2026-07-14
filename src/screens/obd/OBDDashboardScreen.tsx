@@ -64,6 +64,7 @@ export default function OBDDashboardScreen() {
     findings,
     warning,
     capability,
+    vinMismatch,
     disconnect,
   } = useObdConnection(vehicleId, vehicleName);
 
@@ -177,6 +178,22 @@ export default function OBDDashboardScreen() {
           <Text style={{ color: colors.textSecondary, fontSize: 11, textAlign: 'center', marginTop: -8 }}>
             {t('obd.leave_hint')}
           </Text>
+        )}
+
+        {/* VIN không khớp: có thể đang cắm Vgate sang XE KHÁC vào bản ghi này
+            (toàn vẹn dữ liệu, Sang duyệt 14/7). Chỉ cảnh báo, không chặn. */}
+        {vinMismatch && (
+          <View style={[styles.warningBanner, { backgroundColor: '#B45309' }]}>
+            <FontAwesome5 name="car-crash" size={13} color="#FEF3C7" solid />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.warningText, { fontWeight: '700' }]}>
+                {t('obd.vin_mismatch_title', { name: vehicleName || 'xe này' })}
+              </Text>
+              <Text style={[styles.warningText, { fontSize: 11, opacity: 0.9, marginTop: 2 }]}>
+                {t('obd.vin_mismatch_desc')}
+              </Text>
+            </View>
+          </View>
         )}
 
         {/* No-data warning: adapter connected but ECU not responding */}

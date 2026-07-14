@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { obdApi } from '../api/obd';
 import { bleService, ConnectionState, ObdDevice } from '../services/obd/BleService';
 import { initializeElm327, readSnapshot, setActivePidWhitelist, ObdSnapshot } from '../services/obd/ObdReader';
-import { getCachedCapability, discoverCapability, VehicleCapability } from '../services/obd/capabilityService';
+import { getCachedCapability, discoverCapability, clearCapability, readCurrentVin, VehicleCapability } from '../services/obd/capabilityService';
 import { obdLiveMonitor } from '../services/obd/obdLiveMonitor';
 import { Finding } from '../services/obd/diagnosticEngine';
 import { savePairing } from '../services/obd/pairedDevices';
@@ -52,11 +52,33 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [warning, setWarning] = useState<ObdWarning>(null);
   const [capability, setCapability] = useState<VehicleCapability | null>(null);
+  // Toàn vẹn dữ liệu (Sang duyệt 14/7): VIN xe đang cắm KHÁC VIN bản ghi này đã
+  // thấy trước đó = có thể đang cắm Vgate sang XE KHÁC -> chỉ CẢNH BÁO (không
+  // chặn), để user tự quyết định có ghi dữ liệu vào xe này hay không.
+  const [vinMismatch, setVinMismatch] = useState<{ expected: string; actual: string } | null>(null);
 
   // Capability (R8): cache có sẵn thì dùng ngay, chưa có thì dò 1 lần sau kết nối.
   // Nạp whitelist cho ObdReader để poll bỏ qua PID xe không hỗ trợ (ý #18).
   const loadCapability = useCallback(async (allowDiscover: boolean) => {
-    let cap = await getCachedCapability(vehicleId).catch(() => null);
+    const cached = await getCachedCapability(vehicleId).catch(() => null);
+
+    // Bản ghi đã có VIN từ lần dò trước -> đọc VIN xe đang cắm để so. Khác nhau
+    // = đang cắm xe KHÁC vào bản ghi này: cảnh báo + DÒ LẠI capability (whitelist
+    // PID của xe cũ sẽ sai cho xe mới). Xe không hỗ trợ VIN -> readCurrentVin
+    // null -> bỏ qua, không cảnh báo oan.
+    if (cached?.vin && allowDiscover) {
+      const currentVin = await readCurrentVin();
+      if (currentVin && currentVin !== cached.vin) {
+        setVinMismatch({ expected: cached.vin, actual: currentVin });
+        await clearCapability(vehicleId).catch(() => {});
+        const fresh = await discoverCapability(vehicleId).catch(() => null);
+        setActivePidWhitelist(fresh?.supportedPids ?? null);
+        setCapability(fresh);
+        return;
+      }
+    }
+
+    let cap = cached;
     if (!cap && allowDiscover) {
       cap = await discoverCapability(vehicleId).catch(() => null);
     }
@@ -79,6 +101,7 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
         setConnectionState('disconnected');
         setLiveSnapshot(null);
         setFindings([]);
+        setVinMismatch(null);
       }),
       bleService.addReconnectingListener(() => setConnectionState('reconnecting')),
       bleService.addReconnectedListener(() => setConnectionState('connected')),
@@ -183,6 +206,7 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
   // trước đây Setup nhảy vào Dashboard kể cả khi init lỗi (fixture #1).
   const connect = useCallback(async (deviceId: string): Promise<boolean> => {
     stopScan();
+    setVinMismatch(null); // xoá cảnh báo VIN của phiên trước
     setConnectionState('connecting');
     setErrorMessage(null);
 
@@ -279,6 +303,7 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
     errorMessage,
     warning,
     capability,
+    vinMismatch,
     isConnected: connectionState === 'connected',
     startScan,
     stopScan,
