@@ -4,7 +4,7 @@
  * Đây là hồi quy cho bug "màn hình toàn dấu -": ATS0 làm response dính liền
  * ("410C1034") trong khi parser cũ tách token theo dấu cách.
  */
-import { extractPayload, isNoData, parseSupportedPids, parseVin, parseDtcCodes, PID_REGISTRY } from '../obdParser';
+import { extractPayload, isNoData, parseSupportedPids, parseVin, parseDtcCodes, assembleIsoTpFrames, PID_REGISTRY } from '../obdParser';
 
 describe('extractPayload - format thật từ fixture #2 (ATS0, không dấu cách)', () => {
   it('parse RPM 410C1034 → 1037 rpm', () => {
@@ -70,6 +70,35 @@ describe('parseVin - format multi-frame thật từ fixture #3', () => {
   it('NO DATA / rác → null', () => {
     expect(parseVin('NO DATA')).toBeNull();
     expect(parseVin('ELM327 v2.3')).toBeNull();
+  });
+});
+
+describe('assembleIsoTpFrames - toàn vẹn khi rớt gói BLE (rà soát 14/7)', () => {
+  const FULL = '014\r0:4902014D5248\r1:474B353833304A\r2:54303430303035';
+
+  it('đủ frame + đúng độ dài header -> ghép ra VIN thật', () => {
+    expect(assembleIsoTpFrames(FULL)).toBe('4902014D5248474B353833304A54303430303035');
+  });
+
+  it('rớt frame GIỮA (mất frame 1) -> null, KHÔNG ghép cụt âm thầm', () => {
+    const dropped = '014\r0:4902014D5248\r2:54303430303035';
+    expect(assembleIsoTpFrames(dropped)).toBeNull();
+  });
+
+  it('rớt frame CUỐI: ghép cụt được nhưng parseVin chặn ở tầng sau (đủ 17 ký tự) -> null', () => {
+    const dropped = '014\r0:4902014D5248\r1:474B353833304A'; // thiếu frame 2
+    expect(parseVin(dropped)).toBeNull();
+  });
+
+  it('frame lộn xộn thứ tự vẫn ghép đúng (sort theo index)', () => {
+    const shuffled = '014\r2:54303430303035\r0:4902014D5248\r1:474B353833304A';
+    expect(assembleIsoTpFrames(shuffled)).toBe('4902014D5248474B353833304A54303430303035');
+  });
+
+  it('rớt frame giữa làm parseDtcCodes trả [] (an toàn) thay vì mã sai', () => {
+    // Giả lập DTC multi-frame bị rớt frame 1: chỉ có frame 0,2 (index không liên tục).
+    const dropped = '00A\r0:430133014902\r2:0000000000';
+    expect(parseDtcCodes(dropped)).toEqual([]);
   });
 });
 

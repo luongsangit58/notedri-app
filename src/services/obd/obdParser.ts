@@ -52,8 +52,19 @@ export function isNoData(response: string): boolean {
  * Ghép response ISO-TP nhiều frame của ELM327 (ATH0+ATS0) thành 1 chuỗi hex.
  * Format thật từ fixture #3 (0902 VIN):
  *   "014\r0:4902014D5248\r1:474B353833304A\r2:54303430303035"
- * Dòng đầu = tổng độ dài (hex, bỏ qua); các dòng "n:HEX" ghép theo index.
- * Trả null nếu không phải dạng multi-frame.
+ * Dòng đầu = TỔNG SỐ BYTE (hex); các dòng "n:HEX" ghép theo index.
+ * Trả null nếu không phải dạng multi-frame HOẶC dữ liệu bị THIẾU (rớt frame).
+ *
+ * Toàn vẹn (sửa 14/7 theo rà soát): BLE thật có thể rớt gói. Trước đây hàm chỉ
+ * sort theo index rồi ghép - rớt frame GIỮA/index trùng vẫn trả chuỗi ghép SAI
+ * âm thầm, khiến parseDtcCodes phát mã lỗi SAI. Giờ:
+ *  - Yêu cầu index LIÊN TỤC từ 0 (0,1,2,...) - rớt frame giữa/trùng -> null.
+ *  - Header độ dài (nếu có) chỉ để CẮT đệm dư về đúng số byte (không dùng để
+ *    reject: ngữ nghĩa header chỉ kiểm chứng trên 1 fixture VIN, không đủ chắc
+ *    để chặn - rớt frame CUỐI đã được chặn ở tầng sau: parseVin đòi đúng 17 ký
+ *    tự, parseDtcCodes chỉ báo THIẾU mã (an toàn) chứ không báo SAI mã).
+ * (Giới hạn có chủ ý: index 1 ký tự hex nên >15 frame sẽ lặp - DTC/VIN luôn
+ *  ngắn hơn thế nên không xét vòng lặp, đúng phạm vi thực tế.)
  */
 export function assembleIsoTpFrames(response: string): string | null {
   const lines = response
@@ -63,14 +74,34 @@ export function assembleIsoTpFrames(response: string): string | null {
     .filter((l) => l.length > 0);
 
   const frames: Array<[number, string]> = [];
+  let declaredBytes: number | null = null;
   for (const line of lines) {
     const m = line.match(/^([0-9A-F]):([0-9A-F]+)$/);
-    if (m) frames.push([parseInt(m[1], 16), m[2]]);
+    if (m) {
+      frames.push([parseInt(m[1], 16), m[2]]);
+    } else if (declaredBytes === null && /^[0-9A-F]{1,3}$/.test(line)) {
+      // Dòng hex ngắn KHÔNG có dấu ':' TRƯỚC các frame = header tổng số byte.
+      declaredBytes = parseInt(line, 16);
+    }
   }
   if (frames.length === 0) return null;
 
   frames.sort((a, b) => a[0] - b[0]);
-  return frames.map((f) => f[1]).join('');
+
+  // Index phải liên tục 0..n-1 (rớt frame giữa hoặc trùng index = dữ liệu hỏng).
+  for (let i = 0; i < frames.length; i++) {
+    if (frames[i][0] !== i) return null;
+  }
+
+  let hex = frames.map((f) => f[1]).join('');
+
+  // Header chỉ để CẮT đệm dư (không reject) - xem docblock.
+  if (declaredBytes !== null) {
+    const needHex = declaredBytes * 2;
+    if (hex.length > needHex) hex = hex.slice(0, needHex);
+  }
+
+  return hex;
 }
 
 /** Chuỗi hex của response: multi-frame thì ghép, không thì lấy dòng hex đầu tiên. */

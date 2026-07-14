@@ -48,6 +48,12 @@ export async function clearCapability(vehicleId: number): Promise<void> {
  */
 export async function discoverCapability(vehicleId: number): Promise<VehicleCapability | null> {
   const supported: string[] = [];
+  // Toàn vẹn (sửa 14/7 theo rà soát): phân biệt "trang tiếp báo KHÔNG còn PID"
+  // (dừng hợp lệ) với "lỗi BLE thoáng qua giữa chừng". Trước đây lỗi trang 2+
+  // vẫn break rồi CACHE danh sách CỤT -> mã PID thật bị coi là không hỗ trợ
+  // VĨNH VIỄN tới khi xoá cache tay. Giờ nếu lỗi giữa chừng: KHÔNG cache (để
+  // phiên sau dò lại), vẫn trả về phần đã có cho phiên hiện tại dùng tạm.
+  let incomplete = false;
 
   for (let base = 0x00; base <= 0xa0; base += 0x20) {
     const pidHex = base.toString(16).toUpperCase().padStart(2, '0');
@@ -55,6 +61,10 @@ export async function discoverCapability(vehicleId: number): Promise<VehicleCapa
     try {
       response = await bleService.sendCommand(`01${pidHex}`, 4000);
     } catch {
+      // Trang ĐẦU lỗi = chưa có gì -> để null như cũ (dò lại phiên sau).
+      // Trang sau lỗi = có dữ liệu 1 phần nhưng CÒN trang chưa đọc -> đánh dấu
+      // incomplete để không cache bản cụt.
+      if (base > 0x00) incomplete = true;
       break;
     }
 
@@ -85,9 +95,13 @@ export async function discoverCapability(vehicleId: number): Promise<VehicleCapa
     discoveredAt: new Date().toISOString(),
   };
 
-  const map = await readMap();
-  map[String(vehicleId)] = capability;
-  await AsyncStorage.setItem(KEY, JSON.stringify(map)).catch(() => {});
+  // Chỉ CACHE khi dò trọn vẹn (không lỗi giữa chừng) - bản cụt do rớt gói không
+  // được ghi đè cache để phiên sau còn dò lại. Vẫn TRẢ VỀ cho phiên hiện tại.
+  if (!incomplete) {
+    const map = await readMap();
+    map[String(vehicleId)] = capability;
+    await AsyncStorage.setItem(KEY, JSON.stringify(map)).catch(() => {});
+  }
 
   return capability;
 }
