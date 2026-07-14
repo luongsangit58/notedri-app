@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, TextInput } from 'react-native';
 import DatePickerField from './DatePickerField';
 import { useColors } from '../utils/theme';
 import { useT } from '../i18n';
+import { decodeVinModelYear, decodeVinRegionHint } from '../services/vin/vinDecoder';
 
 // Các trường hồ sơ xe TUỲ CHỌN (khớp web _form): màu, VIN, số máy, đại lý, ngày/giá mua, ghi chú.
 export type VehicleExtra = {
@@ -69,6 +70,14 @@ export default function VehicleMoreFields({
     borderWidth: 1, borderColor: colors.border,
   };
   const labelStyle = { color: colors.textSecondary, fontSize: 12, marginBottom: 4, marginTop: 4 };
+  const hintStyle = { color: colors.textSecondary, fontSize: 11.5, marginTop: -8, marginBottom: 12, fontStyle: 'italic' as const };
+
+  // VIN #28/#31 (brainstorm 14/7): CHỈ gợi ý (không tự điền field nào) - năm
+  // sản xuất (ký tự thứ 10) + vùng lắp ráp (ký tự đầu, danh sách hẹp đáng tin
+  // cậy). Không đoán hãng/dòng - việc đó cần bảng WMI curated riêng (đã từ
+  // chối làm ở Giai đoạn C4).
+  const vinYear = useMemo(() => decodeVinModelYear(value.vin), [value.vin]);
+  const vinRegion = useMemo(() => decodeVinRegionHint(value.vin), [value.vin]);
 
   return (
     <View>
@@ -83,6 +92,13 @@ export default function VehicleMoreFields({
       <Text style={labelStyle}>{t('add_vehicle.vin_label')}</Text>
       <TextInput style={inputStyle} value={value.vin} onChangeText={(v) => onChange({ vin: v })}
         placeholder={t('add_vehicle.vin_placeholder')} placeholderTextColor={colors.textSecondary} autoCapitalize="characters" />
+      {(vinYear !== null || vinRegion !== null) && (
+        <Text style={hintStyle}>
+          {vinYear !== null ? t('vehicles.vin_hint_year', { year: vinYear }) : ''}
+          {vinYear !== null && vinRegion !== null ? ' · ' : ''}
+          {vinRegion !== null ? t('vehicles.vin_hint_region', { region: vinRegion }) : ''}
+        </Text>
+      )}
 
       <Text style={labelStyle}>{t('vehicles.engine_no_label')}</Text>
       <TextInput style={inputStyle} value={value.engine_no} onChangeText={(v) => onChange({ engine_no: v })}

@@ -279,7 +279,16 @@ export default function AddVehicleScreen() {
     // Trường hồ sơ tuỳ chọn (màu, VIN, số máy, đại lý, ngày/giá mua, ghi chú) - bỏ giá trị rỗng.
     Object.entries(extraToPayload(extra)).forEach(([k, val]) => { if (val != null) payload[k] = val; });
     try {
-      await createVehicle.mutateAsync({ data: payload, photo: photo ?? undefined });
+      const result = await createVehicle.mutateAsync({ data: payload, photo: photo ?? undefined });
+      // VIN #29: cảnh báo KHÔNG CHẶN khi backend phát hiện VIN trùng xe khác -
+      // xe vẫn được tạo bình thường, chỉ báo cho user tự quyết định (có thể là
+      // gia đình dùng chung xe, nhầm xe, hoặc xe vừa mua đã có lịch sử trên NoteDri).
+      if (result?.meta?.vin_duplicate) {
+        Alert.alert(t('vehicles.vin_duplicate_title'), t('vehicles.vin_duplicate_warning'), [
+          { text: t('common.ok'), onPress: () => navigation.goBack() },
+        ]);
+        return;
+      }
       navigation.goBack();
     } catch (err: any) {
       setApiError(err?.response?.data?.message ?? err?.response?.data?.error ?? t('vehicles.error_generic'));

@@ -142,7 +142,14 @@ export default function EditVehicleScreen() {
     }
 
     try {
-      await updateVehicle.mutateAsync({ id: vehicleId, data: payload, photo: photo ?? undefined });
+      const result = await updateVehicle.mutateAsync({ id: vehicleId, data: payload, photo: photo ?? undefined });
+      // VIN #29: cảnh báo KHÔNG CHẶN khi backend phát hiện VIN trùng xe khác - xem AddVehicleScreen.
+      if (result?.meta?.vin_duplicate) {
+        Alert.alert(t('vehicles.vin_duplicate_title'), t('vehicles.vin_duplicate_warning'), [
+          { text: t('common.ok'), onPress: () => navigation.goBack() },
+        ]);
+        return;
+      }
       navigation.goBack();
     } catch (err: any) {
       const msg =
