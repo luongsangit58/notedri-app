@@ -7,9 +7,9 @@ import {
   ObdSnapshot,
   DtcCode,
 } from './ObdReader';
-import { evaluate, DiagnosticRule, Finding } from './diagnosticEngine';
+import { evaluate, Finding } from './diagnosticEngine';
+import { getActiveRules, refreshRulesFromServer } from './diagnosticRulesStore';
 import { useObdSessionStore } from '../../store/obdSessionStore';
-import rulesFile from '../../data/diagnosticRules.json';
 
 /**
  * Live monitor OBD (quyết định 14/7: GPS là nguồn CHUYẾN ĐI duy nhất - fixture #5
@@ -24,7 +24,6 @@ import rulesFile from '../../data/diagnosticRules.json';
 
 const POLL_INTERVAL_MS = 3000;
 const DTC_EVERY_N_POLLS = 100; // ~5 phút
-const RULES = (rulesFile as { rules: DiagnosticRule[] }).rules;
 
 let timer: ReturnType<typeof setInterval> | null = null;
 let inFlight = false;
@@ -108,7 +107,7 @@ async function poll(): Promise<void> {
     }
 
     // Rule engine trên từng snapshot (hàm thuần, rẻ)
-    const findings = evaluate(RULES, {
+    const findings = evaluate(getActiveRules(), {
       rpm: snapshot.rpm,
       speedKmh: snapshot.speedKmh,
       engineLoadPct: snapshot.engineLoadPct,
@@ -162,6 +161,8 @@ export const obdLiveMonitor = {
     pollCount = 0;
     reportedCodes = new Set();
     resetSessionStats();
+    // Tải rule mới nhất đúng lúc sắp dùng - không chặn vòng poll đầu tiên
+    refreshRulesFromServer().catch(() => {});
     timer = setInterval(() => void poll(), POLL_INTERVAL_MS);
   },
 

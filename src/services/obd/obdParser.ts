@@ -127,16 +127,11 @@ export function parseDtcCodes(response: string): string[] {
   const idx = hex.indexOf('43');
   if (idx === -1) return [];
 
-  const afterMode = hex.slice(idx + 2);
-  if (afterMode.length < 2) return [];
-
-  const count = parseInt(afterMode.slice(0, 2), 16);
-  if (isNaN(count) || count === 0) return [];
-
-  // Đủ dữ liệu cho count mã (mỗi mã 4 ký tự hex) thì tin byte đếm;
-  // thiếu thì fallback đọc mọi cặp (phòng adapter non-CAN không có byte đếm).
-  const hasCountByte = afterMode.length - 2 >= count * 4;
-  const codesHex = hasCountByte ? afterMode.slice(2, 2 + count * 4) : afterMode;
+  // Chuẩn SAE J1979 (xác nhận qua tài liệu công khai 14/7, sửa giả định "byte
+  // đếm" ban đầu CHƯA kiểm chứng): KHÔNG có byte đếm sau "43" - chỉ là các cặp
+  // 2-byte nối tiếp (mỗi cặp = 1 mã), đệm 00 00 khi thiếu, tối đa 3 mã/khung
+  // 7-byte trên K-line; CAN dùng multi-frame ISO-TP (responseHex đã ghép sẵn).
+  const codesHex = hex.slice(idx + 2);
 
   const codes: string[] = [];
   for (let i = 0; i + 3 < codesHex.length; i += 4) {

@@ -57,12 +57,16 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "sync:dtc": "node scripts/sync-dtc-dictionary.mjs",
+    "sync:rules": "node scripts/sync-diagnostic-rules.mjs",
     "test": "jest",
     "postinstall": "patch-package"
   },
   "jest": {
     "preset": "jest-expo",
-    "testMatch": ["**/__tests__/**/*.test.ts"]
+    "testMatch": ["**/__tests__/**/*.test.ts"],
+    "moduleNameMapper": {
+      "^@react-native-async-storage/async-storage$": "@react-native-async-storage/async-storage/jest/async-storage-mock"
+    }
   },
   "private": true,
   "expo": {

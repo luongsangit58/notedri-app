@@ -73,25 +73,37 @@ describe('parseVin - format multi-frame thật từ fixture #3', () => {
   });
 });
 
-describe('parseDtcCodes - mode 03 chuẩn CAN (chờ mẫu thật xác nhận thêm)', () => {
+describe('parseDtcCodes - mode 03 chuẩn SAE J1979 (kiểm chứng lại 14/7 qua tài liệu công khai)', () => {
+  // SỬA 14/7: giả định ban đầu "có byte đếm sau 43" là SAI, đã kiểm chứng qua
+  // x-engineer.org (giải mã byte-level Mode 03) + tài liệu tham chiếu PID OBD2
+  // công khai (GitHub obd2-elm327-pid-reference): response chỉ là các cặp
+  // 2-byte nối tiếp ngay sau "43" (không byte đếm), đệm 00 00 khi thiếu, tối đa
+  // 3 mã/khung 7-byte trên K-line; CAN dùng multi-frame ISO-TP khi >2 mã. Mọi
+  // chuỗi hex dưới đây được TÍNH TAY theo đúng công thức bit rồi giải mã ngược
+  // lại để xác nhận round-trip, không suy đoán.
   it('xe khoẻ 4300 → không mã nào', () => {
     expect(parseDtcCodes('4300')).toEqual([]);
   });
 
-  it('2 mã có byte đếm: 430201710420 → P0171 + P0420 (hồi quy bug byte đếm bị decode nhầm)', () => {
-    expect(parseDtcCodes('430201710420')).toEqual(['P0171', 'P0420']);
+  it('1 mã hệ powertrain: 434035 → C0035 (byte1≠0 nên không bị coi là đệm)', () => {
+    expect(parseDtcCodes('434035')).toEqual(['C0035']);
   });
 
-  it('mã hệ khung gầm/mạng decode đúng chữ đầu', () => {
-    // 43 01 4035 → C0035 ; 43 01 C100 → U0100
-    expect(parseDtcCodes('43014035')).toEqual(['C0035']);
-    expect(parseDtcCodes('4301C100')).toEqual(['U0100']);
+  it('1 mã hệ mạng: 43C100 → U0100', () => {
+    expect(parseDtcCodes('43C100')).toEqual(['U0100']);
   });
 
-  it('multi-frame nhiều mã (format như VIN)', () => {
-    const raw = '00A\r0:430401710420\r1:014034350000';
-    // 43 04: P0171, C0420? -> giải: 0171 P0171; 0420 -> 04>>6=0 P0420; 0140 P0140; 3435 -> 34>>6=0 P3435
-    expect(parseDtcCodes(raw)).toEqual(['P0171', 'P0420', 'P0140', 'P3435']);
+  it('2 mã + đệm 00 00 đúng khung 7-byte thật: 43 0171 0420 0000 → P0171, P0420', () => {
+    expect(parseDtcCodes('43017104200000')).toEqual(['P0171', 'P0420']);
+  });
+
+  it('3 mã lấp đầy đúng 1 khung (không đệm): 43 0171 0420 0300', () => {
+    expect(parseDtcCodes('430171042003 00'.replace(/\s/g, ''))).toEqual(['P0171', 'P0420', 'P0300']);
+  });
+
+  it('multi-frame ISO-TP (>3 mã, format ghép giống VIN): 4 mã P0171/P0420/P0300/C0035', () => {
+    const raw = '011\r0:4301710420\r1:03004035';
+    expect(parseDtcCodes(raw)).toEqual(['P0171', 'P0420', 'P0300', 'C0035']);
   });
 
   it('NO DATA → rỗng', () => {

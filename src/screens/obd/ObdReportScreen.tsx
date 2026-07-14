@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
@@ -7,6 +7,7 @@ import { useQuery } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { obdApi } from '../../api/obd';
 import { evaluateSession } from '../../services/obd/sessionReport';
+import { refreshRulesFromServer } from '../../services/obd/diagnosticRulesStore';
 import AppBgPattern from '../../components/AppBgPattern';
 import { useColors } from '../../utils/theme';
 import { useT } from '../../i18n';
@@ -36,6 +37,11 @@ export default function ObdReportScreen() {
     queryFn: () => obdApi.recentSessions(vehicleId).then((r) => r.data.data),
     enabled: !!vehicleId,
   });
+
+  // Xem báo cáo không cần đang kết nối OBD - tranh thủ tải rule mới nhất ở đây
+  useEffect(() => {
+    refreshRulesFromServer().catch(() => {});
+  }, []);
 
   const sessions = data ?? [];
   const latest = sessions[0];

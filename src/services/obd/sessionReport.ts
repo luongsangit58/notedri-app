@@ -1,8 +1,6 @@
 import { ObdSessionSummary } from '../../api/obd';
-import { evaluate, dedupeFindings, DiagnosticRule, Finding, VehicleSnapshot } from './diagnosticEngine';
-import rulesFile from '../../data/diagnosticRules.json';
-
-const RULES = (rulesFile as { rules: DiagnosticRule[] }).rules;
+import { evaluate, dedupeFindings, Finding, VehicleSnapshot } from './diagnosticEngine';
+import { getActiveRules } from './diagnosticRulesStore';
 
 /**
  * Daily Vehicle Report (checklist E6/C3, Technical Bible v8-F10): tái dùng
@@ -20,7 +18,8 @@ export function evaluateSession(summary: ObdSessionSummary, durationSeconds: num
     throttlePct: null,
     sessionAgeSeconds: durationSeconds,
   };
-  const lowFindings = evaluate(RULES, { ...base, controlModuleVoltage: summary.voltage_min });
-  const highFindings = evaluate(RULES, { ...base, controlModuleVoltage: summary.voltage_max });
+  const rules = getActiveRules();
+  const lowFindings = evaluate(rules, { ...base, controlModuleVoltage: summary.voltage_min });
+  const highFindings = evaluate(rules, { ...base, controlModuleVoltage: summary.voltage_max });
   return dedupeFindings(lowFindings, highFindings);
 }
