@@ -67,6 +67,7 @@ export function buildSessionSummary(): Record<string, unknown> | null {
     coolant_max: aggCoolant.n ? aggCoolant.max : null,
     coolant_min: aggCoolant.n ? aggCoolant.min : null,
     voltage_min: aggVoltage.n ? Number(aggVoltage.min.toFixed(2)) : null,
+    voltage_max: aggVoltage.n ? Number(aggVoltage.max.toFixed(2)) : null,
     voltage_avg: avg(aggVoltage, 2),
     rpm_idle_avg: avg(aggIdleRpm),
     load_avg: avg(aggLoad),

@@ -41,6 +41,28 @@ export type DtcLookupResult = {
   cost_max?: number | null;
 };
 
+export type ObdSessionSummary = {
+  samples: number;
+  coolant_max: number | null;
+  coolant_min: number | null;
+  voltage_min: number | null;
+  voltage_max: number | null;
+  voltage_avg: number | null;
+  rpm_idle_avg: number | null;
+  load_avg: number | null;
+  speed_max: number | null;
+  dtc_count: number;
+  findings: string[];
+};
+
+export type ObdSessionRecord = {
+  id: number;
+  device_name: string | null;
+  connected_at: string;
+  duration_seconds: number;
+  summary: ObdSessionSummary;
+};
+
 export const obdApi = {
   saveTrip: (summary: TripSummary, deviceId: string | null) =>
     client.post('/obd2/trips', {
@@ -76,6 +98,10 @@ export const obdApi = {
   // Báo mã lỗi phát hiện LIVE (không qua chuyến - GPS là nguồn chuyến duy nhất từ 14/7)
   reportDtc: (vehicleId: number, codes: Array<{ code: string; description: string | null }>) =>
     client.post('/obd2/dtc', { vehicle_id: vehicleId, codes }),
+
+  // Lịch sử phiên gần nhất (đã có summary) cho Daily Report - app tự đánh giá
+  recentSessions: (vehicleId: number) =>
+    client.get<{ data: ObdSessionRecord[] }>('/obd2/sessions/recent', { params: { vehicle_id: vehicleId } }),
 
   // Telemetry retention: 1 dòng mỗi phiên kết nối đã kết thúc (fire-and-forget)
   reportSession: (payload: {

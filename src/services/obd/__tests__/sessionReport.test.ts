@@ -1,0 +1,56 @@
+/**
+ * Daily Report (E6/C3): evaluate() phải chạy đúng cả 2 hướng điện áp (thấp/cao)
+ * và gộp không trùng - đây là chỗ dễ sai nhất khi tái dùng engine 1-chiều cho
+ * input 2 cực trị (voltage_min/voltage_max) của một phiên.
+ */
+import { evaluateSession } from '../sessionReport';
+import { ObdSessionSummary } from '../../../api/obd';
+
+const baseSummary: ObdSessionSummary = {
+  samples: 76,
+  coolant_max: 84,
+  coolant_min: 48,
+  voltage_min: 14.0,
+  voltage_max: 14.5,
+  voltage_avg: 14.32,
+  rpm_idle_avg: 752,
+  load_avg: 52,
+  speed_max: 57,
+  dtc_count: 0,
+  findings: [],
+};
+
+describe('evaluateSession - phiên khoẻ (số liệu thật xe Sang 13/7)', () => {
+  it('không finding nào', () => {
+    expect(evaluateSession(baseSummary, 3348)).toEqual([]);
+  });
+});
+
+describe('evaluateSession - điện áp lệch thấp', () => {
+  it('voltage_min thấp -> báo máy phát yếu, không báo nhầm quá áp', () => {
+    const findings = evaluateSession({ ...baseSummary, voltage_min: 12.4, voltage_max: 12.6 }, 3348);
+    expect(findings.map((f) => f.ruleId)).toEqual(['charging-voltage-low']);
+  });
+});
+
+describe('evaluateSession - điện áp lệch cao', () => {
+  it('voltage_max cao -> báo tiết chế lỗi, không báo nhầm sạc yếu', () => {
+    const findings = evaluateSession({ ...baseSummary, voltage_min: 14.0, voltage_max: 15.5 }, 3348);
+    expect(findings.map((f) => f.ruleId)).toEqual(['charging-voltage-high']);
+  });
+});
+
+describe('evaluateSession - dedupe khi cả 2 lần evaluate cùng ra 1 rule', () => {
+  it('rule không phụ thuộc điện áp (quá nhiệt) không bị nhân đôi', () => {
+    const findings = evaluateSession({ ...baseSummary, coolant_max: 108 }, 3348);
+    const overheat = findings.filter((f) => f.ruleId === 'engine-overheat');
+    expect(overheat).toHaveLength(1);
+  });
+});
+
+describe('evaluateSession - thermostat kẹt mở dùng coolant_max làm cực trị', () => {
+  it('chạy đủ lâu mà coolant_max vẫn thấp -> nghi thermostat', () => {
+    const findings = evaluateSession({ ...baseSummary, coolant_max: 62 }, 700);
+    expect(findings.map((f) => f.ruleId)).toContain('thermostat-stuck-open-suspect');
+  });
+});

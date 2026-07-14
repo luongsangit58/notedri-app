@@ -68,6 +68,24 @@ function conditionMet(cond: RuleCondition, value: number): boolean {
  * Rule bị BỎ QUA (không phải fail) khi thiếu tín hiệu hoặc phiên còn non -
  * "không đủ dữ liệu" khác với "không có vấn đề".
  */
+/**
+ * Chuẩn hoá danh sách Finding: dedupe theo ruleId, giữ bản xuất hiện trước.
+ * Dùng khi evaluate() được gọi nhiều lần trên các biến thể snapshot (vd Daily
+ * Report chạy 2 lần với voltage_min/voltage_max rồi gộp - xem obdLiveMonitor).
+ */
+export function dedupeFindings(...lists: Finding[][]): Finding[] {
+  const seen = new Set<string>();
+  const out: Finding[] = [];
+  for (const list of lists) {
+    for (const f of list) {
+      if (seen.has(f.ruleId)) continue;
+      seen.add(f.ruleId);
+      out.push(f);
+    }
+  }
+  return out;
+}
+
 export function evaluate(rules: DiagnosticRule[], snapshot: VehicleSnapshot): Finding[] {
   const findings: Finding[] = [];
 

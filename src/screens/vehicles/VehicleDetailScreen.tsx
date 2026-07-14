@@ -510,6 +510,30 @@ export default function VehicleDetailScreen() {
           <FontAwesome5 name="chevron-right" size={13} color={colors.textSecondary} />
         </TouchableOpacity>
 
+        {/* Báo cáo sức khoẻ từ dữ liệu OBD (E6/C3) - chỉ Premium mới có phiên OBD */}
+        {isPremium && (
+          <TouchableOpacity
+            onPress={() => navigation.navigate('ObdReport', { vehicleId, vehicleName: v?.ten ?? v?.name ?? '' })}
+            style={{
+              flexDirection: 'row', alignItems: 'center', gap: 12,
+              backgroundColor: colors.surface, borderRadius: 12, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: colors.border,
+            }}>
+            <View style={{
+              width: 40, height: 40, borderRadius: 20,
+              backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center',
+            }}>
+              <FontAwesome5 name="file-medical-alt" size={16} color={colors.primary} solid />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14 }}>{t('obd.report_title')}</Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 1 }}>
+                {t('obd.report_entry_desc')}
+              </Text>
+            </View>
+            <FontAwesome5 name="chevron-right" size={13} color={colors.textSecondary} />
+          </TouchableOpacity>
+        )}
+
         {/* Sức khoẻ xe — breakdown card */}
         {healthData != null && (
           <>

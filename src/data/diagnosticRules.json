@@ -11,10 +11,10 @@
       "required_signals": ["rpm", "controlModuleVoltage"],
       "min_session_seconds": 120,
       "conditions": [
-        { "signal": "rpm", "op": "gte", "value": 1000 },
+        { "signal": "rpm", "op": "gte", "value": 400 },
         { "signal": "controlModuleVoltage", "op": "lt", "value": 13.2 }
       ],
-      "source": "Dải điện áp sạc chuẩn 13.5-14.7V khi động cơ chạy (SAE J537; Battery Council International; sổ tay bảo dưỡng Honda/Toyota)",
+      "source": "Dải điện áp sạc chuẩn 13.5-14.7V khi động cơ chạy (SAE J537; Battery Council International; sổ tay bảo dưỡng Honda/Toyota). Ngưỡng rpm hạ từ 1000 xuống 400 (>=14/7, phát hiện qua Daily Report): máy phát sạc điện ngay từ garanti (~700-800rpm), rpm>=1000 khiến rule không bao giờ kích trên dữ liệu garanti thực tế - 400 vẫn đủ loại trừ số đọc nhất thời lúc mới đề máy/chết máy.",
       "beta": true
     },
     {
