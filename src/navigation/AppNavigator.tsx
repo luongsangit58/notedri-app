@@ -47,6 +47,7 @@ import ExportDataScreen from '../screens/profile/ExportDataScreen';
 import OBDSetupScreen from '../screens/obd/OBDSetupScreen';
 import OBDDashboardScreen from '../screens/obd/OBDDashboardScreen';
 import OBDTechnicalScreen from '../screens/obd/OBDTechnicalScreen';
+import ObdSystemHealthScreen from '../screens/obd/ObdSystemHealthScreen';
 import OBDTripsScreen from '../screens/obd/OBDTripsScreen';
 import NfcSetupScreen from '../screens/obd/NfcSetupScreen';
 import DtcLookupScreen from '../screens/obd/DtcLookupScreen';
@@ -282,6 +283,8 @@ export default function AppNavigator() {
       <RootStack.Screen name="OBDDashboard" component={OBDDashboardScreen}
         options={{ headerShown: false }} />
       <RootStack.Screen name="OBDTechnical" component={OBDTechnicalScreen}
+        options={{ headerShown: false }} />
+      <RootStack.Screen name="ObdSystemHealth" component={ObdSystemHealthScreen}
         options={{ headerShown: false }} />
       <RootStack.Screen name="OBDTrips" component={OBDTripsScreen}
         options={{ headerShown: false }} />

@@ -321,6 +321,16 @@ export default function OBDDashboardScreen() {
           </View>
         </View>
 
+        {/* Sức khoẻ theo hệ thống (C4): gom findings + số liệu sống theo hệ
+            (Động cơ/Làm mát/Điện/Nhiên liệu) - xem nhanh, không chấm điểm. */}
+        <TouchableOpacity
+          style={[styles.historyBtn, { backgroundColor: colors.card }]}
+          onPress={() => navigation.navigate('ObdSystemHealth', { vehicleId, vehicleName })}>
+          <FontAwesome5 name="heartbeat" size={14} color={colors.primary} />
+          <Text style={[styles.historyBtnText, { color: colors.primary }]}>{t('obd.sys_health_link')}</Text>
+          <FontAwesome5 name="chevron-right" size={12} color={colors.textSecondary} />
+        </TouchableOpacity>
+
         {/* Trang kỹ thuật: xem hết 13 PID (kể cả 5 PID chưa hiện ở grid trên) -
             dành cho user muốn xem số liệu thô, không giới hạn Premium (đã ở
             trong khu vực Premium-gated OBD rồi). */}
