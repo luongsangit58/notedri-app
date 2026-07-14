@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
-  FlatList,
+  ScrollView,
   TouchableOpacity,
   ActivityIndicator,
   StyleSheet,
@@ -22,6 +22,7 @@ import AppBgPattern from '../../components/AppBgPattern';
 import { useColors } from '../../utils/theme';
 import { useAuthStore } from '../../store/authStore';
 import { useT } from '../../i18n';
+import ObdConnectionGuide from '../../components/ObdConnectionGuide';
 
 export default function OBDSetupScreen() {
   const navigation = useNavigation<any>();
@@ -162,7 +163,7 @@ export default function OBDSetupScreen() {
         <View style={{ width: 32 }} />
       </View>
 
-      <View style={styles.body}>
+      <ScrollView style={styles.body} contentContainerStyle={{ paddingBottom: 32 }} keyboardShouldPersistTaps="handled">
         {/* Status indicator */}
         <View style={[styles.statusCard, { backgroundColor: colors.card }]}>
           <FontAwesome5
@@ -221,14 +222,13 @@ export default function OBDSetupScreen() {
           )}
         </View>
 
-        {/* Device list */}
+        {/* Device list - map thay FlatList (đã nằm trong ScrollView, số thiết bị
+            luôn ít nên không cần ảo hoá; lồng FlatList vào ScrollView gây cảnh báo). */}
         {foundDevices.length > 0 && (
-          <FlatList
-            data={foundDevices}
-            keyExtractor={(item, index) => item.id ?? `device-${index}`}
-            style={{ marginTop: 16 }}
-            renderItem={({ item }) => (
+          <View style={{ marginTop: 16 }}>
+            {foundDevices.map((item, index) => (
               <TouchableOpacity
+                key={item.id ?? `device-${index}`}
                 style={[styles.deviceRow, { backgroundColor: colors.card }]}
                 onPress={() => handleConnect(item.id, item.name)}
                 disabled={isConnecting}
@@ -239,8 +239,8 @@ export default function OBDSetupScreen() {
                 </Text>
                 <FontAwesome5 name="chevron-right" size={14} color={colors.textSecondary} />
               </TouchableOpacity>
-            )}
-            />
+            ))}
+          </View>
         )}
 
         {/* Quick actions: vẫn xem lại lịch sử / debug log được ngay trên màn kết nối,
@@ -287,23 +287,9 @@ export default function OBDSetupScreen() {
           />
         </View>
 
-        {/* Hint */}
-        <View style={[styles.hintCard, { backgroundColor: colors.card }]}>
-          <Text style={[styles.hintTitle, { color: colors.text }]}>{t('obd.guide_title')}</Text>
-          <Text style={[styles.hintText, { color: colors.textSecondary }]}>
-            {t('obd.guide_step1')}
-          </Text>
-          <Text style={[styles.hintText, { color: colors.textSecondary }]}>
-            {t('obd.guide_step2')}
-          </Text>
-          <Text style={[styles.hintText, { color: colors.textSecondary }]}>
-            {t('obd.guide_step3')}
-          </Text>
-          <Text style={[styles.hintText, { color: colors.textSecondary }]}>
-            {t('obd.guide_recommended')}
-          </Text>
-        </View>
-      </View>
+        {/* Hướng dẫn kết nối (component chỉn chu thay card 3 dòng cũ) */}
+        <ObdConnectionGuide />
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -369,12 +355,4 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   showAllLabel: { fontSize: 14, fontWeight: '500' },
-  hintCard: {
-    borderRadius: 12,
-    padding: 16,
-    marginTop: 24,
-    gap: 6,
-  },
-  hintTitle: { fontSize: 14, fontWeight: '600', marginBottom: 4 },
-  hintText: { fontSize: 13, lineHeight: 20 },
 });
