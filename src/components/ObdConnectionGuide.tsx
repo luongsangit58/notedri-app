@@ -6,50 +6,43 @@ import { useT } from '../i18n';
 
 /**
  * Hướng dẫn kết nối OBD2 - bản chỉn chu thay cho card 3 dòng chữ cũ (Sang phản
- * hồi 14/7: quá sơ sài). Mỗi bước có số thứ tự, icon, tiêu đề + mô tả và MỘT Ô
- * HÌNH MINH HOẠ.
+ * hồi 14/7: quá sơ sài).
  *
- * THÊM HÌNH: khi có hình từ ChatGPT (xem prompt trong
- * _bmad-output/CHATGPT-PROMPT-OBD-GUIDE-IMAGES-*.md), lưu vào
- * assets/obd-guide/ rồi bỏ comment require tương ứng dưới đây theo đúng khoá
- * bước. Chưa có hình thì ô hiển thị placeholder, KHÔNG vỡ layout hay crash
- * (require tĩnh của RN sẽ ném lỗi nếu file thiếu nên phải để trong map này).
+ * HÌNH MINH HOẠ: dùng MỘT ảnh gộp 2x2 (4 ô đánh số 1-4 khớp 4 bước chữ bên
+ * dưới) làm hình lớn ở đầu - ChatGPT sinh sẵn kiểu này (xem prompt trong
+ * _bmad-output/CHATGPT-PROMPT-OBD-GUIDE-IMAGES-*.md). THÊM HÌNH: lưu ảnh vào
+ * assets/obd-guide/guide-steps.png rồi bỏ comment dòng require dưới đây. Chưa có
+ * ảnh thì hiện placeholder, KHÔNG vỡ layout hay crash (require tĩnh của RN ném
+ * lỗi nếu file thiếu nên phải để trong biến này).
  */
-const GUIDE_IMAGES: Partial<Record<StepKey, ImageSourcePropType>> = {
-  // find_port: require('../../assets/obd-guide/step-find-port.png'),
-  // plug_adapter: require('../../assets/obd-guide/step-plug-adapter.png'),
-  // start_engine: require('../../assets/obd-guide/step-start-engine.png'),
-  // scan_connect: require('../../assets/obd-guide/step-scan-connect.png'),
-};
+const GUIDE_HERO: ImageSourcePropType | null =
+  require('../../assets/obd-guide/guide-steps.png');
 
-type StepKey = 'find_port' | 'plug_adapter' | 'start_engine' | 'scan_connect';
-
-const STEPS: { key: StepKey; icon: string }[] = [
-  { key: 'find_port', icon: 'search-location' },
-  { key: 'plug_adapter', icon: 'plug' },
-  { key: 'start_engine', icon: 'key' },
-  { key: 'scan_connect', icon: 'bluetooth-b' },
+const STEPS: { icon: string }[] = [
+  { icon: 'search-location' },
+  { icon: 'plug' },
+  { icon: 'key' },
+  { icon: 'bluetooth-b' },
 ];
 
-function StepIllustration({ stepKey }: { stepKey: StepKey }) {
+function GuideHero() {
   const colors = useColors();
   const t = useT();
-  const source = GUIDE_IMAGES[stepKey];
 
-  if (source) {
+  if (GUIDE_HERO) {
     return (
       <Image
-        source={source}
-        style={[styles.illustration, { backgroundColor: colors.background }]}
-        resizeMode="cover"
+        source={GUIDE_HERO}
+        style={[styles.hero, { backgroundColor: colors.background }]}
+        resizeMode="contain"
       />
     );
   }
 
-  // Placeholder tới khi có hình thật - vẫn giữ đúng khung tỉ lệ để layout không nhảy
+  // Placeholder tới khi có ảnh thật - giữ khung để layout không nhảy khi gắn ảnh
   return (
-    <View style={[styles.illustration, styles.illustrationPlaceholder, { backgroundColor: colors.background, borderColor: colors.border }]}>
-      <FontAwesome5 name="image" size={20} color={colors.textSecondary} />
+    <View style={[styles.hero, styles.heroPlaceholder, { backgroundColor: colors.background, borderColor: colors.border }]}>
+      <FontAwesome5 name="images" size={22} color={colors.textSecondary} />
       <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 6 }}>
         {t('obd.guide_img_pending')}
       </Text>
@@ -67,6 +60,9 @@ export default function ObdConnectionGuide() {
       {/* Tiêu đề */}
       <Text style={[styles.title, { color: colors.text }]}>{t('obd.guide_title')}</Text>
       <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{t('obd.guide_subtitle')}</Text>
+
+      {/* Ảnh minh hoạ gộp 4 bước */}
+      <GuideHero />
 
       {/* Cần chuẩn bị */}
       <View style={[styles.needCard, { backgroundColor: colors.card }]}>
@@ -87,16 +83,15 @@ export default function ObdConnectionGuide() {
         </View>
       </View>
 
-      {/* Các bước */}
+      {/* Các bước (số 1-4 khớp 4 ô trong ảnh gộp phía trên) */}
       {STEPS.map((step, i) => (
-        <View key={step.key} style={[styles.stepCard, { backgroundColor: colors.card }]}>
-          <StepIllustration stepKey={step.key} />
-          <View style={styles.stepBody}>
+        <View key={i} style={[styles.stepCard, { backgroundColor: colors.card }]}>
+          <View style={[styles.stepNum, { backgroundColor: colors.primary }]}>
+            <Text style={styles.stepNumText}>{i + 1}</Text>
+          </View>
+          <View style={{ flex: 1 }}>
             <View style={styles.stepHeader}>
-              <View style={[styles.stepNum, { backgroundColor: colors.primary }]}>
-                <Text style={styles.stepNumText}>{i + 1}</Text>
-              </View>
-              <FontAwesome5 name={step.icon} size={14} color={colors.primary} />
+              <FontAwesome5 name={step.icon} size={13} color={colors.primary} />
               <Text style={[styles.stepTitle, { color: colors.text }]}>
                 {t(`obd.guide_s${i + 1}_title` as any)}
               </Text>
@@ -149,19 +144,20 @@ export default function ObdConnectionGuide() {
 const styles = StyleSheet.create({
   title: { fontSize: 17, fontWeight: '700', marginBottom: 4 },
   subtitle: { fontSize: 13, lineHeight: 19, marginBottom: 14 },
+  hero: { width: '100%', aspectRatio: 16 / 10, borderRadius: 12, marginBottom: 14 },
+  heroPlaceholder: { alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
   needCard: { borderRadius: 12, padding: 14, marginBottom: 14 },
   needTitle: { fontSize: 13, fontWeight: '700', marginBottom: 12 },
   needRow: { flexDirection: 'row', justifyContent: 'space-around' },
   needItem: { alignItems: 'center', flex: 1, gap: 6 },
   needIcon: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   needLabel: { fontSize: 11, textAlign: 'center', lineHeight: 15 },
-  stepCard: { borderRadius: 12, overflow: 'hidden', marginBottom: 12 },
-  illustration: { width: '100%', height: 150 },
-  illustrationPlaceholder: { alignItems: 'center', justifyContent: 'center', borderBottomWidth: 1 },
-  stepBody: { padding: 14 },
-  stepHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
-  stepNum: { width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
-  stepNumText: { color: '#fff', fontSize: 12, fontWeight: '800' },
+  stepCard: {
+    flexDirection: 'row', gap: 10, borderRadius: 12, padding: 14, marginBottom: 10, alignItems: 'flex-start',
+  },
+  stepNum: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
+  stepNumText: { color: '#fff', fontSize: 13, fontWeight: '800' },
+  stepHeader: { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 5 },
   stepTitle: { flex: 1, fontSize: 14, fontWeight: '700' },
   stepDesc: { fontSize: 13, lineHeight: 20 },
   recoCard: { borderRadius: 12, padding: 14, marginBottom: 12, borderWidth: 1 },
