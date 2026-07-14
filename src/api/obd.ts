@@ -83,5 +83,6 @@ export const obdApi = {
     device_name: string | null;
     connected_at: string;
     duration_seconds: number;
+    summary?: Record<string, unknown> | null;
   }) => client.post('/obd2/sessions', payload),
 };

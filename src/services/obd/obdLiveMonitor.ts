@@ -33,6 +33,49 @@ let pollCount = 0;
 let activeVehicleId: number | null = null;
 let reportedCodes = new Set<string>();
 
+// E1 - Session Timeline: tích luỹ thống kê chuẩn hoá trong phiên, gửi kèm
+// telemetry khi phiên kết thúc (trước đây snapshot hiển thị xong là VỨT -
+// không có ký ức giữa các phiên thì không bao giờ làm được trend analysis).
+type Agg = { sum: number; n: number; min: number; max: number };
+const newAgg = (): Agg => ({ sum: 0, n: 0, min: Infinity, max: -Infinity });
+let aggCoolant = newAgg();
+let aggVoltage = newAgg();
+let aggLoad = newAgg();
+let aggIdleRpm = newAgg(); // rpm khi xe đứng yên
+let maxSpeed: number | null = null;
+let sessionDtcCount = 0;
+let sessionFindingIds = new Set<string>();
+
+function feed(agg: Agg, v: number | null): void {
+  if (v === null) return;
+  agg.sum += v; agg.n += 1;
+  if (v < agg.min) agg.min = v;
+  if (v > agg.max) agg.max = v;
+}
+
+function resetSessionStats(): void {
+  aggCoolant = newAgg(); aggVoltage = newAgg(); aggLoad = newAgg(); aggIdleRpm = newAgg();
+  maxSpeed = null; sessionDtcCount = 0; sessionFindingIds = new Set();
+}
+
+/** Snapshot chuẩn hoá cuối phiên - null khi phiên không có dữ liệu nào. */
+export function buildSessionSummary(): Record<string, unknown> | null {
+  if (aggCoolant.n === 0 && aggVoltage.n === 0 && aggIdleRpm.n === 0) return null;
+  const avg = (a: Agg, digits = 0) => (a.n ? Number((a.sum / a.n).toFixed(digits)) : null);
+  return {
+    samples: pollCount,
+    coolant_max: aggCoolant.n ? aggCoolant.max : null,
+    coolant_min: aggCoolant.n ? aggCoolant.min : null,
+    voltage_min: aggVoltage.n ? Number(aggVoltage.min.toFixed(2)) : null,
+    voltage_avg: avg(aggVoltage, 2),
+    rpm_idle_avg: avg(aggIdleRpm),
+    load_avg: avg(aggLoad),
+    speed_max: maxSpeed,
+    dtc_count: sessionDtcCount,
+    findings: [...sessionFindingIds],
+  };
+}
+
 const snapshotListeners = new Set<(s: ObdSnapshot) => void>();
 const dtcListeners = new Set<(codes: DtcCode[]) => void>();
 const findingListeners = new Set<(findings: Finding[]) => void>();
@@ -54,6 +97,15 @@ async function poll(): Promise<void> {
     const snapshot = await readSnapshot();
     snapshotListeners.forEach((fn) => fn(snapshot));
 
+    // E1: tích luỹ thống kê phiên
+    feed(aggCoolant, snapshot.coolantTempC);
+    feed(aggVoltage, snapshot.controlModuleVoltage);
+    feed(aggLoad, snapshot.engineLoadPct);
+    if (snapshot.speedKmh !== null) {
+      if (maxSpeed === null || snapshot.speedKmh > maxSpeed) maxSpeed = snapshot.speedKmh;
+      if (snapshot.speedKmh === 0) feed(aggIdleRpm, snapshot.rpm);
+    }
+
     // Rule engine trên từng snapshot (hàm thuần, rẻ)
     const findings = evaluate(RULES, {
       rpm: snapshot.rpm,
@@ -65,11 +117,13 @@ async function poll(): Promise<void> {
       sessionAgeSeconds: bleService.getSessionAgeSeconds(),
     });
     findingListeners.forEach((fn) => fn(findings));
+    findings.forEach((f) => sessionFindingIds.add(f.ruleId));
 
     // DTC: sớm ở vòng 2 rồi mỗi ~5 phút
     if (pollCount === 2 || pollCount % DTC_EVERY_N_POLLS === 0) {
       const codes = await readDtcCodes();
       if (codes.length > 0) {
+        sessionDtcCount = codes.length;
         dtcListeners.forEach((fn) => fn(codes));
         // Báo server các mã CHƯA báo trong phiên này (fire-and-forget)
         const fresh = codes.filter((c) => !reportedCodes.has(c.code));
@@ -106,6 +160,7 @@ export const obdLiveMonitor = {
     activeVehicleId = vehicleId;
     pollCount = 0;
     reportedCodes = new Set();
+    resetSessionStats();
     timer = setInterval(() => void poll(), POLL_INTERVAL_MS);
   },
 
@@ -149,6 +204,7 @@ bleService.addDisconnectListener(() => {
       device_name: info.deviceName,
       connected_at: new Date(info.startedAt).toISOString(),
       duration_seconds: Math.max(0, Math.round((Date.now() - info.startedAt) / 1000)),
+      summary: buildSessionSummary(),
     }).catch(() => {});
   }
 
