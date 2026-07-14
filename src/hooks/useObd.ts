@@ -4,8 +4,8 @@ import { obdApi } from '../api/obd';
 import { bleService, ConnectionState, ObdDevice } from '../services/obd/BleService';
 import { initializeElm327, readSnapshot, setActivePidWhitelist, ObdSnapshot } from '../services/obd/ObdReader';
 import { getCachedCapability, discoverCapability, VehicleCapability } from '../services/obd/capabilityService';
-import { TripSummary } from '../services/obd/TripSession';
-import { obdTripManager } from '../services/obd/obdTripManager';
+import { obdLiveMonitor } from '../services/obd/obdLiveMonitor';
+import { Finding } from '../services/obd/diagnosticEngine';
 import { savePairing } from '../services/obd/pairedDevices';
 import { useAuthStore } from '../store/authStore';
 import { useObdSessionStore } from '../store/obdSessionStore';
@@ -48,7 +48,6 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
   const [connectionState, setConnectionState] = useState<ConnectionState>('disconnected');
   const [foundDevices, setFoundDevices] = useState<ObdDevice[]>([]);
   const [liveSnapshot, setLiveSnapshot] = useState<ObdSnapshot | null>(null);
-  const [lastTripSummary, setLastTripSummary] = useState<TripSummary | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [warning, setWarning] = useState<ObdWarning>(null);
   const [capability, setCapability] = useState<VehicleCapability | null>(null);
@@ -64,28 +63,21 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
     setCapability(cap);
   }, [vehicleId]);
 
-  // Chuyến sống ở obdTripManager (C5 tầng 2) - hook chỉ là VIEW: subscribe sự
-  // kiện để cập nhật state, rời màn hình KHÔNG còn giết chuyến. Telemetry +
-  // notification + lưu chuyến đều đã chuyển sang manager (chạy không cần UI).
-  const [isTripActive, setIsTripActive] = useState(obdTripManager.isActive());
+  // Quyết định 14/7: GPS là nguồn CHUYẾN ĐI duy nhất. OBD chỉ còn live monitor
+  // (poll số liệu + canh DTC + rule engine) sống theo phiên BLE - hook là VIEW.
+  const [findings, setFindings] = useState<Finding[]>([]);
 
   useEffect(() => {
     const unsubs = [
-      obdTripManager.onSnapshot((snap) => setLiveSnapshot(snap)),
-      obdTripManager.onDtcFound(() => {
+      obdLiveMonitor.onSnapshot((snap) => setLiveSnapshot(snap)),
+      obdLiveMonitor.onFindings((f) => setFindings(f)),
+      obdLiveMonitor.onDtcFound(() => {
         qc.invalidateQueries({ queryKey: ['obd', 'dtc', vehicleId] });
-      }),
-      obdTripManager.onTripEnd((summary) => {
-        setIsTripActive(false);
-        setLastTripSummary(summary);
-        qc.invalidateQueries({ queryKey: ['obd', 'trips', vehicleId] });
-        qc.invalidateQueries({ queryKey: ['obd', 'dtc', vehicleId] });
-        qc.invalidateQueries({ queryKey: ['dashboard'] });
       }),
       bleService.addDisconnectListener(() => {
-        setIsTripActive(obdTripManager.isActive());
         setConnectionState('disconnected');
         setLiveSnapshot(null);
+        setFindings([]);
       }),
       bleService.addReconnectingListener(() => setConnectionState('reconnecting')),
       bleService.addReconnectedListener(() => setConnectionState('connected')),
@@ -202,6 +194,9 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
       // Trạng thái toàn cục (C5): thẻ Home/chi tiết xe + banner biết đang nối xe nào
       useObdSessionStore.getState().patch({ vehicleId, vehicleName: vehicleName ?? null });
 
+      // Live monitor sống theo phiên kết nối (thay trip manager)
+      obdLiveMonitor.start(vehicleId);
+
       const snap = await readSnapshot();
       setLiveSnapshot(snap);
 
@@ -221,22 +216,12 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
   }, [stopScan, vehicleId, vehicleName, loadCapability]);
 
   const disconnect = useCallback(async () => {
-    // Chốt chuyến trước khi ngắt (manager lưu chuyến, kể cả offline)
-    obdTripManager.stop();
     await bleService.disconnect();
     setConnectionState('disconnected');
     setLiveSnapshot(null);
   }, []);
 
   // --- Trip ---
-
-  const startTrip = useCallback(() => {
-    if (obdTripManager.start(vehicleId)) setIsTripActive(true);
-  }, [vehicleId]);
-
-  const stopTrip = useCallback(() => {
-    obdTripManager.stop();
-  }, []);
 
   // Seed từ singleton khi mount: OBDSetupScreen connect xong rồi navigation.replace()
   // sang OBDDashboard -> hook MỚI khởi tạo 'disconnected' dù bleService đã kết nối.
@@ -248,8 +233,8 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
       // gỡ app cài lại là mất cache → cả phiên poll thừa 2 PID NO DATA mỗi vòng)
       loadCapability(true).catch(() => {});
       useObdSessionStore.getState().patch({ vehicleId, vehicleName: vehicleName ?? null });
-      // Chuyến đang chạy toàn cục (bắt đầu từ lần vào Dashboard trước) → đồng bộ lại
-      setIsTripActive(obdTripManager.isActive());
+      // Đảm bảo live monitor chạy (app relaunch khi phiên BLE còn sống)
+      obdLiveMonitor.start(vehicleId);
       // Rehydrate snapshot sống để lưới số liệu không hiện "-"
       readSnapshot().then((snap) => setLiveSnapshot(snap)).catch(() => {});
     }
@@ -270,18 +255,14 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
     connectionState,
     foundDevices,
     liveSnapshot,
-    getTripDistanceKm: () => obdTripManager.getCurrentDistanceKm(),
-    lastTripSummary,
+    findings,
     errorMessage,
     warning,
     capability,
     isConnected: connectionState === 'connected',
-    isTripActive,
     startScan,
     stopScan,
     connect,
     disconnect,
-    startTrip,
-    stopTrip,
   };
 }

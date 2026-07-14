@@ -53,7 +53,7 @@ const HIDDEN_ON = new Set(['OBDSetup', 'OBDDashboard', 'OBDTrips', 'NfcSetup']);
  */
 export default function ObdSessionBanner() {
   const t = useT();
-  const { connected, reconnecting, vehicleId, vehicleName, tripActive } = useObdSessionStore();
+  const { connected, reconnecting, vehicleId, vehicleName } = useObdSessionStore();
   const [routeName, setRouteName] = useState<string | undefined>(undefined);
   const toast = useTransitionToast();
 
@@ -94,8 +94,6 @@ export default function ObdSessionBanner() {
   const color = reconnecting ? '#F59E0B' : '#22C55E';
   const label = reconnecting
     ? t('obd.banner_reconnecting')
-    : tripActive
-    ? t('obd.banner_trip', { name: vehicleName ?? 'OBD2' })
     : t('obd.banner_connected', { name: vehicleName ?? 'OBD2' });
 
   return (

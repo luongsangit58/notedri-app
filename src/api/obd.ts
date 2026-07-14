@@ -73,6 +73,10 @@ export const obdApi = {
   lookupDtc: (code: string) =>
     client.get<{ data: DtcLookupResult }>(`/dtc-codes/${encodeURIComponent(code)}`),
 
+  // Báo mã lỗi phát hiện LIVE (không qua chuyến - GPS là nguồn chuyến duy nhất từ 14/7)
+  reportDtc: (vehicleId: number, codes: Array<{ code: string; description: string | null }>) =>
+    client.post('/obd2/dtc', { vehicle_id: vehicleId, codes }),
+
   // Telemetry retention: 1 dòng mỗi phiên kết nối đã kết thúc (fire-and-forget)
   reportSession: (payload: {
     vehicle_id: number;

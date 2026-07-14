@@ -97,6 +97,11 @@ class BleService {
   private sessionStartedAt: number | null = null;
   private sessionDeviceName: string | null = null;
 
+  /** Tuổi phiên hiện tại (giây) - đọc KHÔNG phá huỷ, cho rule engine (min_session_seconds). */
+  getSessionAgeSeconds(): number {
+    return this.sessionStartedAt ? Math.round((Date.now() - this.sessionStartedAt) / 1000) : 0;
+  }
+
   /** Trả mốc phiên hiện tại rồi XOÁ - đảm bảo mỗi phiên chỉ report đúng 1 lần. */
   consumeSessionInfo(): { startedAt: number; deviceName: string | null } | null {
     if (this.sessionStartedAt === null) return null;

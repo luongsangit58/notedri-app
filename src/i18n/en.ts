@@ -469,6 +469,8 @@ const en = {
   "obd.banner_connected": "OBD2 · {{name}}",
   "obd.banner_trip": "OBD2 · {{name}} · trip recording",
   "obd.banner_reconnecting": "OBD2 · reconnecting...",
+  "obd.trips_via_gps": "Trips are recorded automatically via GPS - view here",
+  "obd.finding_beta": "beta",
   "obd.toast_connected": "OBD2 connected · {{name}}",
   "obd.toast_reconnected": "OBD2 reconnected",
   "obd.toast_disconnected": "OBD2 connection lost",

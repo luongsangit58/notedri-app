@@ -470,6 +470,8 @@ const vi = {
   "obd.banner_connected": "OBD2 · {{name}}",
   "obd.banner_trip": "OBD2 · {{name}} · đang ghi chuyến",
   "obd.banner_reconnecting": "OBD2 · đang kết nối lại...",
+  "obd.trips_via_gps": "Hành trình ghi tự động bằng GPS - xem tại đây",
+  "obd.finding_beta": "thử nghiệm",
   "obd.toast_connected": "Đã kết nối OBD2 · {{name}}",
   "obd.toast_reconnected": "Đã kết nối lại OBD2",
   "obd.toast_disconnected": "Mất kết nối OBD2",

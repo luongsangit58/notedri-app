@@ -4,7 +4,7 @@ import { create } from 'zustand';
  * Trạng thái phiên OBD TOÀN CỤC (C5 tầng 1): nguồn sự thật cho thẻ Home,
  * thẻ màn chi tiết xe và banner mini - kết nối không còn "tàng hình" khi
  * rời Dashboard. BleService cập nhật connected/reconnecting/deviceName;
- * useObd cập nhật vehicleId/vehicleName/tripActive.
+ * useObd cập nhật vehicleId/vehicleName.
  */
 type ObdSessionState = {
   connected: boolean;
@@ -12,7 +12,6 @@ type ObdSessionState = {
   vehicleId: number | null;
   vehicleName: string | null;
   deviceName: string | null;
-  tripActive: boolean;
   patch: (p: Partial<Omit<ObdSessionState, 'patch' | 'clear'>>) => void;
   clear: () => void;
 };
@@ -23,7 +22,6 @@ export const useObdSessionStore = create<ObdSessionState>((set) => ({
   vehicleId: null,
   vehicleName: null,
   deviceName: null,
-  tripActive: false,
   patch: (p) => set(p),
   clear: () =>
     set({
@@ -32,6 +30,5 @@ export const useObdSessionStore = create<ObdSessionState>((set) => ({
       vehicleId: null,
       vehicleName: null,
       deviceName: null,
-      tripActive: false,
     }),
 }));

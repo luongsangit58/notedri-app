@@ -61,14 +61,10 @@ export default function OBDDashboardScreen() {
   const {
     connectionState,
     liveSnapshot,
-    isTripActive,
-    getTripDistanceKm,
-    lastTripSummary,
+    findings,
     warning,
     capability,
     disconnect,
-    startTrip,
-    stopTrip,
   } = useObdConnection(vehicleId, vehicleName);
 
   async function handleDisconnect() {
@@ -198,6 +194,32 @@ export default function OBDDashboardScreen() {
           </View>
         )}
 
+        {/* Cảnh báo từ Diagnostic Engine (rule beta có nguồn dẫn) - hiện khi
+            evaluate() bắt được bất thường trên snapshot sống */}
+        {findings.map((f) => (
+          <View
+            key={f.ruleId}
+            style={[
+              styles.warningBanner,
+              { backgroundColor: f.severity === 'critical' ? '#B91C1C' : '#B45309' },
+            ]}>
+            <FontAwesome5
+              name={f.can_drive === 'stop' ? 'hand-paper' : 'exclamation-triangle'}
+              size={13}
+              color="#FEF3C7"
+              solid
+            />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.warningText, { fontWeight: '700' }]}>
+                {f.title_vi}{f.beta ? ` (${t('obd.finding_beta')})` : ''}
+              </Text>
+              <Text style={[styles.warningText, { fontSize: 11, opacity: 0.9, marginTop: 2 }]}>
+                {f.action_vi}
+              </Text>
+            </View>
+          </View>
+        ))}
+
         {/* Live stats grid - ẩn ô của PID xe không hỗ trợ (capability R8).
             Chưa dò được capability (null) thì hiện đủ như cũ. */}
         <View style={styles.statsGrid}>
@@ -282,39 +304,15 @@ export default function OBDDashboardScreen() {
           <FontAwesome5 name="chevron-right" size={12} color={colors.textSecondary} />
         </TouchableOpacity>
 
-        {/* Trip control */}
-        <View style={[styles.tripCard, { backgroundColor: colors.card }]}>
-          <Text style={[styles.tripTitle, { color: colors.text }]}>{t('obd.trip_title')}</Text>
-          {isTripActive && (
-            <Text style={[styles.tripKm, { color: '#3B82F6' }]}>
-              {getTripDistanceKm()} km
-            </Text>
-          )}
-          {!isTripActive && lastTripSummary && (
-            <View style={styles.tripSummary}>
-              <Text style={[styles.tripSummaryText, { color: colors.textSecondary }]}>
-                {t('obd.trip_last', { dist: lastTripSummary.distanceKm, speed: lastTripSummary.avgSpeedKmh })}
-              </Text>
-            </View>
-          )}
-          <TouchableOpacity
-            style={[
-              styles.tripBtn,
-              { backgroundColor: isTripActive ? '#EF4444' : '#3B82F6' },
-            ]}
-            onPress={isTripActive ? stopTrip : startTrip}
-            disabled={!isConnected}
-          >
-            <FontAwesome5
-              name={isTripActive ? 'stop' : 'play'}
-              size={14}
-              color="#fff"
-            />
-            <Text style={styles.tripBtnText}>
-              {isTripActive ? t('obd.trip_end') : t('obd.trip_start')}
-            </Text>
-          </TouchableOpacity>
-        </View>
+        {/* Quyết định 14/7: GPS là nguồn chuyến duy nhất (fixture #5: JS timer bị
+            đóng băng ở nền → quãng đường OBD sai). OBD chỉ còn live view + DTC. */}
+        <TouchableOpacity
+          style={[styles.historyBtn, { backgroundColor: colors.card }]}
+          onPress={() => navigation.navigate('GpsTrips', { vehicleId, vehicleName })}>
+          <FontAwesome5 name="satellite-dish" size={14} color={colors.primary} />
+          <Text style={[styles.historyBtnText, { color: colors.primary }]}>{t('obd.trips_via_gps')}</Text>
+          <FontAwesome5 name="chevron-right" size={12} color={colors.textSecondary} />
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
