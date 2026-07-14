@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, RefreshControl, Switch, ImageBackground } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, RefreshControl, Switch, ImageBackground, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useVehicle, useVehicleHealth, useVehicleReminders, useToggleVehicleRest, useUpdateVehicle } from '../../hooks/useVehicles';
 import { useObdDtcEvents } from '../../hooks/useObd';
+import { useMarkVehicleSold } from '../../hooks/useVehicleTransfer';
 import { getPairingForVehicle } from '../../services/obd/pairedDevices';
 import { getCachedCapability } from '../../services/obd/capabilityService';
 import { useObdSessionStore } from '../../store/obdSessionStore';
@@ -247,6 +248,7 @@ export default function VehicleDetailScreen() {
   const { data: dtcData } = useObdDtcEvents(vehicleId);
   const { mutate: toggleRest, isPending: togglingRest } = useToggleVehicleRest();
   const { mutate: updateVehicle, isPending: savingVin } = useUpdateVehicle();
+  const { mutate: markSold, isPending: markingSold } = useMarkVehicleSold();
 
   // VIN prefill (checklist C4): VIN đọc được qua OBD (mode 09, chính xác 100% -
   // không phải suy đoán như hãng/model) - chỉ đề nghị lưu khi hồ sơ xe CHƯA có VIN.
@@ -430,6 +432,37 @@ export default function VehicleDetailScreen() {
           />
         </TouchableOpacity>
 
+        {/* VIN #30: chủ tự đánh dấu "đã bán" KHÔNG cần chờ ai gửi yêu cầu -
+            tắt xe khỏi danh sách đang dùng. Không premium-gated (quản lý xe
+            của chính mình). Dùng button xác nhận (không phải Switch) vì đây
+            là hành động đáng kể hơn "tạm nghỉ", tránh vô ý chạm nhầm. */}
+        {!v?.is_sold && (
+          <TouchableOpacity
+            onPress={() => Alert.alert(t('vehicles.mark_sold_title'), t('vehicles.mark_sold_confirm'), [
+              { text: t('common.cancel'), style: 'cancel' },
+              { text: t('common.confirm'), onPress: () => markSold({ vehicleId, sold: true }) },
+            ])}
+            disabled={markingSold}
+            style={{
+              flexDirection: 'row', alignItems: 'center', gap: 10,
+              backgroundColor: colors.surface, borderRadius: 12, padding: 14, marginBottom: 10,
+              borderWidth: 1, borderColor: colors.border,
+            }}>
+            <FontAwesome5 name="hand-holding-usd" size={16} color={colors.textSecondary} solid />
+            <Text style={{ color: colors.text, fontWeight: '600', fontSize: 14, flex: 1 }}>{t('vehicles.mark_sold_title')}</Text>
+          </TouchableOpacity>
+        )}
+        {v?.is_sold && (
+          <View style={{
+            flexDirection: 'row', alignItems: 'center', gap: 10,
+            backgroundColor: colors.surface, borderRadius: 12, padding: 14, marginBottom: 10,
+            borderWidth: 1, borderColor: colors.border, opacity: 0.7,
+          }}>
+            <FontAwesome5 name="hand-holding-usd" size={16} color={colors.textSecondary} solid />
+            <Text style={{ color: colors.textSecondary, fontSize: 13, flex: 1 }}>{t('vehicles.mark_sold_hint')}</Text>
+          </View>
+        )}
+
         {/* GPS Hành trình - Free feature */}
         <TouchableOpacity
           onPress={() =>
@@ -543,6 +576,31 @@ export default function VehicleDetailScreen() {
             <FontAwesome5 name="chevron-right" size={13} color={colors.textSecondary} />
           </TouchableOpacity>
         )}
+
+        {/* VIN #30 "Hộ chiếu bảo dưỡng khi sang tên xe" (Premium) - hiện kèm
+            khoá cho Free thay vì ẩn hoàn toàn (bài học audit 14/7: tính năng
+            vô hình = mất cơ hội upsell). */}
+        <TouchableOpacity
+          onPress={() => navigation.navigate(isPremium ? 'VehicleTransferRequests' : 'Premium')}
+          style={{
+            flexDirection: 'row', alignItems: 'center', gap: 12,
+            backgroundColor: colors.surface, borderRadius: 12, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: colors.border,
+          }}>
+          <View style={{
+            width: 40, height: 40, borderRadius: 20,
+            backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center',
+          }}>
+            <FontAwesome5 name="file-signature" size={16} color={colors.primary} solid />
+          </View>
+          <View style={{ flex: 1 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14 }}>{t('transfer.entry_title')}</Text>
+              {!isPremium && <FontAwesome5 name="crown" size={11} color={colors.warning} solid />}
+            </View>
+            <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 1 }}>{t('transfer.entry_desc')}</Text>
+          </View>
+          <FontAwesome5 name="chevron-right" size={13} color={colors.textSecondary} />
+        </TouchableOpacity>
 
         {/* VIN prefill (checklist C4): VIN đọc qua OBD chính xác 100%, chỉ đề
             nghị lưu khi hồ sơ xe chưa có - không tự động ghi đè im lặng */}

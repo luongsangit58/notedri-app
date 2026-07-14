@@ -15,6 +15,7 @@ import VehiclesScreen from '../screens/vehicles/VehiclesScreen';
 import VehicleDetailScreen from '../screens/vehicles/VehicleDetailScreen';
 import AddVehicleScreen from '../screens/vehicles/AddVehicleScreen';
 import EditVehicleScreen from '../screens/vehicles/EditVehicleScreen';
+import VehicleTransferRequestsScreen from '../screens/vehicles/VehicleTransferRequestsScreen';
 import ProfileScreen from '../screens/profile/ProfileScreen';
 import EditProfileScreen from '../screens/profile/EditProfileScreen';
 import ChangePasswordScreen from '../screens/profile/ChangePasswordScreen';
@@ -162,6 +163,8 @@ export default function AppNavigator() {
         options={{ headerShown: true, ...headerOpts, title: t('vehicles.add') }} />
       <RootStack.Screen name="EditVehicle" component={EditVehicleScreen}
         options={{ headerShown: true, ...headerOpts, title: t('common.edit') }} />
+      <RootStack.Screen name="VehicleTransferRequests" component={VehicleTransferRequestsScreen}
+        options={{ headerShown: false }} />
 
       {/* Profile (no longer a tab - accessible via avatar in HomeScreen header) */}
       <RootStack.Screen name="Profile" component={ProfileScreen}

@@ -19,6 +19,7 @@ import { useQuery } from '@tanstack/react-query';
 import { FontAwesome5 } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useCreateVehicle } from '../../hooks/useVehicles';
+import { useSendTransferRequest } from '../../hooks/useVehicleTransfer';
 import { useAuthStore } from '../../store/authStore';
 import client from '../../api/client';
 import { useColors } from '../../utils/theme';
@@ -140,6 +141,8 @@ export default function AddVehicleScreen() {
   const navigation = useNavigation<any>();
   const token = useAuthStore((s) => s.token);
   const createVehicle = useCreateVehicle();
+  const sendTransferRequest = useSendTransferRequest();
+  const isPremium = useAuthStore((s) => s.user?.is_premium ?? false);
   // Loại nhiên liệu: danh sách TĨNH khớp web (không lấy từ bảng giá xăng dầu).
   const FUEL_OPTIONS: { value: string; label: string }[] = [
     { value: 'Xăng',   label: t('vehicles.fuel_petrol') },
@@ -303,13 +306,29 @@ export default function AddVehicleScreen() {
     Object.entries(extraToPayload(extra)).forEach(([k, val]) => { if (val != null) payload[k] = val; });
     try {
       const result = await createVehicle.mutateAsync({ data: payload, photo: photo ?? undefined });
-      // VIN #29: cảnh báo KHÔNG CHẶN khi backend phát hiện VIN trùng xe khác -
-      // xe vẫn được tạo bình thường, chỉ báo cho user tự quyết định (có thể là
-      // gia đình dùng chung xe, nhầm xe, hoặc xe vừa mua đã có lịch sử trên NoteDri).
+      // VIN #29/#30: cảnh báo KHÔNG CHẶN khi backend phát hiện VIN trùng xe khác -
+      // xe vẫn được tạo bình thường. Premium: mời gửi yêu cầu xem lịch sử bảo
+      // dưỡng (#30) ngay tại đây thay vì chỉ cảnh báo suông.
       if (result?.meta?.vin_duplicate) {
-        Alert.alert(t('vehicles.vin_duplicate_title'), t('vehicles.vin_duplicate_warning'), [
-          { text: t('common.ok'), onPress: () => navigation.goBack() },
-        ]);
+        const newVehicleId = result?.data?.id;
+        if (isPremium && newVehicleId) {
+          Alert.alert(t('vehicles.vin_duplicate_title'), t('vehicles.vin_duplicate_send_request'), [
+            { text: t('common.cancel'), style: 'cancel', onPress: () => navigation.goBack() },
+            {
+              text: t('vehicles.vin_duplicate_send_request_btn'),
+              onPress: () => {
+                sendTransferRequest.mutate(newVehicleId, {
+                  onSuccess: () => { Alert.alert(t('common.ok'), t('vehicles.vin_duplicate_request_sent')); navigation.goBack(); },
+                  onError: (e: any) => { Alert.alert(t('common.error'), e?.response?.data?.message ?? t('vehicles.error_generic')); navigation.goBack(); },
+                });
+              },
+            },
+          ]);
+        } else {
+          Alert.alert(t('vehicles.vin_duplicate_title'), t('vehicles.vin_duplicate_warning'), [
+            { text: t('common.ok'), onPress: () => navigation.goBack() },
+          ]);
+        }
         return;
       }
       navigation.goBack();

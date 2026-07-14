@@ -15,6 +15,8 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useVehicle, useUpdateVehicle, useDeleteVehicle } from '../../hooks/useVehicles';
+import { useSendTransferRequest } from '../../hooks/useVehicleTransfer';
+import { useAuthStore } from '../../store/authStore';
 import VehicleMoreFields, { VehicleExtra, EMPTY_VEHICLE_EXTRA, extraFromVehicle, extraToPayload } from '../../components/VehicleMoreFields';
 import LoadingView from '../../components/LoadingView';
 import ErrorView from '../../components/ErrorView';
@@ -49,6 +51,8 @@ export default function EditVehicleScreen() {
 
   const { data: vehicleData, isLoading, isError, refetch } = useVehicle(vehicleId);
   const updateVehicle = useUpdateVehicle();
+  const sendTransferRequest = useSendTransferRequest();
+  const isPremium = useAuthStore((s) => s.user?.is_premium ?? false);
   const deleteVehicle = useDeleteVehicle();
   // Loại nhiên liệu: danh sách TĨNH khớp web (không lấy từ bảng giá xăng).
   const FUEL_OPTIONS: { value: string; label: string }[] = [
@@ -143,11 +147,27 @@ export default function EditVehicleScreen() {
 
     try {
       const result = await updateVehicle.mutateAsync({ id: vehicleId, data: payload, photo: photo ?? undefined });
-      // VIN #29: cảnh báo KHÔNG CHẶN khi backend phát hiện VIN trùng xe khác - xem AddVehicleScreen.
+      // VIN #29/#30: cảnh báo KHÔNG CHẶN khi backend phát hiện VIN trùng xe khác -
+      // xem AddVehicleScreen. Premium: mời gửi yêu cầu xem lịch sử bảo dưỡng (#30).
       if (result?.meta?.vin_duplicate) {
-        Alert.alert(t('vehicles.vin_duplicate_title'), t('vehicles.vin_duplicate_warning'), [
-          { text: t('common.ok'), onPress: () => navigation.goBack() },
-        ]);
+        if (isPremium) {
+          Alert.alert(t('vehicles.vin_duplicate_title'), t('vehicles.vin_duplicate_send_request'), [
+            { text: t('common.cancel'), style: 'cancel', onPress: () => navigation.goBack() },
+            {
+              text: t('vehicles.vin_duplicate_send_request_btn'),
+              onPress: () => {
+                sendTransferRequest.mutate(vehicleId, {
+                  onSuccess: () => { Alert.alert(t('common.ok'), t('vehicles.vin_duplicate_request_sent')); navigation.goBack(); },
+                  onError: (e: any) => { Alert.alert(t('common.error'), e?.response?.data?.message ?? t('vehicles.error_generic')); navigation.goBack(); },
+                });
+              },
+            },
+          ]);
+        } else {
+          Alert.alert(t('vehicles.vin_duplicate_title'), t('vehicles.vin_duplicate_warning'), [
+            { text: t('common.ok'), onPress: () => navigation.goBack() },
+          ]);
+        }
         return;
       }
       navigation.goBack();
