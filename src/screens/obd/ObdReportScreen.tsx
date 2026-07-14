@@ -124,6 +124,18 @@ export default function ObdReportScreen() {
               <Vital label={t('obd.report_top_speed')} value={`${latest.summary.speed_max ?? '-'}`} unit=" km/h" icon="tachometer-alt" />
               <Vital label={t('obd.report_dtc')} value={`${latest.summary.dtc_count}`} icon="exclamation-circle" />
             </View>
+            {/* Chấm điểm lái xe (Giai đoạn G) - phiên cũ trước 14/7 không có 2
+                trường này (undefined), hiện "-" thay vì crash. */}
+            {latest.summary.driving_score !== undefined && (
+              <View style={styles.vitalsRow}>
+                <Vital label={t('obd.report_driving_score')} value={`${latest.summary.driving_score}`} unit="/100" icon="user-check" />
+                <Vital
+                  label={t('obd.report_harsh_events')}
+                  value={`${(latest.summary.harsh_brake_count ?? 0) + (latest.summary.harsh_accel_count ?? 0)}`}
+                  icon="exclamation-triangle"
+                />
+              </View>
+            )}
           </View>
 
           {voltageDelta !== null && Math.abs(voltageDelta) >= 0.1 && (

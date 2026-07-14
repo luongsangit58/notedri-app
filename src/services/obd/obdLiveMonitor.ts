@@ -9,6 +9,7 @@ import {
 } from './ObdReader';
 import { evaluate, Finding } from './diagnosticEngine';
 import { getActiveRules, refreshRulesFromServer } from './diagnosticRulesStore';
+import { detectDrivingEvents, scoreFromCounts, SpeedSample } from '../drivingScore/drivingScoreEngine';
 import { useObdSessionStore } from '../../store/obdSessionStore';
 
 /**
@@ -51,6 +52,16 @@ let maxSpeed: number | null = null;
 let sessionDtcCount = 0;
 let sessionFindingIds = new Set<string>();
 
+// Chấm điểm lái xe (Giai đoạn G, _bmad-output/driving-score-design-proposal-
+// 2026-07-14.md): tốc độ ECU (PID 0D) đã đọc mỗi 3s cho live-monitor sẵn có -
+// tái dùng làm nguồn phát hiện phanh gấp/tăng tốc đột ngột, KHÔNG tốn thêm pin.
+// Chỉ giữ MẪU LIỀN TRƯỚC (không giữ cả mảng) để không phình bộ nhớ theo phiên
+// dài - detectDrivingEvents chạy trên đúng 1 cặp mẫu mỗi lần, giống cách các
+// Agg khác trong file này tích luỹ dần chứ không giữ lịch sử thô.
+let lastSpeedSample: SpeedSample | null = null;
+let harshBrakeCount = 0;
+let harshAccelCount = 0;
+
 function feed(agg: Agg, v: number | null): void {
   if (v === null) return;
   agg.sum += v; agg.n += 1;
@@ -62,6 +73,7 @@ function resetSessionStats(): void {
   aggCoolant = newAgg(); aggVoltage = newAgg(); aggLoad = newAgg(); aggIdleRpm = newAgg();
   aggRpmAll = newAgg(); aggIdleThrottle = newAgg();
   maxSpeed = null; sessionDtcCount = 0; sessionFindingIds = new Set();
+  lastSpeedSample = null; harshBrakeCount = 0; harshAccelCount = 0;
 }
 
 /** Snapshot chuẩn hoá cuối phiên - null khi phiên không có dữ liệu nào. */
@@ -82,6 +94,11 @@ export function buildSessionSummary(): Record<string, unknown> | null {
     speed_max: maxSpeed,
     dtc_count: sessionDtcCount,
     findings: [...sessionFindingIds],
+    harsh_brake_count: harshBrakeCount,
+    harsh_accel_count: harshAccelCount,
+    // Thời lượng phiên (không phải quãng đường - OBD live-monitor không theo dõi
+    // quãng đường, GPS là nguồn chuyến duy nhất) làm đơn vị chuẩn hoá mật độ.
+    driving_score: scoreFromCounts(harshBrakeCount, harshAccelCount, bleService.getSessionAgeSeconds() / 60),
   };
 }
 
@@ -117,6 +134,15 @@ async function poll(): Promise<void> {
         feed(aggIdleRpm, snapshot.rpm);
         feed(aggIdleThrottle, snapshot.throttlePct);
       }
+
+      const curSpeedSample: SpeedSample = { ts: Date.now(), speedKmh: snapshot.speedKmh };
+      if (lastSpeedSample) {
+        for (const ev of detectDrivingEvents([lastSpeedSample, curSpeedSample])) {
+          if (ev.type === 'harsh_brake') harshBrakeCount += 1;
+          else harshAccelCount += 1;
+        }
+      }
+      lastSpeedSample = curSpeedSample;
     }
 
     // Rule engine trên từng snapshot (hàm thuần, rẻ)

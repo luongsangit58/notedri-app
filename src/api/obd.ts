@@ -57,6 +57,10 @@ export type ObdSessionSummary = {
   speed_max: number | null;
   dtc_count: number;
   findings: string[];
+  // Optional: phiên lưu trước 14/7 (chấm điểm lái xe) sẽ không có 3 key này.
+  harsh_brake_count?: number;
+  harsh_accel_count?: number;
+  driving_score?: number;
 };
 
 export type ObdSessionRecord = {

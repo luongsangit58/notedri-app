@@ -28,6 +28,7 @@ import { useVehicles } from '../../hooks/useVehicles';
 import { devicesApi, DeviceSession } from '../../api/devices';
 import { GpsTripRecord, gpsTripsApi } from '../../api/gpsTrips';
 import { openLocationSettings, openBatterySettings } from '../../services/gps/GpsTripTracker';
+import { detectDrivingEvents, computeDrivingScoreByDistance } from '../../services/drivingScore/drivingScoreEngine';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import RouteMap from '../../components/RouteMap';
 import dayjs from 'dayjs';
@@ -484,6 +485,15 @@ function TripRow({ trip, expanded, onToggle, onDelete, onEditNote }: {
   const points = Array.isArray(trip.route_points) ? trip.route_points : [];
   const hasRoute = points.length >= 2;
 
+  // Chấm điểm lái xe (Giai đoạn G): tính LẠI từ route_points đã lưu sẵn mỗi 5s
+  // cho mọi chuyến từ trước tới giờ - không cần đổi gì ở backend/tần suất GPS,
+  // xem _bmad-output/driving-score-design-proposal-2026-07-14.md.
+  const drivingScore = useMemo(() => {
+    if (points.length < 2) return null;
+    const events = detectDrivingEvents(points.map((p) => ({ ts: p.ts, speedKmh: p.spd })));
+    return computeDrivingScoreByDistance(events, distanceKm);
+  }, [points, distanceKm]);
+
   return (
     <View style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }]}>
       <TouchableOpacity onPress={onToggle} activeOpacity={0.7}>
@@ -528,6 +538,14 @@ function TripRow({ trip, expanded, onToggle, onDelete, onEditNote }: {
           {avgSpeed !== null && <Chip icon="tachometer-alt" label={t('gps_trips.avg_speed', { spd: avgSpeed })} />}
           {maxSpeed !== null && <Chip icon="flag-checkered" label={t('gps_trips.max_speed', { spd: maxSpeed })} />}
           {points.length > 0 && <Chip icon="map-marker-alt" label={t('gps_trips.chip_points', { n: points.length })} />}
+          {/* Chỉ hiện khi có sự kiện (tránh rợp mọi dòng bằng "0 lần") - tín hiệu
+              THÔ hơn nguồn OBD vì GPS lấy mẫu mỗi 5s, xem tài liệu thiết kế. */}
+          {!!drivingScore?.harshBrakeCount && (
+            <Chip icon="exclamation-triangle" label={t('gps_trips.harsh_brake_count', { n: drivingScore.harshBrakeCount })} />
+          )}
+          {!!drivingScore?.harshAccelCount && (
+            <Chip icon="bolt" label={t('gps_trips.harsh_accel_count', { n: drivingScore.harshAccelCount })} />
+          )}
         </View>
       </TouchableOpacity>
 
