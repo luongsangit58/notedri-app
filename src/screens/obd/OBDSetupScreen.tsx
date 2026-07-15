@@ -78,15 +78,25 @@ export default function OBDSetupScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showAllDevices]);
 
+  // Feedback tức thì khi bấm (phản hồi 15/7: nút "trông như không phản hồi" -
+  // tryEnableBluetooth() có thể mất tới 2s ở Android 13+/ROM chặn trước khi rơi
+  // xuống mở Cài đặt, cả khoảng đó nút phải hiện đang xử lý chứ không đứng im).
+  const [enablingBt, setEnablingBt] = useState(false);
   async function handleEnableBluetooth() {
-    // Android <=12: bật thẳng được; Android 13+/iOS: OS chặn -> mở cài đặt hệ thống.
-    const enabled = await bleService.tryEnableBluetooth();
-    if (!enabled) {
-      if (Platform.OS === 'android') {
-        Linking.sendIntent('android.settings.BLUETOOTH_SETTINGS').catch(() => Linking.openSettings());
-      } else {
-        Linking.openSettings();
+    if (enablingBt) return;
+    setEnablingBt(true);
+    try {
+      // Android <=12: bật thẳng được; Android 13+/iOS: OS chặn -> mở cài đặt hệ thống.
+      const enabled = await bleService.tryEnableBluetooth();
+      if (!enabled) {
+        if (Platform.OS === 'android') {
+          Linking.sendIntent('android.settings.BLUETOOTH_SETTINGS').catch(() => Linking.openSettings());
+        } else {
+          Linking.openSettings();
+        }
       }
+    } finally {
+      setEnablingBt(false);
     }
   }
 
@@ -198,8 +208,15 @@ export default function OBDSetupScreen() {
           <View style={styles.btBanner}>
             <FontAwesome5 name="bluetooth-b" size={16} color="#FEF3C7" />
             <Text style={styles.btBannerText}>{t('obd.bt_off_banner')}</Text>
-            <TouchableOpacity style={styles.btBannerBtn} onPress={handleEnableBluetooth}>
-              <Text style={styles.btBannerBtnText}>{t('obd.bt_enable')}</Text>
+            <TouchableOpacity
+              style={[styles.btBannerBtn, enablingBt && { opacity: 0.6 }]}
+              onPress={handleEnableBluetooth}
+              disabled={enablingBt}>
+              {enablingBt ? (
+                <ActivityIndicator size="small" color="#B45309" />
+              ) : (
+                <Text style={styles.btBannerBtnText}>{t('obd.bt_enable')}</Text>
+              )}
             </TouchableOpacity>
           </View>
         )}

@@ -359,7 +359,15 @@ class BleService {
   async tryEnableBluetooth(): Promise<boolean> {
     if (Platform.OS !== 'android') return false;
     try {
-      await this.manager.enable();
+      // manager.enable() gọi BluetoothAdapter.enable() - Android 13+ CHẶN lệnh này
+      // nhưng một số ROM (MIUI...) không throw ngay mà TREO promise vô thời hạn
+      // thay vì reject, khiến nút "Bật Bluetooth" trông như không phản hồi (phản
+      // hồi 15/7). Ép timeout 2s: quá giờ coi như bị chặn, rơi xuống mở Cài đặt
+      // hệ thống - vẫn đúng hành vi mong muốn cho trường hợp Android 13+.
+      await Promise.race([
+        this.manager.enable(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('ENABLE_TIMEOUT')), 2000)),
+      ]);
       return true;
     } catch {
       return false;
