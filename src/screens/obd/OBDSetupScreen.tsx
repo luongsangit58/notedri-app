@@ -15,6 +15,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import { State as BtState } from 'react-native-ble-plx';
 import { useObdConnection } from '../../hooks/useObd';
 import { bleService } from '../../services/obd/BleService';
 import { getPairingForVehicle, getPairingForDevice } from '../../services/obd/pairedDevices';
@@ -60,6 +61,34 @@ export default function OBDSetupScreen() {
   // Toggle "hiện tất cả thiết bị": một số adapter quảng bá tên lạ (không chứa
   // OBD/ELM/VLINK...) sẽ bị bộ lọc mặc định bỏ qua - bật lên để hiện mọi thiết bị BLE có tên.
   const [showAllDevices, setShowAllDevices] = useState(false);
+
+  // Nhận biết Bluetooth CHỦ ĐỘNG (user phản hồi 15/7): banner "đang tắt" hiện ngay
+  // từ lúc mở màn, không đợi quét lỗi rồi mới báo. BT bật lại (từ banner hoặc từ
+  // Control Center) -> tự quét luôn, user không phải bấm "Quét lại".
+  const [btState, setBtState] = useState<BtState | null>(null);
+  useEffect(() => {
+    return bleService.onBluetoothStateChange((state) => {
+      setBtState((prev) => {
+        if (prev === BtState.PoweredOff && state === BtState.PoweredOn) {
+          startScan(showAllDevices);
+        }
+        return state;
+      });
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showAllDevices]);
+
+  async function handleEnableBluetooth() {
+    // Android <=12: bật thẳng được; Android 13+/iOS: OS chặn -> mở cài đặt hệ thống.
+    const enabled = await bleService.tryEnableBluetooth();
+    if (!enabled) {
+      if (Platform.OS === 'android') {
+        Linking.sendIntent('android.settings.BLUETOOTH_SETTINGS').catch(() => Linking.openSettings());
+      } else {
+        Linking.openSettings();
+      }
+    }
+  }
 
   useEffect(() => {
     if (!isPremium) return;
@@ -164,6 +193,17 @@ export default function OBDSetupScreen() {
       </View>
 
       <ScrollView style={styles.body} contentContainerStyle={{ paddingBottom: 32 }} keyboardShouldPersistTaps="handled">
+        {/* Banner Bluetooth tắt - chủ động từ lúc mở màn, kèm nút bật/mở cài đặt */}
+        {btState === BtState.PoweredOff && (
+          <View style={styles.btBanner}>
+            <FontAwesome5 name="bluetooth-b" size={16} color="#FEF3C7" />
+            <Text style={styles.btBannerText}>{t('obd.bt_off_banner')}</Text>
+            <TouchableOpacity style={styles.btBannerBtn} onPress={handleEnableBluetooth}>
+              <Text style={styles.btBannerBtnText}>{t('obd.bt_enable')}</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Status indicator */}
         <View style={[styles.statusCard, { backgroundColor: colors.card }]}>
           <FontAwesome5
@@ -355,4 +395,16 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   showAllLabel: { fontSize: 14, fontWeight: '500' },
+  btBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: '#B45309',
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 12,
+  },
+  btBannerText: { flex: 1, color: '#FEF3C7', fontSize: 13, fontWeight: '500' },
+  btBannerBtn: { backgroundColor: '#FEF3C7', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 7 },
+  btBannerBtnText: { color: '#B45309', fontSize: 12, fontWeight: '700' },
 });

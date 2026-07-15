@@ -376,6 +376,17 @@ class BleService {
   }
 
   /**
+   * Theo dõi trạng thái Bluetooth (bật/tắt) cho UI - emitCurrent=true phát ngay
+   * trạng thái hiện tại nên màn hình biết BT đang TẮT từ lúc mount, không phải
+   * đợi user bấm quét rồi mới báo lỗi (user phản hồi 15/7: app không nhận biết
+   * được máy đã bật Bluetooth hay chưa để đề xuất bật). Trả về hàm unsubscribe.
+   */
+  onBluetoothStateChange(fn: (state: State) => void): () => void {
+    const subscription = this.manager.onStateChange(fn, true);
+    return () => subscription.remove();
+  }
+
+  /**
    * Lỗi có .code để UI phân biệt: BT_OFF (tắt - bật được), BT_UNSUPPORTED (máy
    * không có BLE), BT_TIMEOUT (state kẹt Unknown/Resetting). Trước đây mọi
    * trường hợp trả CHUNG "Bluetooth không khả dụng" - user không biết là do

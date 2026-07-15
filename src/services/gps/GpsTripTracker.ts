@@ -449,7 +449,13 @@ async function startUpdates(): Promise<void> {
   await Location.startLocationUpdatesAsync(GPS_TASK_NAME, {
     accuracy: Location.Accuracy.High,
     timeInterval: 5_000,
-    distanceInterval: 20,
+    // 0 chứ KHÔNG phải 20 (sửa 15/7): distanceInterval=20 nghĩa là ĐỨNG YÊN thì
+    // không có callback nào chạy -> nhánh IDLE_SHUTDOWN_MS trong handleLocation
+    // không bao giờ được đánh giá -> service + thông báo màn hình khoá treo VĨNH
+    // VIỄN sau khi đóng app (user báo 15/7). Nhận callback mỗi 5s lúc đứng yên
+    // trong tối đa 20 phút rồi tự tắt hẳn vẫn rẻ hơn giữ GPS chạy mãi; nhiễu
+    // toạ độ khi đỗ đã có MIN_SEGMENT_KM chặn từ trước.
+    distanceInterval: 0,
     showsBackgroundLocationIndicator: true,
     foregroundService: {
       notificationTitle: useI18nStore.getState().t('gps_trips.fg_notif_title'),

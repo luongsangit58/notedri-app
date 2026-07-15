@@ -4,7 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { bleService } from '../../services/obd/BleService';
-import { readSnapshot, readExtendedSnapshot, ObdSnapshot, ObdExtendedSnapshot } from '../../services/obd/ObdReader';
+import { readExtendedSnapshot, ObdSnapshot, ObdExtendedSnapshot } from '../../services/obd/ObdReader';
+import { obdLiveMonitor } from '../../services/obd/obdLiveMonitor';
 import { getCachedCapability } from '../../services/obd/capabilityService';
 import AppBgPattern from '../../components/AppBgPattern';
 import { useColors } from '../../utils/theme';
@@ -57,6 +58,17 @@ export default function OBDTechnicalScreen() {
       .catch(() => {});
   }, [vehicleId]);
 
+  // 6 PID lõi lấy từ obdLiveMonitor (vòng poll 3s sẵn chạy ngầm cả phiên BLE) -
+  // KHÔNG tự gọi readSnapshot() nữa: trước 15/7 màn này poll riêng chồng lên vòng
+  // của live monitor, log adapter thật cho thấy cùng 1 PID bị hỏi 2 lần cách 60-90ms
+  // (2 cờ in-flight độc lập không biết nhau) - tốn round-trip BLE vô ích.
+  useEffect(() => {
+    if (!isConnected) return;
+    return obdLiveMonitor.onSnapshot(setSnapshot);
+  }, [isConnected]);
+
+  // Vòng poll riêng CHỈ còn 5 PID mở rộng (fuel trim, áp suất/nhiệt độ khí nạp...)
+  // - thứ duy nhất obdLiveMonitor không đọc.
   useEffect(() => {
     if (!isConnected) return;
     let cancelled = false;
@@ -65,8 +77,8 @@ export default function OBDTechnicalScreen() {
       if (pollInFlight.current) return;
       pollInFlight.current = true;
       try {
-        const [snap, ext] = await Promise.all([readSnapshot(), readExtendedSnapshot()]);
-        if (!cancelled) { setSnapshot(snap); setExtended(ext); }
+        const ext = await readExtendedSnapshot();
+        if (!cancelled) setExtended(ext);
       } catch {
         // Poll lỗi thoáng qua - bỏ qua, vòng sau thử lại
       } finally {
