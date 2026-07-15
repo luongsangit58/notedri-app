@@ -30,12 +30,21 @@ function GuideHero() {
   const t = useT();
 
   if (GUIDE_HERO) {
+    // Image BỌC trong View, không đặt style kích thước thẳng lên Image (sửa 15/7:
+    // ảnh vẫn hiện quá to/cắt cụt góc bước 1 dù đã set aspectRatio+contain). Trên
+    // Android, <Image> không nhận width qua Yoga stretch đáng tin cậy như <View> -
+    // thiếu width tường minh, nó có xu hướng co theo KÍCH THƯỚC GỐC của file
+    // (guide-steps.png 1586x992px thật) rồi bị overflow:hidden cắt còn đúng góc
+    // trên-trái. Để View (stretch chuẩn, giống mọi card khác trong file này) quyết
+    // định kích thước hộp, Image chỉ việc lấp đầy 100% hộp đã có kích thước sẵn.
     return (
-      <Image
-        source={GUIDE_HERO}
-        style={[styles.hero, { backgroundColor: colors.background }]}
-        resizeMode="contain"
-      />
+      <View style={[styles.hero, { backgroundColor: colors.background }]}>
+        <Image
+          source={GUIDE_HERO}
+          style={styles.heroImage}
+          resizeMode="contain"
+        />
+      </View>
     );
   }
 
@@ -144,7 +153,13 @@ export default function ObdConnectionGuide() {
 const styles = StyleSheet.create({
   title: { fontSize: 17, fontWeight: '700', marginBottom: 4 },
   subtitle: { fontSize: 13, lineHeight: 19, marginBottom: 14 },
-  hero: { width: '100%', aspectRatio: 16 / 10, borderRadius: 12, marginBottom: 14 },
+  // KHÔNG khai width: '100%' - ScrollView cha đặt paddingHorizontal qua prop `style` (không
+  // phải contentContainerStyle), trên Android width phần trăm của con có thể tính theo chiều
+  // rộng CHƯA trừ padding đó -> ảnh tràn rộng hơn các card khác cùng cấp. Để mặc định
+  // alignItems:'stretch' của flex tự co giãn đúng bề rộng khả dụng, giống mọi card khác
+  // trong file này (statusCard, stepCard...) không khai width tường minh.
+  hero: { aspectRatio: 16 / 10, borderRadius: 12, marginBottom: 14, overflow: 'hidden' },
+  heroImage: { width: '100%', height: '100%' },
   heroPlaceholder: { alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
   needCard: { borderRadius: 12, padding: 14, marginBottom: 14 },
   needTitle: { fontSize: 13, fontWeight: '700', marginBottom: 12 },
