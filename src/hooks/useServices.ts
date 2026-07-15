@@ -1,6 +1,9 @@
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { servicesApi, ServicePhoto } from '../api/services';
 
+// enabled:!!vehicleId - ServicesScreen chỉ set vehicleId THẬT sau khi useVehicles()
+// load xong, thiếu enabled khiến query bắn ngay với vehicleId=undefined rồi bắn
+// lại khi ID thật về (sửa 15/7, cùng lỗi Home).
 export const useServices = (vehicleId?: number) =>
   useInfiniteQuery({
     queryKey: ['services', vehicleId],
@@ -10,6 +13,7 @@ export const useServices = (vehicleId?: number) =>
       return current_page < last_page ? current_page + 1 : undefined;
     },
     initialPageParam: 1,
+    enabled: !!vehicleId,
   });
 
 export const useCreateService = () => {
