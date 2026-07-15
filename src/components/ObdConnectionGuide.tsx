@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { View, Text, Image, StyleSheet, TouchableOpacity, ScrollView, useWindowDimensions, ImageSourcePropType, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
+import { View, Text, Image, StyleSheet, TouchableOpacity, ScrollView, ImageSourcePropType, NativeSyntheticEvent, NativeScrollEvent, LayoutChangeEvent } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useColors } from '../utils/theme';
 import { useT } from '../i18n';
@@ -77,33 +77,47 @@ function StepSlide({ index, width }: { index: number; width: number }) {
 
 function StepCarousel() {
   const colors = useColors();
-  // Trừ padding ngang màn cha (16*2, xem OBDSetupScreen styles.body) để slide
-  // khớp đúng bề rộng khả dụng, không phải bề rộng toàn màn hình.
-  const { width: screenWidth } = useWindowDimensions();
-  const slideWidth = screenWidth - 32;
+  // ĐO bề rộng THẬT bằng onLayout thay vì đoán qua useWindowDimensions() - padding
+  // (sửa 15/7: đoán sai làm carousel lệch trái + vuốt "next" nhảy thẳng ảnh cuối -
+  // cùng gốc lỗi với ảnh gộp cũ hiện quá to hồi trước: ScrollView cha đặt padding
+  // qua prop `style` chứ không phải `contentContainerStyle`, nên bề rộng nội dung
+  // khả dụng thực tế KHÔNG bằng screenWidth trừ padding tính tay). onLayout luôn
+  // cho đúng con số Yoga đã tính, dùng con số đó cho CẢ bề rộng slide LẪN mốc
+  // snapToInterval/scrollTo - khớp tuyệt đối, pagingEnabled tính đúng trang.
+  const [carouselWidth, setCarouselWidth] = useState(0);
   const [activeIndex, setActiveIndex] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
 
+  function handleLayout(e: LayoutChangeEvent) {
+    const w = e.nativeEvent.layout.width;
+    if (w > 0 && w !== carouselWidth) setCarouselWidth(w);
+  }
+
   function handleScroll(e: NativeSyntheticEvent<NativeScrollEvent>) {
-    const idx = Math.round(e.nativeEvent.contentOffset.x / slideWidth);
+    if (!carouselWidth) return;
+    const idx = Math.round(e.nativeEvent.contentOffset.x / carouselWidth);
     if (idx !== activeIndex) setActiveIndex(idx);
   }
 
   return (
-    <View>
-      <ScrollView
-        ref={scrollRef}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        onScroll={handleScroll}
-        scrollEventThrottle={32}
-        snapToInterval={slideWidth}
-        decelerationRate="fast">
-        {STEPS.map((_, i) => (
-          <StepSlide key={i} index={i} width={slideWidth} />
-        ))}
-      </ScrollView>
+    <View onLayout={handleLayout}>
+      {/* Chưa đo được bề rộng thật (lần render đầu) - không render ScrollView với
+          bề rộng đoán sai, đợi 1 nhịp onLayout rồi mới vẽ để không bao giờ lệch. */}
+      {carouselWidth > 0 && (
+        <ScrollView
+          ref={scrollRef}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onScroll={handleScroll}
+          scrollEventThrottle={32}
+          snapToInterval={carouselWidth}
+          decelerationRate="fast">
+          {STEPS.map((_, i) => (
+            <StepSlide key={i} index={i} width={carouselWidth} />
+          ))}
+        </ScrollView>
+      )}
 
       {/* Chấm chỉ số trang - chạm 1 chấm để nhảy thẳng tới bước đó */}
       <View style={styles.dotsRow}>
@@ -112,7 +126,7 @@ function StepCarousel() {
             key={i}
             hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}
             onPress={() => {
-              scrollRef.current?.scrollTo({ x: i * slideWidth, animated: true });
+              scrollRef.current?.scrollTo({ x: i * carouselWidth, animated: true });
               setActiveIndex(i);
             }}>
             <View
@@ -139,27 +153,19 @@ export default function ObdConnectionGuide() {
       <Text style={[styles.title, { color: colors.text }]}>{t('obd.guide_title')}</Text>
       <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{t('obd.guide_subtitle')}</Text>
 
+      {/* Cần chuẩn bị - RÚT GỌN thành 1 dòng (sửa 15/7: box lớn 3 icon tròn trước
+          đây trùng nội dung với 4 bước carousel bên dưới, chiếm nhiều diện tích
+          không cần thiết - vẫn giữ vì là checklist nhanh hữu ích trước khi bắt
+          đầu, chỉ nén còn 1 dòng text ngắn). */}
+      <View style={styles.needCompactRow}>
+        <FontAwesome5 name="clipboard-check" size={11} color={colors.textSecondary} />
+        <Text style={[styles.needCompactText, { color: colors.textSecondary }]}>
+          {t('obd.guide_need_compact')}
+        </Text>
+      </View>
+
       {/* Carousel vuốt ngang: mỗi bước 1 slide (ảnh + text ngắn ngay dưới) */}
       <StepCarousel />
-
-      {/* Cần chuẩn bị */}
-      <View style={[styles.needCard, { backgroundColor: colors.card }]}>
-        <Text style={[styles.needTitle, { color: colors.text }]}>{t('obd.guide_need_title')}</Text>
-        <View style={styles.needRow}>
-          {[
-            { icon: 'microchip', label: t('obd.guide_need_adapter') },
-            { icon: 'car', label: t('obd.guide_need_engine') },
-            { icon: 'mobile-alt', label: t('obd.guide_need_bt') },
-          ].map((n) => (
-            <View key={n.icon} style={styles.needItem}>
-              <View style={[styles.needIcon, { backgroundColor: colors.primary + '18' }]}>
-                <FontAwesome5 name={n.icon} size={15} color={colors.primary} solid />
-              </View>
-              <Text style={[styles.needLabel, { color: colors.textSecondary }]}>{n.label}</Text>
-            </View>
-          ))}
-        </View>
-      </View>
 
       {/* Thiết bị khuyên dùng */}
       <View style={[styles.recoCard, { backgroundColor: colors.primary + '12', borderColor: colors.primary + '33' }]}>
@@ -201,7 +207,9 @@ export default function ObdConnectionGuide() {
 
 const styles = StyleSheet.create({
   title: { fontSize: 17, fontWeight: '700', marginBottom: 4 },
-  subtitle: { fontSize: 13, lineHeight: 19, marginBottom: 14 },
+  subtitle: { fontSize: 13, lineHeight: 19, marginBottom: 10 },
+  needCompactRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 14 },
+  needCompactText: { flex: 1, fontSize: 12, lineHeight: 16 },
   slideInner: {},
   // Cùng lý do không khai width:'100%' như bản cũ (xem comment lịch sử ở git log) -
   // View cha (slide, đã có width cố định = slideWidth) tự stretch đúng bề rộng.
@@ -211,12 +219,6 @@ const styles = StyleSheet.create({
   slideTextRow: { flexDirection: 'row', gap: 10, alignItems: 'flex-start', paddingRight: 4 },
   dotsRow: { flexDirection: 'row', justifyContent: 'center', gap: 8, marginTop: 12, marginBottom: 14 },
   dot: { width: 7, height: 7, borderRadius: 4 },
-  needCard: { borderRadius: 12, padding: 14, marginBottom: 14 },
-  needTitle: { fontSize: 13, fontWeight: '700', marginBottom: 12 },
-  needRow: { flexDirection: 'row', justifyContent: 'space-around' },
-  needItem: { alignItems: 'center', flex: 1, gap: 6 },
-  needIcon: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
-  needLabel: { fontSize: 11, textAlign: 'center', lineHeight: 15 },
   stepNum: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
   stepNumText: { color: '#fff', fontSize: 13, fontWeight: '800' },
   stepHeader: { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 5, flexWrap: 'wrap' },

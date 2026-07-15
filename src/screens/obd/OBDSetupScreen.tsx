@@ -62,18 +62,18 @@ export default function OBDSetupScreen() {
   // OBD/ELM/VLINK...) sẽ bị bộ lọc mặc định bỏ qua - bật lên để hiện mọi thiết bị BLE có tên.
   const [showAllDevices, setShowAllDevices] = useState(false);
 
-  // Nhận biết Bluetooth CHỦ ĐỘNG (user phản hồi 15/7): banner "đang tắt" hiện ngay
-  // từ lúc mở màn, không đợi quét lỗi rồi mới báo. BT bật lại (từ banner hoặc từ
-  // Control Center) -> tự quét luôn, user không phải bấm "Quét lại".
-  const [btState, setBtState] = useState<BtState | null>(null);
+  // Nhận biết Bluetooth CHỦ ĐỘNG: BT bật lại (từ Cài đặt/Control Center) -> tự
+  // quét luôn, user không phải bấm "Quét lại". Dùng ref (không phải state) - chỉ
+  // để so sánh prev/next, không có UI nào render theo giá trị này nữa (banner
+  // riêng đã gộp vào thông báo lỗi sẵn có bên dưới, phản hồi 15/7: 2 nơi cùng
+  // báo Bluetooth tắt trên 1 màn hình là dư thừa, rối mắt).
+  const prevBtStateRef = React.useRef<BtState | null>(null);
   useEffect(() => {
     return bleService.onBluetoothStateChange((state) => {
-      setBtState((prev) => {
-        if (prev === BtState.PoweredOff && state === BtState.PoweredOn) {
-          startScan(showAllDevices);
-        }
-        return state;
-      });
+      if (prevBtStateRef.current === BtState.PoweredOff && state === BtState.PoweredOn) {
+        startScan(showAllDevices);
+      }
+      prevBtStateRef.current = state;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showAllDevices]);
@@ -203,24 +203,6 @@ export default function OBDSetupScreen() {
       </View>
 
       <ScrollView style={styles.body} contentContainerStyle={{ paddingBottom: 32 }} keyboardShouldPersistTaps="handled">
-        {/* Banner Bluetooth tắt - chủ động từ lúc mở màn, kèm nút bật/mở cài đặt */}
-        {btState === BtState.PoweredOff && (
-          <View style={styles.btBanner}>
-            <FontAwesome5 name="bluetooth-b" size={16} color="#FEF3C7" />
-            <Text style={styles.btBannerText}>{t('obd.bt_off_banner')}</Text>
-            <TouchableOpacity
-              style={[styles.btBannerBtn, enablingBt && { opacity: 0.6 }]}
-              onPress={handleEnableBluetooth}
-              disabled={enablingBt}>
-              {enablingBt ? (
-                <ActivityIndicator size="small" color="#B45309" />
-              ) : (
-                <Text style={styles.btBannerBtnText}>{t('obd.bt_enable')}</Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        )}
-
         {/* Status indicator */}
         <View style={[styles.statusCard, { backgroundColor: colors.card }]}>
           <FontAwesome5
@@ -254,18 +236,20 @@ export default function OBDSetupScreen() {
           {errorMessage && (
             <Text style={styles.errorText}>{errorMessage}</Text>
           )}
-          {/* Bluetooth tắt/chưa sẵn sàng và không tự bật được (Android 13+/iOS) → dẫn thẳng vào cài đặt */}
+          {/* Bluetooth tắt/chưa sẵn sàng - CHỈ 1 nơi hiện thông báo + nút xử lý (phản hồi
+              15/7: trước đây có thêm 1 banner cam riêng ở đầu trang, trùng lặp với đúng
+              khối này khiến trang rối). Bấm thử bật thẳng trước (Android <=12 thành công
+              luôn, khỏi rời màn); không được mới rơi xuống mở Cài đặt hệ thống. */}
           {(errorMessage === t('obd.bluetooth_unavailable') || errorMessage === t('obd.bluetooth_off')) && (
             <TouchableOpacity
-              style={{ marginTop: 8, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8, backgroundColor: '#3B82F6' }}
-              onPress={() => {
-                if (Platform.OS === 'android') {
-                  Linking.sendIntent('android.settings.BLUETOOTH_SETTINGS').catch(() => Linking.openSettings());
-                } else {
-                  Linking.openSettings();
-                }
-              }}>
-              <Text style={{ color: '#fff', fontWeight: '600', fontSize: 13 }}>{t('obd.open_bt_settings')}</Text>
+              style={[styles.btActionBtn, enablingBt && { opacity: 0.6 }]}
+              onPress={handleEnableBluetooth}
+              disabled={enablingBt}>
+              {enablingBt ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={styles.btActionBtnText}>{t('obd.bt_enable')}</Text>
+              )}
             </TouchableOpacity>
           )}
           {/* Từ chối quyền Bluetooth (Android "don't ask again") → chỉ mở lại được
@@ -300,26 +284,6 @@ export default function OBDSetupScreen() {
           </View>
         )}
 
-        {/* Quick actions: vẫn xem lại lịch sử / debug log được ngay trên màn kết nối,
-            kể cả vừa disconnect xong và chưa vào dashboard nữa. */}
-        <View style={{ flexDirection: 'row', gap: 12, marginTop: 16 }}>
-          <TouchableOpacity
-            style={[styles.actionBtn, { borderColor: colors.primary, flex: 1 }]}
-            onPress={() => navigation.navigate('OBDTrips', { vehicleId, vehicleName, consumptionOfficial })}
-            disabled={!vehicleId}
-          >
-            <FontAwesome5 name="route" size={14} color={colors.primary} />
-            <Text style={[styles.actionBtnText, { color: colors.primary }]}>{t('obd.trip_history')}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.actionBtn, { borderColor: colors.primary, flex: 1 }]}
-            onPress={handleExportLog}
-          >
-            <FontAwesome5 name="file-export" size={14} color={colors.primary} />
-            <Text style={[styles.actionBtnText, { color: colors.primary }]}>{t('obd.export_log')}</Text>
-          </TouchableOpacity>
-        </View>
-
         {/* Retry scan */}
         {!isScanning && !isConnecting && (
           <TouchableOpacity
@@ -346,6 +310,27 @@ export default function OBDSetupScreen() {
 
         {/* Hướng dẫn kết nối (component chỉn chu thay card 3 dòng cũ) */}
         <ObdConnectionGuide />
+
+        {/* Quick actions: chuyển xuống cuối trang (phản hồi 15/7) - lịch sử/log gỡ
+            lỗi không phải việc chính khi đang kết nối, để chiếm chỗ đầu trang làm
+            nhiệm vụ chính (quét/kết nối) mất tập trung. */}
+        <View style={{ flexDirection: 'row', gap: 12, marginTop: 20 }}>
+          <TouchableOpacity
+            style={[styles.actionBtn, { borderColor: colors.border, flex: 1 }]}
+            onPress={() => navigation.navigate('OBDTrips', { vehicleId, vehicleName, consumptionOfficial })}
+            disabled={!vehicleId}
+          >
+            <FontAwesome5 name="route" size={13} color={colors.textSecondary} />
+            <Text style={[styles.actionBtnText, { color: colors.textSecondary }]}>{t('obd.trip_history')}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.actionBtn, { borderColor: colors.border, flex: 1 }]}
+            onPress={handleExportLog}
+          >
+            <FontAwesome5 name="file-export" size={13} color={colors.textSecondary} />
+            <Text style={[styles.actionBtnText, { color: colors.textSecondary }]}>{t('obd.export_log')}</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -412,16 +397,6 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   showAllLabel: { fontSize: 14, fontWeight: '500' },
-  btBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    backgroundColor: '#B45309',
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 12,
-  },
-  btBannerText: { flex: 1, color: '#FEF3C7', fontSize: 13, fontWeight: '500' },
-  btBannerBtn: { backgroundColor: '#FEF3C7', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 7 },
-  btBannerBtnText: { color: '#B45309', fontSize: 12, fontWeight: '700' },
+  btActionBtn: { marginTop: 8, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8, backgroundColor: '#3B82F6' },
+  btActionBtnText: { color: '#fff', fontWeight: '600', fontSize: 13 },
 });
