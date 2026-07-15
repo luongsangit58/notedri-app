@@ -42,7 +42,7 @@ describe('groupSessionsByDay - gộp phiên theo ngày lịch cho biểu đồ E
     expect(empty.coolantMax).toBeNull();
     expect(empty.drivingScore).toBeNull();
     expect(empty.dtcCount).toBeNull();
-    expect(empty.engineHours).toBeNull();
+    expect(empty.engineMinutes).toBeNull();
   });
 
   it('ngày có 1 phiên: lấy thẳng số liệu phiên đó', () => {
@@ -57,11 +57,11 @@ describe('groupSessionsByDay - gộp phiên theo ngày lịch cho biểu đồ E
       coolantMax: 88,
       drivingScore: 95,
       dtcCount: 1,
-      engineHours: 0.5,
+      engineMinutes: 30,
     });
   });
 
-  it('ngày có 2+ phiên: voltage/score trung bình, coolant lấy MAX, dtc/giờ máy CỘNG', () => {
+  it('ngày có 2+ phiên: voltage/score trung bình, coolant lấy MAX, dtc/phút máy CỘNG', () => {
     const points = groupSessionsByDay(
       [
         session('2026-07-15T08:00:00', { voltage_avg: 14.0, coolant_max: 84, driving_score: 90, dtc_count: 1, engine_run_seconds: 1800 }),
@@ -74,13 +74,22 @@ describe('groupSessionsByDay - gộp phiên theo ngày lịch cho biểu đồ E
     expect(points[0].coolantMax).toBe(90);
     expect(points[0].drivingScore).toBe(95);
     expect(points[0].dtcCount).toBe(3);
-    expect(points[0].engineHours).toBe(1.5);
+    expect(points[0].engineMinutes).toBe(90);
+  });
+
+  it('phiên rất ngắn (<30s máy chạy) -> làm tròn 0 phút THẬT, khác null (phản hồi 15/7: "0h" trước đây nuốt mất dữ liệu thật do làm tròn theo giờ)', () => {
+    const points = groupSessionsByDay(
+      [session('2026-07-15T08:00:00', { engine_run_seconds: 18 })],
+      1,
+      TODAY,
+    );
+    expect(points[0].engineMinutes).toBe(0);
   });
 
   it('phiên cũ thiếu field optional (driving_score, engine_run_seconds) -> null thay vì NaN', () => {
     const points = groupSessionsByDay([session('2026-07-15T08:00:00')], 1, TODAY);
     expect(points[0].drivingScore).toBeNull();
-    expect(points[0].engineHours).toBeNull();
+    expect(points[0].engineMinutes).toBeNull();
     // dtc_count là field bắt buộc -> 0 thật (xe không lỗi), không phải null
     expect(points[0].dtcCount).toBe(0);
   });

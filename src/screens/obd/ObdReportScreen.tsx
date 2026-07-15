@@ -23,7 +23,7 @@ const TREND_METRICS: Array<{ metric: TrendMetric; labelKey: string; unit: string
   { metric: 'coolantMax', labelKey: 'obd.trend_coolant', unit: '°C' },
   { metric: 'drivingScore', labelKey: 'obd.trend_driving_score', unit: '' },
   { metric: 'dtcCount', labelKey: 'obd.trend_dtc', unit: '' },
-  { metric: 'engineHours', labelKey: 'obd.trend_engine_hours', unit: 'h' },
+  { metric: 'engineMinutes', labelKey: 'obd.trend_engine_hours', unit: ' min' },
 ];
 
 function Vital({ label, value, unit, icon }: { label: string; value: string; unit?: string; icon: string }) {

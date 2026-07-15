@@ -20,8 +20,13 @@ export type DailyTrendPoint = {
   drivingScore: number | null;
   /** Tổng số mã lỗi DTC các phiên trong ngày */
   dtcCount: number | null;
-  /** Tổng giờ máy chạy trong ngày (h, 1 số lẻ) */
-  engineHours: number | null;
+  /** Tổng thời gian máy chạy trong ngày (PHÚT, số nguyên) - không dùng giờ ở
+   * biểu đồ xu hướng: phiên test/đi lại ngắn thường chỉ vài phút, làm tròn 1 số
+   * lẻ theo GIỜ (VD 0.0333h) mất hết độ phân giải, hiển thị "0h" dù có dữ liệu
+   * thật (phản hồi 15/7). Tổng tích luỹ nhiều phiên/bảo dưỡng vẫn tính theo giờ
+   * ở nơi khác (ObdReportScreen tab "Phiên gần nhất") - phút chỉ dùng cho trục
+   * thời gian ngắn (theo ngày) của riêng biểu đồ này. */
+  engineMinutes: number | null;
 };
 
 export type TrendMetric = Exclude<keyof DailyTrendPoint, 'date'>;
@@ -51,7 +56,7 @@ export function groupSessionsByDay(
     const date = today.subtract(i, 'day').format('YYYY-MM-DD');
     const bucket = byDate.get(date);
     if (!bucket) {
-      points.push({ date, voltageAvg: null, coolantMax: null, drivingScore: null, dtcCount: null, engineHours: null });
+      points.push({ date, voltageAvg: null, coolantMax: null, drivingScore: null, dtcCount: null, engineMinutes: null });
       continue;
     }
 
@@ -68,7 +73,7 @@ export function groupSessionsByDay(
       coolantMax: coolants.length ? Math.max(...coolants) : null,
       drivingScore: scores.length ? Math.round(avg(scores)!) : null,
       dtcCount: dtcTotal,
-      engineHours: runSeconds > 0 ? Number((runSeconds / 3600).toFixed(1)) : null,
+      engineMinutes: runSeconds > 0 ? Math.round(runSeconds / 60) : null,
     });
   }
   return points;

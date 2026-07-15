@@ -37,8 +37,13 @@ export default function ObdTrendChart({ points, metric, title, unit = '' }: Prop
   if (!hasData) return null;
 
   // Cao nhất 100%, thấp nhất 15% (vẫn thấy cột, phân biệt được với vạch "không đo").
+  // Chỉ áp dụng cho giá trị > 0 - giá trị 0 THẬT có nhánh vẽ riêng (xem zeroBar
+  // bên dưới, không đi qua hàm này). Sửa lỗi (phản hồi 15/7): khi max===min (VD
+  // chỉ có 1 ngày dữ liệu, hoặc mọi ngày quan sát được đều bằng nhau) code cũ trả
+  // thẳng 100% - khiến 1 điểm dữ liệu duy nhất luôn bị vẽ như đỉnh cao nhất từng
+  // có. Giờ vẽ mức vừa phải (60%) cho trường hợp này thay vì giả vờ đó là kỷ lục.
   const heightPct = (v: number): number =>
-    max === min ? 100 : 15 + ((v - min) / (max - min)) * 85;
+    max === min ? 60 : 15 + ((v - min) / (max - min)) * 85;
 
   const fmt = (v: number): string => `${v}${unit}`;
 
@@ -75,7 +80,12 @@ export default function ObdTrendChart({ points, metric, title, unit = '' }: Prop
                 hitSlop={{ top: 8, bottom: 8 }}
               >
                 {v === null ? (
+                  // Không đo - vạch xám mờ, KHÁC màu với "0 thật" bên dưới để không lẫn.
                   <View style={[styles.noData, { backgroundColor: colors.border }]} />
+                ) : v === 0 ? (
+                  // 0 THẬT (VD "0 mã lỗi" - tin tốt) - cột thấp nhưng CÓ MÀU chính,
+                  // phân biệt rõ với "không đo" (xám mờ) mà không giả vờ cao như đỉnh.
+                  <View style={[styles.zeroBar, { backgroundColor: selected === i ? colors.text : colors.primary }]} />
                 ) : (
                   <View
                     style={[
@@ -117,5 +127,8 @@ const styles = StyleSheet.create({
   slot: { flex: 1, height: '100%', justifyContent: 'flex-end', alignItems: 'center' },
   bar: { alignSelf: 'stretch', borderTopLeftRadius: 3, borderTopRightRadius: 3, maxWidth: 24 },
   noData: { alignSelf: 'stretch', height: 3, borderRadius: 2, opacity: 0.6, maxWidth: 24 },
+  // Cao hơn noData (6 so với 3) + KHÔNG giảm opacity - "đo được, bằng 0" phải rõ
+  // ràng hơn "không đo được gì", dù cả 2 đều là cột thấp gần đáy.
+  zeroBar: { alignSelf: 'stretch', height: 6, borderRadius: 2, maxWidth: 24 },
   dateRow: { flexDirection: 'row', justifyContent: 'space-between', paddingLeft: 36 },
 });
