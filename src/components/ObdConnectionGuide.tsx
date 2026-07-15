@@ -1,22 +1,25 @@
-import React, { useState } from 'react';
-import { View, Text, Image, StyleSheet, TouchableOpacity, ImageSourcePropType } from 'react-native';
+import React, { useRef, useState } from 'react';
+import { View, Text, Image, StyleSheet, TouchableOpacity, ScrollView, useWindowDimensions, ImageSourcePropType, NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useColors } from '../utils/theme';
 import { useT } from '../i18n';
 
 /**
  * Hướng dẫn kết nối OBD2 - bản chỉn chu thay cho card 3 dòng chữ cũ (Sang phản
- * hồi 14/7: quá sơ sài).
+ * hồi 14/7: quá sơ sài). Sửa 15/7 (phản hồi): 1 ảnh gộp 2x2 + 4 khối text xếp
+ * dọc bên dưới làm trang quá dài -> đổi sang carousel vuốt ngang, mỗi bước 1
+ * slide (1 ảnh riêng + text ngắn ngay dưới), có chấm chỉ số trang.
  *
- * HÌNH MINH HOẠ: dùng MỘT ảnh gộp 2x2 (4 ô đánh số 1-4 khớp 4 bước chữ bên
- * dưới) làm hình lớn ở đầu - ChatGPT sinh sẵn kiểu này (xem prompt trong
- * _bmad-output/CHATGPT-PROMPT-OBD-GUIDE-IMAGES-*.md). THÊM HÌNH: lưu ảnh vào
- * assets/obd-guide/guide-steps.png rồi bỏ comment dòng require dưới đây. Chưa có
- * ảnh thì hiện placeholder, KHÔNG vỡ layout hay crash (require tĩnh của RN ném
- * lỗi nếu file thiếu nên phải để trong biến này).
+ * 4 ảnh step-1..4.png được CẮT SẴN từ ảnh gộp cũ (guide-steps.png, ChatGPT sinh,
+ * xem _bmad-output/CHATGPT-PROMPT-OBD-GUIDE-IMAGES-*.md) theo đúng 4 góc phần
+ * tư 793x496 mỗi ảnh - không sinh ảnh mới, giữ nguyên nội dung minh hoạ đã duyệt.
  */
-const GUIDE_HERO: ImageSourcePropType | null =
-  require('../../assets/obd-guide/guide-steps.png');
+const STEP_IMAGES: (ImageSourcePropType | null)[] = [
+  require('../../assets/obd-guide/step-1.png'),
+  require('../../assets/obd-guide/step-2.png'),
+  require('../../assets/obd-guide/step-3.png'),
+  require('../../assets/obd-guide/step-4.png'),
+];
 
 const STEPS: { icon: string }[] = [
   { icon: 'search-location' },
@@ -25,36 +28,102 @@ const STEPS: { icon: string }[] = [
   { icon: 'bluetooth-b' },
 ];
 
-function GuideHero() {
+function StepSlide({ index, width }: { index: number; width: number }) {
   const colors = useColors();
   const t = useT();
+  const image = STEP_IMAGES[index];
+  const step = STEPS[index];
 
-  if (GUIDE_HERO) {
-    // Image BỌC trong View, không đặt style kích thước thẳng lên Image (sửa 15/7:
-    // ảnh vẫn hiện quá to/cắt cụt góc bước 1 dù đã set aspectRatio+contain). Trên
-    // Android, <Image> không nhận width qua Yoga stretch đáng tin cậy như <View> -
-    // thiếu width tường minh, nó có xu hướng co theo KÍCH THƯỚC GỐC của file
-    // (guide-steps.png 1586x992px thật) rồi bị overflow:hidden cắt còn đúng góc
-    // trên-trái. Để View (stretch chuẩn, giống mọi card khác trong file này) quyết
-    // định kích thước hộp, Image chỉ việc lấp đầy 100% hộp đã có kích thước sẵn.
-    return (
-      <View style={[styles.hero, { backgroundColor: colors.background }]}>
-        <Image
-          source={GUIDE_HERO}
-          style={styles.heroImage}
-          resizeMode="contain"
-        />
+  return (
+    <View style={{ width }}>
+      <View style={[styles.slideInner, { paddingHorizontal: 2 }]}>
+        {/* Ảnh riêng của bước này - View bọc ngoài quyết định kích thước (stretch
+            chuẩn), Image chỉ lấp đầy 100% (bài học 15/7: Image không nhận width
+            qua Yoga đáng tin cậy như View, thiếu bọc sẽ co theo kích thước gốc
+            file rồi bị overflow:hidden cắt cụt). */}
+        {image ? (
+          <View style={[styles.hero, { backgroundColor: colors.background }]}>
+            <Image source={image} style={styles.heroImage} resizeMode="contain" />
+          </View>
+        ) : (
+          <View style={[styles.hero, styles.heroPlaceholder, { backgroundColor: colors.background, borderColor: colors.border }]}>
+            <FontAwesome5 name="images" size={22} color={colors.textSecondary} />
+            <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 6 }}>
+              {t('obd.guide_img_pending')}
+            </Text>
+          </View>
+        )}
+
+        <View style={styles.slideTextRow}>
+          <View style={[styles.stepNum, { backgroundColor: colors.primary }]}>
+            <Text style={styles.stepNumText}>{index + 1}</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <View style={styles.stepHeader}>
+              <FontAwesome5 name={step.icon} size={13} color={colors.primary} />
+              <Text style={[styles.stepTitle, { color: colors.text }]}>
+                {t(`obd.guide_s${index + 1}_title` as any)}
+              </Text>
+            </View>
+            <Text style={[styles.stepDesc, { color: colors.textSecondary }]}>
+              {t(`obd.guide_s${index + 1}_desc` as any)}
+            </Text>
+          </View>
+        </View>
       </View>
-    );
+    </View>
+  );
+}
+
+function StepCarousel() {
+  const colors = useColors();
+  // Trừ padding ngang màn cha (16*2, xem OBDSetupScreen styles.body) để slide
+  // khớp đúng bề rộng khả dụng, không phải bề rộng toàn màn hình.
+  const { width: screenWidth } = useWindowDimensions();
+  const slideWidth = screenWidth - 32;
+  const [activeIndex, setActiveIndex] = useState(0);
+  const scrollRef = useRef<ScrollView>(null);
+
+  function handleScroll(e: NativeSyntheticEvent<NativeScrollEvent>) {
+    const idx = Math.round(e.nativeEvent.contentOffset.x / slideWidth);
+    if (idx !== activeIndex) setActiveIndex(idx);
   }
 
-  // Placeholder tới khi có ảnh thật - giữ khung để layout không nhảy khi gắn ảnh
   return (
-    <View style={[styles.hero, styles.heroPlaceholder, { backgroundColor: colors.background, borderColor: colors.border }]}>
-      <FontAwesome5 name="images" size={22} color={colors.textSecondary} />
-      <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 6 }}>
-        {t('obd.guide_img_pending')}
-      </Text>
+    <View>
+      <ScrollView
+        ref={scrollRef}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        onScroll={handleScroll}
+        scrollEventThrottle={32}
+        snapToInterval={slideWidth}
+        decelerationRate="fast">
+        {STEPS.map((_, i) => (
+          <StepSlide key={i} index={i} width={slideWidth} />
+        ))}
+      </ScrollView>
+
+      {/* Chấm chỉ số trang - chạm 1 chấm để nhảy thẳng tới bước đó */}
+      <View style={styles.dotsRow}>
+        {STEPS.map((_, i) => (
+          <TouchableOpacity
+            key={i}
+            hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}
+            onPress={() => {
+              scrollRef.current?.scrollTo({ x: i * slideWidth, animated: true });
+              setActiveIndex(i);
+            }}>
+            <View
+              style={[
+                styles.dot,
+                { backgroundColor: i === activeIndex ? colors.primary : colors.border },
+              ]}
+            />
+          </TouchableOpacity>
+        ))}
+      </View>
     </View>
   );
 }
@@ -70,8 +139,8 @@ export default function ObdConnectionGuide() {
       <Text style={[styles.title, { color: colors.text }]}>{t('obd.guide_title')}</Text>
       <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{t('obd.guide_subtitle')}</Text>
 
-      {/* Ảnh minh hoạ gộp 4 bước */}
-      <GuideHero />
+      {/* Carousel vuốt ngang: mỗi bước 1 slide (ảnh + text ngắn ngay dưới) */}
+      <StepCarousel />
 
       {/* Cần chuẩn bị */}
       <View style={[styles.needCard, { backgroundColor: colors.card }]}>
@@ -91,26 +160,6 @@ export default function ObdConnectionGuide() {
           ))}
         </View>
       </View>
-
-      {/* Các bước (số 1-4 khớp 4 ô trong ảnh gộp phía trên) */}
-      {STEPS.map((step, i) => (
-        <View key={i} style={[styles.stepCard, { backgroundColor: colors.card }]}>
-          <View style={[styles.stepNum, { backgroundColor: colors.primary }]}>
-            <Text style={styles.stepNumText}>{i + 1}</Text>
-          </View>
-          <View style={{ flex: 1 }}>
-            <View style={styles.stepHeader}>
-              <FontAwesome5 name={step.icon} size={13} color={colors.primary} />
-              <Text style={[styles.stepTitle, { color: colors.text }]}>
-                {t(`obd.guide_s${i + 1}_title` as any)}
-              </Text>
-            </View>
-            <Text style={[styles.stepDesc, { color: colors.textSecondary }]}>
-              {t(`obd.guide_s${i + 1}_desc` as any)}
-            </Text>
-          </View>
-        </View>
-      ))}
 
       {/* Thiết bị khuyên dùng */}
       <View style={[styles.recoCard, { backgroundColor: colors.primary + '12', borderColor: colors.primary + '33' }]}>
@@ -153,26 +202,24 @@ export default function ObdConnectionGuide() {
 const styles = StyleSheet.create({
   title: { fontSize: 17, fontWeight: '700', marginBottom: 4 },
   subtitle: { fontSize: 13, lineHeight: 19, marginBottom: 14 },
-  // KHÔNG khai width: '100%' - ScrollView cha đặt paddingHorizontal qua prop `style` (không
-  // phải contentContainerStyle), trên Android width phần trăm của con có thể tính theo chiều
-  // rộng CHƯA trừ padding đó -> ảnh tràn rộng hơn các card khác cùng cấp. Để mặc định
-  // alignItems:'stretch' của flex tự co giãn đúng bề rộng khả dụng, giống mọi card khác
-  // trong file này (statusCard, stepCard...) không khai width tường minh.
-  hero: { aspectRatio: 16 / 10, borderRadius: 12, marginBottom: 14, overflow: 'hidden' },
+  slideInner: {},
+  // Cùng lý do không khai width:'100%' như bản cũ (xem comment lịch sử ở git log) -
+  // View cha (slide, đã có width cố định = slideWidth) tự stretch đúng bề rộng.
+  hero: { aspectRatio: 16 / 10, borderRadius: 12, marginBottom: 10, overflow: 'hidden' },
   heroImage: { width: '100%', height: '100%' },
   heroPlaceholder: { alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+  slideTextRow: { flexDirection: 'row', gap: 10, alignItems: 'flex-start', paddingRight: 4 },
+  dotsRow: { flexDirection: 'row', justifyContent: 'center', gap: 8, marginTop: 12, marginBottom: 14 },
+  dot: { width: 7, height: 7, borderRadius: 4 },
   needCard: { borderRadius: 12, padding: 14, marginBottom: 14 },
   needTitle: { fontSize: 13, fontWeight: '700', marginBottom: 12 },
   needRow: { flexDirection: 'row', justifyContent: 'space-around' },
   needItem: { alignItems: 'center', flex: 1, gap: 6 },
   needIcon: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   needLabel: { fontSize: 11, textAlign: 'center', lineHeight: 15 },
-  stepCard: {
-    flexDirection: 'row', gap: 10, borderRadius: 12, padding: 14, marginBottom: 10, alignItems: 'flex-start',
-  },
   stepNum: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
   stepNumText: { color: '#fff', fontSize: 13, fontWeight: '800' },
-  stepHeader: { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 5 },
+  stepHeader: { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 5, flexWrap: 'wrap' },
   stepTitle: { flex: 1, fontSize: 14, fontWeight: '700' },
   stepDesc: { fontSize: 13, lineHeight: 20 },
   recoCard: { borderRadius: 12, padding: 14, marginBottom: 12, borderWidth: 1 },
