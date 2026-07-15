@@ -36,6 +36,12 @@ jest.mock('../BleService', () => ({
 jest.mock('../ObdReader', () => ({
   readSnapshot: async () => (mockAllNull ? allNullSnapshot : validSnapshot),
   readDtcCodes: async () => [],
+  readPendingDtcCodes: async () => [],
+  readPermanentDtcCodes: async () => [],
+  readFreezeFrame: async () => ({
+    rpm: null, speedKmh: null, coolantTempC: null,
+    engineLoadPct: null, fuelTrimShortB1Pct: null, controlModuleVoltage: null,
+  }),
   reinitElm327AfterReconnect: async () => {},
 }));
 

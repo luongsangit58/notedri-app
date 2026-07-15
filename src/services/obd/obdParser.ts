@@ -143,26 +143,28 @@ export function parseVin(response: string): string | null {
 }
 
 /**
- * Parse mã lỗi từ response mode 03 (CAN - ISO 15765-4, protocol xe đã xác nhận
- * qua ATDPN=A7): "43" + 1 byte SỐ MÃ + từng cặp 2 byte/mã. Xe khoẻ: "4300".
- * Nhiều mã (>2) sẽ về dạng multi-frame như VIN - responseHex ghép sẵn.
- * LƯU Ý: format này viết theo chuẩn SAE J1979 CAN + transport đã đo thật;
- * chưa có mẫu mode 03 thật từ xe (xe khoẻ) - fixture sau sẽ xác nhận "4300".
+ * Parse mã lỗi từ response mode 03/07/0A (CAN - ISO 15765-4, protocol xe đã xác
+ * nhận qua ATDPN=A7): "<echo mode+40>" + từng cặp 2 byte/mã, KHÔNG byte đếm.
+ * Xe khoẻ: "4300". Nhiều mã (>2) sẽ về dạng multi-frame như VIN - responseHex
+ * ghép sẵn. LƯU Ý: format này viết theo chuẩn SAE J1979 CAN + transport đã đo
+ * thật cho mode 03; mode 07 (pending, echo "47")/0A (permanent, echo "4A")
+ * dùng CHUNG cấu trúc payload theo chuẩn (chỉ khác byte echo) - chưa có mẫu
+ * thật từ xe cho 2 mode này, cần fixture xác nhận khi có DTC thật để kiểm lại.
  */
-export function parseDtcCodes(response: string): string[] {
+export function parseDtcCodes(response: string, responsePrefix: string = '43'): string[] {
   if (isNoData(response)) return [];
 
   const hex = responseHex(response);
   if (!hex) return [];
 
-  const idx = hex.indexOf('43');
+  const idx = hex.indexOf(responsePrefix);
   if (idx === -1) return [];
 
   // Chuẩn SAE J1979 (xác nhận qua tài liệu công khai 14/7, sửa giả định "byte
-  // đếm" ban đầu CHƯA kiểm chứng): KHÔNG có byte đếm sau "43" - chỉ là các cặp
-  // 2-byte nối tiếp (mỗi cặp = 1 mã), đệm 00 00 khi thiếu, tối đa 3 mã/khung
-  // 7-byte trên K-line; CAN dùng multi-frame ISO-TP (responseHex đã ghép sẵn).
-  const codesHex = hex.slice(idx + 2);
+  // đếm" ban đầu CHƯA kiểm chứng): KHÔNG có byte đếm sau byte echo mode - chỉ
+  // là các cặp 2-byte nối tiếp (mỗi cặp = 1 mã), đệm 00 00 khi thiếu, tối đa 3
+  // mã/khung 7-byte trên K-line; CAN dùng multi-frame ISO-TP (responseHex đã ghép sẵn).
+  const codesHex = hex.slice(idx + responsePrefix.length);
 
   const codes: string[] = [];
   for (let i = 0; i + 3 < codesHex.length; i += 4) {

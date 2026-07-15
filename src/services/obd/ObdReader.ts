@@ -1,5 +1,6 @@
 import { bleService } from './BleService';
-import { extractPayload, isNoData, isPlausibleValue, parseDtcCodes } from './obdParser';
+import { extractPayload, isNoData, isPlausibleValue, parseDtcCodes, PID_REGISTRY } from './obdParser';
+import { readCurrentVin } from './capabilityService';
 
 // Capability-aware polling (ý #18): PID xe không hỗ trợ (Honda City: 2F fuel,
 // 5C oil temp đều NO DATA - fixture #2) bị bỏ qua ngay, không tốn round-trip BLE.
@@ -77,13 +78,17 @@ export async function initializeElm327(): Promise<InitResult> {
     const [rpm, speed] = await Promise.all([readRpm(), readSpeed()]);
     const dataAvailable = rpm !== null || speed !== null;
 
-    // Dò best-effort CHỈ ĐỂ GHI LOG PHIÊN: phiên bản adapter, protocol, VIN thô
-    // (mode 09 multi-frame chưa có parser - chờ mẫu thật từ log để viết chính xác).
+    // Dò best-effort CHỈ ĐỂ GHI LOG PHIÊN: phiên bản adapter, protocol.
     // Bitmap 0100/0120/... KHÔNG probe ở đây nữa - capabilityService dò + parse thật.
     if (dataAvailable) {
-      for (const probe of ['ATI', 'ATDPN', '0902']) {
+      for (const probe of ['ATI', 'ATDPN']) {
         await bleService.sendCommand(probe, 3000).catch(() => {});
       }
+      // VIN qua readCurrentVin() (không phải probe thô) để dùng chung cache phiên
+      // (sửa 15/7) - loadCapability() gọi readCurrentVin() ngay sau connect() sẽ
+      // THẤY VIN đã đọc ở đây, khỏi gửi 0902 lần 2 (fixture #5: 0902 từng bị gửi
+      // 3 lần trong 1.2s đầu phiên).
+      await readCurrentVin().catch(() => {});
     }
 
     if (!dataAvailable) {
@@ -259,4 +264,81 @@ export async function readDtcCodes(): Promise<DtcCode[]> {
   } catch {
     return [];
   }
+}
+
+/**
+ * Mode 07 - Pending DTC: lỗi ECU đang GHI NHẬN nhưng chưa đủ chu kỳ lái để xác
+ * nhận thành mã lỗi chính thức (mode 03). Ý nghĩa khác hẳn DTC thật - KHÔNG được
+ * gộp chung/hiển thị như lỗi chính thức (dễ báo động giả), chỉ mang tính "đang
+ * hình thành". Cùng cấu trúc payload mode 03, khác byte echo (07 -> 47).
+ */
+export async function readPendingDtcCodes(): Promise<DtcCode[]> {
+  try {
+    const response = await bleService.sendCommand('07', 5000);
+    return parseDtcCodes(response, '47').map((code) => ({ code, description: null }));
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Mode 0A - Permanent DTC: mã lỗi ĐÃ XÁC NHẬN mà không thể xoá bằng cách ngắt
+ * ắc-quy/xoá bằng scan tool thông thường (chỉ tự xoá khi ECU xác nhận đã sửa
+ * qua vài chu kỳ lái) - độ tin cậy cao hơn mode 03, gần như không đổi trong 1
+ * phiên nên KHÔNG cần đọc lặp lại như mode 03/07 (xem obdLiveMonitor.ts).
+ */
+export async function readPermanentDtcCodes(): Promise<DtcCode[]> {
+  try {
+    const response = await bleService.sendCommand('0A', 5000);
+    return parseDtcCodes(response, '4A').map((code) => ({ code, description: null }));
+  } catch {
+    return [];
+  }
+}
+
+export type FreezeFrameSnapshot = {
+  rpm: number | null;
+  speedKmh: number | null;
+  coolantTempC: number | null;
+  engineLoadPct: number | null;
+  fuelTrimShortB1Pct: number | null;
+  controlModuleVoltage: number | null;
+};
+
+// Mode 02 - Freeze Frame: ảnh chụp thông số ECU tại ĐÚNG thời điểm mã lỗi mode
+// 03 được ghi nhận (frame 0, chuẩn ELM327 "02<PID>00"). Response cùng định
+// dạng mode 01 (PID_REGISTRY.decode tái dùng được), chỉ khác byte echo (41->42)
+// - extractPayload() đã nhận mode làm tham số nên không cần sửa parser.
+async function readFreezeFramePid(pid: string): Promise<number[] | null> {
+  if (activePidWhitelist && !activePidWhitelist.has(pid.toUpperCase())) return null;
+  try {
+    const response = await bleService.sendCommand(`02${pid}00`, 4000);
+    if (isNoData(response) || response.includes('ERROR') || response.includes('?')) return null;
+    return extractPayload(response, '02', pid);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Chỉ gọi khi mode 03 vừa phát hiện DTC MỚI trong phiên (xem obdLiveMonitor.ts)
+ * - không đọc mỗi vòng poll như snapshot thường, tốn round-trip vô ích cho 1
+ * dữ liệu chỉ có giá trị đúng lúc lỗi xảy ra.
+ */
+export async function readFreezeFrame(): Promise<FreezeFrameSnapshot> {
+  const rpmBytes = await readFreezeFramePid('0C');
+  const speedBytes = await readFreezeFramePid('0D');
+  const coolantBytes = await readFreezeFramePid('05');
+  const loadBytes = await readFreezeFramePid('04');
+  const trimBytes = await readFreezeFramePid('06');
+  const voltBytes = await readFreezeFramePid('42');
+
+  return {
+    rpm: rpmBytes ? PID_REGISTRY['0C'].decode(rpmBytes) : null,
+    speedKmh: speedBytes ? PID_REGISTRY['0D'].decode(speedBytes) : null,
+    coolantTempC: coolantBytes ? PID_REGISTRY['05'].decode(coolantBytes) : null,
+    engineLoadPct: loadBytes ? PID_REGISTRY['04'].decode(loadBytes) : null,
+    fuelTrimShortB1Pct: trimBytes ? PID_REGISTRY['06'].decode(trimBytes) : null,
+    controlModuleVoltage: voltBytes ? PID_REGISTRY['42'].decode(voltBytes) : null,
+  };
 }

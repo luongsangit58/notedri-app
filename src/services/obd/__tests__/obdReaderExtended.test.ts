@@ -16,6 +16,9 @@ const responses: Record<string, string> = {
 jest.mock('../BleService', () => ({
   bleService: {
     sendCommand: (cmd: string) => Promise.resolve(responses[cmd] ?? 'NO DATA'),
+    // ObdReader.ts import capabilityService.ts (cache VIN theo phiên, 15/7) -
+    // đăng ký listener ở module scope khi import.
+    addDisconnectListener: () => () => {},
   },
 }));
 

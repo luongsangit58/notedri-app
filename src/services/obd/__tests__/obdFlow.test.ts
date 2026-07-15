@@ -13,6 +13,9 @@ const mockEmulator = new Elm327Emulator(fixture.entries as FixtureEntry[]);
 jest.mock('../BleService', () => ({
   bleService: {
     sendCommand: (cmd: string, timeoutMs?: number) => mockEmulator.sendCommand(cmd, timeoutMs),
+    // ObdReader.ts import capabilityService.ts (cache VIN theo phiên, 15/7) -
+    // đăng ký listener ở module scope khi import.
+    addDisconnectListener: () => () => {},
   },
 }));
 

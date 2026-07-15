@@ -140,6 +140,29 @@ describe('parseDtcCodes - mode 03 chuẩn SAE J1979 (kiểm chứng lại 14/7 q
   });
 });
 
+describe('parseDtcCodes - mode 07 (Pending) và 0A (Permanent), 15/7 - cùng payload mode 03, khác byte echo', () => {
+  it('mode 07: 470171 → P0171 (echo 47, không phải 43)', () => {
+    expect(parseDtcCodes('470171', '47')).toEqual(['P0171']);
+  });
+
+  it('mode 07 xe khoẻ: 4700 → không mã nào', () => {
+    expect(parseDtcCodes('4700', '47')).toEqual([]);
+  });
+
+  it('mode 0A: 4A017104200000 → P0171, P0420 (echo 4A)', () => {
+    expect(parseDtcCodes('4A017104200000', '4A')).toEqual(['P0171', 'P0420']);
+  });
+
+  it('không truyền responsePrefix vẫn mặc định mode 03 (không phá hành vi cũ)', () => {
+    expect(parseDtcCodes('4300')).toEqual([]);
+    expect(parseDtcCodes('434035')).toEqual(['C0035']);
+  });
+
+  it('nhầm prefix (đọc 47 nhưng parse theo 43) → không tìm thấy mã nào, không crash', () => {
+    expect(parseDtcCodes('470171', '43')).toEqual([]);
+  });
+});
+
 describe('parseSupportedPids - bitmap THẬT từ fixture #3 (Honda City)', () => {
   it('trang 0100 thật: có 0C/0D/04/05/11, có bit trang sau (20)', () => {
     const pids = parseSupportedPids('4100BC3EA803', 0x00);

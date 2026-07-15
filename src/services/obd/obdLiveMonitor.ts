@@ -4,9 +4,13 @@ import { enqueueObdSession, flushPendingObdSessions } from './ObdSessionSyncQueu
 import {
   readSnapshot,
   readDtcCodes,
+  readPendingDtcCodes,
+  readPermanentDtcCodes,
+  readFreezeFrame,
   reinitElm327AfterReconnect,
   ObdSnapshot,
   DtcCode,
+  FreezeFrameSnapshot,
 } from './ObdReader';
 import { evaluate, Finding } from './diagnosticEngine';
 import { getActiveRules, refreshRulesFromServer } from './diagnosticRulesStore';
@@ -26,6 +30,11 @@ import { useObdSessionStore } from '../../store/obdSessionStore';
 
 const POLL_INTERVAL_MS = 3000;
 const DTC_EVERY_N_POLLS = 100; // ~5 phút
+
+// Trạng thái phiên (đề xuất 15/7, bản RÚT GỌN - không dựng state machine đầy đủ
+// như GPS đã có riêng cho "đang lái", chỉ suy trực tiếp từ rpm/speed mỗi vòng
+// poll để Knowledge Engine dùng sau này qua buildSessionSummary()).
+export type SessionPhase = 'engine_off' | 'idle' | 'driving';
 
 // Khoảng cách giữa 2 lần poll vượt xa nhịp 3s bình thường = JS timer bị OS đóng
 // băng khi app vào nền (bài học fixture #5: gap 144s/1700s/980s không hề bị BLE
@@ -86,6 +95,20 @@ let harshAccelCount = 0;
 // nổ máy - thời gian BLE khiến rule báo nhầm ngay sau đề máy nguội).
 let engineRunSeconds = 0;
 
+// Giây "đang lái" (rpm>0 VÀ speed>0) - phần con của engineRunSeconds; idle suy
+// ra được ở tầng đọc (engineRunSeconds - drivingSeconds), không cần đếm riêng.
+let drivingSeconds = 0;
+let currentPhase: SessionPhase = 'engine_off';
+
+// Pending DTC (mode 07): đếm mã đang hình thành trong phiên, KHÔNG cộng vào
+// sessionDtcCount/reportDtc - ý nghĩa khác DTC đã xác nhận, tránh báo nhầm.
+let sessionPendingDtcCount = 0;
+// Permanent DTC (mode 0A): gần như tĩnh trong 1 phiên, chỉ đọc 1 lần.
+let sessionPermanentDtcCount = 0;
+let permanentDtcChecked = false;
+// Freeze Frame (mode 02): chụp 1 lần cho mã DTC MỚI đầu tiên trong phiên.
+let freezeFrame: FreezeFrameSnapshot | null = null;
+
 function feed(agg: Agg, v: number | null): void {
   if (v === null) return;
   agg.sum += v; agg.n += 1;
@@ -98,7 +121,9 @@ function resetSessionStats(): void {
   aggRpmAll = newAgg(); aggIdleThrottle = newAgg();
   maxSpeed = null; sessionDtcCount = 0; sessionFindingIds = new Set();
   lastSpeedSample = null; harshBrakeCount = 0; harshAccelCount = 0;
-  engineRunSeconds = 0;
+  engineRunSeconds = 0; drivingSeconds = 0; currentPhase = 'engine_off';
+  sessionPendingDtcCount = 0; sessionPermanentDtcCount = 0; permanentDtcChecked = false;
+  freezeFrame = null;
   lastPollAt = null; backgroundGapCount = 0; backgroundGapSecondsTotal = 0;
   consecutiveAllNullPolls = 0; vehicleUnresponsiveNotified = false;
 }
@@ -122,6 +147,11 @@ export function buildSessionSummary(): Record<string, unknown> | null {
     dtc_count: sessionDtcCount,
     findings: [...sessionFindingIds],
     engine_run_seconds: engineRunSeconds,
+    driving_seconds: drivingSeconds,
+    session_phase: currentPhase,
+    pending_dtc_count: sessionPendingDtcCount,
+    permanent_dtc_count: sessionPermanentDtcCount,
+    freeze_frame: freezeFrame,
     harsh_brake_count: harshBrakeCount,
     harsh_accel_count: harshAccelCount,
     // Số lần / tổng giây "khoảng trống nền" (fixture #5) trong phiên - phân biệt
@@ -137,6 +167,8 @@ export function buildSessionSummary(): Record<string, unknown> | null {
 
 const snapshotListeners = new Set<(s: ObdSnapshot) => void>();
 const dtcListeners = new Set<(codes: DtcCode[]) => void>();
+const pendingDtcListeners = new Set<(codes: DtcCode[]) => void>();
+const permanentDtcListeners = new Set<(codes: DtcCode[]) => void>();
 const findingListeners = new Set<(findings: Finding[]) => void>();
 const vehicleUnresponsiveListeners = new Set<() => void>();
 
@@ -199,7 +231,18 @@ async function poll(): Promise<void> {
     feed(aggLoad, snapshot.engineLoadPct);
     feed(aggRpmAll, snapshot.rpm);
     // Máy đang chạy (rpm>0) -> cộng dồn thời gian máy chạy cho ngưỡng rule.
-    if (snapshot.rpm !== null && snapshot.rpm > 0) engineRunSeconds += POLL_INTERVAL_MS / 1000;
+    // Trạng thái phiên: suy trực tiếp từ rpm/speed mỗi vòng poll (xem SessionPhase).
+    if (snapshot.rpm !== null && snapshot.rpm > 0) {
+      engineRunSeconds += POLL_INTERVAL_MS / 1000;
+      if (snapshot.speedKmh !== null && snapshot.speedKmh > 0) {
+        drivingSeconds += POLL_INTERVAL_MS / 1000;
+        currentPhase = 'driving';
+      } else {
+        currentPhase = 'idle';
+      }
+    } else {
+      currentPhase = 'engine_off';
+    }
     if (snapshot.speedKmh !== null) {
       if (maxSpeed === null || snapshot.speedKmh > maxSpeed) maxSpeed = snapshot.speedKmh;
       if (snapshot.speedKmh === 0) {
@@ -238,9 +281,36 @@ async function poll(): Promise<void> {
         dtcListeners.forEach((fn) => fn(codes));
         // Báo server các mã CHƯA báo trong phiên này (fire-and-forget)
         const fresh = codes.filter((c) => !reportedCodes.has(c.code));
+        // Freeze Frame (mode 02): chụp NGAY thông số ECU tại thời điểm phát hiện
+        // mã MỚI - chỉ 1 lần/phiên (mã đầu tiên đáng giá nhất, không đọc lại
+        // cho mã mới phát hiện sau đó cùng phiên).
+        if (fresh.length > 0 && !freezeFrame) {
+          freezeFrame = await readFreezeFrame();
+        }
         if (fresh.length > 0 && activeVehicleId) {
           fresh.forEach((c) => reportedCodes.add(c.code));
           obdApi.reportDtc(activeVehicleId, fresh).catch(() => {});
+        }
+      }
+
+      // Mode 07 - Pending DTC: cùng nhịp mode 03 (đang hình thành, đổi liên
+      // tục) nhưng KHÔNG báo server/không gộp dtc_count chính thức - ý nghĩa
+      // khác DTC đã xác nhận, tránh báo động giả ("Phát hiện lỗi đang hình thành").
+      const pending = await readPendingDtcCodes();
+      if (pending.length > 0) {
+        sessionPendingDtcCount = pending.length;
+        pendingDtcListeners.forEach((fn) => fn(pending));
+      }
+
+      // Mode 0A - Permanent DTC: gần như tĩnh trong 1 phiên (chỉ tự xoá sau
+      // nhiều chu kỳ lái đạt chuẩn) - chỉ cần đọc 1 LẦN, không lặp mỗi 5 phút
+      // như mode 03/07 (đỡ round-trip BLE vô ích cho dữ liệu hiếm khi đổi).
+      if (!permanentDtcChecked) {
+        permanentDtcChecked = true;
+        const permanent = await readPermanentDtcCodes();
+        if (permanent.length > 0) {
+          sessionPermanentDtcCount = permanent.length;
+          permanentDtcListeners.forEach((fn) => fn(permanent));
         }
       }
     }
@@ -298,6 +368,22 @@ export const obdLiveMonitor = {
   onDtcFound(fn: (codes: DtcCode[]) => void): () => void {
     dtcListeners.add(fn);
     return () => dtcListeners.delete(fn);
+  },
+
+  /** Mode 07 - lỗi đang hình thành, CHƯA phải DTC chính thức - hiển thị tách biệt. */
+  onPendingDtcFound(fn: (codes: DtcCode[]) => void): () => void {
+    pendingDtcListeners.add(fn);
+    return () => pendingDtcListeners.delete(fn);
+  },
+
+  /** Mode 0A - DTC không xoá được bằng ngắt ắc-quy/xoá tay thông thường. */
+  onPermanentDtcFound(fn: (codes: DtcCode[]) => void): () => void {
+    permanentDtcListeners.add(fn);
+    return () => permanentDtcListeners.delete(fn);
+  },
+
+  getSessionPhase(): SessionPhase {
+    return currentPhase;
   },
 
   onFindings(fn: (findings: Finding[]) => void): () => void {
