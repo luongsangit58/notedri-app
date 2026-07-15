@@ -178,7 +178,7 @@ export default function HomeScreen() {
 
   // Dashboard data for quick stats strip
   // Note: useDashboard returns r.data (Axios), but the actual fields are at r.data.data
-  const { data: dashRaw, refetch: refetchDash } = useDashboard(vehicleId);
+  const { data: dashRaw, refetch: refetchDash } = useDashboard(vehicleId, { enabled: !!vehicleId });
   const dash: any = (dashRaw as any)?.data ?? {};
   const thisMonth = dash.this_month;
   const allTime = dash.all_time;
@@ -199,9 +199,14 @@ export default function HomeScreen() {
 
   const onRefresh = () => { refetchVehicles(); refetchRem(); refetchDash(); };
 
-  // Chống "giật gây bấm nhầm": chờ dữ liệu chính (xe + lời nhắc quyết định banner NỔI BẬT)
-  // load xong mới dựng dashboard, tránh các section pop-in đẩy nút xuống lúc user đang bấm.
-  const booting = vehiclesLoading || (!!vehicleId && remRaw === undefined && remFetching);
+  // Chỉ chặn màn hình chờ DUY NHẤT /vehicles (dữ liệu tối thiểu để dựng UI: chọn
+  // xe, các thẻ CTA chính). Trước đây còn đợi CẢ /reminders xong mới bỏ spinner -
+  // 2 request chạy nối đuôi (reminders cần vehicleId lấy từ vehicles) cộng dồn
+  // thời gian chờ thay vì song song, "lâu lâu" (mạng yếu/cache hết hạn sau 5 phút
+  // không mở app) có thể treo spinner toàn màn hình gần 1-2 phút (phản hồi 15/7).
+  // Đánh đổi: banner "Nổi bật" + khối "Sắp tới" (phụ thuộc reminders) giờ pop-in
+  // sau khi vehicles đã hiện - chấp nhận được, tốt hơn nhiều so với treo cả màn.
+  const booting = vehiclesLoading;
   if (booting) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
