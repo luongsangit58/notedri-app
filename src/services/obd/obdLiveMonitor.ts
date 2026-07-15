@@ -1,5 +1,6 @@
 import { obdApi } from '../../api/obd';
 import { bleService } from './BleService';
+import { enqueueObdSession, flushPendingObdSessions } from './ObdSessionSyncQueue';
 import {
   readSnapshot,
   readDtcCodes,
@@ -324,13 +325,17 @@ bleService.addDisconnectListener(() => {
   const info = bleService.consumeSessionInfo();
   const vehicleId = useObdSessionStore.getState().vehicleId;
   if (info && vehicleId) {
-    obdApi.reportSession({
+    // E2: enqueue local TRƯỚC rồi mới thử gửi - rút cáp lúc mất mạng không còn mất
+    // phiên (trước đây fire-and-forget thẳng). Flush lần sau: connect() trong useObd.
+    enqueueObdSession({
       vehicle_id: vehicleId,
       device_name: info.deviceName,
       connected_at: new Date(info.startedAt).toISOString(),
       duration_seconds: Math.max(0, Math.round((Date.now() - info.startedAt) / 1000)),
       summary: buildSessionSummary(),
-    }).catch(() => {});
+    })
+      .then(() => flushPendingObdSessions())
+      .catch(() => {});
   }
 
   obdLiveMonitor.stop();

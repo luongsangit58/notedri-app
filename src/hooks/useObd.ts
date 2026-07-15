@@ -5,6 +5,7 @@ import { bleService, ConnectionState, ObdDevice } from '../services/obd/BleServi
 import { initializeElm327, readSnapshot, setActivePidWhitelist, ObdSnapshot } from '../services/obd/ObdReader';
 import { getCachedCapability, discoverCapability, clearCapability, readCurrentVin, VehicleCapability } from '../services/obd/capabilityService';
 import { obdLiveMonitor } from '../services/obd/obdLiveMonitor';
+import { flushPendingObdSessions } from '../services/obd/ObdSessionSyncQueue';
 import { Finding } from '../services/obd/diagnosticEngine';
 import { savePairing } from '../services/obd/pairedDevices';
 import { useAuthStore } from '../store/authStore';
@@ -233,6 +234,11 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
 
       // Live monitor sống theo phiên kết nối (thay trip manager)
       obdLiveMonitor.start(vehicleId);
+
+      // E2: đẩy nốt phiên còn tồn trong hàng đợi (rút cáp lúc offline lần trước).
+      // Điểm nghiệp vụ chắc chắn có mạng-hoạt-động-lại gần nhất, mirror cách GPS
+      // flush trong GpsTripTracker sau khi chốt chuyến.
+      flushPendingObdSessions().catch(() => {});
 
       const snap = await readSnapshot();
       setLiveSnapshot(snap);

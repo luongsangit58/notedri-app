@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
@@ -9,9 +9,22 @@ import { obdApi } from '../../api/obd';
 import { evaluateSession } from '../../services/obd/sessionReport';
 import { findingCostLabel } from '../../services/obd/findingCost';
 import { refreshRulesFromServer } from '../../services/obd/diagnosticRulesStore';
+import { groupSessionsByDay, TrendMetric } from '../../services/obd/sessionTrend';
+import ObdTrendChart from './ObdTrendChart';
 import AppBgPattern from '../../components/AppBgPattern';
 import { useColors } from '../../utils/theme';
 import { useT } from '../../i18n';
+
+const TREND_DAYS = 30;
+
+// 5 chỉ số xu hướng (E2) - lấy thẳng từ summary phiên đã lưu, không tính lại
+const TREND_METRICS: Array<{ metric: TrendMetric; labelKey: string; unit: string }> = [
+  { metric: 'voltageAvg', labelKey: 'obd.trend_voltage', unit: 'V' },
+  { metric: 'coolantMax', labelKey: 'obd.trend_coolant', unit: '°C' },
+  { metric: 'drivingScore', labelKey: 'obd.trend_driving_score', unit: '' },
+  { metric: 'dtcCount', labelKey: 'obd.trend_dtc', unit: '' },
+  { metric: 'engineHours', labelKey: 'obd.trend_engine_hours', unit: 'h' },
+];
 
 function Vital({ label, value, unit, icon }: { label: string; value: string; unit?: string; icon: string }) {
   const colors = useColors();
@@ -32,12 +45,29 @@ export default function ObdReportScreen() {
 
   const t = useT();
   const colors = useColors();
+  const [tab, setTab] = useState<'latest' | 'trend'>('latest');
 
   const { data, isLoading } = useQuery({
     queryKey: ['obd', 'sessions-recent', vehicleId],
     queryFn: () => obdApi.recentSessions(vehicleId).then((r) => r.data),
     enabled: !!vehicleId,
   });
+
+  // E2: tải riêng khi mở tab Xu hướng (30 ngày phiên - nặng hơn recent 10 phiên)
+  const { data: historyData, isLoading: historyLoading } = useQuery({
+    queryKey: ['obd', 'sessions-history', vehicleId, TREND_DAYS],
+    queryFn: () => obdApi.historySessions(vehicleId, TREND_DAYS).then((r) => r.data),
+    enabled: !!vehicleId && tab === 'trend',
+  });
+
+  const trendPoints = useMemo(
+    () => groupSessionsByDay(historyData?.data ?? [], TREND_DAYS),
+    [historyData],
+  );
+  const trendHasData = useMemo(
+    () => trendPoints.some((p) => TREND_METRICS.some(({ metric }) => p[metric] !== null)),
+    [trendPoints],
+  );
 
   // Xem báo cáo không cần đang kết nối OBD - tranh thủ tải rule mới nhất ở đây
   useEffect(() => {
@@ -85,7 +115,41 @@ export default function ObdReportScreen() {
             <Text style={styles.connectBtnText}>{t('obd.report_connect_cta')}</Text>
           </TouchableOpacity>
         </View>
+      ) : tab === 'trend' ? (
+        <>
+          <TabRow tab={tab} onChange={setTab} />
+          {historyLoading ? (
+            <ActivityIndicator color={colors.primary} style={{ marginTop: 40 }} />
+          ) : !trendHasData ? (
+            <View style={styles.emptyState}>
+              <FontAwesome5 name="chart-bar" size={32} color={colors.textSecondary} />
+              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+                {t('obd.trend_empty')}
+              </Text>
+            </View>
+          ) : (
+            <ScrollView contentContainerStyle={styles.body}>
+              <Text style={[styles.sessionMeta, { color: colors.textSecondary }]}>
+                {t('obd.trend_days', { days: TREND_DAYS })} · {t('obd.trend_tap_hint')}
+              </Text>
+              {TREND_METRICS.map(({ metric, labelKey, unit }) => (
+                <ObdTrendChart
+                  key={metric}
+                  points={trendPoints}
+                  metric={metric}
+                  title={t(labelKey as any)}
+                  unit={unit}
+                />
+              ))}
+              <Text style={[styles.disclaimer, { color: colors.textSecondary }]}>
+                {t('obd.report_disclaimer')}
+              </Text>
+            </ScrollView>
+          )}
+        </>
       ) : (
+        <>
+        <TabRow tab={tab} onChange={setTab} />
         <ScrollView contentContainerStyle={styles.body}>
           <Text style={[styles.sessionMeta, { color: colors.textSecondary }]}>
             {dayjs(latest.connected_at).format('DD/MM/YYYY HH:mm')} · {latest.device_name ?? 'OBD2'}
@@ -176,8 +240,29 @@ export default function ObdReportScreen() {
             {t('obd.report_disclaimer')}
           </Text>
         </ScrollView>
+        </>
       )}
     </SafeAreaView>
+  );
+}
+
+// Toggle "Phiên gần nhất" / "Xu hướng" (E2) - không tạo route mới, giữ deep link cũ
+function TabRow({ tab, onChange }: { tab: 'latest' | 'trend'; onChange: (t: 'latest' | 'trend') => void }) {
+  const t = useT();
+  const colors = useColors();
+  return (
+    <View style={[styles.tabRow, { backgroundColor: colors.card }]}>
+      {(['latest', 'trend'] as const).map((key) => (
+        <TouchableOpacity
+          key={key}
+          style={[styles.tabBtn, tab === key && { backgroundColor: colors.primary }]}
+          onPress={() => onChange(key)}>
+          <Text style={[styles.tabBtnText, { color: tab === key ? '#fff' : colors.textSecondary }]}>
+            {t(key === 'latest' ? 'obd.report_tab_latest' : 'obd.report_tab_trend')}
+          </Text>
+        </TouchableOpacity>
+      ))}
+    </View>
   );
 }
 
@@ -192,6 +277,9 @@ const styles = StyleSheet.create({
   connectBtn: { paddingHorizontal: 20, paddingVertical: 12, borderRadius: 10 },
   connectBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
   sessionMeta: { fontSize: 12, marginBottom: 4 },
+  tabRow: { flexDirection: 'row', marginHorizontal: 16, marginBottom: 4, borderRadius: 10, padding: 4, gap: 4 },
+  tabBtn: { flex: 1, paddingVertical: 8, borderRadius: 8, alignItems: 'center' },
+  tabBtnText: { fontSize: 13, fontWeight: '600' },
   okBanner: { flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: 10, padding: 14 },
   okText: { fontSize: 14, fontWeight: '600' },
   warningBanner: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, borderRadius: 10, padding: 12 },

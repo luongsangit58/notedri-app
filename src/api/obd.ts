@@ -73,6 +73,17 @@ export type ObdSessionRecord = {
   summary: ObdSessionSummary;
 };
 
+// Payload gửi POST /obd2/sessions. idempotency_key sinh ở ObdSessionSyncQueue lúc
+// enqueue, gửi lại y nguyên mỗi lần retry -> server không tạo phiên trùng.
+export type ObdSessionPayload = {
+  vehicle_id: number;
+  device_name: string | null;
+  connected_at: string;
+  duration_seconds: number;
+  summary?: Record<string, unknown> | null;
+  idempotency_key: string;
+};
+
 export const obdApi = {
   saveTrip: (summary: TripSummary, deviceId: string | null) =>
     client.post('/obd2/trips', {
@@ -115,12 +126,13 @@ export const obdApi = {
     client.get<{ data: ObdSessionRecord[]; meta?: { total_engine_hours: number } }>(
       '/obd2/sessions/recent', { params: { vehicle_id: vehicleId } }),
 
-  // Telemetry retention: 1 dòng mỗi phiên kết nối đã kết thúc (fire-and-forget)
-  reportSession: (payload: {
-    vehicle_id: number;
-    device_name: string | null;
-    connected_at: string;
-    duration_seconds: number;
-    summary?: Record<string, unknown> | null;
-  }) => client.post('/obd2/sessions', payload),
+  // E2: toàn bộ phiên trong N ngày (cũ->mới) cho biểu đồ xu hướng - app tự gộp
+  // theo ngày LỊCH của máy user (server gộp theo UTC sẽ lệch ngày ở VN +7).
+  historySessions: (vehicleId: number, days = 30) =>
+    client.get<{ data: ObdSessionRecord[]; meta?: { days: number } }>(
+      '/obd2/sessions/history', { params: { vehicle_id: vehicleId, days } }),
+
+  // Telemetry retention: 1 dòng mỗi phiên kết nối đã kết thúc. Gọi qua
+  // ObdSessionSyncQueue (enqueue + flush) - đừng gọi thẳng, mất phiên khi offline.
+  reportSession: (payload: ObdSessionPayload) => client.post('/obd2/sessions', payload),
 };

@@ -7,6 +7,7 @@ import { sendDeviceHeartbeat } from '../api/devices';
 import { useI18nStore } from '../i18n';
 import { clearGpsQueue } from '../services/gps/GpsTripSyncQueue';
 import { clearObdQueue } from '../services/obd/TripSyncQueue';
+import { clearObdSessionQueue } from '../services/obd/ObdSessionSyncQueue';
 
 interface User {
   id: number;
@@ -145,6 +146,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // sang tài khoản mới đăng nhập trên cùng thiết bị.
       await clearGpsQueue();
       await clearObdQueue();
+      await clearObdSessionQueue();
       set({ user: null, token: null, isLoggingOut: false, userSynced: false });
     }
   },
