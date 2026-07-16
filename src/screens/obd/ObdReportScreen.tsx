@@ -26,6 +26,63 @@ const TREND_METRICS: Array<{ metric: TrendMetric; labelKey: string; unit: string
   { metric: 'engineMinutes', labelKey: 'obd.trend_engine_hours', unit: ' min' },
 ];
 
+// Khu điểm lái xe riêng (rà soát 16/7, góp ý user: "chưa thấy phần điểm lái xe
+// đâu" - backend đã tính driving_score_stats (avg 10 phiên + xu hướng) từ
+// Vehicle::drivingScoreStats() nhưng trước đây KHÔNG có màn nào hiển thị, chỉ
+// có 1 ô nhỏ ở cuối lưới Vital cho ĐÚNG 1 phiên gần nhất - không phải "1 tính
+// năng" theo đúng nghĩa. Không cần API mới - data đã có sẵn trong cùng query
+// recentSessions() (data.meta.driving_score_stats), chỉ thiếu chỗ hiển thị.
+function DrivingScoreCard({ stats }: {
+  stats: { avg_score: number; trend: 'up' | 'down' | 'stable' | null; sessions_counted: number; harsh_brake_total: number; harsh_accel_total: number };
+}) {
+  const colors = useColors();
+  const t = useT();
+  const scoreColor = stats.avg_score >= 80 ? '#22C55E' : stats.avg_score >= 50 ? '#F59E0B' : '#EF4444';
+  const trendMeta = stats.trend === 'up'
+    ? { icon: 'arrow-up', color: '#22C55E', key: 'obd.driving_score_trend_up' }
+    : stats.trend === 'down'
+    ? { icon: 'arrow-down', color: '#EF4444', key: 'obd.driving_score_trend_down' }
+    : stats.trend === 'stable'
+    ? { icon: 'minus', color: colors.textSecondary, key: 'obd.driving_score_trend_stable' }
+    : null;
+  const harshTotal = stats.harsh_brake_total + stats.harsh_accel_total;
+
+  return (
+    <View style={[dsStyles.card, { backgroundColor: colors.card }]}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <View style={{ flex: 1 }}>
+          <Text style={[dsStyles.title, { color: colors.text }]}>{t('obd.driving_score_title')}</Text>
+          <Text style={[dsStyles.subtitle, { color: colors.textSecondary }]}>
+            {t('obd.driving_score_subtitle', { n: stats.sessions_counted })}
+          </Text>
+        </View>
+        <View style={{ alignItems: 'flex-end' }}>
+          <Text style={[dsStyles.score, { color: scoreColor }]}>{stats.avg_score}</Text>
+          <Text style={{ fontSize: 11, color: colors.textSecondary }}>/100</Text>
+        </View>
+      </View>
+      {trendMeta && (
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10 }}>
+          <FontAwesome5 name={trendMeta.icon} size={11} color={trendMeta.color} />
+          <Text style={{ fontSize: 12, color: trendMeta.color, flex: 1 }}>{t(trendMeta.key as any)}</Text>
+        </View>
+      )}
+      {harshTotal > 0 && (
+        <Text style={{ fontSize: 11.5, color: colors.textSecondary, marginTop: 6 }}>
+          {t('obd.driving_score_harsh_total', { n: harshTotal })}
+        </Text>
+      )}
+    </View>
+  );
+}
+
+const dsStyles = StyleSheet.create({
+  card: { borderRadius: 14, padding: 16, marginBottom: 12 },
+  title: { fontSize: 15, fontWeight: '700' },
+  subtitle: { fontSize: 12, marginTop: 2 },
+  score: { fontSize: 30, fontWeight: '800' },
+});
+
 function Vital({ label, value, unit, icon }: { label: string; value: string; unit?: string; icon: string }) {
   const colors = useColors();
   return (
@@ -155,6 +212,10 @@ export default function ObdReportScreen() {
             {dayjs(latest.connected_at).format('DD/MM/YYYY HH:mm')} · {latest.device_name ?? 'OBD2'}
           </Text>
 
+          {data?.meta?.driving_score_stats && (
+            <DrivingScoreCard stats={data.meta.driving_score_stats} />
+          )}
+
           {/* C1: tổng giờ máy tích luỹ từ OBD - metric mới, nền cho bảo dưỡng
               theo giờ máy (chính xác hơn km với xe chạy phố nhiều garanti). */}
           {totalEngineHours > 0 && (
@@ -209,18 +270,6 @@ export default function ObdReportScreen() {
               <Vital label={t('obd.report_top_speed')} value={`${latest.summary.speed_max ?? '-'}`} unit=" km/h" icon="tachometer-alt" />
               <Vital label={t('obd.report_dtc')} value={`${latest.summary.dtc_count}`} icon="exclamation-circle" />
             </View>
-            {/* Chấm điểm lái xe (Giai đoạn G) - phiên cũ trước 14/7 không có 2
-                trường này (undefined), hiện "-" thay vì crash. */}
-            {latest.summary.driving_score !== undefined && (
-              <View style={styles.vitalsRow}>
-                <Vital label={t('obd.report_driving_score')} value={`${latest.summary.driving_score}`} unit="/100" icon="user-check" />
-                <Vital
-                  label={t('obd.report_harsh_events')}
-                  value={`${(latest.summary.harsh_brake_count ?? 0) + (latest.summary.harsh_accel_count ?? 0)}`}
-                  icon="exclamation-triangle"
-                />
-              </View>
-            )}
           </View>
 
           {(latest.summary.background_gap_seconds_total ?? 0) > 0 &&
