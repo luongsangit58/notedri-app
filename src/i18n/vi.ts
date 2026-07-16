@@ -1407,6 +1407,9 @@ const vi = {
   "nfc.connect_nudge_title": "Lần sau chỉ cần chạm thẻ NFC?",
   "nfc.connect_nudge_body": "Ghép 1 thẻ NFC dán gần cổng OBD2 - lần sau lên xe chỉ cần chạm điện thoại vào thẻ là tự kết nối, không cần mở app quét lại.",
   "nfc.connect_nudge_cta": "Ghép thẻ ngay",
+  "nfc.guide_buy": "Cần 1 thẻ NFC trắng (NTAG213/215/216) - giá rẻ, có bán trên các sàn TMĐT",
+  "nfc.guide_place": "Dán thẻ ở nơi dễ chạm khi ngồi vào xe: gần cổng OBD2, táp-lô hoặc giá đỡ điện thoại",
+  "nfc.guide_tip": "Nếu điện thoại đang đeo ốp lưng dày/kim loại, tháo ra trước khi chạm để đọc thẻ tốt hơn",
   "nfc.unsupported": "Điện thoại này không hỗ trợ NFC.",
   "nfc.disabled": "NFC đang tắt. Vào Cài đặt để bật NFC rồi thử lại.",
 

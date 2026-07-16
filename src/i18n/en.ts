@@ -1407,6 +1407,9 @@ const en = {
   "nfc.connect_nudge_title": "Just tap an NFC tag next time?",
   "nfc.connect_nudge_body": "Pair an NFC tag near the OBD2 port - next time you get in, just tap your phone on it to auto-connect, no need to scan again.",
   "nfc.connect_nudge_cta": "Pair a tag now",
+  "nfc.guide_buy": "You'll need a blank NFC tag (NTAG213/215/216) - cheap, available on most online marketplaces",
+  "nfc.guide_place": "Stick it somewhere easy to reach when you get in: near the OBD2 port, dashboard, or phone mount",
+  "nfc.guide_tip": "If your phone has a thick/metal case, remove it first for a more reliable read",
   "nfc.unsupported": "This phone does not support NFC.",
   "nfc.disabled": "NFC is turned off. Enable it in Settings and try again.",
 

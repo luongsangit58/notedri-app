@@ -10,6 +10,15 @@ import { isNfcSupported, isNfcEnabled, writeVehicleTag, cancelNfcSession } from 
 
 type Status = 'idle' | 'writing' | 'success' | 'error' | 'unsupported' | 'disabled';
 
+function GuideRow({ icon, text, colors }: { icon: string; text: string; colors: ReturnType<typeof useColors> }) {
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 6 }}>
+      <FontAwesome5 name={icon} size={12} color={colors.textSecondary} style={{ marginTop: 2 }} />
+      <Text style={{ flex: 1, fontSize: 12.5, lineHeight: 17, color: colors.textSecondary }}>{text}</Text>
+    </View>
+  );
+}
+
 export default function NfcSetupScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
@@ -57,6 +66,16 @@ export default function NfcSetupScreen() {
       </View>
 
       <View style={styles.body}>
+        {/* Hướng dẫn gọn (góp ý user 16/7: chưa từng ghép thẻ thì không biết mua
+            gì/dán đâu) - chỉ hiện khi CHƯA thành công, tránh thừa sau khi xong. */}
+        {status === 'idle' && (
+          <View style={[styles.guideCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <GuideRow icon="shopping-cart" text={t('nfc.guide_buy')} colors={colors} />
+            <GuideRow icon="map-marker-alt" text={t('nfc.guide_place')} colors={colors} />
+            <GuideRow icon="lightbulb" text={t('nfc.guide_tip')} colors={colors} />
+          </View>
+        )}
+
         <View style={[styles.card, { backgroundColor: colors.card }]}>
           <FontAwesome5 name="wifi" size={40} color={status === 'success' ? colors.success : colors.primary} />
 
@@ -108,6 +127,9 @@ const styles = StyleSheet.create({
   backBtn: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
   title: { fontSize: 16, fontWeight: '700' },
   body: { flex: 1, paddingHorizontal: 20, paddingTop: 24 },
+  guideCard: {
+    borderRadius: 12, padding: 14, marginBottom: 16, borderWidth: 1,
+  },
   card: {
     borderRadius: 16, padding: 24, alignItems: 'center', gap: 8,
   },
