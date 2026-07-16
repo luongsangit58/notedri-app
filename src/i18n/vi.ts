@@ -547,6 +547,7 @@ const vi = {
   "obd.report_driving_score": "Điểm lái xe",
   "obd.report_harsh_events": "Phanh/tăng tốc gấp",
   "obd.report_voltage_trend": "Điện áp trung bình đổi {{delta}}V so với phiên trước",
+  "obd.report_background_gap": "Phiên bị gián đoạn theo dõi nền khoảng {{minutes}} phút (màn hình khoá khi đang lái) - một số chỉ số có thể chưa phản ánh đủ cả chuyến đi",
   "obd.report_disclaimer": "Báo cáo dựa trên quy tắc thử nghiệm (beta) đối chiếu ngưỡng kỹ thuật phổ biến, không thay thế chẩn đoán tại gara.",
   "obd.report_tab_latest": "Phiên gần nhất",
   "obd.report_tab_trend": "Xu hướng",

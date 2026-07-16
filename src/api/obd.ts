@@ -36,6 +36,9 @@ export type ObdSessionSummary = {
   driving_score?: number;
   // Optional: giây máy chạy thật (E5 core) - phiên cũ không có, fallback duration.
   engine_run_seconds?: number;
+  // Optional: khoảng trống nền (fixture #5, obdLiveMonitor) - phiên cũ không có.
+  background_gap_count?: number;
+  background_gap_seconds_total?: number;
 };
 
 export type ObdSessionRecord = {

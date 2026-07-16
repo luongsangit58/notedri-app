@@ -546,6 +546,7 @@ const en = {
   "obd.report_driving_score": "Driving score",
   "obd.report_harsh_events": "Harsh brake/accel",
   "obd.report_voltage_trend": "Average voltage changed {{delta}}V vs previous session",
+  "obd.report_background_gap": "Background monitoring was interrupted for about {{minutes}} min (screen locked while driving) - some figures may not fully reflect the whole trip",
   "obd.report_disclaimer": "This report uses beta rules against common technical thresholds - not a substitute for a garage diagnosis.",
   "obd.report_tab_latest": "Latest session",
   "obd.report_tab_trend": "Trends",

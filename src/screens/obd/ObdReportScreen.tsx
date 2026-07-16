@@ -223,6 +223,19 @@ export default function ObdReportScreen() {
             )}
           </View>
 
+          {(latest.summary.background_gap_seconds_total ?? 0) > 0 &&
+            latest.duration_seconds > 0 &&
+            (latest.summary.background_gap_seconds_total! / latest.duration_seconds) >= 0.3 && (
+            <View style={[styles.trendCard, { backgroundColor: colors.card }]}>
+              <FontAwesome5 name="pause-circle" size={13} color="#F59E0B" />
+              <Text style={[styles.trendText, { color: colors.text }]}>
+                {t('obd.report_background_gap', {
+                  minutes: Math.round(latest.summary.background_gap_seconds_total! / 60),
+                })}
+              </Text>
+            </View>
+          )}
+
           {voltageDelta !== null && Math.abs(voltageDelta) >= 0.1 && (
             <View style={[styles.trendCard, { backgroundColor: colors.card }]}>
               <FontAwesome5
