@@ -561,6 +561,7 @@ const en = {
   "obd.toast_connected": "OBD2 connected · {{name}}",
   "obd.toast_reconnected": "OBD2 reconnected",
   "obd.toast_disconnected": "OBD2 connection lost",
+  "obd.toast_session_saved": "Driving session saved ({{minutes}} min)",
   "home.obd_quick_setup": "Connect an OBD-II adapter for your car",
   "vehicle_detail.vin_prefill_title": "VIN read via OBD",
   "obd.disconnect_title": "Disconnect",

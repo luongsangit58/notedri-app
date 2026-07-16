@@ -13,7 +13,7 @@ import { useT } from '../i18n';
  */
 function useTransitionToast(): string | null {
   const t = useT();
-  const { connected, reconnecting, vehicleName } = useObdSessionStore();
+  const { connected, reconnecting, vehicleName, lastSessionSaved } = useObdSessionStore();
   const [toast, setToast] = useState<string | null>(null);
   const prev = useRef({ connected: false, reconnecting: false });
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -27,7 +27,15 @@ function useTransitionToast(): string | null {
         ? t('obd.toast_reconnected')
         : t('obd.toast_connected', { name: vehicleName ?? 'OBD2' });
     } else if (was.connected && !connected && !reconnecting) {
-      message = t('obd.toast_disconnected');
+      // Rà soát 16/7 (góp ý user: kết thúc phiên không có phản hồi gì): nếu
+      // obdLiveMonitor vừa patch lastSessionSaved đồng bộ NGAY trước lúc connected
+      // chuyển false (xem obdLiveMonitor.ts) - tức phiên có dữ liệu thật - báo
+      // rõ đã tổng hợp/lưu thay vì chỉ "mất kết nối" chung chung. Chỉ dùng khi
+      // vừa mới ghi (<5s) để không hiện nhầm cho 1 phiên đã lưu từ rất lâu trước.
+      const justSaved = lastSessionSaved && Date.now() - lastSessionSaved.ts < 5000 && lastSessionSaved.samples > 0;
+      message = justSaved
+        ? t('obd.toast_session_saved', { minutes: Math.max(1, Math.round(lastSessionSaved!.durationSeconds / 60)) })
+        : t('obd.toast_disconnected');
     }
 
     prev.current = { connected, reconnecting };

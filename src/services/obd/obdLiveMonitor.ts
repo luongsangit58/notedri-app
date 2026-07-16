@@ -412,14 +412,33 @@ bleService.addDisconnectListener(() => {
   const info = bleService.consumeSessionInfo();
   const vehicleId = useObdSessionStore.getState().vehicleId;
   if (info && vehicleId) {
+    const summary = buildSessionSummary();
+    const durationSeconds = Math.max(0, Math.round((Date.now() - info.startedAt) / 1000));
+
+    // Rà soát 16/7: user tắt kết nối xong không biết dữ liệu đã "tổng hợp/lưu"
+    // hay chưa (không có phản hồi nào). Patch NGAY (đồng bộ, cùng tick BleService
+    // fire listener TRƯỚC clear()) để ObdSessionBanner đọc được lastSessionSaved
+    // đúng lúc connected chuyển false, không cần chờ enqueue/flush async xong -
+    // "đã lưu" ở đây nghĩa là đã tổng hợp xong tại máy, không phải đã lên server.
+    if (summary) {
+      useObdSessionStore.getState().patch({
+        lastSessionSaved: {
+          samples: (summary.samples as number) ?? 0,
+          durationSeconds,
+          drivingScore: (summary.driving_score as number | undefined) ?? null,
+          ts: Date.now(),
+        },
+      });
+    }
+
     // E2: enqueue local TRƯỚC rồi mới thử gửi - rút cáp lúc mất mạng không còn mất
     // phiên (trước đây fire-and-forget thẳng). Flush lần sau: connect() trong useObd.
     enqueueObdSession({
       vehicle_id: vehicleId,
       device_name: info.deviceName,
       connected_at: new Date(info.startedAt).toISOString(),
-      duration_seconds: Math.max(0, Math.round((Date.now() - info.startedAt) / 1000)),
-      summary: buildSessionSummary(),
+      duration_seconds: durationSeconds,
+      summary,
     })
       .then(() => flushPendingObdSessions())
       .catch(() => {});
