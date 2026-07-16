@@ -214,22 +214,41 @@ export default function AddRefuelScreen() {
     if (num) setOdometer(num);
   };
 
+  // Rà soát 16/7 (user báo "tự tính tiền chưa được" - nói tổng tiền qua giọng
+  // nói lẽ ra phải tự tính ra số lít dựa vào giá/lít đã biết sẵn, hoặc ngược
+  // lại): trước đây MỖI handler chỉ tính lại giaLit (trừ handleGiaLitChange tính
+  // lại tongTien) - không nhánh nào tự tính SỐ LÍT cả, dù giaLit hầu như luôn có
+  // sẵn từ trước (auto-fill giá thị trường ngay khi chọn loại xăng/ngày, xem 2
+  // useEffect phía trên). Kết quả: user chỉ nói 1 giá trị (rất phổ biến - voice
+  // chỉ set được 1 trong 2 field tongTien/soLit mỗi lần) thì trường còn lại luôn
+  // trống trơn dù giá/lít đã đủ để suy ra. Giờ: field vừa đổi + giaLit đã biết +
+  // field CÒN LẠI đang trống -> tự tính field còn lại đó TRƯỚC, chỉ tính lại
+  // giaLit như cũ khi cả 2 field kia đã có giá trị sẵn (user đang tự nhập đủ).
   const handleTongTienChange = (v: string) => {
     setTongTien(v);
-    const t = parseFloat(v), s = parseLiters(soLit);
+    const t = parseFloat(v), g = parseFloat(giaLit);
+    if (!soLit && t > 0 && g > 0) { setSoLit((t / g).toFixed(2)); return; }
+    const s = parseLiters(soLit);
     if (t > 0 && s > 0) setGiaLit(Math.round(t / s).toString());
   };
 
   const handleSoLitChange = (v: string) => {
     setSoLit(v);
-    const t = parseFloat(tongTien), s = parseLiters(v);
+    const s = parseLiters(v), g = parseFloat(giaLit);
+    if (!tongTien && s > 0 && g > 0) { setTongTien(Math.round(s * g).toString()); return; }
+    const t = parseFloat(tongTien);
     if (t > 0 && s > 0) setGiaLit(Math.round(t / s).toString());
   };
 
   const handleGiaLitChange = (v: string) => {
     autoFilledPriceRef.current = ''; // user manually edited - stop auto-updating
     setGiaLit(v);
-    const g = parseFloat(v), s = parseLiters(soLit);
+    const g = parseFloat(v);
+    if (!soLit && tongTien && g > 0) {
+      const t = parseFloat(tongTien);
+      if (t > 0) { setSoLit((t / g).toFixed(2)); return; }
+    }
+    const s = parseLiters(soLit);
     if (g > 0 && s > 0) setTongTien(Math.round(g * s).toString());
   };
 
