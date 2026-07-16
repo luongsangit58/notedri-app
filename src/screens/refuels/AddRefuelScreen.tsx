@@ -71,6 +71,8 @@ export default function AddRefuelScreen() {
   const [cayXang, setCayXang] = useState('');
   const [ghiChu, setGhiChu] = useState('');
   const [isFullTank, setIsFullTank] = useState(true);
+  const [showDetails, setShowDetails] = useState(false);
+  const [odoPrefilled, setOdoPrefilled] = useState(false);
   const [ocrTarget, setOcrTarget] = useState<'receipt' | 'odo' | null>(null);
   const [priceInfo, setPriceInfo] = useState<{
     gia: number | null; uoc_luong: boolean; ngung_ban: boolean; hieu_luc?: string;
@@ -160,6 +162,31 @@ export default function AddRefuelScreen() {
     && parseInt(odometer) < currentVehicle.odo_hien_tai
     ? t('add_refuel.odo_lower_warning', { last: formatKm(currentVehicle.odo_hien_tai) })
     : null;
+  const priceHint = priceInfo?.ngung_ban
+    ? { icon: 'ban', color: colors.warning, text: t('add_refuel.fuel_discontinued') }
+    : priceInfo?.uoc_luong && priceInfo.gia != null
+    ? {
+        icon: 'info-circle',
+        color: colors.textSecondary,
+        text: priceInfo.hieu_luc
+          ? t('add_refuel.reference_price_date', { date: priceInfo.hieu_luc })
+          : t('add_refuel.reference_price'),
+      }
+    : !priceInfo && marketPrice != null
+    ? {
+        icon: 'chart-line',
+        color: colors.textSecondary,
+        text: t('add_refuel.market_price', { price: formatVND(marketPrice) }),
+      }
+    : null;
+
+  useEffect(() => {
+    if (odometer === '' && currentVehicle?.odo_hien_tai != null) {
+      setOdometer(String(currentVehicle.odo_hien_tai));
+      setOdoPrefilled(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentVehicle?.id, currentVehicle?.odo_hien_tai]);
 
   const handleSmartVoice = (value: string, raw: string) => {
     if (voiceFeedbackTimer.current) clearTimeout(voiceFeedbackTimer.current);
@@ -211,7 +238,10 @@ export default function AddRefuelScreen() {
 
   const handleOdoOcrResult = (text: string) => {
     const num = text.replace(/[^0-9]/g, '');
-    if (num) setOdometer(num);
+    if (num) {
+      setOdometer(num);
+      setOdoPrefilled(false);
+    }
   };
 
   // Rà soát 16/7 (user báo "tự tính tiền chưa được" - nói tổng tiền qua giọng
@@ -354,7 +384,7 @@ export default function AddRefuelScreen() {
             </ScrollView>
           )}
 
-          {/* Quick action row: camera + voice + nearby */}
+          {/* Quick action row: receipt OCR only; nearby stations live inside details. */}
           <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
             <TouchableOpacity
               onPress={() => setOcrTarget('receipt')}
@@ -364,15 +394,6 @@ export default function AddRefuelScreen() {
               }}>
               <FontAwesome5 name="camera" size={15} color={colors.primary} solid />
               <Text style={{ color: colors.primary, fontWeight: '600', fontSize: 13 }}>{t('add_refuel.scan_receipt')}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => (navigation as any).navigate('NearbyStations')}
-              style={{
-                flex: 1, backgroundColor: colors.surface, padding: 12, borderRadius: 10,
-                alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6,
-              }}>
-              <FontAwesome5 name="location-arrow" size={14} color={colors.primary} solid />
-              <Text style={{ color: colors.textSecondary, fontWeight: '600', fontSize: 13 }}>{t('add_refuel.nearby_stations')}</Text>
             </TouchableOpacity>
           </View>
 
@@ -416,20 +437,11 @@ export default function AddRefuelScreen() {
             <View style={{ flex: 1 }}>
               <FieldLabel>{t('refuels.price_per_liter_label')}</FieldLabel>
               <MoneyInput value={giaLit} onChangeText={handleGiaLitChange} placeholder="0" placeholderTextColor={colors.textSecondary} style={input} />
-              {priceInfo?.ngung_ban && (
-                <Text style={{ color: colors.warning, fontSize: 11, marginTop: 3 }}>
-                  {t('add_refuel.fuel_discontinued')}
-                </Text>
-              )}
-              {priceInfo?.uoc_luong && priceInfo.gia != null && !priceInfo.ngung_ban && (
-                <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 3 }}>
-                  {priceInfo.hieu_luc ? t('add_refuel.reference_price_date', { date: priceInfo.hieu_luc }) : t('add_refuel.reference_price')}
-                </Text>
-              )}
-              {!priceInfo && marketPrice != null && (
-                <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 3 }}>
-                  {t('add_refuel.market_price', { price: formatVND(marketPrice) })}
-                </Text>
+              {priceHint && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 }}>
+                  <FontAwesome5 name={priceHint.icon as any} size={10} color={priceHint.color} solid />
+                  <Text style={{ color: priceHint.color, fontSize: 11 }}>{priceHint.text}</Text>
+                </View>
               )}
             </View>
           </View>
@@ -438,7 +450,7 @@ export default function AddRefuelScreen() {
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 2 }}>
             <TextInput
               value={odometer}
-              onChangeText={setOdometer}
+              onChangeText={(v) => { setOdometer(v); setOdoPrefilled(false); }}
               placeholder={t('refuels.odo_placeholder')}
               placeholderTextColor={colors.textSecondary}
               keyboardType="numeric"
@@ -447,91 +459,117 @@ export default function AddRefuelScreen() {
             <TouchableOpacity
               onPress={() => setOcrTarget('odo')}
               style={{
-                width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center',
-                backgroundColor: colors.surface,
+                flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5,
+                paddingHorizontal: 10, height: 40, borderRadius: 10,
+                backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
               }}>
-              <FontAwesome5 name="camera" size={14} color={colors.primary} solid />
+              <FontAwesome5 name="tachometer-alt" size={12} color={colors.primary} solid />
+              <Text style={{ color: colors.primary, fontSize: 11.5, fontWeight: '700' }}>ODO</Text>
             </TouchableOpacity>
           </View>
+          {odoPrefilled && (
+            <Text style={{ color: colors.textSecondary, fontSize: 11.5, marginBottom: 4 }}>
+              {t('odometer.prefilled_hint')}
+            </Text>
+          )}
           {odoWarning && (
             <Text style={{ color: colors.warning, fontSize: 12, marginBottom: 4 }}>{odoWarning}</Text>
           )}
 
           <DatePickerField label={t('refuels.date_label')} value={ngay} onChange={setNgay} />
 
-          <FieldLabel>{t('refuels.station_label')}</FieldLabel>
-          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 4 }}>
-            <TextInput
-              value={cayXang}
-              onChangeText={v => { setCayXang(v); if (!v) setStationsDropdown([]); }}
-              placeholder={t('refuels.station_placeholder')}
-              placeholderTextColor={colors.textSecondary}
-              style={[input, { flex: 1 }]}
-            />
-            <TouchableOpacity
-              onPress={handleFindNearbyInline}
-              disabled={nearbyLoading}
-              style={{
-                width: 46, borderRadius: 10, backgroundColor: colors.surface,
-                alignItems: 'center', justifyContent: 'center',
-              }}>
-              {nearbyLoading
-                ? <ActivityIndicator size="small" color={colors.primary} />
-                : <FontAwesome5 name="location-arrow" size={14} color={colors.primary} solid />}
-            </TouchableOpacity>
-          </View>
-          {stationsDropdown.length > 0 && (
-            <View style={{
-              backgroundColor: colors.surface, borderRadius: 10, marginBottom: 8,
-              borderWidth: 1, borderColor: colors.border, overflow: 'hidden',
+          <TouchableOpacity
+            onPress={() => setShowDetails((v) => !v)}
+            style={{
+              flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+              backgroundColor: colors.surface, borderRadius: 10, padding: 13, marginTop: 4, marginBottom: showDetails ? 10 : 20,
+              borderWidth: 1, borderColor: colors.border,
             }}>
-              {stationsDropdown.map((s, i) => {
-                const dist = s.dist != null
-                  ? (s.dist >= 1000 ? `${(s.dist / 1000).toFixed(1)}km` : `${s.dist}m`)
-                  : null;
-                return (
-                  <TouchableOpacity
-                    key={i}
-                    onPress={() => { setCayXang(s.name ?? ''); setStationsDropdown([]); }}
-                    style={{
-                      paddingHorizontal: 14, paddingVertical: 10,
-                      borderBottomWidth: i < stationsDropdown.length - 1 ? 1 : 0,
-                      borderBottomColor: colors.border,
-                    }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <FontAwesome5 name="gas-pump" size={11} color={colors.textSecondary} solid />
-                      <Text style={{ color: colors.text, fontWeight: '600', flex: 1, fontSize: 13 }} numberOfLines={1}>
-                        {s.name}
-                      </Text>
-                      {dist && <Text style={{ color: colors.textSecondary, fontSize: 12 }}>{dist}</Text>}
-                    </View>
-                    {s.addr ? (
-                      <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 2, marginLeft: 17 }} numberOfLines={1}>
-                        {s.addr}
-                      </Text>
-                    ) : null}
-                  </TouchableOpacity>
-                );
-              })}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <FontAwesome5 name="sliders-h" size={13} color={colors.textSecondary} solid />
+              <Text style={{ color: colors.text, fontWeight: '700', fontSize: 13 }}>{showDetails ? t('add_refuel.hide_details') : t('add_refuel.more_details')}</Text>
+            </View>
+            <FontAwesome5 name={showDetails ? 'chevron-up' : 'chevron-down'} size={12} color={colors.textSecondary} solid />
+          </TouchableOpacity>
+
+          {showDetails && (
+            <View style={{ marginBottom: 20 }}>
+              <FieldLabel>{t('refuels.station_label')}</FieldLabel>
+              <View style={{ flexDirection: 'row', gap: 8, marginBottom: 4 }}>
+                <TextInput
+                  value={cayXang}
+                  onChangeText={v => { setCayXang(v); if (!v) setStationsDropdown([]); }}
+                  placeholder={t('refuels.station_placeholder')}
+                  placeholderTextColor={colors.textSecondary}
+                  style={[input, { flex: 1 }]}
+                />
+                <TouchableOpacity
+                  onPress={handleFindNearbyInline}
+                  disabled={nearbyLoading}
+                  style={{
+                    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5,
+                    paddingHorizontal: 10, borderRadius: 10, backgroundColor: colors.surface,
+                    borderWidth: 1, borderColor: colors.border,
+                  }}>
+                  {nearbyLoading
+                    ? <ActivityIndicator size="small" color={colors.primary} />
+                    : <FontAwesome5 name="location-arrow" size={12} color={colors.primary} solid />}
+                  <Text style={{ color: colors.primary, fontSize: 11.5, fontWeight: '700' }}>{t('add_refuel.nearby_short')}</Text>
+                </TouchableOpacity>
+              </View>
+              {stationsDropdown.length > 0 && (
+                <View style={{
+                  backgroundColor: colors.surface, borderRadius: 10, marginBottom: 8,
+                  borderWidth: 1, borderColor: colors.border, overflow: 'hidden',
+                }}>
+                  {stationsDropdown.map((s, i) => {
+                    const dist = s.dist != null
+                      ? (s.dist >= 1000 ? `${(s.dist / 1000).toFixed(1)}km` : `${s.dist}m`)
+                      : null;
+                    return (
+                      <TouchableOpacity
+                        key={i}
+                        onPress={() => { setCayXang(s.name ?? ''); setStationsDropdown([]); }}
+                        style={{
+                          paddingHorizontal: 14, paddingVertical: 10,
+                          borderBottomWidth: i < stationsDropdown.length - 1 ? 1 : 0,
+                          borderBottomColor: colors.border,
+                        }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <FontAwesome5 name="gas-pump" size={11} color={colors.textSecondary} solid />
+                          <Text style={{ color: colors.text, fontWeight: '600', flex: 1, fontSize: 13 }} numberOfLines={1}>
+                            {s.name}
+                          </Text>
+                          {dist && <Text style={{ color: colors.textSecondary, fontSize: 12 }}>{dist}</Text>}
+                        </View>
+                        {s.addr ? (
+                          <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 2, marginLeft: 17 }} numberOfLines={1}>
+                            {s.addr}
+                          </Text>
+                        ) : null}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              )}
+
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.surface, borderRadius: 10, padding: 14, marginBottom: 8 }}>
+                <View>
+                  <Text style={{ color: colors.text, fontWeight: '600' }}>{t('refuels.full_tank_label')}</Text>
+                  <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>{t('refuels.full_tank_hint')}</Text>
+                </View>
+                <Switch
+                  value={isFullTank}
+                  onValueChange={setIsFullTank}
+                  trackColor={{ false: colors.border, true: colors.primary }}
+                  thumbColor={colors.text}
+                />
+              </View>
+
+              <FieldLabel>{t('refuels.note_label')}</FieldLabel>
+              <TextInput value={ghiChu} onChangeText={setGhiChu} placeholder={t('refuels.note_placeholder')} placeholderTextColor={colors.textSecondary} multiline style={[input, { minHeight: 72, textAlignVertical: 'top' }]} />
             </View>
           )}
-
-          {/* Full tank toggle */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.surface, borderRadius: 10, padding: 14, marginBottom: 8 }}>
-            <View>
-              <Text style={{ color: colors.text, fontWeight: '600' }}>{t('refuels.full_tank_label')}</Text>
-              <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>{t('refuels.full_tank_hint')}</Text>
-            </View>
-            <Switch
-              value={isFullTank}
-              onValueChange={setIsFullTank}
-              trackColor={{ false: colors.border, true: colors.primary }}
-              thumbColor={colors.text}
-            />
-          </View>
-
-          <FieldLabel>{t('refuels.note_label')}</FieldLabel>
-          <TextInput value={ghiChu} onChangeText={setGhiChu} placeholder={t('refuels.note_placeholder')} placeholderTextColor={colors.textSecondary} multiline style={[input, { minHeight: 72, textAlignVertical: 'top', marginBottom: 20 }]} />
 
           <TouchableOpacity
             onPress={handleSubmit}
