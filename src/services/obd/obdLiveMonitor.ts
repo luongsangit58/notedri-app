@@ -297,10 +297,11 @@ async function poll(): Promise<void> {
       // tục) nhưng KHÔNG báo server/không gộp dtc_count chính thức - ý nghĩa
       // khác DTC đã xác nhận, tránh báo động giả ("Phát hiện lỗi đang hình thành").
       const pending = await readPendingDtcCodes();
-      if (pending.length > 0) {
-        sessionPendingDtcCount = pending.length;
-        pendingDtcListeners.forEach((fn) => fn(pending));
-      }
+      // Rà soát 16/7: gán lại toàn bộ (không chỉ khi length>0) - mã đang hình
+      // thành có thể tự hết giữa phiên; trước đây chỉ set khi >0 nên count kẹt
+      // ở đỉnh cũ, không bao giờ về 0 dù xe đã sạch mã pending.
+      sessionPendingDtcCount = pending.length;
+      if (pending.length > 0) pendingDtcListeners.forEach((fn) => fn(pending));
 
       // Mode 0A - Permanent DTC: gần như tĩnh trong 1 phiên (chỉ tự xoá sau
       // nhiều chu kỳ lái đạt chuẩn) - chỉ cần đọc 1 LẦN, không lặp mỗi 5 phút

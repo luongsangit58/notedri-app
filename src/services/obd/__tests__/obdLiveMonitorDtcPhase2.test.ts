@@ -144,6 +144,20 @@ describe('obdLiveMonitor - Phase 2: Mode 07 Pending DTC', () => {
     expect(received).toEqual([{ code: 'P0171', description: null }]);
     unsub();
   });
+
+  it('mã pending tự hết giữa phiên -> pending_dtc_count về lại 0 (rà soát 16/7: trước đây kẹt ở đỉnh cũ)', async () => {
+    mockPendingCodes = [{ code: 'P0171', description: null }];
+    obdLiveMonitor.start(1);
+    await tick(); // poll 1
+    await tick(); // poll 2 - lần đọc DTC đầu, có 1 mã pending
+
+    expect(buildSessionSummary()!.pending_dtc_count).toBe(1);
+
+    mockPendingCodes = []; // mã pending tự hết
+    for (let i = 0; i < 100; i++) await tick(); // chạm mốc đọc DTC lần 2 (~5 phút)
+
+    expect(buildSessionSummary()!.pending_dtc_count).toBe(0);
+  });
 });
 
 describe('obdLiveMonitor - Phase 2: Mode 0A Permanent DTC (chỉ đọc 1 lần/phiên)', () => {

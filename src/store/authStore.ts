@@ -139,6 +139,19 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         const { stopTracking } = await import('../services/gps/GpsTripTracker');
         await stopTracking(false);
       } catch { /* non-critical */ }
+      // Rà soát 16/7: cùng lỗi rò rỉ chéo tài khoản như GPS ở trên nhưng phía OBD2 -
+      // obdLiveMonitor/BLE là module-level singleton, KHÔNG tự dừng theo lifecycle màn
+      // hình hay theo logout(). Nếu user rút thẻ đăng xuất trong khi adapter vẫn cắm,
+      // BLE ở lại "connected" -> lúc rớt kết nối tự nhiên sau đó (adapter mất điện, xe
+      // tắt máy...) listener disconnect của obdLiveMonitor đọc token/vehicleId LÚC ĐÓ,
+      // có thể đã thuộc tài khoản MỚI vừa đăng nhập trên cùng máy -> phiên OBD của user
+      // cũ bị gắn nhầm/gửi dưới token user mới. Ngắt BLE ngay tại đây (token cũ vẫn còn
+      // hợp lệ) để buộc listener chạy trong ngữ cảnh đúng - clearObdSessionQueue() bên
+      // dưới xoá sạch hàng đợi ngay sau đó nên không cần đợi enqueue/flush xong.
+      try {
+        const { bleService } = await import('../services/obd/BleService');
+        if (bleService.isConnected()) await bleService.disconnect();
+      } catch { /* non-critical */ }
       await storage.deleteToken();
       await storage.deleteUser();
       queryClient.clear(); // xoá toàn bộ cache React Query khi đăng xuất
