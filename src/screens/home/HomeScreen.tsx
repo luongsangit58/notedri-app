@@ -175,6 +175,13 @@ export default function HomeScreen() {
     const unsubscribe = nav.addListener('focus', refresh);
     return unsubscribe;
   }, [nav]);
+  // Cá nhân hoá độ nổi bật OBD2 (rà soát 16/7, góp ý user): user ĐÃ từng ghép/
+  // đang kết nối OBD2 -> đây rõ ràng là tính năng họ dùng thật, nâng lên hero
+  // NGANG HÀNG GPS (trước đây OBD2 luôn là card nhỏ dù đã dùng, GPS luôn hero -
+  // lệch cảm nhận "GPS mới là chính"). User CHƯA từng dùng (đặc biệt Free) ->
+  // giữ nguyên card nhỏ + crown để dẫn phễu nâng cấp, không áp đảo ngay từ đầu
+  // bằng 1 tính năng họ chưa chắc sẽ mua adapter để dùng.
+  const obdEngaged = !!(obdPairing || obdSession.connected);
 
   // Dashboard data for quick stats strip
   // Note: useDashboard returns r.data (Axios), but the actual fields are at r.data.data
@@ -372,53 +379,72 @@ export default function HomeScreen() {
             ghép/đang kết nối/user Premium, nên user Free CHƯA từng ghép không bao
             giờ thấy thẻ này, mất luôn lối vào phễu nâng cấp. Đồng nhất với
             VehicleDetailScreen.tsx: luôn hiện thẻ khi có xe, gắn icon crown cho
-            Free - OBDSetupScreen đã tự redirect sang Premium khi Free bấm vào. */}
-        {(obdPairing || obdSession.connected || vehicleId) && (
+            Free - OBDSetupScreen đã tự redirect sang Premium khi Free bấm vào.
+            obdEngaged (đã ghép/đang kết nối) -> hero NGANG HÀNG GPS thay vì card
+            nhỏ - trước đây GPS luôn hero dù user dùng OBD2 nhiều hơn, tạo cảm
+            giác GPS mới là tính năng chính dù không đúng với user đó. */}
+        {obdEngaged ? (
           <TouchableOpacity
             activeOpacity={0.85}
             onPress={() => nav.navigate('OBDSetup', {
-              vehicleId: obdSession.connected
-                ? obdSession.vehicleId
-                : obdPairing?.vehicleId ?? vehicleId,
-              vehicleName: (obdSession.connected
-                ? obdSession.vehicleName
-                : obdPairing?.vehicleName ?? vehicleName) ?? '',
+              vehicleId: obdSession.connected ? obdSession.vehicleId : obdPairing?.vehicleId ?? vehicleId,
+              vehicleName: (obdSession.connected ? obdSession.vehicleName : obdPairing?.vehicleName ?? vehicleName) ?? '',
               consumptionOfficial: null,
             })}
             style={{
+              borderRadius: 18, marginBottom: 12, overflow: 'hidden',
+              shadowColor: '#5b21b6', shadowOpacity: 0.35, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 5,
+            }}>
+            <LinearGradient colors={['#8b5cf6', '#4c1d95']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+              style={{ padding: 18, flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+              <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: '#ffffff22', alignItems: 'center', justifyContent: 'center' }}>
+                <FontAwesome5 name="microchip" size={26} color="#fff" solid />
+              </View>
+              <View style={{ flex: 1 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  {obdSession.connected && (
+                    <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#22C55E' }} />
+                  )}
+                  <Text style={{ color: '#fff', fontSize: 18, fontWeight: '800' }}>{t('obd.setup_title')}</Text>
+                </View>
+                <Text style={{ color: '#ffffffcc', fontSize: 13, marginTop: 2 }} numberOfLines={1}>
+                  {obdSession.connected
+                    ? t('home.obd_quick_connected', { name: obdSession.vehicleName ?? 'OBD2' })
+                    : t('home.obd_quick_sub', { name: obdPairing?.vehicleName ?? '' })}
+                </Text>
+              </View>
+              <FontAwesome5 name="chevron-right" size={16} color="#ffffffcc" />
+            </LinearGradient>
+          </TouchableOpacity>
+        ) : vehicleId ? (
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={() => nav.navigate('OBDSetup', { vehicleId, vehicleName: vehicleName ?? '', consumptionOfficial: null })}
+            style={{
               flexDirection: 'row', alignItems: 'center', gap: 12,
               backgroundColor: colors.surface, borderRadius: 14, padding: 14, marginBottom: 12,
-              borderWidth: 1, borderColor: obdSession.connected ? '#22C55E66' : colors.border,
+              borderWidth: 1, borderColor: colors.border,
             }}>
             <View style={{
               width: 40, height: 40, borderRadius: 20,
               backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center',
             }}>
-              <FontAwesome5 name="microchip" size={16} color={obdSession.connected ? '#22C55E' : colors.primary} solid />
+              <FontAwesome5 name="microchip" size={16} color={colors.primary} solid />
             </View>
             <View style={{ flex: 1 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                {obdSession.connected && (
-                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#22C55E' }} />
-                )}
                 <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14 }}>{t('obd.setup_title')}</Text>
                 {!isPremiumUser && (
                   <FontAwesome5 name="crown" size={11} color={colors.warning} solid />
                 )}
               </View>
               <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 1 }} numberOfLines={1}>
-                {obdSession.connected
-                  ? t('home.obd_quick_connected', { name: obdSession.vehicleName ?? 'OBD2' })
-                  : obdPairing
-                  ? t('home.obd_quick_sub', { name: obdPairing.vehicleName })
-                  : isPremiumUser
-                  ? t('home.obd_quick_setup')
-                  : t('home.obd_quick_upsell')}
+                {isPremiumUser ? t('home.obd_quick_setup') : t('home.obd_quick_upsell')}
               </Text>
             </View>
             <FontAwesome5 name="chevron-right" size={13} color={colors.textSecondary} />
           </TouchableOpacity>
-        )}
+        ) : null}
 
         {/* Rich CTA cards - 2 col */}
         <View style={{ flexDirection: 'row', gap: 12, marginBottom: 12 }}>
