@@ -16,6 +16,7 @@ import { evaluate, Finding } from './diagnosticEngine';
 import { getActiveRules, refreshRulesFromServer } from './diagnosticRulesStore';
 import { detectDrivingEvents, scoreFromCounts, SpeedSample } from '../drivingScore/drivingScoreEngine';
 import { useObdSessionStore } from '../../store/obdSessionStore';
+import { startObdKeepAlive, stopObdKeepAlive } from './obdKeepAliveService';
 
 /**
  * Live monitor OBD (quyết định 14/7: GPS là nguồn CHUYẾN ĐI duy nhất - fixture #5
@@ -353,12 +354,16 @@ export const obdLiveMonitor = {
     // Tải rule mới nhất đúng lúc sắp dùng - không chặn vòng poll đầu tiên
     refreshRulesFromServer().catch(() => {});
     timer = setInterval(() => void poll(), POLL_INTERVAL_MS);
+    // Gap nền thật (fixture #5, 16/7): giữ tiến trình JS sống khi khoá màn hình
+    // lúc đang lái - xem obdKeepAliveService.ts.
+    startObdKeepAlive().catch(() => {});
   },
 
   stop(): void {
     if (timer) clearInterval(timer);
     timer = null;
     activeVehicleId = null;
+    stopObdKeepAlive().catch(() => {});
   },
 
   onSnapshot(fn: (s: ObdSnapshot) => void): () => void {

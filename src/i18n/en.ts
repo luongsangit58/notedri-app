@@ -562,6 +562,8 @@ const en = {
   "obd.toast_reconnected": "OBD2 reconnected",
   "obd.toast_disconnected": "OBD2 connection lost",
   "obd.toast_session_saved": "Driving session saved ({{minutes}} min)",
+  "obd.fg_notif_title": "NoteDri - OBD2 monitoring",
+  "obd.fg_notif_body": "Keeps the connection alive while your screen is locked. Tap to open the app.",
   "home.obd_quick_setup": "Connect an OBD-II adapter for your car",
   "vehicle_detail.vin_prefill_title": "VIN read via OBD",
   "obd.disconnect_title": "Disconnect",

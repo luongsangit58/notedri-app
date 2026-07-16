@@ -563,6 +563,8 @@ const vi = {
   "obd.toast_reconnected": "Đã kết nối lại OBD2",
   "obd.toast_disconnected": "Mất kết nối OBD2",
   "obd.toast_session_saved": "Đã lưu dữ liệu phiên lái xe ({{minutes}} phút)",
+  "obd.fg_notif_title": "NoteDri - đang theo dõi OBD2",
+  "obd.fg_notif_body": "Giữ kết nối khi bạn khoá màn hình lúc đang lái. Chạm để mở app.",
   "home.obd_quick_setup": "Kết nối adapter OBD-II cho xe của bạn",
   "vehicle_detail.vin_prefill_title": "Đã đọc được số khung xe (VIN) qua OBD",
   "obd.disconnect_title": "Ngắt kết nối",
