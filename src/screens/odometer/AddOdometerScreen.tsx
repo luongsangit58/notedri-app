@@ -42,6 +42,7 @@ export default function AddOdometerScreen() {
 
   const [vehicleId, setVehicleId] = useState<number | null>(defaultVehicle?.id ?? null);
   const [odo, setOdo] = useState('');
+  const [odoPrefilled, setOdoPrefilled] = useState(false); // gợi ý điền sẵn (chưa phải người dùng gõ) - giảm gõ tay
   const [ngay, setNgay] = useState(dayjs().format('YYYY-MM-DD'));
   const [ghiChu, setGhiChu] = useState('');
   const [ocrOpen, setOcrOpen] = useState(false);
@@ -51,13 +52,27 @@ export default function AddOdometerScreen() {
     if (!vehicleId && defaultVehicle) setVehicleId(defaultVehicle.id);
   }, [vehicles]);
 
+  const currentVehicle = vehicles.find((v: any) => v.id === vehicleId);
+
+  // Điền sẵn ODO hiện tại của xe (đã bao gồm ước lượng GPS/OBD2 tự động, xem
+  // Vehicle::recalcOdo() bên Laravel) làm gợi ý thay vì bắt gõ từ số 0 - PO phản
+  // hồi 16/7: OBD2 không tự lấy được ODO thật (PID A6 hiếm xe hỗ trợ) nên vẫn
+  // cần người xác nhận, nhưng đỡ phải NHỚ VÀ GÕ LẠI số hiện tại mỗi lần.
+  useEffect(() => {
+    if (odo === '' && currentVehicle?.odo_hien_tai != null) {
+      setOdo(String(currentVehicle.odo_hien_tai));
+      setOdoPrefilled(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentVehicle?.id, currentVehicle?.odo_hien_tai]);
+
   useEffect(() => {
     isTrackingActive().then(setTracking).catch(() => {});
   }, []);
 
   const handleOcrResult = (text: string) => {
     const num = text.replace(/[^0-9]/g, '');
-    if (num) setOdo(num);
+    if (num) { setOdo(num); setOdoPrefilled(false); }
     setOcrOpen(false);
   };
 
@@ -98,8 +113,6 @@ export default function AddOdometerScreen() {
       Alert.alert(t('common.error'), detail ?? err.response?.data?.message ?? t('common.save_failed'));
     }
   };
-
-  const currentVehicle = vehicles.find((v: any) => v.id === vehicleId);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom']}>
@@ -165,16 +178,22 @@ export default function AddOdometerScreen() {
           <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 6 }}>{t('odometer.value_label')}</Text>
           <TextInput
             value={odo}
-            onChangeText={setOdo}
+            onChangeText={(v) => { setOdo(v); setOdoPrefilled(false); }}
             placeholder=""
             placeholderTextColor={colors.textSecondary}
             keyboardType="numeric"
-            style={[input, { fontSize: 28, fontWeight: '800', textAlign: 'center', letterSpacing: 2, marginBottom: 10 }]}
+            selectTextOnFocus
+            style={[input, { fontSize: 28, fontWeight: '800', textAlign: 'center', letterSpacing: 2, marginBottom: odoPrefilled ? 4 : 10 }]}
           />
+          {odoPrefilled && (
+            <Text style={{ color: colors.textSecondary, fontSize: 11.5, textAlign: 'center', marginBottom: 10 }}>
+              {t('odometer.prefilled_hint')}
+            </Text>
+          )}
           <VoiceButton
             label={t('odometer.voice_label')}
             hint={t('odometer.voice_hint')}
-            onResult={(value) => { if (value) setOdo(value); }}
+            onResult={(value) => { if (value) { setOdo(value); setOdoPrefilled(false); } }}
             compact={false}
           />
 

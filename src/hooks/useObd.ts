@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { obdApi } from '../api/obd';
 import { bleService, ConnectionState, ObdDevice } from '../services/obd/BleService';
 import { initializeElm327, readSnapshot, setActivePidWhitelist, ObdSnapshot } from '../services/obd/ObdReader';
@@ -31,14 +31,6 @@ export const useObdDtcEvents = (vehicleId: number) => {
     queryKey: ['obd', 'dtc', vehicleId],
     queryFn: () => obdApi.dtcEvents(vehicleId).then((r) => r.data),
     enabled: !!vehicleId && isPremium,
-  });
-};
-
-export const useResolveDtc = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (dtcEventId: number) => obdApi.resolveDtc(dtcEventId).then((r) => r.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['obd', 'dtc'] }),
   });
 };
 

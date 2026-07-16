@@ -224,8 +224,9 @@ export default function OBDSetupScreen() {
               {t('obd.auto_connect_hint')}
             </Text>
           )}
-          {/* Decay/empty state (ý #13): không có thiết bị không có nghĩa là mất app */}
-          {!isScanning && !isConnecting && foundDevices.length === 0 && (
+          {/* Decay/empty state (ý #13): không có thiết bị không có nghĩa là mất app.
+              Ẩn khi đã có errorMessage riêng (vd Bluetooth tắt) để khỏi chồng 2 dòng giải thích. */}
+          {!isScanning && !isConnecting && foundDevices.length === 0 && !errorMessage && (
             <Text style={{ color: colors.textSecondary, fontSize: 12, textAlign: 'center' }}>
               {t('obd.no_device_reassure')}
             </Text>

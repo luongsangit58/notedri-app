@@ -1,32 +1,5 @@
 import client from './client';
-import { TripSummary } from '../services/obd/TripSession';
-
-export type ObdTripRecord = {
-  id: number;
-  vehicle_id: number;
-  started_at: string;
-  ended_at: string;
-  distance_km: number;
-  avg_speed_kmh: number | null;
-  max_speed_kmh: number | null;
-  avg_engine_load_pct: number | null;
-  avg_coolant_temp_c: number | null;
-  fuel_level_start_pct: number | null;
-  fuel_level_end_pct: number | null;
-  idle_time_seconds: number;
-  driving_time_seconds: number;
-  obd_device_id: string | null;
-};
-
-export type DtcEventRecord = {
-  id: number;
-  vehicle_id: number;
-  code: string;
-  description: string | null;
-  is_resolved: boolean;
-  detected_at: string;
-  resolved_at: string | null;
-};
+import { TripSummary } from '../services/obd/TripSyncQueue';
 
 export type DtcLookupResult = {
   code: string;
@@ -109,9 +82,6 @@ export const obdApi = {
   dtcEvents: (vehicleId: number) =>
     client.get('/obd2/dtc', { params: { vehicle_id: vehicleId } }),
 
-  resolveDtc: (dtcEventId: number) =>
-    client.post(`/obd2/dtc/${dtcEventId}/resolve`),
-
   // Tra cứu tay 1 mã lỗi từ từ điển server (route Free, không cần thiết bị OBD)
   lookupDtc: (code: string) =>
     client.get<{ data: DtcLookupResult }>(`/dtc-codes/${encodeURIComponent(code)}`),
@@ -122,9 +92,22 @@ export const obdApi = {
 
   // Lịch sử phiên gần nhất (đã có summary) cho Daily Report - app tự đánh giá.
   // meta.total_engine_hours (C1): tổng giờ máy tích luỹ mọi phiên.
+  // meta.driving_score_stats (rà soát 16/7): điểm lái xe TB 10 phiên gần nhất +
+  // xu hướng - null nếu xe chưa có phiên nào tính được điểm (xem Vehicle::drivingScoreStats()).
   recentSessions: (vehicleId: number) =>
-    client.get<{ data: ObdSessionRecord[]; meta?: { total_engine_hours: number } }>(
-      '/obd2/sessions/recent', { params: { vehicle_id: vehicleId } }),
+    client.get<{
+      data: ObdSessionRecord[];
+      meta?: {
+        total_engine_hours: number;
+        driving_score_stats: {
+          avg_score: number;
+          trend: 'up' | 'down' | 'stable' | null;
+          sessions_counted: number;
+          harsh_brake_total: number;
+          harsh_accel_total: number;
+        } | null;
+      };
+    }>('/obd2/sessions/recent', { params: { vehicle_id: vehicleId } }),
 
   // E2: toàn bộ phiên trong N ngày (cũ->mới) cho biểu đồ xu hướng - app tự gộp
   // theo ngày LỊCH của máy user (server gộp theo UTC sẽ lệch ngày ở VN +7).

@@ -1,9 +1,29 @@
 import * as SecureStore from 'expo-secure-store';
 import { obdApi } from '../../api/obd';
-import { TripSummary } from './TripSession';
 import { isPermanentSyncError } from '../syncRetryPolicy';
+import { ObdSnapshot, DtcCode } from './ObdReader';
 
 const QUEUE_KEY = 'obd_pending_trips';
+
+// Kiểu tóm tắt 1 chuyến OBD2 - trước đây sinh bởi TripSession (đã bỏ 14/7 khi
+// obdLiveMonitor thay thế), giữ lại type này vì hàng đợi đồng bộ bên dưới vẫn
+// cần cho các item CŨ còn tồn đọng trên máy user từ trước bản cập nhật đó.
+export type TripSummary = {
+  vehicleId: number;
+  startedAt: string;
+  endedAt: string;
+  distanceKm: number;
+  avgSpeedKmh: number;
+  maxSpeedKmh: number;
+  avgEngineLoad: number | null;
+  avgCoolantTemp: number | null;
+  fuelLevelStart: number | null;
+  fuelLevelEnd: number | null;
+  idleTimeSeconds: number;
+  drivingTimeSeconds: number;
+  snapshots: ObdSnapshot[];
+  dtcCodes: DtcCode[];
+};
 
 // Strip raw snapshots before persisting — they are not sent to the API and
 // can easily exceed SecureStore's ~2 KB per-key limit on iOS, causing a
@@ -16,12 +36,6 @@ type PendingTrip = {
   queuedAt: string;
   retries: number;
 };
-
-function stripSnapshots(summary: TripSummary): StorableSummary {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { snapshots: _snapshots, ...rest } = summary;
-  return rest;
-}
 
 async function readQueue(): Promise<PendingTrip[]> {
   try {
@@ -39,25 +53,6 @@ async function writeQueue(queue: PendingTrip[]): Promise<void> {
   } catch {
     // Storage full or unavailable - drop silently rather than crashing
   }
-}
-
-export async function enqueueTripSync(
-  summary: TripSummary,
-  deviceId: string | null
-): Promise<void> {
-  const queue = await readQueue();
-
-  // Cap at 30 trips (~30 × ~300 bytes = ~9 KB total, well within SecureStore)
-  if (queue.length >= 30) queue.shift();
-
-  queue.push({
-    summary: stripSnapshots(summary),
-    deviceId,
-    queuedAt: new Date().toISOString(),
-    retries: 0,
-  });
-
-  await writeQueue(queue);
 }
 
 // Single-flight: chặn flush chạy chồng nhau -> tránh upload trùng cùng 1 chuyến.
@@ -108,11 +103,6 @@ export async function flushPendingTrips(): Promise<{ synced: number; failed: num
   } finally {
     isFlushingObd = false;
   }
-}
-
-export async function pendingCount(): Promise<number> {
-  const queue = await readQueue();
-  return queue.length;
 }
 
 /** Xoá sạch hàng đợi (gọi khi logout để không đẩy chuyến của user cũ sang tài khoản mới). */
