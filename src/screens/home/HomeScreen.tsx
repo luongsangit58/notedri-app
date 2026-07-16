@@ -367,10 +367,13 @@ export default function HomeScreen() {
           </LinearGradient>
         </TouchableOpacity>
 
-        {/* OBD quick-connect (C4/C5): hiện khi có thiết bị đã ghép, ĐANG kết nối,
-            hoặc user Premium có xe (Sang góp ý 14/7: gỡ app cài lại là mất pairing,
-            thẻ biến mất - Premium là đối tượng của OBD nên luôn có lối vào từ Home) */}
-        {(obdPairing || obdSession.connected || (isPremiumUser && vehicleId)) && (
+        {/* OBD quick-connect (C4/C5): rà soát 16/7 (góp ý user: Free không thấy CTA
+            OBD2 -> mất cơ hội kêu gọi nâng cấp) - trước đây thẻ CHỈ hiện khi đã
+            ghép/đang kết nối/user Premium, nên user Free CHƯA từng ghép không bao
+            giờ thấy thẻ này, mất luôn lối vào phễu nâng cấp. Đồng nhất với
+            VehicleDetailScreen.tsx: luôn hiện thẻ khi có xe, gắn icon crown cho
+            Free - OBDSetupScreen đã tự redirect sang Premium khi Free bấm vào. */}
+        {(obdPairing || obdSession.connected || vehicleId) && (
           <TouchableOpacity
             activeOpacity={0.85}
             onPress={() => nav.navigate('OBDSetup', {
@@ -399,13 +402,18 @@ export default function HomeScreen() {
                   <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#22C55E' }} />
                 )}
                 <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14 }}>{t('obd.setup_title')}</Text>
+                {!isPremiumUser && (
+                  <FontAwesome5 name="crown" size={11} color={colors.warning} solid />
+                )}
               </View>
               <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 1 }} numberOfLines={1}>
                 {obdSession.connected
                   ? t('home.obd_quick_connected', { name: obdSession.vehicleName ?? 'OBD2' })
                   : obdPairing
                   ? t('home.obd_quick_sub', { name: obdPairing.vehicleName })
-                  : t('home.obd_quick_setup')}
+                  : isPremiumUser
+                  ? t('home.obd_quick_setup')
+                  : t('home.obd_quick_upsell')}
               </Text>
             </View>
             <FontAwesome5 name="chevron-right" size={13} color={colors.textSecondary} />

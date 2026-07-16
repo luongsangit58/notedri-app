@@ -566,6 +566,7 @@ const vi = {
   "obd.fg_notif_title": "NoteDri - đang theo dõi OBD2",
   "obd.fg_notif_body": "Giữ kết nối khi bạn khoá màn hình lúc đang lái. Chạm để mở app.",
   "home.obd_quick_setup": "Kết nối adapter OBD-II cho xe của bạn",
+  "home.obd_quick_upsell": "Tính năng Premium - chẩn đoán lỗi xe qua Bluetooth",
   "vehicle_detail.vin_prefill_title": "Đã đọc được số khung xe (VIN) qua OBD",
   "obd.disconnect_title": "Ngắt kết nối",
   "obd.disconnect_confirm": "Bạn có muốn ngắt kết nối OBD2?",

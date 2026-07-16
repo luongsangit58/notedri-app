@@ -565,6 +565,7 @@ const en = {
   "obd.fg_notif_title": "NoteDri - OBD2 monitoring",
   "obd.fg_notif_body": "Keeps the connection alive while your screen is locked. Tap to open the app.",
   "home.obd_quick_setup": "Connect an OBD-II adapter for your car",
+  "home.obd_quick_upsell": "Premium feature - diagnose car issues via Bluetooth",
   "vehicle_detail.vin_prefill_title": "VIN read via OBD",
   "obd.disconnect_title": "Disconnect",
   "obd.disconnect_confirm": "Disconnect from OBD2?",
