@@ -1,4 +1,4 @@
-# Hướng dẫn test NoteDri OBD-II (cho Sang) - 14/7/2026
+# Hướng dẫn test NoteDri OBD2 (cho Sang) - 14/7/2026
 
 Tài liệu này liệt kê ĐÚNG những gì cần test TRÊN MÁY THẬT + Vgate + xe (những thứ
 KHÔNG thể tự động test bằng unit test). Phần nào đã có unit test tự động thì ghi

@@ -130,7 +130,7 @@ The user should feel the vehicle is being monitored continuously.
 
 ## 9. Data Flow
 
-OBD-II ↓ Vehicle Data Layer ↓ Timeline Recorder ↓ Knowledge Engine ↓
+OBD2 ↓ Vehicle Data Layer ↓ Timeline Recorder ↓ Knowledge Engine ↓
 Trend Analysis ↓ Health Calculation ↓ Recommendations ↓ Mobile App
 
 ------------------------------------------------------------------------

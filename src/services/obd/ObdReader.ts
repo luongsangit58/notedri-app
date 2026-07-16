@@ -74,7 +74,7 @@ export async function initializeElm327(): Promise<InitResult> {
 
     // Health-check: try reading RPM and Speed to confirm the vehicle ECU is responding.
     // Both null means the adapter connected but the car is off, uses an unsupported
-    // protocol, or the vehicle predates OBD-II (pre-2005 VN market).
+    // protocol, or the vehicle predates OBD2 (pre-2005 VN market).
     const [rpm, speed] = await Promise.all([readRpm(), readSpeed()]);
     const dataAvailable = rpm !== null || speed !== null;
 

@@ -14,7 +14,7 @@ Vehicle Data ↓ Knowledge ↓ Insight ↓ Recommendation ↓ Action
 
 # Vehicle Data Flow
 
-BLE ↓ ELM327 ↓ OBD-II Core ↓ Vehicle Data Layer ↓ Vehicle Timeline ↓
+BLE ↓ ELM327 ↓ OBD2 Core ↓ Vehicle Data Layer ↓ Vehicle Timeline ↓
 Knowledge Engine ↓ Rule Engine ↓ Recommendation Engine ↓ Vehicle Health
 ↓ Mobile App
 

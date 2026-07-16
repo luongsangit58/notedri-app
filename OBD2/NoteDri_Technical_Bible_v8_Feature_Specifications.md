@@ -108,5 +108,5 @@ Phase 3: - Predictive Maintenance - Driving Insights
 
 Phase 4: - Community Intelligence - AI Summary
 
-Rule: Never consume raw OBD-II responses directly. All features use
+Rule: Never consume raw OBD2 responses directly. All features use
 normalized data from the Vehicle Data Layer and Knowledge Engine.

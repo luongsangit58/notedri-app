@@ -20,7 +20,7 @@ export default function OnboardingScreen({ navigation }: { navigation: any }) {
   const listRef = useRef<FlatList<Slide>>(null);
   const [index, setIndex] = useState(0);
 
-  // OBD-II mở màn (định vị chủ đạo của NoteDri), rồi mới tới các tiện ích khác
+  // OBD2 mở màn (định vị chủ đạo của NoteDri), rồi mới tới các tiện ích khác
   const slides: Slide[] = [
     { icon: 'microchip',   title: t('onboarding.s1_title'), desc: t('onboarding.s1_desc') },
     { icon: 'stethoscope', title: t('onboarding.s2_title'), desc: t('onboarding.s2_desc') },

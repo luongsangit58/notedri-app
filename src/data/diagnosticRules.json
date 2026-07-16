@@ -131,7 +131,7 @@
      "value": 70
     }
    ],
-   "source": "Logic giám sát P0128 chuẩn OBD-II: ECT phải đạt nhiệt độ điều tiết (~76-85°C tuỳ hãng) trong thời gian quy định (SAE J1979; điều kiện monitor Honda/GM)",
+   "source": "Logic giám sát P0128 chuẩn OBD2: ECT phải đạt nhiệt độ điều tiết (~76-85°C tuỳ hãng) trong thời gian quy định (SAE J1979; điều kiện monitor Honda/GM)",
    "related_dtc": "P0128",
    "beta": true
   },

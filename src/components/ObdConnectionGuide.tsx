@@ -36,7 +36,7 @@ function StepSlide({ index, width }: { index: number; width: number }) {
 
   return (
     <View style={{ width }}>
-      <View style={[styles.slideInner, { paddingHorizontal: 2 }]}>
+      <View style={styles.slideInner}>
         {/* Ảnh riêng của bước này - View bọc ngoài quyết định kích thước (stretch
             chuẩn), Image chỉ lấp đầy 100% (bài học 15/7: Image không nhận width
             qua Yoga đáng tin cậy như View, thiếu bọc sẽ co theo kích thước gốc
@@ -55,9 +55,6 @@ function StepSlide({ index, width }: { index: number; width: number }) {
         )}
 
         <View style={styles.slideTextRow}>
-          <View style={[styles.stepNum, { backgroundColor: colors.primary }]}>
-            <Text style={styles.stepNumText}>{index + 1}</Text>
-          </View>
           <View style={{ flex: 1 }}>
             <View style={styles.stepHeader}>
               <FontAwesome5 name={step.icon} size={13} color={colors.primary} />
@@ -139,7 +136,7 @@ function StepCarousel() {
           disabled={activeIndex === 0}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           style={[styles.navBtn, activeIndex === 0 && styles.navBtnDisabled]}>
-          <FontAwesome5 name="chevron-left" size={13} color={activeIndex === 0 ? colors.border : colors.primary} />
+          <FontAwesome5 name="chevron-left" size={11} color={activeIndex === 0 ? colors.border : colors.primary} />
         </TouchableOpacity>
 
         <View style={styles.dotsRow}>
@@ -165,7 +162,7 @@ function StepCarousel() {
           style={[styles.navBtn, activeIndex === STEPS.length - 1 && styles.navBtnDisabled]}>
           <FontAwesome5
             name="chevron-right"
-            size={13}
+            size={11}
             color={activeIndex === STEPS.length - 1 ? colors.border : colors.primary}
           />
         </TouchableOpacity>
@@ -195,7 +192,7 @@ export default function ObdConnectionGuide() {
               name={key === 'adapter' ? 'microchip' : key === 'engine' ? 'key' : 'bluetooth-b'}
               size={10} color={colors.textSecondary}
             />
-            <Text style={[styles.needChipText, { color: colors.textSecondary }]}>
+            <Text numberOfLines={1} style={[styles.needChipText, { color: colors.textSecondary }]}>
               {t(`obd.guide_need_${key}` as any)}
             </Text>
           </View>
@@ -246,26 +243,25 @@ export default function ObdConnectionGuide() {
 const styles = StyleSheet.create({
   title: { fontSize: 17, fontWeight: '700', marginBottom: 4 },
   subtitle: { fontSize: 13, lineHeight: 19, marginBottom: 10 },
-  needChipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },
+  needChipsRow: { flexDirection: 'row', flexWrap: 'nowrap', gap: 6, marginBottom: 16 },
   needChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    borderRadius: 8, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 6,
+    flex: 1, minWidth: 0,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5,
+    borderRadius: 8, borderWidth: 1, paddingHorizontal: 8, paddingVertical: 6,
   },
-  needChipText: { fontSize: 12, fontWeight: '500' },
-  slideInner: {},
+  needChipText: { flexShrink: 1, fontSize: 11, fontWeight: '500' },
+  slideInner: { paddingHorizontal: 12 },
   // Cùng lý do không khai width:'100%' như bản cũ (xem comment lịch sử ở git log) -
   // View cha (slide, đã có width cố định = slideWidth) tự stretch đúng bề rộng.
   hero: { aspectRatio: 16 / 10, borderRadius: 12, marginBottom: 10, overflow: 'hidden' },
   heroImage: { width: '100%', height: '100%' },
   heroPlaceholder: { alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
-  slideTextRow: { flexDirection: 'row', gap: 10, alignItems: 'flex-start', paddingRight: 4 },
-  navRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 18, marginTop: 12, marginBottom: 14 },
-  navBtn: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
+  slideTextRow: { flexDirection: 'row', gap: 8, alignItems: 'flex-start', paddingRight: 0 },
+  navRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, marginTop: 10, marginBottom: 12 },
+  navBtn: { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
   navBtnDisabled: { opacity: 0.4 },
-  dotsRow: { flexDirection: 'row', justifyContent: 'center', gap: 8 },
-  dot: { width: 7, height: 7, borderRadius: 4 },
-  stepNum: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
-  stepNumText: { color: '#fff', fontSize: 13, fontWeight: '800' },
+  dotsRow: { flexDirection: 'row', justifyContent: 'center', gap: 6 },
+  dot: { width: 5, height: 5, borderRadius: 3 },
   stepHeader: { flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: 5, flexWrap: 'wrap' },
   stepTitle: { flex: 1, fontSize: 14, fontWeight: '700' },
   stepDesc: { fontSize: 13, lineHeight: 20 },

@@ -3,12 +3,12 @@
 ## 1. Vision
 
 -   NoteDri is a Vehicle Health Platform.
--   OBD-II is only a data source.
+-   OBD2 is only a data source.
 -   The goal is to build a digital health record for every vehicle.
 
 ## 2. Core Architecture
 
-Vehicle → OBD-II / Manual Input / Maintenance → Vehicle Data Layer →
+Vehicle → OBD2 / Manual Input / Maintenance → Vehicle Data Layer →
 Vehicle Timeline → Knowledge Repository (JSON) → Rule Engine →
 Recommendation Engine → Vehicle Health → AI (assistant only)
 
@@ -60,6 +60,6 @@ Week 4 - Import into Laravel - Connect Rule Engine - Connect Mobile App
 -   Never hardcode manufacturers.
 -   JSON first, database later.
 -   Git is the source of truth.
--   OBD-II is only a data source.
+-   OBD2 is only a data source.
 -   Vehicle Timeline is more important than Dashboard.
 -   AI assists research, never replaces the Rule Engine.
