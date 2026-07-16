@@ -11,12 +11,25 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useObdConnection } from '../../hooks/useObd';
 import { bleService, LinkQuality } from '../../services/obd/BleService';
 import { findingCostLabel } from '../../services/obd/findingCost';
 import AppBgPattern from '../../components/AppBgPattern';
 import { useColors } from '../../utils/theme';
 import { useT } from '../../i18n';
+
+// Rà soát 16/7 (góp ý user: giảm thao tác lúc lên xe - "1 chạm là kết nối"):
+// NFC tap-to-connect đã có sẵn (NfcSetupScreen) nhưng chỉ nằm ở 1 link nhỏ, ít
+// ai tự tìm ra. Nhắc NGAY sau lần kết nối Bluetooth thành công đầu tiên/xe -
+// đúng lúc user vừa trải nghiệm sự bất tiện của việc bấm quét+chọn thiết bị,
+// nên dễ thấy giá trị của "lần sau chỉ cần chạm thẻ". Chỉ nhắc 1 LẦN/xe (không
+// biết chắc user đã ghép thẻ thật hay chưa - viết thẻ NFC là hành động vật lý
+// ở đầu đọc riêng, không có cách nào server/app tự xác nhận - nhắc lặp lại mỗi
+// lần kết nối sẽ gây phiền hơn là hữu ích).
+function nfcNudgeKey(vehicleId: number): string {
+  return `obd_nfc_nudge_shown_${vehicleId}`;
+}
 
 function StatBox({
   label,
@@ -119,6 +132,33 @@ export default function OBDDashboardScreen() {
     const timer = setInterval(() => setLinkQuality(bleService.getLinkQuality()), 5000);
     return () => clearInterval(timer);
   }, [isConnected]);
+
+  // Nhắc ghép thẻ NFC (rà soát 16/7) - xem comment nfcNudgeKey() ở đầu file.
+  useEffect(() => {
+    if (!isConnected || !vehicleId) return;
+    let cancelled = false;
+    (async () => {
+      const key = nfcNudgeKey(vehicleId);
+      const shown = await AsyncStorage.getItem(key);
+      if (shown || cancelled) return;
+      await AsyncStorage.setItem(key, '1');
+      Alert.alert(
+        t('nfc.connect_nudge_title'),
+        t('nfc.connect_nudge_body'),
+        [
+          { text: t('gps_trips.later'), style: 'cancel' },
+          {
+            text: t('nfc.connect_nudge_cta'),
+            onPress: () => {
+              const bleDeviceId = bleService.getDeviceId();
+              if (bleDeviceId) navigation.navigate('NfcSetup', { vehicleId, vehicleName, bleDeviceId });
+            },
+          },
+        ],
+      );
+    })();
+    return () => { cancelled = true; };
+  }, [isConnected, vehicleId]);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>

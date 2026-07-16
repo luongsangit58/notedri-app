@@ -1404,6 +1404,9 @@ const en = {
   "nfc.writing": "Writing to NFC tag...",
   "nfc.write_success": "Tag paired! Next time, just tap it to connect.",
   "nfc.write_error": "Failed to write tag. Try holding it closer.",
+  "nfc.connect_nudge_title": "Just tap an NFC tag next time?",
+  "nfc.connect_nudge_body": "Pair an NFC tag near the OBD2 port - next time you get in, just tap your phone on it to auto-connect, no need to scan again.",
+  "nfc.connect_nudge_cta": "Pair a tag now",
   "nfc.unsupported": "This phone does not support NFC.",
   "nfc.disabled": "NFC is turned off. Enable it in Settings and try again.",
 

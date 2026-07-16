@@ -1404,6 +1404,9 @@ const vi = {
   "nfc.writing": "Đang ghi vào thẻ NFC...",
   "nfc.write_success": "Ghép thẻ thành công! Lần sau chỉ cần chạm thẻ để kết nối.",
   "nfc.write_error": "Ghi thẻ thất bại. Thử chạm lại gần thẻ hơn.",
+  "nfc.connect_nudge_title": "Lần sau chỉ cần chạm thẻ NFC?",
+  "nfc.connect_nudge_body": "Ghép 1 thẻ NFC dán gần cổng OBD2 - lần sau lên xe chỉ cần chạm điện thoại vào thẻ là tự kết nối, không cần mở app quét lại.",
+  "nfc.connect_nudge_cta": "Ghép thẻ ngay",
   "nfc.unsupported": "Điện thoại này không hỗ trợ NFC.",
   "nfc.disabled": "NFC đang tắt. Vào Cài đặt để bật NFC rồi thử lại.",
 
