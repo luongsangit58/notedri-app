@@ -720,6 +720,39 @@ export async function getReadiness(): Promise<Readiness> {
   };
 }
 
+export type AutoArmResult =
+  | { armed: true }
+  | { armed: false; reason: 'already_active' | 'missing_permission' | 'error' };
+
+/**
+ * Rà soát 16/7 (góp ý user: GPS nên "âm thầm" tự ghi nếu đã đủ điều kiện, chỉ
+ * nhắc khi thiếu): trước đây user PHẢI tự bấm nút bật trên GpsTripsScreen mỗi
+ * lần service tự tắt (auto-shutdown sau 20 phút không hoạt động, hoặc lần đầu
+ * cài app) - rất dễ quên bật trước khi lái, mất chuyến oan dù tính năng vốn đã
+ * thiết kế "tự ghi theo tốc độ". Gọi hàm này lúc app khởi động (App.tsx, gate
+ * theo token) để tự bật lại NẾU quyền vị trí nền đã có sẵn (từ trước) - hoàn
+ * toàn im lặng, KHÔNG tự bật hộp thoại xin quyền mới (đó là hành động chủ động
+ * cần user hiểu rõ lý do qua showBackgroundLocationDisclosure(), không nên bắn
+ * ra ngay lúc mở app). Nếu thiếu quyền, trả về để tầng gọi tự quyết định cách
+ * nhắc (banner/alert một lần, không xin quyền hộ).
+ */
+export async function autoArmIfReady(vehicleId: number): Promise<AutoArmResult> {
+  try {
+    const active = await isTrackingActive();
+    if (active) return { armed: false, reason: 'already_active' };
+
+    const readiness = await getReadiness();
+    if (!readiness.foreground || !readiness.background) {
+      return { armed: false, reason: 'missing_permission' };
+    }
+
+    const result = await requestPermissionsAndStart(vehicleId);
+    return result.ok ? { armed: true } : { armed: false, reason: 'error' };
+  } catch {
+    return { armed: false, reason: 'error' };
+  }
+}
+
 // Mở Cài đặt định vị hệ thống (khi không bật được bằng dialog)
 export async function openLocationSettings(): Promise<void> {
   if (Platform.OS === 'android') {

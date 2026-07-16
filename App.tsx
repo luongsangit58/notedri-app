@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
-import { AppState, AppStateStatus, Appearance } from 'react-native';
+import { AppState, AppStateStatus, Appearance, Alert } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './src/api/queryClient';
 import { NavigationContainer } from '@react-navigation/native';
@@ -14,12 +15,51 @@ import { flushPendingTrips } from './src/services/obd/TripSyncQueue';
 import { bleService } from './src/services/obd/BleService';
 import { hasAnyPairing } from './src/services/obd/pairedDevices';
 import { flushPendingGpsTrips } from './src/services/gps/GpsTripSyncQueue';
-import { maybeAutoShutdownStale } from './src/services/gps/GpsTripTracker';
+import { maybeAutoShutdownStale, autoArmIfReady } from './src/services/gps/GpsTripTracker';
+import { vehiclesApi } from './src/api/vehicles';
 import { initDeepLinkService } from './src/services/nfc/DeepLinkService';
 import { sendDeviceHeartbeat } from './src/api/devices';
 import { useAuthStore } from './src/store/authStore';
 import { initializeAdMob } from './src/services/ads/admob';
 import { recoverPendingGoogleAuthIfAny } from './src/services/googleAuthRecovery';
+
+// Chỉ nhắc bật ghi hành trình tự động 1 LẦN DUY NHẤT/máy (rà soát 16/7) - tránh
+// làm phiền mỗi lần mở app nếu user đã lỡ bỏ qua hoặc cố tình chưa cấp quyền.
+const GPS_AUTOSTART_NUDGE_KEY = 'gps_autostart_nudge_shown';
+
+async function tryAutoArmGpsTracking(): Promise<void> {
+  try {
+    const res = await vehiclesApi.list();
+    const raw = (res as any)?.data;
+    const vehicles: any[] = Array.isArray(raw?.data) ? raw.data : Array.isArray(raw) ? raw : [];
+    const defaultVehicle = vehicles.find((v) => v.is_default) ?? vehicles[0];
+    if (!defaultVehicle?.id) return;
+
+    const result = await autoArmIfReady(defaultVehicle.id);
+    if (result.armed || result.reason !== 'missing_permission') return;
+
+    const alreadyNudged = await AsyncStorage.getItem(GPS_AUTOSTART_NUDGE_KEY);
+    if (alreadyNudged) return;
+    await AsyncStorage.setItem(GPS_AUTOSTART_NUDGE_KEY, '1');
+
+    const t = useI18nStore.getState().t;
+    Alert.alert(
+      t('gps_trips.autostart_nudge_title'),
+      t('gps_trips.autostart_nudge_body'),
+      [
+        { text: t('gps_trips.later'), style: 'cancel' },
+        {
+          text: t('gps_trips.autostart_nudge_cta'),
+          onPress: () => {
+            if (navigationRef.isReady()) navigationRef.navigate('GpsTrips' as never);
+          },
+        },
+      ],
+    );
+  } catch {
+    // Best-effort - không được để lỗi ở đây làm gãy luồng khởi động app chính.
+  }
+}
 // Side-effect import: registers the GPS_TRIP_TRACKING background task at module load time
 import './src/services/gps/GpsTripTracker';
 
@@ -62,6 +102,10 @@ function AppLoader({ children }: { children: React.ReactNode }) {
     flushPendingTrips().catch(() => {});
     maybeAutoShutdownStale().catch(() => {}); // đóng chuyến bị kẹt từ phiên trước (app bị kill)
     flushPendingGpsTrips().catch(() => {});
+    // GPS tự ghi hành trình (rà soát 16/7): trước đây phải tự bấm nút bật lại mỗi
+    // khi service tự tắt do rảnh 20 phút - dễ quên trước khi lái, mất chuyến oan.
+    // Tự bật lại NẾU quyền đã có sẵn (im lặng); nếu thiếu quyền, nhắc 1 lần duy nhất.
+    tryAutoArmGpsTracking();
   }, [token]);
 
   useEffect(() => {
