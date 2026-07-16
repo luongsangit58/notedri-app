@@ -99,6 +99,12 @@ function StepCarousel() {
     if (idx !== activeIndex) setActiveIndex(idx);
   }
 
+  function goTo(i: number) {
+    const clamped = Math.max(0, Math.min(STEPS.length - 1, i));
+    scrollRef.current?.scrollTo({ x: clamped * carouselWidth, animated: true });
+    setActiveIndex(clamped);
+  }
+
   return (
     <View onLayout={handleLayout}>
       {/* Chưa đo được bề rộng thật (lần render đầu) - không render ScrollView với
@@ -107,36 +113,62 @@ function StepCarousel() {
         <ScrollView
           ref={scrollRef}
           horizontal
-          pagingEnabled
           showsHorizontalScrollIndicator={false}
           onScroll={handleScroll}
           scrollEventThrottle={32}
+          // Rà soát 16/7 (user báo vuốt 1 cái nhảy thẳng bước 3-4): pagingEnabled
+          // VÀ snapToInterval cùng lúc là 2 cơ chế snap CHỒNG nhau, Android xử lý
+          // không nhất quán với vuốt nhanh/mạnh tay - chỉ giữ snapToInterval (đã
+          // đúng bằng carouselWidth, đủ để snap từng trang) + decelerationRate
+          // "fast" là đủ, bỏ hẳn pagingEnabled để hết xung đột.
           snapToInterval={carouselWidth}
-          decelerationRate="fast">
+          snapToAlignment="start"
+          decelerationRate="fast"
+          disableIntervalMomentum>
           {STEPS.map((_, i) => (
             <StepSlide key={i} index={i} width={carouselWidth} />
           ))}
         </ScrollView>
       )}
 
-      {/* Chấm chỉ số trang - chạm 1 chấm để nhảy thẳng tới bước đó */}
-      <View style={styles.dotsRow}>
-        {STEPS.map((_, i) => (
-          <TouchableOpacity
-            key={i}
-            hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}
-            onPress={() => {
-              scrollRef.current?.scrollTo({ x: i * carouselWidth, animated: true });
-              setActiveIndex(i);
-            }}>
-            <View
-              style={[
-                styles.dot,
-                { backgroundColor: i === activeIndex ? colors.primary : colors.border },
-              ]}
-            />
-          </TouchableOpacity>
-        ))}
+      {/* Nút Trước/Tiếp (rà soát 16/7: vuốt tay không đủ tin cậy, thêm lối bấm
+          rõ ràng - đỡ phụ thuộc hoàn toàn vào cử chỉ vuốt) + chấm chỉ số trang. */}
+      <View style={styles.navRow}>
+        <TouchableOpacity
+          onPress={() => goTo(activeIndex - 1)}
+          disabled={activeIndex === 0}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          style={[styles.navBtn, activeIndex === 0 && styles.navBtnDisabled]}>
+          <FontAwesome5 name="chevron-left" size={13} color={activeIndex === 0 ? colors.border : colors.primary} />
+        </TouchableOpacity>
+
+        <View style={styles.dotsRow}>
+          {STEPS.map((_, i) => (
+            <TouchableOpacity
+              key={i}
+              hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}
+              onPress={() => goTo(i)}>
+              <View
+                style={[
+                  styles.dot,
+                  { backgroundColor: i === activeIndex ? colors.primary : colors.border },
+                ]}
+              />
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <TouchableOpacity
+          onPress={() => goTo(activeIndex + 1)}
+          disabled={activeIndex === STEPS.length - 1}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          style={[styles.navBtn, activeIndex === STEPS.length - 1 && styles.navBtnDisabled]}>
+          <FontAwesome5
+            name="chevron-right"
+            size={13}
+            color={activeIndex === STEPS.length - 1 ? colors.border : colors.primary}
+          />
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -153,15 +185,21 @@ export default function ObdConnectionGuide() {
       <Text style={[styles.title, { color: colors.text }]}>{t('obd.guide_title')}</Text>
       <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{t('obd.guide_subtitle')}</Text>
 
-      {/* Cần chuẩn bị - RÚT GỌN thành 1 dòng (sửa 15/7: box lớn 3 icon tròn trước
-          đây trùng nội dung với 4 bước carousel bên dưới, chiếm nhiều diện tích
-          không cần thiết - vẫn giữ vì là checklist nhanh hữu ích trước khi bắt
-          đầu, chỉ nén còn 1 dòng text ngắn). */}
-      <View style={styles.needCompactRow}>
-        <FontAwesome5 name="clipboard-check" size={11} color={colors.textSecondary} />
-        <Text style={[styles.needCompactText, { color: colors.textSecondary }]}>
-          {t('obd.guide_need_compact')}
-        </Text>
+      {/* Cần chuẩn bị - rà soát 16/7 (user: dòng "Cần: X · Y · Z" nối bằng dấu
+          chấm đọc dài dòng, trình bày không chuyên nghiệp) - đổi 3 mục thành 3
+          chip nhỏ riêng biệt, dễ quét mắt hơn 1 câu văn nối chuỗi. */}
+      <View style={styles.needChipsRow}>
+        {(['adapter', 'engine', 'bluetooth'] as const).map((key) => (
+          <View key={key} style={[styles.needChip, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <FontAwesome5
+              name={key === 'adapter' ? 'microchip' : key === 'engine' ? 'key' : 'bluetooth-b'}
+              size={10} color={colors.textSecondary}
+            />
+            <Text style={[styles.needChipText, { color: colors.textSecondary }]}>
+              {t(`obd.guide_need_${key}` as any)}
+            </Text>
+          </View>
+        ))}
       </View>
 
       {/* Carousel vuốt ngang: mỗi bước 1 slide (ảnh + text ngắn ngay dưới) */}
@@ -208,8 +246,12 @@ export default function ObdConnectionGuide() {
 const styles = StyleSheet.create({
   title: { fontSize: 17, fontWeight: '700', marginBottom: 4 },
   subtitle: { fontSize: 13, lineHeight: 19, marginBottom: 10 },
-  needCompactRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 14 },
-  needCompactText: { flex: 1, fontSize: 12, lineHeight: 16 },
+  needChipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 },
+  needChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    borderRadius: 8, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 6,
+  },
+  needChipText: { fontSize: 12, fontWeight: '500' },
   slideInner: {},
   // Cùng lý do không khai width:'100%' như bản cũ (xem comment lịch sử ở git log) -
   // View cha (slide, đã có width cố định = slideWidth) tự stretch đúng bề rộng.
@@ -217,7 +259,10 @@ const styles = StyleSheet.create({
   heroImage: { width: '100%', height: '100%' },
   heroPlaceholder: { alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
   slideTextRow: { flexDirection: 'row', gap: 10, alignItems: 'flex-start', paddingRight: 4 },
-  dotsRow: { flexDirection: 'row', justifyContent: 'center', gap: 8, marginTop: 12, marginBottom: 14 },
+  navRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 18, marginTop: 12, marginBottom: 14 },
+  navBtn: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
+  navBtnDisabled: { opacity: 0.4 },
+  dotsRow: { flexDirection: 'row', justifyContent: 'center', gap: 8 },
   dot: { width: 7, height: 7, borderRadius: 4 },
   stepNum: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
   stepNumText: { color: '#fff', fontSize: 13, fontWeight: '800' },
