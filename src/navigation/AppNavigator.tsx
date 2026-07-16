@@ -118,7 +118,7 @@ function ThemedTabNavigator() {
         options={{ headerShown: false, title: t('nav.tab_dashboard'), tabBarIcon: ({ color, size }) => <FontAwesome5 name="home" size={size - 2} color={color} solid /> }}
       />
       <Tab.Screen
-        name="ThongKe"
+        name="Stats"
         component={ThongKeScreen}
         options={{ headerShown: false, title: t('nav.tab_stats'), tabBarIcon: ({ color, size }) => <FontAwesome5 name="chart-line" size={size - 2} color={color} solid /> }}
       />
@@ -128,7 +128,7 @@ function ThemedTabNavigator() {
         options={{ title: t('nav.tab_vehicles'), headerShown: false, tabBarIcon: ({ color, size }) => <FontAwesome5 name="car-side" size={size - 2} color={color} solid /> }}
       />
       <Tab.Screen
-        name="QuanLy"
+        name="Management"
         component={QuanLyScreen}
         options={{ headerShown: false, title: t('nav.tab_manage'), tabBarIcon: ({ color, size }) => <FontAwesome5 name="heartbeat" size={size - 2} color={color} solid /> }}
       />

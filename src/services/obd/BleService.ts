@@ -1,4 +1,4 @@
-import { BleManager, Device, State, Characteristic, BleRestoredState } from 'react-native-ble-plx';
+import { BleManager, Device, State, Characteristic, BleRestoredState, BleErrorCode } from 'react-native-ble-plx';
 import { Platform, PermissionsAndroid } from 'react-native';
 import { useI18nStore } from '../../i18n';
 import { useObdSessionStore } from '../../store/obdSessionStore';
@@ -446,6 +446,27 @@ class BleService {
     });
   }
 
+  /**
+   * Lỗi trạng thái Bluetooth từ chính native SDK (vd quét lúc BT tắt) đến kèm
+   * message tiếng Anh gốc - dịch lại qua bleError() trước khi đưa ra UI, tránh
+   * lẫn tiếng Anh vào giao diện tiếng Việt (Sang phản hồi 16/7: quét lúc BT tắt
+   * vẫn hiện "BluetoothLE is powered off").
+   */
+  private translateBleError(error: Error & { errorCode?: BleErrorCode }): Error {
+    switch (error.errorCode) {
+      case BleErrorCode.BluetoothPoweredOff:
+        return this.bleError('BT_OFF');
+      case BleErrorCode.BluetoothUnsupported:
+        return this.bleError('BT_UNSUPPORTED');
+      case BleErrorCode.BluetoothUnauthorized:
+      case BleErrorCode.BluetoothInUnknownState:
+      case BleErrorCode.BluetoothResetting:
+        return this.bleError('BT_TIMEOUT');
+      default:
+        return error;
+    }
+  }
+
   scanForDevices(
     onFound: (device: ObdDevice) => void,
     onError: (error: Error) => void,
@@ -453,7 +474,7 @@ class BleService {
   ): () => void {
     const found = new Set<string>();
     this.manager.startDeviceScan(null, { allowDuplicates: false }, (error, device) => {
-      if (error) { onError(error); return; }
+      if (error) { onError(this.translateBleError(error)); return; }
       if (!device || !device.name) return;
       const name = device.name.toUpperCase();
       // 'VLINK' bắt buộc phải có: Vgate iCar Pro BLE 4.0 quảng bá tên "IOS-Vlink",
@@ -501,7 +522,7 @@ class BleService {
       const device = await this.manager.connectToDevice(deviceId, {
         autoConnect: false,
         requestMTU: 512,
-      });
+      }).catch((error) => { throw this.translateBleError(error); });
 
       await this.attachToDevice(device);
       this.sessionStartedAt = Date.now();

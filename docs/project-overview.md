@@ -10,6 +10,23 @@ Built with **Expo SDK ~54** (React Native 0.81.5) in TypeScript. Deployed via **
 
 ---
 
+## Navigation / Tab Bar
+
+The root bottom tab bar (`src/navigation/AppNavigator.tsx` → `ThemedTabNavigator`, rendered through the custom `CustomTabBar`) has **4 tabs**:
+
+| Tab route name | Screen rendered | Icon |
+|---|---|---|
+| `Dashboard` | `HomeScreen` (`src/screens/home/HomeScreen.tsx`) | home |
+| `Stats` | `ThongKeScreen` (`src/screens/stats/ThongKeScreen.tsx`) — embeds Timeline / Reports / GPS Trips as sub-tabs | chart-line |
+| `Vehicles` | `VehiclesStack` → `VehiclesScreen` / `VehicleDetailScreen` | car-side |
+| `Management` | `QuanLyScreen` (`src/screens/management/QuanLyScreen.tsx`) — embeds Reminders / Health as sub-tabs | heartbeat |
+
+`Stats` and `Management` are the current route names; they were renamed from the earlier Vietnamese-derived route names `ThongKe`/`QuanLy` for consistency with the rest of the (English) route names in the navigator. The underlying screen **file names** (`ThongKeScreen.tsx`, `QuanLyScreen.tsx`) were not renamed. A raised center FAB (built directly into `CustomTabBar`, not a 5th tab) opens a quick-add sheet for Refuel / Odometer / GPS Trip / Service / Reminder.
+
+Note: `src/screens/dashboard/DashboardScreen.tsx` (an older, more detailed per-vehicle dashboard) exists in the tree but is **not currently wired into `AppNavigator.tsx`** — the `Dashboard` tab renders `HomeScreen`, not `DashboardScreen`. See [screens-inventory.md](screens-inventory.md) for details.
+
+---
+
 ## Summary Table
 
 | Property | Value |
@@ -56,36 +73,40 @@ Built with **Expo SDK ~54** (React Native 0.81.5) in TypeScript. Deployed via **
 
 ### Core Vehicle Management
 
-- Multi-vehicle registry (Free tier: 2 vehicles; Premium: 3+)
-- Vehicle dossier - registration, insurance, and inspection document storage
+- Multi-vehicle registry (Free tier: capped vehicle count; Premium: higher/unlimited)
+- Vehicle dossier - registration, insurance, and inspection document storage, plus extended profile fields (color, VIN with decode-assisted model year/region, engine number, dealer, purchase date/price)
+- Vehicle ownership transfer requests ("maintenance passport" hand-over between owners, VIN-based)
 - Odometer logging with OCR (dashboard photo) and voice input
-- Fuel refuel logging with receipt OCR and voice input
-- Service / maintenance log with full history
-- Reminders for legal deadlines (inspection, insurance, registration) and maintenance intervals
-- Fuel prices feed and nearby fuel station map (WebView + Leaflet)
+- Fuel refuel logging with receipt OCR, voice input, and auto price lookup
+- Service / maintenance log with full history and receipt photo attachment
+- Reminders for legal deadlines (inspection, insurance, registration) and maintenance intervals, with suggested-reminder seeding
+- Fuel prices feed (with 6-month trend chart) and nearby fuel-station / EV-charging-station map (WebView + Leaflet)
 
 ### Analytics and Reporting
 
-- Dashboard with aggregated stats per vehicle (cost per km, fuel efficiency, service spend)
-- Timeline: chronological event stream across all vehicles
-- Reports: cost breakdown and consumption charts
-- Year Review: annual summary highlights
-- Achievements / gamification milestones
-- Data export from profile settings
+- Home dashboard with quick stats, highlight banner, and quick-action cards per vehicle
+- Timeline: chronological event stream across vehicles (embedded as a Stats sub-tab)
+- Reports: cost breakdown and consumption charts (embedded as a Stats sub-tab)
+- Year Review: annual summary highlights (dark animated recap card)
+- Achievements / gamification milestones with badge levels
+- Data export from profile settings (Premium-gated)
 
 ### Vehicle Health
 
-- Vehicle Health Score (VHS) display - score computed server-side
+- Vehicle Health Score (VHS) display for every vehicle - score computed server-side, with pillar breakdown, organ-level findings, and a score-trend chart
 - Band-change push notifications from the backend scoring engine
-- Garage guide (workshop checklist per vehicle type)
+- Garage guide (workshop checklist per vehicle type, with last-cost context)
 
-### OBD2 Diagnostics (Premium-only)
+### OBD2 Diagnostics (Premium-only, except DTC Lookup)
 
 - BLE ELM327 / Vgate iCar adapter support (auto-detected)
 - Live dashboard: RPM, speed, coolant temperature, oil temperature, fuel level, engine load, throttle position
-- OBD trip recording (PID polling every 3 s)
-- DTC fault code reading with SAE J2012 descriptions and resolution workflow
-- OBD trip history and sync queue for offline resilience
+- Full technical PID table (13 PIDs incl. fuel trim, intake pressure/temp, ambient temp, fuel rate)
+- System-health view grouping readings into engine / cooling / electrical / fuel status cards
+- OBD trip recording (PID polling every 3 s) and trip history with DTC events
+- Session report with a 30-day trend chart (voltage, coolant, driving score, DTC count, engine hours)
+- NFC tap-to-connect setup (write vehicle/adapter pairing to an NFC tag)
+- DTC fault code lookup (SAE J2012) with online + offline dictionary fallback and resolution guidance - available even without a connected adapter or Premium
 
 ### GPS Trip Tracking
 
@@ -94,8 +115,9 @@ Built with **Expo SDK ~54** (React Native 0.81.5) in TypeScript. Deployed via **
 - Background foreground service (Android) / background location (iOS)
 - Pause and resume trip
 - Stale-trip recovery on app restart
+- Driving-score computation from detected driving events
 - Route map rendered with Leaflet via WebView
-- GPS trip history with haversine distance calculation
+- GPS trip history with haversine distance calculation (embedded as a Stats sub-tab)
 
 ### Input Assistance
 
@@ -104,12 +126,16 @@ Built with **Expo SDK ~54** (React Native 0.81.5) in TypeScript. Deployed via **
 
 ### Account and Premium
 
-- Email/password registration and login
-- Google OAuth (expo-auth-session)
-- Premium subscription screen and tier gating (OBD2, vehicle limits, history window)
-- Profile editing and avatar upload
+- Email/password registration with OTP email verification, and login
+- Google OAuth (expo-auth-session), including linking/unlinking Google from an existing account
+- First-run onboarding carousel with in-flow language switch
+- Premium subscription screen with plan-length picker, redeem codes, and QR bank-transfer payment; payment history screen
+- Tier gating (OBD2 core flow, data export, vehicle limits, history window)
+- Profile editing (name, phone, address, avatar upload)
+- Active device/session management (view, log out one/all, set primary device)
 - Push notifications via Expo push service
 - Notification preferences screen
+- In-app feedback form
 - Dark / light theme (persisted in SecureStore)
 - Bilingual UI: Vietnamese (default) and English
 
@@ -152,8 +178,8 @@ See [deployment-guide.md](deployment-guide.md) for full build commands and EAS c
 |---|---|
 | [architecture.md](architecture.md) | System architecture deep dive |
 | [source-tree-analysis.md](source-tree-analysis.md) | Annotated directory tree |
-| [screens-inventory.md](screens-inventory.md) | All 44 screens catalogued |
-| [component-inventory.md](component-inventory.md) | All shared components |
+| [screens-inventory.md](screens-inventory.md) | All 56 screen files catalogued |
+| [component-inventory.md](component-inventory.md) | All shared components (22 files in `src/components/`) |
 | [services-guide.md](services-guide.md) | BLE / GPS / sync service classes |
 | [api-integration.md](api-integration.md) | Axios + TanStack Query + endpoints |
 | [development-guide.md](development-guide.md) | Local dev setup |

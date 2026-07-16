@@ -314,7 +314,7 @@ export default function HomeScreen() {
         {topHighlight && (
           <TouchableOpacity
             activeOpacity={0.85}
-            onPress={() => nav.navigate('QuanLy', { tab: 0, _ts: Date.now() })}
+            onPress={() => nav.navigate('Management', { tab: 0, _ts: Date.now() })}
             style={{
               borderRadius: 16, marginBottom: 12, overflow: 'hidden',
               borderWidth: 1, borderColor: topHighlight.remaining_days <= 0 ? '#ef4444' : colors.warning,
@@ -570,7 +570,7 @@ export default function HomeScreen() {
         {vehicleId && dashRaw && (
           <TouchableOpacity
             activeOpacity={0.85}
-            onPress={() => nav.navigate('ThongKe', { tab: 1 })}
+            onPress={() => nav.navigate('Stats', { tab: 1 })}
             style={{
               flexDirection: 'row', backgroundColor: colors.surface, borderRadius: 14,
               paddingVertical: 14, marginBottom: 12, borderWidth: 1, borderColor: colors.border,
@@ -607,7 +607,7 @@ export default function HomeScreen() {
           <View style={{ backgroundColor: colors.surface, borderRadius: 14, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: colors.border }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
               <Text style={{ color: colors.text, fontWeight: '700', fontSize: 15 }}>{t('vehicles.upcoming_reminders')}</Text>
-              <TouchableOpacity onPress={() => nav.navigate('QuanLy', { tab: 0, _ts: Date.now() })}>
+              <TouchableOpacity onPress={() => nav.navigate('Management', { tab: 0, _ts: Date.now() })}>
                 <Text style={{ color: colors.primary, fontSize: 13 }}>
                   {t('home.see_all')}
                 </Text>
@@ -622,7 +622,7 @@ export default function HomeScreen() {
                   activeOpacity={0.6}
                   onPress={() => r.id != null
                     ? nav.navigate('EditReminder', { reminderId: r.id, vehicleId })
-                    : nav.navigate('QuanLy', { tab: 0, _ts: Date.now() })}
+                    : nav.navigate('Management', { tab: 0, _ts: Date.now() })}
                   style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 7 }}>
                   <Text style={{ color: colors.text, fontSize: 14, flex: 1 }} numberOfLines={1}>{r.hang_muc}</Text>
                   <Text style={{ color: urgent, fontSize: 13, fontWeight: '700' }}>
