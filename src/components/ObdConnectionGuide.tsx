@@ -22,8 +22,8 @@ const STEP_IMAGES: (ImageSourcePropType | null)[] = [
 ];
 
 const STEPS: { icon: string }[] = [
-  { icon: 'search-location' },
   { icon: 'plug' },
+  { icon: 'lightbulb' },
   { icon: 'key' },
   { icon: 'bluetooth-b' },
 ];
