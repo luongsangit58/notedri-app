@@ -221,6 +221,42 @@ export default function OBDDashboardScreen() {
           </Text>
         )}
 
+        {/* Rà soát 16/7 (góp ý user: quá nhiều text trước khi thấy số liệu) - số
+            liệu sống lên NGAY sau trạng thái kết nối, mọi banner cảnh báo/chẩn
+            đoán (VIN lệch, no-data, mọi thứ ổn, findings, tạm dừng) đẩy XUỐNG
+            dưới lưới số - đúng kỳ vọng "dashboard" là thấy đồng hồ trước, đọc
+            chẩn đoán chi tiết sau nếu cần, không phải ngược lại. */}
+
+        {/* Live stats grid - ẩn ô của PID xe không hỗ trợ (capability R8).
+            Chưa dò được capability (null) thì hiện đủ như cũ. Mờ đi khi số liệu
+            không còn cập nhật (mất sóng) để phân biệt với dữ liệu sống. */}
+        <View style={[styles.statsGrid, !isConnected && snap ? { opacity: 0.5 } : null]}>
+          {(() => {
+            const tiles = [
+              { pid: '0D', el: <StatBox key="0D" label={t('obd.stat_speed')} value={snap?.speedKmh ?? null} unit=" km/h" icon="tachometer-alt" color="#3B82F6" /> },
+              { pid: '0C', el: <StatBox key="0C" label="RPM" value={snap?.rpm !== null ? Math.round(snap?.rpm ?? 0) : null} icon="cogs" color="#8B5CF6" /> },
+              { pid: '04', el: <StatBox key="04" label={t('obd.stat_engine_load')} value={snap?.engineLoadPct ?? null} unit="%" icon="fire" color="#F59E0B" /> },
+              { pid: '05', el: <StatBox key="05" label={t('obd.stat_coolant')} value={snap?.coolantTempC ?? null} unit="°C" icon="thermometer-half" color="#EF4444" /> },
+              { pid: '2F', el: <StatBox key="2F" label={t('obd.stat_fuel')} value={snap?.fuelLevelPct ?? null} unit="%" icon="gas-pump" color="#10B981" /> },
+              { pid: '5C', el: <StatBox key="5C" label={t('obd.stat_oil_temp')} value={snap?.oilTempC ?? null} unit="°C" icon="oil-can" color="#F97316" /> },
+              { pid: '11', el: <StatBox key="11" label={t('obd.stat_throttle')} value={snap?.throttlePct ?? null} unit="%" icon="sliders-h" color="#14B8A6" /> },
+              { pid: '42', el: <StatBox key="42" label={t('obd.stat_voltage')} value={snap?.controlModuleVoltage ?? null} unit="V" icon="battery-full" color="#6366F1" /> },
+            ];
+            const supported = capability
+              ? tiles.filter((tile) => capability.supportedPids.includes(tile.pid))
+              : tiles;
+            const rows = [];
+            for (let i = 0; i < supported.length; i += 2) {
+              rows.push(
+                <View key={i} style={styles.statsRow}>
+                  {supported.slice(i, i + 2).map((tile) => tile.el)}
+                </View>,
+              );
+            }
+            return rows;
+          })()}
+        </View>
+
         {/* VIN không khớp: có thể đang cắm Vgate sang XE KHÁC vào bản ghi này
             (toàn vẹn dữ liệu, Sang duyệt 14/7). Chỉ cảnh báo, không chặn. */}
         {vinMismatch && (
@@ -309,36 +345,6 @@ export default function OBDDashboardScreen() {
             </Text>
           </View>
         )}
-
-        {/* Live stats grid - ẩn ô của PID xe không hỗ trợ (capability R8).
-            Chưa dò được capability (null) thì hiện đủ như cũ. Mờ đi khi số liệu
-            không còn cập nhật (mất sóng) để phân biệt với dữ liệu sống. */}
-        <View style={[styles.statsGrid, !isConnected && snap ? { opacity: 0.5 } : null]}>
-          {(() => {
-            const tiles = [
-              { pid: '0D', el: <StatBox key="0D" label={t('obd.stat_speed')} value={snap?.speedKmh ?? null} unit=" km/h" icon="tachometer-alt" color="#3B82F6" /> },
-              { pid: '0C', el: <StatBox key="0C" label="RPM" value={snap?.rpm !== null ? Math.round(snap?.rpm ?? 0) : null} icon="cogs" color="#8B5CF6" /> },
-              { pid: '04', el: <StatBox key="04" label={t('obd.stat_engine_load')} value={snap?.engineLoadPct ?? null} unit="%" icon="fire" color="#F59E0B" /> },
-              { pid: '05', el: <StatBox key="05" label={t('obd.stat_coolant')} value={snap?.coolantTempC ?? null} unit="°C" icon="thermometer-half" color="#EF4444" /> },
-              { pid: '2F', el: <StatBox key="2F" label={t('obd.stat_fuel')} value={snap?.fuelLevelPct ?? null} unit="%" icon="gas-pump" color="#10B981" /> },
-              { pid: '5C', el: <StatBox key="5C" label={t('obd.stat_oil_temp')} value={snap?.oilTempC ?? null} unit="°C" icon="oil-can" color="#F97316" /> },
-              { pid: '11', el: <StatBox key="11" label={t('obd.stat_throttle')} value={snap?.throttlePct ?? null} unit="%" icon="sliders-h" color="#14B8A6" /> },
-              { pid: '42', el: <StatBox key="42" label={t('obd.stat_voltage')} value={snap?.controlModuleVoltage ?? null} unit="V" icon="battery-full" color="#6366F1" /> },
-            ];
-            const supported = capability
-              ? tiles.filter((tile) => capability.supportedPids.includes(tile.pid))
-              : tiles;
-            const rows = [];
-            for (let i = 0; i < supported.length; i += 2) {
-              rows.push(
-                <View key={i} style={styles.statsRow}>
-                  {supported.slice(i, i + 2).map((tile) => tile.el)}
-                </View>,
-              );
-            }
-            return rows;
-          })()}
-        </View>
 
         <View style={[styles.infoCard, { backgroundColor: colors.card }]}>
           <Text style={[styles.infoTitle, { color: colors.text }]}>{t('obd.live_data_title')}</Text>
