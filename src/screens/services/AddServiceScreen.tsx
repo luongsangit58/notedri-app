@@ -15,20 +15,28 @@ import { useColors } from '../../utils/theme';
 import { useT } from '../../i18n';
 import MoneyInput from '../../components/MoneyInput';
 import ReceiptPicker from '../../components/ReceiptPicker';
+import OcrCamera, { ReceiptData } from '../../components/OcrCamera';
+import VoiceButton from '../../components/VoiceButton';
 import { ServicePhoto } from '../../api/services';
 
-const LOAI_OPTIONS = [
+// Rà soát 16/7 (UX audit: 10 chip ngang hàng khiến loại hay dùng "bao dưỡng/sửa
+// chữa" bị chìm giữa loại hiếm dùng "phí cầu đường/rửa xe") - chỉ hiện 4 loại
+// phổ biến nhất mặc định, phần còn lại gộp sau "Khác" (bấm mở rộng khi cần).
+const LOAI_OPTIONS_COMMON = [
   { value: 'bao_duong', labelKey: 'services.type_bao_duong' },
   { value: 'sua_chua', labelKey: 'services.type_sua_chua' },
   { value: 'lop', labelKey: 'services.type_lop' },
-  { value: 'bao_hiem', labelKey: 'reminders.type_bao_hiem' },
   { value: 'dang_kiem', labelKey: 'reminders.type_dang_kiem' },
+];
+const LOAI_OPTIONS_MORE = [
+  { value: 'bao_hiem', labelKey: 'reminders.type_bao_hiem' },
   { value: 'phat_nguoi', labelKey: 'services.type_phat_nguoi' },
   { value: 'phi_gui_xe', labelKey: 'services.type_phi_gui_xe' },
   { value: 'phi_cau_duong', labelKey: 'services.type_phi_cau_duong' },
   { value: 'rua_xe', labelKey: 'services.type_rua_xe' },
   { value: 'khac', labelKey: 'reminders.type_khac' },
 ];
+const LOAI_OPTIONS = [...LOAI_OPTIONS_COMMON, ...LOAI_OPTIONS_MORE];
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
   const colors = useColors();
@@ -119,19 +127,40 @@ export default function AddServiceScreen() {
 
   const [vehicleId, setVehicleId] = useState<number | null>(defaultVehicle?.id ?? null);
   const [loai, setLoai] = useState('bao_duong');
+  const [showMoreLoai, setShowMoreLoai] = useState(false);
   const [hangMuc, setHangMuc] = useState('');
   const [chiPhi, setChiPhi] = useState('');
   const [odometer, setOdometer] = useState('');
+  const [odoPrefilled, setOdoPrefilled] = useState(false);
   const [ngay, setNgay] = useState(dayjs().format('YYYY-MM-DD'));
   const [noiLam, setNoiLam] = useState('');
   const [ghiChu, setGhiChu] = useState('');
   const [photo, setPhoto] = useState<ServicePhoto | null>(null);
+  const [ocrOpen, setOcrOpen] = useState(false);
 
   useEffect(() => {
     if (!vehicleId && defaultVehicle) {
       setVehicleId(defaultVehicle.id);
     }
   }, [vehicles]);
+
+  const currentVehicle = vehicles.find((v: any) => v.id === vehicleId);
+
+  // Auto-fill ODO (rà soát 16/7, UX audit: AddOdometerScreen/AddRefuelScreen đã
+  // làm việc này, AddServiceScreen thiếu - bắt gõ tay số ODO dù đã biết) - cùng
+  // pattern: gợi ý điền sẵn, xoá cờ prefill ngay khi user tự sửa/chọn OCR/giọng nói.
+  useEffect(() => {
+    if (odometer === '' && currentVehicle?.odo_hien_tai != null) {
+      setOdometer(String(currentVehicle.odo_hien_tai));
+      setOdoPrefilled(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentVehicle?.id, currentVehicle?.odo_hien_tai]);
+
+  const handleReceiptResult = ({ tongTien }: ReceiptData) => {
+    if (tongTien) setChiPhi(tongTien);
+    setOcrOpen(false);
+  };
 
   const handleSubmit = async () => {
     if (!vehicleId) {
@@ -201,14 +230,14 @@ export default function AddServiceScreen() {
             </>
           )}
 
-          {/* Loai selector */}
+          {/* Loai selector - 4 loại phổ biến trước, phần còn lại sau "Khác..." */}
           <FieldLabel>{t('services.type_label')}</FieldLabel>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
             style={styles.chipRow}
           >
-            {LOAI_OPTIONS.map((opt) => (
+            {(showMoreLoai ? LOAI_OPTIONS : LOAI_OPTIONS_COMMON).map((opt) => (
               <TouchableOpacity
                 key={opt.value}
                 onPress={() => setLoai(opt.value)}
@@ -225,6 +254,11 @@ export default function AddServiceScreen() {
                 </Text>
               </TouchableOpacity>
             ))}
+            {!showMoreLoai && (
+              <TouchableOpacity onPress={() => setShowMoreLoai(true)} style={styles.chip}>
+                <Text style={styles.chipText}>{t('services.type_more')}</Text>
+              </TouchableOpacity>
+            )}
           </ScrollView>
 
           {/* Hang muc */}
@@ -237,7 +271,8 @@ export default function AddServiceScreen() {
             style={styles.input}
           />
 
-          {/* Chi phi */}
+          {/* Chi phi - OCR hoá đơn/giọng nói (rà soát 16/7: AddRefuel/AddOdometer
+              đã có, AddService chỉ có ReceiptPicker đính ảnh không tự đọc số tiền). */}
           <FieldLabel>{t('services.cost_label')}</FieldLabel>
           <MoneyInput
             value={chiPhi}
@@ -246,17 +281,41 @@ export default function AddServiceScreen() {
             placeholderTextColor={colors.textSecondary}
             style={styles.input}
           />
+          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14 }}>
+            <TouchableOpacity
+              onPress={() => setOcrOpen(true)}
+              style={{
+                flex: 1, backgroundColor: colors.surface, padding: 10, borderRadius: 10,
+                alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6,
+                borderWidth: 1, borderColor: colors.border,
+              }}>
+              <FontAwesome5 name="camera" size={14} color={colors.primary} solid />
+              <Text style={{ color: colors.primary, fontWeight: '600', fontSize: 13 }}>{t('services.scan_receipt')}</Text>
+            </TouchableOpacity>
+          </View>
+          <VoiceButton
+            label={t('services.voice_label')}
+            hint={t('services.voice_hint')}
+            onResult={(value) => { if (value) setChiPhi(value); }}
+            compact
+          />
 
-          {/* Odometer */}
+          {/* Odometer - gợi ý điền sẵn từ odo_hien_tai (rà soát 16/7, cùng pattern
+              AddOdometerScreen) thay vì bắt nhớ và gõ tay. */}
           <FieldLabel>{t('refuels.odo_label')}</FieldLabel>
           <TextInput
             value={odometer}
-            onChangeText={setOdometer}
+            onChangeText={(v) => { setOdometer(v); setOdoPrefilled(false); }}
             placeholder={t('refuels.odo_label')}
             placeholderTextColor={colors.textSecondary}
             keyboardType="numeric"
-            style={styles.input}
+            style={[styles.input, odoPrefilled && { marginBottom: 2 }]}
           />
+          {odoPrefilled && (
+            <Text style={{ color: colors.textSecondary, fontSize: 11.5, marginBottom: 10 }}>
+              {t('odometer.prefilled_hint')}
+            </Text>
+          )}
 
           {/* Ngay */}
           <FieldLabel>{t('common.date')}</FieldLabel>
@@ -305,6 +364,15 @@ export default function AddServiceScreen() {
 
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <OcrCamera
+        visible={ocrOpen}
+        onClose={() => setOcrOpen(false)}
+        mode="receipt"
+        onResult={() => {}}
+        onReceiptResult={handleReceiptResult}
+        hint={t('ocr.title_receipt')}
+      />
     </SafeAreaView>
   );
 }
