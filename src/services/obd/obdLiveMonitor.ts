@@ -18,6 +18,7 @@ import { detectDrivingEvents, scoreFromCounts, SpeedSample } from '../drivingSco
 import { useObdSessionStore } from '../../store/obdSessionStore';
 import { startObdKeepAlive, stopObdKeepAlive } from './obdKeepAliveService';
 import { syncDtcNotifications } from './dtcNotificationStore';
+import { ewmaStep } from '../../utils/ewma';
 
 /**
  * Live monitor OBD (quyết định 14/7: GPS là nguồn CHUYẾN ĐI duy nhất - fixture #5
@@ -91,6 +92,17 @@ let lastSpeedSample: SpeedSample | null = null;
 let harshBrakeCount = 0;
 let harshAccelCount = 0;
 
+// Giá trị MƯỢT (EWMA) cho gauge hiển thị (mục 12 kiểm toán 16/07) - TÁCH KHỎI
+// snapshot RAW dùng cho rule engine/aggregator ở trên: làm mượt giảm giật do nhiễu
+// lượng tử hoá BLE trên gauge, nhưng rule engine cần giá trị tức thời thật để không
+// trễ pha/bỏ sót đỉnh ngắn (vd 1 lần quá nhiệt thoáng qua vẫn phải bắt được).
+let smoothedRpm: number | null = null;
+let smoothedSpeedKmh: number | null = null;
+let smoothedEngineLoadPct: number | null = null;
+let smoothedCoolantTempC: number | null = null;
+let smoothedThrottlePct: number | null = null;
+let smoothedControlModuleVoltage: number | null = null;
+
 // Giây MÁY ĐÃ CHẠY (rpm>0) trong phiên (E5 core + sửa bug rule van hằng nhiệt
 // 14/7): cộng dồn POLL_INTERVAL mỗi vòng poll có rpm>0. Dùng làm ngưỡng cho rule
 // engine thay vì thời gian BLE (adapter cắm cổng luôn có điện, connect trước khi
@@ -123,6 +135,8 @@ function resetSessionStats(): void {
   aggRpmAll = newAgg(); aggIdleThrottle = newAgg();
   maxSpeed = null; sessionDtcCount = 0; sessionFindingIds = new Set();
   lastSpeedSample = null; harshBrakeCount = 0; harshAccelCount = 0;
+  smoothedRpm = null; smoothedSpeedKmh = null; smoothedEngineLoadPct = null;
+  smoothedCoolantTempC = null; smoothedThrottlePct = null; smoothedControlModuleVoltage = null;
   engineRunSeconds = 0; drivingSeconds = 0; currentPhase = 'engine_off';
   sessionPendingDtcCount = 0; sessionPermanentDtcCount = 0; permanentDtcChecked = false;
   freezeFrame = null;
@@ -168,6 +182,7 @@ export function buildSessionSummary(): Record<string, unknown> | null {
 }
 
 const snapshotListeners = new Set<(s: ObdSnapshot) => void>();
+const smoothedSnapshotListeners = new Set<(s: ObdSnapshot) => void>();
 const dtcListeners = new Set<(codes: DtcCode[]) => void>();
 const pendingDtcListeners = new Set<(codes: DtcCode[]) => void>();
 const permanentDtcListeners = new Set<(codes: DtcCode[]) => void>();
@@ -204,6 +219,26 @@ async function poll(): Promise<void> {
 
     const snapshot = await readSnapshot();
     snapshotListeners.forEach((fn) => fn(snapshot));
+
+    // Gauge hiển thị: bản MƯỢT (EWMA) của snapshot, phát riêng cho màn hình nào
+    // muốn đỡ giật hình - rule engine bên dưới vẫn dùng `snapshot` RAW, không đổi.
+    smoothedRpm = ewmaStep(smoothedRpm, snapshot.rpm);
+    smoothedSpeedKmh = ewmaStep(smoothedSpeedKmh, snapshot.speedKmh);
+    smoothedEngineLoadPct = ewmaStep(smoothedEngineLoadPct, snapshot.engineLoadPct);
+    smoothedCoolantTempC = ewmaStep(smoothedCoolantTempC, snapshot.coolantTempC);
+    smoothedThrottlePct = ewmaStep(smoothedThrottlePct, snapshot.throttlePct);
+    smoothedControlModuleVoltage = ewmaStep(smoothedControlModuleVoltage, snapshot.controlModuleVoltage);
+    if (smoothedSnapshotListeners.size > 0) {
+      smoothedSnapshotListeners.forEach((fn) => fn({
+        ...snapshot,
+        rpm: smoothedRpm,
+        speedKmh: smoothedSpeedKmh,
+        engineLoadPct: smoothedEngineLoadPct,
+        coolantTempC: smoothedCoolantTempC,
+        throttlePct: smoothedThrottlePct,
+        controlModuleVoltage: smoothedControlModuleVoltage,
+      }));
+    }
 
     // Toàn bộ PID null liên tiếp = xe đã tắt máy/ECU ngủ trong khi BLE vẫn sống
     // (đuôi fixture #5) - báo tầng trên để hiển thị thông báo phù hợp thay vì
@@ -377,6 +412,15 @@ export const obdLiveMonitor = {
   onSnapshot(fn: (s: ObdSnapshot) => void): () => void {
     snapshotListeners.add(fn);
     return () => snapshotListeners.delete(fn);
+  },
+
+  /**
+   * Bản MƯỢT (EWMA) của snapshot - dùng cho gauge hiển thị (giảm giật do nhiễu BLE).
+   * KHÔNG dùng cho chẩn đoán/rule engine - dùng onSnapshot() (RAW) cho việc đó.
+   */
+  onSmoothedSnapshot(fn: (s: ObdSnapshot) => void): () => void {
+    smoothedSnapshotListeners.add(fn);
+    return () => smoothedSnapshotListeners.delete(fn);
   },
 
   onDtcFound(fn: (codes: DtcCode[]) => void): () => void {

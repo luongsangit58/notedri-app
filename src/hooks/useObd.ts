@@ -42,6 +42,10 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
   const [connectionState, setConnectionState] = useState<ConnectionState>('disconnected');
   const [foundDevices, setFoundDevices] = useState<ObdDevice[]>([]);
   const [liveSnapshot, setLiveSnapshot] = useState<ObdSnapshot | null>(null);
+  // Bản MƯỢT (EWMA) của liveSnapshot - dùng cho gauge hiển thị đỡ giật do nhiễu
+  // BLE (mục 12 kiểm toán 16/07). Rule engine/DTC vẫn dựa trên liveSnapshot RAW
+  // qua onFindings() - KHÔNG đổi, chỉ thêm lựa chọn hiển thị mượt hơn.
+  const [smoothedSnapshot, setSmoothedSnapshot] = useState<ObdSnapshot | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [warning, setWarning] = useState<ObdWarning>(null);
   const [capability, setCapability] = useState<VehicleCapability | null>(null);
@@ -86,6 +90,7 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
   useEffect(() => {
     const unsubs = [
       obdLiveMonitor.onSnapshot((snap) => setLiveSnapshot(snap)),
+      obdLiveMonitor.onSmoothedSnapshot((snap) => setSmoothedSnapshot(snap)),
       obdLiveMonitor.onFindings((f) => setFindings(f)),
       obdLiveMonitor.onDtcFound(() => {
         qc.invalidateQueries({ queryKey: ['obd', 'dtc', vehicleId] });
@@ -93,6 +98,7 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
       bleService.addDisconnectListener(() => {
         setConnectionState('disconnected');
         setLiveSnapshot(null);
+        setSmoothedSnapshot(null);
         setFindings([]);
         setVinMismatch(null);
       }),
@@ -297,6 +303,7 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
     connectionState,
     foundDevices,
     liveSnapshot,
+    smoothedSnapshot,
     findings,
     errorMessage,
     warning,

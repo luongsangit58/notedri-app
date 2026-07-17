@@ -74,7 +74,7 @@ export default function OBDDashboardScreen() {
   const colors = useColors();
   const {
     connectionState,
-    liveSnapshot,
+    smoothedSnapshot,
     findings,
     warning,
     capability,
@@ -121,7 +121,9 @@ export default function OBDDashboardScreen() {
     });
   }
 
-  const snap = liveSnapshot;
+  // Gauge hiển thị dùng bản MƯỢT (EWMA, mục 12 kiểm toán 16/07) đỡ giật do nhiễu
+  // BLE - findings/DTC ở trên vẫn tính từ snapshot RAW qua onFindings(), không đổi.
+  const snap = smoothedSnapshot;
   const isConnected = connectionState === 'connected';
   const isReconnecting = connectionState === 'reconnecting';
 
