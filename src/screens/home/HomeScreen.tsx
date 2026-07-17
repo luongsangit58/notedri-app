@@ -347,11 +347,14 @@ export default function HomeScreen() {
           activeOpacity={0.85}
           onPress={() => vehicleId ? nav.navigate('GpsTrips', { vehicleId, vehicleName }) : nav.navigate('AddVehicle')}
           style={{
-            borderRadius: 18, marginBottom: 12, overflow: 'hidden',
+            borderRadius: 18, marginBottom: 12,
             shadowColor: '#1e40af', shadowOpacity: 0.35, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 5,
           }}>
+          {/* Rà soát 17/7: overflow+borderRadius dời sang LinearGradient (xem comment
+              chi tiết ở thẻ OBD bên dưới) - tránh cùng lỗi Android tiềm ẩn nếu thẻ này
+              có lúc mount muộn (vd sau khi thêm/xoá điều kiện hiển thị ở trên). */}
           <LinearGradient colors={['#3b82f6', '#1e3a8a']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-            style={{ padding: 18, flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+            style={{ padding: 18, flexDirection: 'row', alignItems: 'center', gap: 16, borderRadius: 18, overflow: 'hidden' }}>
           <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: '#ffffff22', alignItems: 'center', justifyContent: 'center' }}>
             <FontAwesome5 name="route" size={26} color="#fff" solid />
           </View>
@@ -392,11 +395,19 @@ export default function HomeScreen() {
               consumptionOfficial: null,
             })}
             style={{
-              borderRadius: 18, marginBottom: 12, overflow: 'hidden',
+              borderRadius: 18, marginBottom: 12,
               shadowColor: '#5b21b6', shadowOpacity: 0.35, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 5,
             }}>
+            {/* Rà soát 17/7 (báo cáo Sang): thẻ này chỉ MOUNT MUỘN (sau khi obdEngaged
+                chuyển false -> true lúc kết nối xong giữa phiên xem màn hình), khác
+                mọi LinearGradient khác trong file này vốn có sẵn từ lần render đầu.
+                overflow:'hidden' + elevation cùng trên 1 View là tổ hợp Android hay bị
+                lỗi không paint lại đúng khi View đó mount muộn (thẻ hiện trống trơn,
+                đúng triệu chứng báo cáo: "chỉ bị khi kết nối"). Dời overflow+borderRadius
+                sang LinearGradient (không còn chung view với elevation) - elevation vẫn
+                ở TouchableOpacity ngoài để giữ đổ bóng. */}
             <LinearGradient colors={['#8b5cf6', '#4c1d95']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-              style={{ padding: 18, flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+              style={{ padding: 18, flexDirection: 'row', alignItems: 'center', gap: 16, borderRadius: 18, overflow: 'hidden' }}>
               <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: '#ffffff22', alignItems: 'center', justifyContent: 'center' }}>
                 <FontAwesome5 name="microchip" size={26} color="#fff" solid />
               </View>
@@ -445,6 +456,31 @@ export default function HomeScreen() {
             <FontAwesome5 name="chevron-right" size={13} color={colors.textSecondary} />
           </TouchableOpacity>
         ) : null}
+
+        {/* Tra mã lỗi OBD - chuyển từ chi tiết xe ra Home (17/7), đặt ngay dưới
+            khối kết nối OBD vì cùng nhóm chủ đề, không cần thiết bị/xe cụ thể. */}
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={() => nav.navigate('DtcLookup')}
+          style={{
+            flexDirection: 'row', alignItems: 'center', gap: 12,
+            backgroundColor: colors.surface, borderRadius: 14, padding: 14, marginBottom: 12,
+            borderWidth: 1, borderColor: colors.border,
+          }}>
+          <View style={{
+            width: 40, height: 40, borderRadius: 20,
+            backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center',
+          }}>
+            <FontAwesome5 name="search" size={16} color={colors.primary} solid />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14 }}>{t('dtc.lookup_title')}</Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 1 }} numberOfLines={1}>
+              {t('dtc.entry_desc')}
+            </Text>
+          </View>
+          <FontAwesome5 name="chevron-right" size={13} color={colors.textSecondary} />
+        </TouchableOpacity>
 
         {/* Rich CTA cards - 2 col */}
         <View style={{ flexDirection: 'row', gap: 12, marginBottom: 12 }}>
