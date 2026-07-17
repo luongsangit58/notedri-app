@@ -647,19 +647,19 @@ const vi = {
 
   // Refuels (new)
   "refuels.ocr_label": "OCR từ hoá đơn xăng",
-  "refuels.find_nearby": "Tìm trạm xăng gần đây",
+  "refuels.find_nearby": "Tìm cây xăng gần đây",
   "refuels.note_label": "Ghi chú",
   "refuels.note_placeholder": "Ghi chú thêm...",
 
   // NearbyStations (new)
   "nearby_stations.getting_location": "Đang lấy vị trí của bạn...",
-  "nearby_stations.searching": "Đang tìm trạm xăng gần đây...",
+  "nearby_stations.searching": "Đang tìm cây xăng gần đây...",
   "nearby_stations.permission_title": "Cần quyền vị trí",
-  "nearby_stations.permission_desc": "Vui lòng cho phép NoteDri truy cập vị trí để tìm trạm xăng gần bạn.",
+  "nearby_stations.permission_desc": "Vui lòng cho phép NoteDri truy cập vị trí để tìm cây xăng gần bạn.",
   "nearby_stations.error_title": "Có lỗi xảy ra",
-  "nearby_stations.empty_subtitle": "Không có trạm xăng nào gần vị trí của bạn.",
-  "nearby_stations.count_title": "{{n}} trạm xăng gần bạn",
-  "nearby_stations.default_name": "Trạm xăng",
+  "nearby_stations.empty_subtitle": "Không có cây xăng nào gần vị trí của bạn.",
+  "nearby_stations.count_title": "{{n}} cây xăng gần bạn",
+  "nearby_stations.default_name": "Cây xăng",
   "nearby_stations.reload": "Tải lại",
   "nearby_stations.tab_fuel": "Cây xăng",
   "nearby_stations.tab_charging": "Trạm sạc",
