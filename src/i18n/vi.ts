@@ -470,7 +470,7 @@ const vi = {
   "dtc.input_placeholder": "P0420",
   "dtc.invalid_format": "Mã không đúng định dạng - gồm 1 chữ (P/C/B/U) + 4 ký tự, ví dụ P0420.",
   "dtc.lookup_error": "Không tra cứu được, kiểm tra mạng rồi thử lại.",
-  "dtc.unknown_code": "Mã {{code}} chưa có trong từ điển NoteDri. Bọn mình sẽ bổ sung dần các mã hiếm gặp.",
+  "dtc.unknown_code": "Mã {{code}} chưa có trong từ điển NoteDri. Chúng tôi sẽ bổ sung dần các mã hiếm gặp.",
   "dtc.severity_critical": "Nghiêm trọng",
   "dtc.severity_warn": "Cần chú ý",
   "dtc.severity_info": "Nhẹ",
