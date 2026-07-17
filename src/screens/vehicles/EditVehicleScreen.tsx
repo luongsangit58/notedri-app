@@ -368,7 +368,13 @@ export default function EditVehicleScreen() {
               borderWidth: 1,
               borderColor: colors.border,
               borderStyle: 'dashed',
-              height: 120,
+              // Rà soát 17/7 (user báo ảnh xe bị cắt cụt vì khung quá dẹt): height cố định
+              // 120px trên toàn chiều rộng màn hình tạo khung rất dẹt (rộng gấp ~2.7 lần cao),
+              // buộc resizeMode="cover" cắt bớt 2 bên ảnh thật (thường không dẹt bằng) để lấp
+              // đầy khung, mất phần đầu/đuôi xe. Khớp đúng aspectRatio 4:3 với `aspect: [4, 3]`
+              // ở pickPhoto() bên dưới (ImagePicker.launchImageLibraryAsync) để ảnh vừa crop ra
+              // không bị cắt thêm lần nữa khi hiển thị lại trong khung preview.
+              aspectRatio: 4 / 3,
               alignItems: 'center',
               justifyContent: 'center',
               overflow: 'hidden',
