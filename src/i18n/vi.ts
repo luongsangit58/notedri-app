@@ -574,8 +574,6 @@ const vi = {
   "obd.toast_session_saved": "Đã lưu dữ liệu phiên lái xe ({{minutes}} phút)",
   "obd.fg_notif_title": "NoteDri - đang theo dõi OBD2",
   "obd.fg_notif_body": "Giữ kết nối khi bạn khoá màn hình lúc đang lái. Chạm để mở app.",
-  "obd.background_permission_title": "Giữ kết nối OBD2 khi khoá màn hình",
-  "obd.background_permission_body": "Để tiếp tục theo dõi thông số xe và báo ngay khi có mã lỗi mới ngay cả khi bạn tắt màn hình, NoteDri cần quyền truy cập vị trí \"Luôn cho phép\" (ở chế độ nền) - vị trí không được dùng cho mục đích nào khác ở đây. Ở màn hình tiếp theo, hãy chọn \"Luôn cho phép\".",
   "home.obd_quick_setup": "Kết nối adapter OBD2 cho xe của bạn",
   "home.obd_quick_upsell": "Tính năng Premium - chẩn đoán lỗi xe qua Bluetooth",
   "vehicle_detail.vin_prefill_title": "Đã đọc được số khung xe (VIN) qua OBD",
