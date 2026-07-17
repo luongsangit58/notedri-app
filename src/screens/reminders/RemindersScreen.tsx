@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AppBgPattern from '../../components/AppBgPattern';
+import DatePickerField from '../../components/DatePickerField';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useReminders, useDeleteReminder, useDoneReminder, useSeedReminders, useConfirmAllReminders } from '../../hooks/useReminders';
@@ -658,14 +659,7 @@ export default function RemindersScreen() {
               {doneCheDo !== 'ngay_co_dinh' && (
                 <>
                   <Text style={styles.modalLabel}>{t('reminders.done_date_label')}</Text>
-                  <TextInput
-                    style={[styles.modalInput, { marginBottom: 12 }]}
-                    placeholder="YYYY-MM-DD"
-                    placeholderTextColor={colors.textSecondary}
-                    value={doneDate}
-                    onChangeText={setDoneDate}
-                    returnKeyType="next"
-                  />
+                  <DatePickerField value={doneDate} onChange={setDoneDate} style={{ marginBottom: 12 }} />
                   <Text style={styles.modalLabel}>{t('reminders.complete_odo_label')}</Text>
                   <TextInput
                     style={styles.modalInput}
@@ -681,14 +675,7 @@ export default function RemindersScreen() {
               {doneCheDo === 'ngay_co_dinh' && (
                 <>
                   <Text style={styles.modalLabel}>{t('reminders.new_due_date_label')}</Text>
-                  <TextInput
-                    style={styles.modalInput}
-                    placeholder="2026-12-31"
-                    placeholderTextColor={colors.textSecondary}
-                    value={doneDate}
-                    onChangeText={setDoneDate}
-                    returnKeyType="done"
-                  />
+                  <DatePickerField value={doneDate} onChange={setDoneDate} />
                 </>
               )}
               <View style={styles.modalActions}>
