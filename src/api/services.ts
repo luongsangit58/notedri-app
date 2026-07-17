@@ -31,4 +31,5 @@ export const servicesApi = {
   delete: (id: number) => client.delete(`/services/${id}`),
   guide: (vehicleId?: number) =>
     client.get('/services/guide', { params: vehicleId ? { vehicle: vehicleId } : undefined }),
+  garages: () => client.get('/services/garages'),
 };

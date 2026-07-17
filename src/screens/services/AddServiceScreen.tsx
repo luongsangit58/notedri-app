@@ -10,7 +10,7 @@ import { useNavigation } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import dayjs from 'dayjs';
 import { useVehicles } from '../../hooks/useVehicles';
-import { useCreateService } from '../../hooks/useServices';
+import { useCreateService, useRecentGarages } from '../../hooks/useServices';
 import { useColors } from '../../utils/theme';
 import { useT } from '../../i18n';
 import MoneyInput from '../../components/MoneyInput';
@@ -116,6 +116,7 @@ export default function AddServiceScreen() {
   const navigation = useNavigation<any>();
   const { data: vehiclesData } = useVehicles();
   const createService = useCreateService();
+  const { data: recentGarages } = useRecentGarages();
 
   const vehicles: any[] = Array.isArray(vehiclesData?.data)
     ? vehiclesData.data
@@ -321,8 +322,28 @@ export default function AddServiceScreen() {
           <FieldLabel>{t('common.date')}</FieldLabel>
           <DatePickerField value={ngay} onChange={setNgay} style={{ marginBottom: 12 }} />
 
-          {/* Noi lam */}
+          {/* Noi lam - gợi ý gara đã dùng trước đó (mọi xe) để chọn nhanh thay vì gõ
+              lại tên (rà soát 17/7: "Gara" hiện chỉ là checklist, không có danh bạ
+              thật, nên tận dụng lịch sử của chính user thay vì xây directory mới). */}
           <FieldLabel>{t('services.location_label')}</FieldLabel>
+          {!!recentGarages?.length && (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
+              {recentGarages.map((name) => (
+                <TouchableOpacity
+                  key={name}
+                  onPress={() => setNoiLam(name)}
+                  style={{
+                    paddingHorizontal: 12, paddingVertical: 7, borderRadius: 8, marginRight: 8,
+                    backgroundColor: noiLam === name ? colors.primary : colors.surface,
+                    borderWidth: 1, borderColor: noiLam === name ? colors.primary : colors.border,
+                  }}>
+                  <Text style={{ color: noiLam === name ? '#fff' : colors.text, fontSize: 13, fontWeight: '600' }} numberOfLines={1}>
+                    {name}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          )}
           <TextInput
             value={noiLam}
             onChangeText={setNoiLam}

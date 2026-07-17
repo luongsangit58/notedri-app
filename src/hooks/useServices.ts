@@ -1,4 +1,4 @@
-import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { servicesApi, ServicePhoto } from '../api/services';
 
 // enabled:!!vehicleId - ServicesScreen chỉ set vehicleId THẬT sau khi useVehicles()
@@ -14,6 +14,15 @@ export const useServices = (vehicleId?: number) =>
     },
     initialPageParam: 1,
     enabled: !!vehicleId,
+  });
+
+// Gara đã dùng gần đây (mọi xe của user, mới nhất trước, bỏ trùng) - gợi ý chọn
+// nhanh ở AddService/EditService thay vì gõ lại tên gara mỗi lần (rà soát 17/7).
+export const useRecentGarages = () =>
+  useQuery({
+    queryKey: ['services', 'garages'],
+    queryFn: () => servicesApi.garages().then(r => r.data.data as string[]),
+    staleTime: 5 * 60 * 1000,
   });
 
 export const useCreateService = () => {

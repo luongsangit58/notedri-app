@@ -10,7 +10,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import dayjs from 'dayjs';
 import MoneyInput, { toMoneyRaw } from '../../components/MoneyInput';
 import { useVehicles } from '../../hooks/useVehicles';
-import { useUpdateService, useDeleteService } from '../../hooks/useServices';
+import { useUpdateService, useDeleteService, useRecentGarages } from '../../hooks/useServices';
 import { servicesApi, ServicePhoto } from '../../api/services';
 import ReceiptPicker from '../../components/ReceiptPicker';
 import { useColors } from '../../utils/theme';
@@ -127,6 +127,7 @@ export default function EditServiceScreen() {
 
   const { data: vehiclesData } = useVehicles();
   const updateService = useUpdateService();
+  const { data: recentGarages } = useRecentGarages();
   const deleteService = useDeleteService();
 
   const vehicles: any[] = Array.isArray(vehiclesData?.data)
@@ -321,8 +322,27 @@ export default function EditServiceScreen() {
           <FieldLabel>{t('common.date')}</FieldLabel>
           <DatePickerField value={ngay} onChange={setNgay} style={{ marginBottom: 12 }} />
 
-          {/* Noi lam */}
+          {/* Noi lam - gợi ý gara đã dùng trước đó (mọi xe) để chọn nhanh, cùng pattern
+              AddServiceScreen (rà soát 17/7). */}
           <FieldLabel>{t('services.location_label')}</FieldLabel>
+          {!!recentGarages?.length && (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
+              {recentGarages.map((name) => (
+                <TouchableOpacity
+                  key={name}
+                  onPress={() => setNoiLam(name)}
+                  style={{
+                    paddingHorizontal: 12, paddingVertical: 7, borderRadius: 8, marginRight: 8,
+                    backgroundColor: noiLam === name ? colors.primary : colors.surface,
+                    borderWidth: 1, borderColor: noiLam === name ? colors.primary : colors.border,
+                  }}>
+                  <Text style={{ color: noiLam === name ? '#fff' : colors.text, fontSize: 13, fontWeight: '600' }} numberOfLines={1}>
+                    {name}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          )}
           <TextInput
             value={noiLam}
             onChangeText={setNoiLam}
