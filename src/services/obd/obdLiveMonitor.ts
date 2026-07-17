@@ -17,6 +17,7 @@ import { getActiveRules, refreshRulesFromServer } from './diagnosticRulesStore';
 import { detectDrivingEvents, scoreFromCounts, SpeedSample } from '../drivingScore/drivingScoreEngine';
 import { useObdSessionStore } from '../../store/obdSessionStore';
 import { startObdKeepAlive, stopObdKeepAlive } from './obdKeepAliveService';
+import { syncDtcNotifications } from './dtcNotificationStore';
 
 /**
  * Live monitor OBD (quyết định 14/7: GPS là nguồn CHUYẾN ĐI duy nhất - fixture #5
@@ -292,6 +293,13 @@ async function poll(): Promise<void> {
           fresh.forEach((c) => reportedCodes.add(c.code));
           obdApi.reportDtc(activeVehicleId, fresh).catch(() => {});
         }
+      }
+      // Thông báo đẩy mã lỗi mới - dùng bộ nhớ BỀN VỮNG riêng (không phải
+      // reportedCodes ở trên, chỉ sống trong phiên) nên không báo lại spam mỗi lần
+      // kết nối lại dongle cho 1 lỗi user chưa/không sửa; và tự "quên" mã đã biến
+      // mất (xe đã sửa) để nếu tái xuất hiện sau này vẫn coi là mới (rà soát 17/7).
+      if (activeVehicleId) {
+        syncDtcNotifications(activeVehicleId, codes).catch(() => {});
       }
 
       // Mode 07 - Pending DTC: cùng nhịp mode 03 (đang hình thành, đổi liên

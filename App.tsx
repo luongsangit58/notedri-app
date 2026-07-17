@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { AppState, AppStateStatus, Appearance, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Notifications from 'expo-notifications';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './src/api/queryClient';
 import { NavigationContainer } from '@react-navigation/native';
@@ -135,6 +136,18 @@ function AppLoader({ children }: { children: React.ReactNode }) {
   // Cold start (app đã đóng) đi qua getInitialURL(); app đang chạy nền/foreground đi
   // qua sự kiện 'url'. Xem DeepLinkService để biết cách 2 dạng URL này được phân biệt.
   useEffect(() => initDeepLinkService(), []);
+
+  // Chạm vào push "phát hiện mã lỗi mới" (obdLiveMonitor -> dtcNotificationStore) ->
+  // mở thẳng lịch sử/DTC của đúng xe thay vì chỉ mở app về màn hình mặc định.
+  useEffect(() => {
+    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
+      const data = response.notification.request.content.data as { type?: string; vehicleId?: number } | undefined;
+      if (data?.type === 'dtc_alert' && data.vehicleId && navigationRef.isReady()) {
+        navigationRef.navigate('OBDTrips', { vehicleId: data.vehicleId });
+      }
+    });
+    return () => sub.remove();
+  }, []);
 
   return <>{children}</>;
 }
