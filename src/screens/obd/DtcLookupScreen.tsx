@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -48,6 +48,14 @@ const CAN_DRIVE_ICON: Record<string, string> = {
 // Mã SAE J2012: 1 chữ hệ thống + 4 ký tự hex (P0420, C0035, U0100, B1318)
 const DTC_FORMAT = /^[PCBU][0-9A-F]{4}$/;
 
+// Rà soát 17/7 (user báo màn tra lỗi chỉ có ô search trống, không gợi ý gì) -
+// 10 mã lỗi động cơ hay gặp nhất trên xe phổ thông VN, tra offline luôn từ
+// dictionary đóng gói sẵn (dtcDictionary.json) nên không cần mạng để hiện.
+const COMMON_DTC_CODES = [
+  'P0300', 'P0301', 'P0171', 'P0420', 'P0442',
+  'P0455', 'P0128', 'P0500', 'P0700', 'P0016',
+];
+
 export default function DtcLookupScreen() {
   const navigation = useNavigation<any>();
   const t = useT();
@@ -62,14 +70,19 @@ export default function DtcLookupScreen() {
   const normalized = input.trim().toUpperCase();
   const isValidFormat = DTC_FORMAT.test(normalized);
 
-  async function handleSearch() {
-    if (!isValidFormat || loading) return;
+  const commonResults = useMemo(
+    () => COMMON_DTC_CODES.map((code) => lookupDtcOffline(code)),
+    [],
+  );
+
+  async function searchCode(code: string) {
+    if (loading) return;
     setLoading(true);
     setErrorMsg(null);
     setResult(null);
     setIsOffline(false);
     try {
-      const res = await obdApi.lookupDtc(normalized);
+      const res = await obdApi.lookupDtc(code);
       setResult(res.data.data);
     } catch (e: any) {
       // 422 = mã sai định dạng theo server - hiện thông báo. Mọi lỗi khác (mất mạng,
@@ -78,12 +91,22 @@ export default function DtcLookupScreen() {
       if (e?.response?.status === 422) {
         setErrorMsg(e.response.data?.message ?? t('dtc.invalid_format'));
       } else {
-        setResult(lookupDtcOffline(normalized));
+        setResult(lookupDtcOffline(code));
         setIsOffline(true);
       }
     } finally {
       setLoading(false);
     }
+  }
+
+  async function handleSearch() {
+    if (!isValidFormat || loading) return;
+    searchCode(normalized);
+  }
+
+  function handlePickCommon(code: string) {
+    setInput(code);
+    searchCode(code);
   }
 
   const severity = result?.severity ?? null;
@@ -217,6 +240,32 @@ export default function DtcLookupScreen() {
             </Text>
           </View>
         )}
+
+        {/* Danh sách mã lỗi thường gặp - chỉ hiện khi chưa gõ/chưa có kết quả tra cứu,
+            tránh màn hình chỉ có mỗi ô search trống không biết bắt đầu từ đâu. */}
+        {!result && !errorMsg && input.length === 0 && (
+          <View style={{ marginTop: 20 }}>
+            <Text style={[styles.commonTitle, { color: colors.text }]}>{t('dtc.common_codes_title')}</Text>
+            {commonResults.map((r) => (
+              <TouchableOpacity
+                key={r.code}
+                style={[styles.commonRow, { backgroundColor: colors.card, borderColor: colors.border }]}
+                onPress={() => handlePickCommon(r.code)}>
+                <Text style={[styles.commonCode, { color: colors.text }]}>{r.code}</Text>
+                <Text style={[styles.commonLabel, { color: colors.textSecondary }]} numberOfLines={1}>
+                  {r.title_vi}
+                </Text>
+                {r.severity && (
+                  <View style={[styles.badge, { backgroundColor: SEVERITY_COLOR[r.severity] + '22' }]}>
+                    <Text style={[styles.badgeText, { color: SEVERITY_COLOR[r.severity] }]}>
+                      {t(`dtc.severity_${r.severity}`)}
+                    </Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -275,4 +324,17 @@ const styles = StyleSheet.create({
   disclaimer: { fontSize: 11, lineHeight: 16, marginTop: 14, fontStyle: 'italic' },
   blogLink: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 14 },
   blogLinkText: { fontSize: 12, fontWeight: '600' },
+  commonTitle: { fontSize: 13, fontWeight: '700', marginBottom: 10 },
+  commonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 8,
+  },
+  commonCode: { fontSize: 14, fontWeight: '800', letterSpacing: 0.5, width: 62 },
+  commonLabel: { flex: 1, fontSize: 12 },
 });

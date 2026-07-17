@@ -3,7 +3,7 @@
  * to the corresponding mobile screen.
  *
  * Web URL patterns → mobile screen mapping:
- *   /vehicles/{id}/reminders    → Reminders
+ *   /vehicles/{id}/reminders    → Management (tab 0)
  *   /vehicles/{id}/health       → Health
  *   /vehicles/{id}/odometer     → OdometerList
  *   /vehicles/{id}/services/guide → GarageGuide
@@ -25,7 +25,7 @@ export function navigateFromUrl(navigation: any, url: string, vehicleId?: number
   } else if (url.includes('/health')) {
     navigation.navigate('Health', vid ? { vehicleId: vid } : undefined);
   } else if (url.includes('/reminders')) {
-    navigation.navigate('Reminders', vid ? { vehicleId: vid } : undefined);
+    navigation.navigate('Management', vid ? { tab: 0, vehicleId: vid, _ts: Date.now() } : { tab: 0, _ts: Date.now() });
   } else if (url.includes('/odometer')) {
     navigation.navigate('OdometerList', vid ? { vehicleId: vid } : undefined);
   } else if (url.includes('/services/create') || url.includes('services.create')) {

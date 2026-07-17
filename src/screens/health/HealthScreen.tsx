@@ -5,7 +5,7 @@ import {
 import { FontAwesome5 } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AppBgPattern from '../../components/AppBgPattern';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { useQueries } from '@tanstack/react-query';
 import { useVehicles } from '../../hooks/useVehicles';
 import { vehiclesApi } from '../../api/vehicles';
@@ -25,11 +25,17 @@ interface Organ {
   detail?: string;
   note?: string;
   cta?: string;
+  action?: string;
 }
 
 interface Pillar {
   score: number;
   max: number;
+  label: string;
+}
+
+interface MissingDataItem {
+  key: string;
   label: string;
 }
 
@@ -39,6 +45,7 @@ interface HealthScore {
   band?: { key: string; label: string; color: string };
   confidence?: string;
   critical?: boolean;
+  missing_data?: MissingDataItem[];
 }
 
 interface HealthData {
@@ -121,7 +128,14 @@ function PillarBar({ pillar }: { pillar: Pillar }) {
 function ctaScreenForKey(key?: string): string {
   if (key === 'tieu_thu') return 'AddRefuel';
   if (key === 'chi_phi') return 'Stats';
-  return 'Reminders'; // các organ nhắc nhở (bao_duong, giay_to, dang_kiem, bao_hiem...)
+  return 'Management'; // các organ nhắc nhở (bao_duong, giay_to, dang_kiem, bao_hiem...) → tab Nhắc nhở
+}
+function navigateToCtaScreen(navigation: any, screen: string, vehicleId: number): void {
+  if (screen === 'Management') {
+    navigation.navigate('Management', { tab: 0, vehicleId, _ts: Date.now() });
+  } else {
+    navigation.navigate(screen, { vehicleId });
+  }
 }
 function ctaLabelOf(organ: any, t: any): string {
   if (organ?.cta && typeof organ.cta === 'object' && organ.cta.label) return organ.cta.label;
@@ -154,6 +168,12 @@ function OrganRow({ organ, onCta }: { organ: Organ & { cta?: any }; onCta?: (scr
       )}
       {!!organ.note && (
         <Text style={{ color: colors.textSecondary, fontSize: 11, fontStyle: 'italic', marginTop: 2 }}>{organ.note}</Text>
+      )}
+      {!!organ.action && (organ.status === 'urgent' || organ.status === 'warn') && (
+        <Text style={{ color: colors.text, fontSize: 11, marginTop: 4, lineHeight: 15 }}>
+          <Text style={{ fontWeight: '700' }}>{t('health.action_label')}: </Text>
+          {organ.action}
+        </Text>
       )}
       {organ.cta && (organ.status === 'urgent' || organ.status === 'warn') && (
         <TouchableOpacity
@@ -231,9 +251,10 @@ interface HealthCardProps {
   onAddReminder: () => void;
   onCta?: (screen: string) => void;
   history?: TrendPoint[];
+  highlighted?: boolean;
 }
 
-function HealthCard({ vehicle, health, loading, onAddReminder, onCta, history }: HealthCardProps) {
+function HealthCard({ vehicle, health, loading, onAddReminder, onCta, history, highlighted }: HealthCardProps) {
   const colors = useColors();
   const t = useT();
   const name = vehicle.ten ?? vehicle.name ?? t('common.vehicle');
@@ -255,6 +276,7 @@ function HealthCard({ vehicle, health, loading, onAddReminder, onCta, history }:
     <View style={{
       backgroundColor: colors.surface, borderRadius: 14, padding: 16, marginBottom: 14,
       borderLeftWidth: 3, borderLeftColor: borderClr,
+      ...(highlighted ? { borderWidth: 2, borderColor: colors.primary } : null),
     }}>
       {/* Vehicle name + plate */}
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
@@ -301,6 +323,23 @@ function HealthCard({ vehicle, health, loading, onAddReminder, onCta, history }:
               <Text style={{ color: '#F44336', fontSize: 11, fontWeight: '700' }}>{t('health.high_risk')}</Text>
             </View>
           )}
+        </View>
+      )}
+
+      {/* Rà soát 17/7 (user thêm xe điểm thấp không biết cần bổ sung gì, vd
+          thiếu ODO): checklist cụ thể từ score.missing_data thay vì chỉ hiện
+          nhãn confidence mơ hồ. */}
+      {!!scoreData?.missing_data?.length && (
+        <View style={{ backgroundColor: colors.background, borderRadius: 8, padding: 10, marginBottom: 12 }}>
+          <Text style={{ color: colors.text, fontWeight: '700', fontSize: 12, marginBottom: 6 }}>
+            {t('health.missing_data_title')}
+          </Text>
+          {scoreData.missing_data.map(m => (
+            <View key={m.key} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+              <FontAwesome5 name="circle" size={5} color={colors.textSecondary} solid />
+              <Text style={{ color: colors.textSecondary, fontSize: 12 }}>{m.label}</Text>
+            </View>
+          ))}
         </View>
       )}
 
@@ -399,10 +438,17 @@ export default function HealthScreen() {
   const colors = useColors();
   const t = useT();
   const navigation = useNavigation<any>();
+  const route = useRoute<any>();
+  const focusVehicleId = route.params?.vehicleId;
 
   const { data: vehiclesRaw, isLoading: vehiclesLoading, isError: vehiclesError, refetch: refetchVehicles } = useVehicles();
-  const vehicles: any[] = Array.isArray(vehiclesRaw?.data) ? vehiclesRaw.data
+  const vehiclesUnordered: any[] = Array.isArray(vehiclesRaw?.data) ? vehiclesRaw.data
     : Array.isArray(vehiclesRaw) ? vehiclesRaw : [];
+  // Khi mở từ thông báo/CTA cho 1 xe cụ thể, đưa xe đó lên đầu và làm nổi bật
+  // để không phải cuộn qua toàn bộ danh sách xe mới thấy cảnh báo liên quan.
+  const vehicles = focusVehicleId
+    ? [...vehiclesUnordered].sort((a, b) => (a.id === focusVehicleId ? -1 : b.id === focusVehicleId ? 1 : 0))
+    : vehiclesUnordered;
 
   // Load health for each vehicle in parallel
   const healthQueries = useQueries({
@@ -497,8 +543,9 @@ export default function HealthScreen() {
               health={healthData}
               loading={q?.isLoading ?? false}
               onAddReminder={() => navigation.navigate('AddReminder', { vehicleId: v.id })}
-              onCta={(screen) => navigation.navigate(screen, { vehicleId: v.id })}
+              onCta={(screen) => navigateToCtaScreen(navigation, screen, v.id)}
               history={historyData}
+              highlighted={focusVehicleId != null && v.id === focusVehicleId}
             />
           );
         })}

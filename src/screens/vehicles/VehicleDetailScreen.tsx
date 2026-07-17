@@ -18,6 +18,7 @@ import { flattenReminders } from '../../utils/reminders';
 import { formatKm } from '../../utils/format';
 import { useAuthStore } from '../../store/authStore';
 import { useT } from '../../i18n';
+import { navigateFromUrl } from '../../utils/navigation';
 import dayjs from 'dayjs';
 
 // ─── Health helpers ──────────────────────────────────────────────────────────
@@ -33,11 +34,17 @@ interface Organ {
   detail?: string;
   note?: string;
   cta?: { label: string; url: string } | null;
+  action?: string;
 }
 
 interface Pillar {
   score: number;
   max: number;
+  label: string;
+}
+
+interface MissingDataItem {
+  key: string;
   label: string;
 }
 
@@ -47,6 +54,7 @@ interface HealthScore {
   band?: { key: string; label: string; color: string };
   confidence?: string;
   critical?: boolean;
+  missing_data?: MissingDataItem[];
 }
 
 interface HealthData {
@@ -105,11 +113,13 @@ function PillarBar({ pillar }: { pillar: Pillar }) {
   );
 }
 
-function OrganRow({ organ }: { organ: Organ }) {
+function OrganRow({ organ, vehicleId, navigation }: { organ: Organ; vehicleId: number; navigation: any }) {
+  const t = useT();
   const colors = useColors();
   const statusClr = organStatusColor(organ.status, colors);
   const iconInfo = organStatusIconName(organ.status, colors);
   if (organ.status === 'na') return null;
+  const showCta = organ.cta?.url && (organ.status === 'urgent' || organ.status === 'warn');
   return (
     <View style={{
       backgroundColor: colors.card,
@@ -130,11 +140,30 @@ function OrganRow({ organ }: { organ: Organ }) {
       {!!organ.note && (
         <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 4, fontStyle: 'italic' }}>{organ.note}</Text>
       )}
+      {!!organ.action && (organ.status === 'urgent' || organ.status === 'warn') && (
+        <Text style={{ color: colors.text, fontSize: 12, marginTop: 4, lineHeight: 16 }}>
+          <Text style={{ fontWeight: '700' }}>{t('health.action_label')}: </Text>
+          {organ.action}
+        </Text>
+      )}
+      {showCta && (
+        <TouchableOpacity
+          onPress={() => navigateFromUrl(navigation, organ.cta!.url, vehicleId)}
+          style={{
+            marginTop: 8, alignSelf: 'flex-start',
+            backgroundColor: statusClr + '22', borderRadius: 6,
+            paddingHorizontal: 10, paddingVertical: 5,
+          }}>
+          <Text style={{ color: statusClr, fontSize: 12, fontWeight: '700' }}>
+            {organ.cta!.label || t('health.cta_handle')}
+          </Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
 
-function HealthBreakdownCard({ health }: { health: HealthData }) {
+function HealthBreakdownCard({ health, vehicleId, navigation }: { health: HealthData; vehicleId: number; navigation: any }) {
   const t = useT();
   const colors = useColors();
   const scoreData = health.score;
@@ -210,6 +239,22 @@ function HealthBreakdownCard({ health }: { health: HealthData }) {
         </View>
       )}
 
+      {/* Rà soát 17/7 (thêm xe điểm thấp không biết cần bổ sung gì, vd thiếu
+          ODO): checklist cụ thể từ score.missing_data. */}
+      {!!scoreData?.missing_data?.length && (
+        <View style={{ backgroundColor: colors.card, borderRadius: 8, padding: 10, marginBottom: 12 }}>
+          <Text style={{ color: colors.text, fontWeight: '700', fontSize: 12, marginBottom: 6 }}>
+            {t('health.missing_data_title')}
+          </Text>
+          {scoreData.missing_data.map(m => (
+            <View key={m.key} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+              <FontAwesome5 name="circle" size={5} color={colors.textSecondary} solid />
+              <Text style={{ color: colors.textSecondary, fontSize: 12 }}>{m.label}</Text>
+            </View>
+          ))}
+        </View>
+      )}
+
       {/* Pillar progress bars */}
       {pillars && (
         <View style={{ marginBottom: 8 }}>
@@ -226,7 +271,7 @@ function HealthBreakdownCard({ health }: { health: HealthData }) {
 
       {/* Organ rows */}
       {visibleOrgans.map(organ => (
-        <OrganRow key={organ.key} organ={organ} />
+        <OrganRow key={organ.key} organ={organ} vehicleId={vehicleId} navigation={navigation} />
       ))}
     </View>
   );
@@ -390,7 +435,7 @@ export default function VehicleDetailScreen() {
               <Text style={{ color: colors.text, fontWeight: '600', fontSize: 13 }}>{t('vehicles.detail_service')}</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              onPress={() => navigation.navigate('Reminders', { vehicleId })}
+              onPress={() => navigation.navigate('Management', { tab: 0, vehicleId, _ts: Date.now() })}
               style={{ flex: 1, backgroundColor: colors.surface, padding: 12, borderRadius: 10, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6 }}>
               <FontAwesome5 name="bell" size={13} color={colors.text} solid />
               <Text style={{ color: colors.text, fontWeight: '600', fontSize: 13 }}>{t('vehicles.detail_reminders')}</Text>
@@ -498,27 +543,8 @@ export default function VehicleDetailScreen() {
           <FontAwesome5 name="chevron-right" size={13} color={colors.textSecondary} />
         </TouchableOpacity>
 
-        {/* Tra mã lỗi OBD - Free, không cần thiết bị */}
-        <TouchableOpacity
-          onPress={() => navigation.navigate('DtcLookup')}
-          style={{
-            flexDirection: 'row', alignItems: 'center', gap: 12,
-            backgroundColor: colors.surface, borderRadius: 12, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: colors.border,
-          }}>
-          <View style={{
-            width: 40, height: 40, borderRadius: 20,
-            backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center',
-          }}>
-            <FontAwesome5 name="stethoscope" size={16} color={colors.primary} solid />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14 }}>{t('dtc.lookup_title')}</Text>
-            <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 1 }}>
-              {t('dtc.entry_desc')}
-            </Text>
-          </View>
-          <FontAwesome5 name="chevron-right" size={13} color={colors.textSecondary} />
-        </TouchableOpacity>
+        {/* Tra mã lỗi OBD: chuyển ra màn hình chính (17/7), ngay dưới khối kết
+            nối OBD - tránh trùng lặp lối vào, đỡ dài trang chi tiết xe. */}
 
         {/* Báo cáo sức khoẻ từ dữ liệu OBD (E6/C3). Hiện kèm KHOÁ cho Free thay
             vì ẩn hoàn toàn (bài học audit 14/7: tính năng vô hình = mất cơ hội
@@ -576,9 +602,9 @@ export default function VehicleDetailScreen() {
         {healthData != null && (
           <>
             <SectionHeader>{t('vehicle_detail.section_health')}</SectionHeader>
-            <HealthBreakdownCard health={healthData} />
+            <HealthBreakdownCard health={healthData} vehicleId={vehicleId} navigation={navigation} />
             <TouchableOpacity
-              onPress={() => navigation.navigate('Health')}
+              onPress={() => navigation.navigate('Health', { vehicleId })}
               style={{
                 alignSelf: 'flex-end', marginTop: -6, marginBottom: 12,
                 paddingHorizontal: 14, paddingVertical: 7,

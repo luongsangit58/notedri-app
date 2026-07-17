@@ -606,6 +606,14 @@ export default function AddVehicleScreen() {
           placeholderTextColor={colors.textSecondary}
           value={odo_ban_dau} onChangeText={setOdoBanDau} keyboardType="numeric" returnKeyType="done"
         />
+        {/* Rà soát 17/7 (user thêm xe không nhập ODO thấy điểm sức khoẻ thấp mà
+            không biết vì sao/cần bổ sung gì) - báo trước ngay tại field liên
+            quan thay vì để user tự đoán sau khi đã tạo xong xe. */}
+        {!odo_ban_dau.trim() && (
+          <Text style={{ color: colors.warning, fontSize: 12, marginTop: -6, marginBottom: 4 }}>
+            {t('add_vehicle.odo_score_hint')}
+          </Text>
+        )}
 
         {/* ── Thông số xe (auto-filled từ spec) ── */}
         <Text style={labelStyle}>{t('vehicles.tank_capacity_label')}</Text>

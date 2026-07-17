@@ -229,13 +229,6 @@ export default function AddRefuelScreen() {
     voiceFeedbackTimer.current = setTimeout(() => setVoiceFeedback(null), 2500);
   };
 
-  const handleReceiptResult = ({ tongTien: t, soLit: s }: ReceiptData) => {
-    if (t) setTongTien(t);
-    if (s) setSoLit(s);
-    const tNum = parseFloat(t), sNum = parseLiters(s);
-    if (tNum > 0 && sNum > 0) setGiaLit(Math.round(tNum / sNum).toString());
-  };
-
   const handleOdoOcrResult = (text: string) => {
     const num = text.replace(/[^0-9]/g, '');
     if (num) {
@@ -244,42 +237,54 @@ export default function AddRefuelScreen() {
     }
   };
 
-  // Rà soát 16/7 (user báo "tự tính tiền chưa được" - nói tổng tiền qua giọng
-  // nói lẽ ra phải tự tính ra số lít dựa vào giá/lít đã biết sẵn, hoặc ngược
-  // lại): trước đây MỖI handler chỉ tính lại giaLit (trừ handleGiaLitChange tính
-  // lại tongTien) - không nhánh nào tự tính SỐ LÍT cả, dù giaLit hầu như luôn có
-  // sẵn từ trước (auto-fill giá thị trường ngay khi chọn loại xăng/ngày, xem 2
-  // useEffect phía trên). Kết quả: user chỉ nói 1 giá trị (rất phổ biến - voice
-  // chỉ set được 1 trong 2 field tongTien/soLit mỗi lần) thì trường còn lại luôn
-  // trống trơn dù giá/lít đã đủ để suy ra. Giờ: field vừa đổi + giaLit đã biết +
-  // field CÒN LẠI đang trống -> tự tính field còn lại đó TRƯỚC, chỉ tính lại
-  // giaLit như cũ khi cả 2 field kia đã có giá trị sẵn (user đang tự nhập đủ).
+  // Rà soát 17/7 (theo yêu cầu user): thứ tự ưu tiên rõ ràng giữa 3 field -
+  // giá/lít > tổng tiền > số lít.
+  //   - Giá/lít là field "chốt", chỉ đổi khi user gõ tay trực tiếp vào chính ô
+  //     đó (handleGiaLitChange). OCR hoá đơn và giọng nói KHÔNG BAO GIỜ được
+  //     set/ghi đè giá/lít - số liệu quét/nghe được kém tin cậy hơn giá đã
+  //     biết sẵn (giá thị trường hoặc giá user tự nhập).
+  //   - Sửa tổng tiền -> luôn suy ra lại SỐ LÍT từ giá/lít (giữ nguyên, không
+  //     đụng). Đây cũng là luồng phổ biến nhất: user chỉ nói/nhập số tiền, số
+  //     lít tự tính ra từ giá/lít đã có sẵn.
+  //   - Sửa số lít -> luôn suy ra lại TỔNG TIỀN từ giá/lít (giữ nguyên).
+  //   - Sửa giá/lít -> giữ nguyên tổng tiền (ưu tiên cao hơn số lít) làm mốc,
+  //     suy ra lại số lít; chỉ khi chưa có tổng tiền mới suy ngược ra tổng
+  //     tiền từ số lít đang có.
   const handleTongTienChange = (v: string) => {
     setTongTien(v);
     const t = parseFloat(v), g = parseFloat(giaLit);
-    if (!soLit && t > 0 && g > 0) { setSoLit((t / g).toFixed(2)); return; }
-    const s = parseLiters(soLit);
-    if (t > 0 && s > 0) setGiaLit(Math.round(t / s).toString());
+    if (t > 0 && g > 0) setSoLit((t / g).toFixed(2));
   };
 
   const handleSoLitChange = (v: string) => {
     setSoLit(v);
     const s = parseLiters(v), g = parseFloat(giaLit);
-    if (!tongTien && s > 0 && g > 0) { setTongTien(Math.round(s * g).toString()); return; }
-    const t = parseFloat(tongTien);
-    if (t > 0 && s > 0) setGiaLit(Math.round(t / s).toString());
+    if (s > 0 && g > 0) setTongTien(Math.round(s * g).toString());
+  };
+
+  // OCR hoá đơn: tin tổng tiền đọc được (số rõ ràng, ít nhầm) hơn số lít (dễ đọc
+  // sai dấu thập phân) - suy ra số lít từ tổng tiền + giá/lít đã biết thay vì
+  // dùng số lít OCR quét được. Chỉ dùng tạm số lít OCR khi chưa có giá/lít để
+  // suy ra (vd loại nhiên liệu chưa có giá thị trường).
+  const handleReceiptResult = ({ tongTien: tOcr, soLit: sOcr }: ReceiptData) => {
+    const g = parseFloat(giaLit);
+    if (tOcr) {
+      setTongTien(tOcr);
+      const t = parseFloat(tOcr);
+      if (t > 0 && g > 0) { setSoLit((t / g).toFixed(2)); return; }
+    }
+    if (sOcr) setSoLit(sOcr);
   };
 
   const handleGiaLitChange = (v: string) => {
     autoFilledPriceRef.current = ''; // user manually edited - stop auto-updating
     setGiaLit(v);
     const g = parseFloat(v);
-    if (!soLit && tongTien && g > 0) {
-      const t = parseFloat(tongTien);
-      if (t > 0) { setSoLit((t / g).toFixed(2)); return; }
-    }
+    if (g <= 0) return;
+    const t = parseFloat(tongTien);
+    if (t > 0) { setSoLit((t / g).toFixed(2)); return; }
     const s = parseLiters(soLit);
-    if (g > 0 && s > 0) setTongTien(Math.round(g * s).toString());
+    if (s > 0) setTongTien(Math.round(g * s).toString());
   };
 
   const handleFindNearbyInline = async () => {
