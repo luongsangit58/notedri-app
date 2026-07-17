@@ -109,6 +109,21 @@ export default function DtcLookupScreen() {
     searchCode(code);
   }
 
+  // Bug 17/7 (user báo): bấm mã lỗi hay gặp ra kết quả, rồi bấm mũi tên quay lại
+  // thì thoát thẳng về Home thay vì quay lại danh sách - vì kết quả tra cứu chỉ là
+  // state nội bộ của cùng 1 màn hình (không push thêm màn mới). Nút back phải "lùi"
+  // qua state đó trước, chỉ thoát màn hình khi đã ở trạng thái ban đầu.
+  function handleBack() {
+    if (result || errorMsg || input.length > 0) {
+      setInput('');
+      setResult(null);
+      setErrorMsg(null);
+      setIsOffline(false);
+      return;
+    }
+    navigation.goBack();
+  }
+
   const severity = result?.severity ?? null;
   const canDrive = result?.can_drive ?? null;
 
@@ -116,7 +131,7 @@ export default function DtcLookupScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <AppBgPattern />
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+        <TouchableOpacity onPress={handleBack} style={styles.backBtn}>
           <FontAwesome5 name="arrow-left" size={18} color={colors.text} />
         </TouchableOpacity>
         <Text style={[styles.title, { color: colors.text }]}>{t('dtc.lookup_title')}</Text>
