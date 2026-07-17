@@ -118,6 +118,12 @@ function AppLoader({ children }: { children: React.ReactNode }) {
           maybeAutoShutdownStale().catch(() => {});
           flushPendingGpsTrips().catch(() => {});
           sendDeviceHeartbeat(); // giữ last_seen_at tươi -> is_online đúng
+          // Rà soát 17/7 (user hỏi): trước đây chỉ tự bật lại ghi hành trình lúc
+          // app MỞ (cold start). Nếu service tự tắt do rảnh 20 phút trong lúc app
+          // vẫn ở nền (chưa bị đóng hẳn) rồi user lái luôn mà không mở lại app,
+          // hành trình sẽ không được ghi. Kiểm tra lại mỗi lần app quay về
+          // foreground - tự bật lại NẾU quyền đã có sẵn (im lặng, không hỏi lại).
+          tryAutoArmGpsTracking();
         }
       }
       appState.current = next;
