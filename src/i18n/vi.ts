@@ -496,7 +496,7 @@ const vi = {
   "obd.guide_s3_title": "Bật khoá điện / nổ máy",
   "obd.guide_s3_desc": "Bật khóa điện (ON) hoặc khởi động động cơ.",
   "obd.guide_s4_title": "Bật Bluetooth & kết nối",
-  "obd.guide_s4_desc": "Bật Bluetooth và kết nối với thiết bị (Vgate, VLINK, ...).",
+  "obd.guide_s4_desc": "Bật Bluetooth và kết nối với thiết bị (Vgate, VLINK, v.v.).",
   "obd.guide_reco_title": "Thiết bị khuyên dùng",
   "obd.guide_reco_body": "Vgate iCar Pro Bluetooth 4.0 (BLE) - ổn định, tương thích cả Android và iOS.",
   "obd.guide_reco_warn": "Tránh nhầm với bản Bluetooth 3.0 (BT3.0): bản này chỉ hỗ trợ Android và không kết nối được với NoteDri.",

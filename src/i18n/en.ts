@@ -495,7 +495,7 @@ const en = {
   "obd.guide_s3_title": "Turn on ignition / start engine",
   "obd.guide_s3_desc": "Turn the ignition to ON, or start the engine.",
   "obd.guide_s4_title": "Enable Bluetooth & connect",
-  "obd.guide_s4_desc": "Turn on Bluetooth and connect to the device (Vgate, VLINK,...).",
+  "obd.guide_s4_desc": "Turn on Bluetooth and connect to the device (e.g. Vgate, VLINK).",
   "obd.guide_reco_title": "Recommended device",
   "obd.guide_reco_body": "Vgate iCar Pro Bluetooth 4.0 (BLE) — reliable, works with both Android and iOS.",
   "obd.guide_reco_warn": "Don't confuse it with the Bluetooth 3.0 (BT3.0) version: that one is Android-only and will NOT connect to NoteDri.",
