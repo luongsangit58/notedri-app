@@ -8,6 +8,7 @@ import { obdLiveMonitor } from '../services/obd/obdLiveMonitor';
 import { flushPendingObdSessions } from '../services/obd/ObdSessionSyncQueue';
 import { Finding } from '../services/obd/diagnosticEngine';
 import { savePairing } from '../services/obd/pairedDevices';
+import { ensureObdBackgroundPermission } from '../services/obd/obdBackgroundPermission';
 import { useAuthStore } from '../store/authStore';
 import { useObdSessionStore } from '../store/obdSessionStore';
 import { useI18nStore } from '../i18n';
@@ -226,6 +227,12 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
 
       // Live monitor sống theo phiên kết nối (thay trip manager)
       obdLiveMonitor.start(vehicleId);
+
+      // Xin quyền vị trí nền (nếu chưa có) để obdKeepAliveService giữ được tiến
+      // trình sống khi user khoá màn hình - không await (không chặn/trễ việc báo
+      // kết nối thành công); nếu user từ chối, OBD2 vẫn hoạt động bình thường lúc
+      // màn hình đang mở, chỉ mất khả năng polling/cảnh báo mã lỗi khi khoá màn hình.
+      ensureObdBackgroundPermission().catch(() => {});
 
       // E2: đẩy nốt phiên còn tồn trong hàng đợi (rút cáp lúc offline lần trước).
       // Điểm nghiệp vụ chắc chắn có mạng-hoạt-động-lại gần nhất, mirror cách GPS

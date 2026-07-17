@@ -573,6 +573,8 @@ const en = {
   "obd.toast_session_saved": "Driving session saved ({{minutes}} min)",
   "obd.fg_notif_title": "NoteDri - OBD2 monitoring",
   "obd.fg_notif_body": "Keeps the connection alive while your screen is locked. Tap to open the app.",
+  "obd.background_permission_title": "Keep OBD2 connected while your screen is locked",
+  "obd.background_permission_body": "To keep monitoring your vehicle's data and alert you the moment a new error code appears even with your screen off, NoteDri needs \"Allow all the time\" location access (background) - location isn't used for anything else here. On the next screen, please choose \"Allow all the time\".",
   "home.obd_quick_setup": "Connect an OBD2 adapter for your car",
   "home.obd_quick_upsell": "Premium feature - diagnose car issues via Bluetooth",
   "vehicle_detail.vin_prefill_title": "VIN read via OBD",
