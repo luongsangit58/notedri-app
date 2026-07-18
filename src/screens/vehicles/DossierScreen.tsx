@@ -61,6 +61,19 @@ function serviceName(s: ServiceLog): string {
   return s.hang_muc ?? s.service_type ?? '—';
 }
 
+const LOAI_KEYS: Record<string, string> = {
+  bao_duong: 'services.type_bao_duong',
+  sua_chua: 'services.type_sua_chua',
+  lop: 'services.type_lop',
+  bao_hiem: 'reminders.type_bao_hiem',
+  dang_kiem: 'reminders.type_dang_kiem',
+  phat_nguoi: 'services.type_phat_nguoi',
+  phi_gui_xe: 'services.type_phi_gui_xe',
+  phi_cau_duong: 'services.type_phi_cau_duong',
+  rua_xe: 'services.type_rua_xe',
+  khac: 'reminders.type_khac',
+};
+
 function serviceType(s: ServiceLog): string {
   return s.loai ?? s.type ?? '';
 }
@@ -411,7 +424,8 @@ export default function DossierScreen() {
             services.map((svc, idx) => {
               const cost = serviceCost(svc);
               const odoVal = serviceOdo(svc);
-              const type = serviceType(svc);
+              const rawType = serviceType(svc);
+              const type = rawType ? (LOAI_KEYS[rawType] ? t(LOAI_KEYS[rawType] as any) : rawType) : '';
               return (
                 <TouchableOpacity
                   key={svc.id ?? idx}
