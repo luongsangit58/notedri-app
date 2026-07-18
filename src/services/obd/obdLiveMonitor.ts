@@ -461,6 +461,12 @@ export const obdLiveMonitor = {
 // Adapter thường tự reboot khi rớt (fixture #5) → nắn lại cài đặt ELM sau reconnect
 bleService.addReconnectedListener(() => {
   reinitElm327AfterReconnect().catch(() => {});
+  // Reset RIÊNG trạng thái EWMA gauge (không đụng aggregate phiên - maxSpeed/DTC/...
+  // vẫn phải sống qua reconnect): giá trị thật có thể đã nhảy trong lúc mất kết nối
+  // (vd tắt-nổ lại máy), giữ EWMA cũ sẽ khiến gauge "trườn" từ giá trị lỗi thời thay
+  // vì phản ánh cú nhảy thật.
+  smoothedRpm = null; smoothedSpeedKmh = null; smoothedEngineLoadPct = null;
+  smoothedCoolantTempC = null; smoothedThrottlePct = null; smoothedControlModuleVoltage = null;
 });
 
 bleService.addDisconnectListener(() => {

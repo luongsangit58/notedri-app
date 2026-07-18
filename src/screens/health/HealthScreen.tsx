@@ -133,6 +133,10 @@ function ctaScreenForKey(key?: string): string {
 function navigateToCtaScreen(navigation: any, screen: string, vehicleId: number): void {
   if (screen === 'Management') {
     navigation.navigate('Management', { tab: 0, vehicleId, _ts: Date.now() });
+  } else if (screen === 'Stats') {
+    // chi_phi (cost) organ -> tab 1 = ReportsScreen, nơi có dữ liệu chi phí. Không
+    // truyền tab sẽ rơi về mặc định tab 0 (Timeline), không phải nơi CTA hứa hẹn.
+    navigation.navigate('Stats', { tab: 1, vehicleId });
   } else {
     navigation.navigate(screen, { vehicleId });
   }
