@@ -1,4 +1,22 @@
-import { suggestDtcOffline } from '../dtcOfflineDictionary';
+import { suggestDtcOffline, withDefaultDtcPrefix } from '../dtcOfflineDictionary';
+
+describe('withDefaultDtcPrefix', () => {
+  it('prepends P when input starts with a digit', () => {
+    expect(withDefaultDtcPrefix('03')).toBe('P03');
+    expect(withDefaultDtcPrefix('0300')).toBe('P0300');
+  });
+
+  it('leaves input starting with a system letter untouched (just uppercased/trimmed)', () => {
+    expect(withDefaultDtcPrefix('p0300')).toBe('P0300');
+    expect(withDefaultDtcPrefix('C0035')).toBe('C0035');
+    expect(withDefaultDtcPrefix('  u0100  ')).toBe('U0100');
+  });
+
+  it('leaves empty input as empty (no P prepended to nothing)', () => {
+    expect(withDefaultDtcPrefix('')).toBe('');
+    expect(withDefaultDtcPrefix('   ')).toBe('');
+  });
+});
 
 describe('suggestDtcOffline', () => {
   it('returns [] below 2 characters (avoid dumping the whole dictionary on 1 keystroke)', () => {

@@ -46,6 +46,18 @@ export function lookupDtcOffline(code: string): DtcLookupResult {
   };
 }
 
+/**
+ * Rà soát 18/7 (user: phải gõ chữ "P" trước mới tìm được, trong khi P là hệ thống
+ * mặc định/phổ biến nhất) - mã KHÔNG bắt đầu bằng chữ hệ thống (P/C/B/U) được ngầm
+ * định P ở đầu, vd "03" -> "P03". Khớp DtcLookupController::withDefaultPrefix() bên
+ * web. Chỉ áp dụng cho giá trị dùng để tìm/gợi ý/submit - KHÔNG dùng để ép sửa nội
+ * dung đang hiển thị trong ô nhập (xem cách gọi ở DtcLookupScreen).
+ */
+export function withDefaultDtcPrefix(raw: string): string {
+  const v = raw.trim().toUpperCase();
+  return /^[0-9]/.test(v) ? `P${v}` : v;
+}
+
 export type DtcSuggestion = { code: string; title_vi: string; severity: RawEntry['severity'] };
 
 /**

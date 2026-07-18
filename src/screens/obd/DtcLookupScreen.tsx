@@ -13,7 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { obdApi, DtcLookupResult } from '../../api/obd';
-import { lookupDtcOffline, suggestDtcOffline } from '../../services/obd/dtcOfflineDictionary';
+import { lookupDtcOffline, suggestDtcOffline, withDefaultDtcPrefix } from '../../services/obd/dtcOfflineDictionary';
 import AppBgPattern from '../../components/AppBgPattern';
 import { useColors } from '../../utils/theme';
 import { formatVND } from '../../utils/format';
@@ -49,11 +49,14 @@ const CAN_DRIVE_ICON: Record<string, string> = {
 const DTC_FORMAT = /^[PCBU][0-9A-F]{4}$/;
 
 // Rà soát 17/7 (user báo màn tra lỗi chỉ có ô search trống, không gợi ý gì) -
-// 10 mã lỗi động cơ hay gặp nhất trên xe phổ thông VN, tra offline luôn từ
-// dictionary đóng gói sẵn (dtcDictionary.json) nên không cần mạng để hiện.
+// mã lỗi động cơ hay gặp nhất trên xe phổ thông VN, tra offline luôn từ dictionary
+// đóng gói sẵn (dtcDictionary.json) nên không cần mạng để hiện.
+// Rà soát 18/7 (user: 10 mã dài quá) -> đúng 2 mã/mức độ (critical/warn/info), đồng
+// bộ với web (DtcLookupController::COMMON_CODES).
 const COMMON_DTC_CODES = [
-  'P0300', 'P0301', 'P0171', 'P0420', 'P0442',
-  'P0455', 'P0128', 'P0500', 'P0700', 'P0016',
+  'P0300', 'P0301', // critical
+  'P0171', 'P0420', // warn
+  'P0442', 'P0455', // info
 ];
 
 export default function DtcLookupScreen() {
@@ -67,7 +70,7 @@ export default function DtcLookupScreen() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isOffline, setIsOffline] = useState(false);
 
-  const normalized = input.trim().toUpperCase();
+  const normalized = withDefaultDtcPrefix(input);
   const isValidFormat = DTC_FORMAT.test(normalized);
 
   const commonResults = useMemo(
