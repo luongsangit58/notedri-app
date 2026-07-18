@@ -45,3 +45,31 @@ export function lookupDtcOffline(code: string): DtcLookupResult {
     cost_max: e.cost_max,
   };
 }
+
+export type DtcSuggestion = { code: string; title_vi: string; severity: RawEntry['severity'] };
+
+/**
+ * Gợi ý mã theo tiền tố khi đang gõ (vd "P03" -> P0300, P0301, ...) - lọc thẳng trên
+ * Map đã dựng sẵn trong bộ nhớ (lookupDtcOffline ở trên), KHÔNG gọi mạng: cùng nguồn
+ * dữ liệu offline, chi phí chỉ là 1 lượt duyệt ~300 mã trong RAM (dưới 1ms), không có
+ * chi phí mạng/debounce nào để lo về hiệu năng.
+ */
+export function suggestDtcOffline(prefix: string, limit = 8): DtcSuggestion[] {
+  const p = prefix.trim().toUpperCase();
+  if (p.length < 2) return [];
+
+  if (!byCode) {
+    byCode = new Map(
+      (snapshot.entries as RawEntry[]).map((e) => [e.code.toUpperCase(), e]),
+    );
+  }
+
+  const out: DtcSuggestion[] = [];
+  for (const [code, e] of byCode) {
+    if (code.startsWith(p)) {
+      out.push({ code, title_vi: e.vi, severity: e.severity });
+      if (out.length >= limit) break;
+    }
+  }
+  return out;
+}

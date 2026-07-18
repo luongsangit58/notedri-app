@@ -13,7 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { obdApi, DtcLookupResult } from '../../api/obd';
-import { lookupDtcOffline } from '../../services/obd/dtcOfflineDictionary';
+import { lookupDtcOffline, suggestDtcOffline } from '../../services/obd/dtcOfflineDictionary';
 import AppBgPattern from '../../components/AppBgPattern';
 import { useColors } from '../../utils/theme';
 import { formatVND } from '../../utils/format';
@@ -73,6 +73,13 @@ export default function DtcLookupScreen() {
   const commonResults = useMemo(
     () => COMMON_DTC_CODES.map((code) => lookupDtcOffline(code)),
     [],
+  );
+
+  // Gợi ý gõ-tới-đâu (vd "P03" -> P0300, P0301...) - lọc offline trong RAM (xem
+  // dtcOfflineDictionary.suggestDtcOffline), ẩn ngay khi đã có kết quả tra cứu.
+  const suggestions = useMemo(
+    () => (!result && !errorMsg ? suggestDtcOffline(normalized) : []),
+    [normalized, result, errorMsg],
   );
 
   async function searchCode(code: string) {
@@ -172,6 +179,28 @@ export default function DtcLookupScreen() {
               : <FontAwesome5 name="search" size={15} color="#fff" />}
           </TouchableOpacity>
         </View>
+
+        {/* Gợi ý gõ-tới-đâu - chỉ hiện khi đang gõ dở, chưa có kết quả */}
+        {suggestions.length > 0 && (
+          <View style={[styles.suggestBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            {suggestions.map((s, idx) => (
+              <TouchableOpacity
+                key={s.code}
+                style={[styles.suggestRow, idx > 0 && { borderTopWidth: 1, borderTopColor: colors.border }]}
+                onPress={() => handlePickCommon(s.code)}>
+                <Text style={[styles.commonCode, { color: colors.text }]}>{s.code}</Text>
+                <Text style={[styles.commonLabel, { color: colors.textSecondary }]} numberOfLines={1}>
+                  {s.title_vi}
+                </Text>
+                <View style={[styles.badge, { backgroundColor: SEVERITY_COLOR[s.severity] + '22' }]}>
+                  <Text style={[styles.badgeText, { color: SEVERITY_COLOR[s.severity] }]}>
+                    {t(`dtc.severity_${s.severity}`)}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
 
         {normalized.length >= 5 && !isValidFormat && (
           <Text style={styles.errorText}>{t('dtc.invalid_format')}</Text>
@@ -317,6 +346,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   errorText: { color: '#EF4444', fontSize: 13, marginTop: 8 },
+  suggestBox: { borderRadius: 10, borderWidth: 1, marginTop: 8, overflow: 'hidden' },
+  suggestRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
   resultCard: { borderRadius: 12, padding: 16, marginTop: 16 },
   resultHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   resultCode: { fontSize: 22, fontWeight: '800', letterSpacing: 1 },
