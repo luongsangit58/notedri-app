@@ -47,15 +47,15 @@ const SEVERITY_ICON: Record<string, string> = {
 function SeverityMark({ severity, size = 13 }: { severity: string; size?: number }) {
   const color = SEVERITY_COLOR[severity];
   if (severity === 'warn') {
-    // Rà soát 18/7 (user: chữ "!" trắng trên nền amber tương phản kém) - #f59e0b là màu
-    // sáng, chữ tối (#111827) đọc rõ hơn hẳn chữ trắng, khớp quy ước "chữ tối trên nền
-    // vàng/cam" web đã dùng ở _head.blade.php.
+    // Rà soát 18/7 (lần 2 - user: nền sáng nên đổi "!" về trắng cho đồng bộ với icon tam
+    // giác/tròn bên cạnh, vốn hiện dấu !/i dạng khoảng trống trắng trên khối màu đặc) -
+    // ưu tiên đồng bộ thị giác giữa 3 icon hơn tỉ lệ tương phản tối ưu tuyệt đối.
     return (
       <View style={{
         width: size, height: size, borderRadius: 2, backgroundColor: color,
         alignItems: 'center', justifyContent: 'center',
       }}>
-        <Text style={{ color: '#111827', fontSize: size * 0.7, fontWeight: '900', lineHeight: size * 0.85 }}>!</Text>
+        <Text style={{ color: '#fff', fontSize: size * 0.7, fontWeight: '900', lineHeight: size * 0.85 }}>!</Text>
       </View>
     );
   }
