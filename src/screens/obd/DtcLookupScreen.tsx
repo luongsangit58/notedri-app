@@ -33,6 +33,14 @@ const SEVERITY_COLOR: Record<string, string> = {
   info: '#3B82F6',
 };
 
+// Rà soát 18/7 (user: chỉ có viền màu chưa đủ rõ) - icon riêng theo mức độ, đi kèm chú giải
+// (xem SeverityLegend) để user không phải đoán ý nghĩa màu.
+const SEVERITY_ICON: Record<string, string> = {
+  critical: 'exclamation-triangle',
+  warn: 'exclamation-circle',
+  info: 'info-circle',
+};
+
 const CAN_DRIVE_COLOR: Record<string, string> = {
   yes: '#22C55E',
   caution: '#F59E0B',
@@ -186,8 +194,8 @@ export default function DtcLookupScreen() {
         {/* Gợi ý gõ-tới-đâu - chỉ hiện khi đang gõ dở, chưa có kết quả.
             Rà soát 18/7 (user: "..." cắt 1 dòng khó hiểu, badge chữ lặp lại mọi dòng dài
             dòng) - mô tả cho xuống tối đa 2 dòng thay vì cắt cụt 1 dòng, và thay badge chữ
-            lặp lại bằng viền màu trái theo mức độ (đủ nhận biết nhanh, đỡ rối mắt khi liệt
-            kê nhiều dòng liên tiếp). */}
+            lặp lại bằng viền màu trái + icon theo mức độ (đủ nhận biết nhanh, đỡ rối mắt
+            khi liệt kê nhiều dòng liên tiếp). */}
         {suggestions.length > 0 && (
           <View style={[styles.suggestBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
             {suggestions.map((s, idx) => (
@@ -199,6 +207,7 @@ export default function DtcLookupScreen() {
                   idx > 0 && { borderTopWidth: 1, borderTopColor: colors.border },
                 ]}
                 onPress={() => handlePickCommon(s.code)}>
+                <FontAwesome5 name={SEVERITY_ICON[s.severity]} size={13} color={SEVERITY_COLOR[s.severity]} solid />
                 <Text style={[styles.commonCode, { color: colors.text }]}>{s.code}</Text>
                 <Text style={[styles.commonLabel, { color: colors.textSecondary }]} numberOfLines={2}>
                   {s.title_vi}
@@ -296,6 +305,18 @@ export default function DtcLookupScreen() {
         {!result && !errorMsg && input.length === 0 && (
           <View style={{ marginTop: 20 }}>
             <Text style={[styles.commonTitle, { color: colors.text }]}>{t('dtc.common_codes_title')}</Text>
+            {/* Chú giải icon + màu mức độ - rà soát 18/7 (user: chỉ viền màu chưa đủ rõ,
+                nên có icon và giải thích để không phải đoán ý nghĩa màu). */}
+            <View style={styles.legendRow}>
+              {(['critical', 'warn', 'info'] as const).map((sev) => (
+                <View key={sev} style={styles.legendItem}>
+                  <FontAwesome5 name={SEVERITY_ICON[sev]} size={11} color={SEVERITY_COLOR[sev]} solid />
+                  <Text style={[styles.legendText, { color: colors.textSecondary }]}>
+                    {t(`dtc.severity_${sev}`)}
+                  </Text>
+                </View>
+              ))}
+            </View>
             {commonResults.map((r) => (
               <TouchableOpacity
                 key={r.code}
@@ -305,6 +326,9 @@ export default function DtcLookupScreen() {
                   r.severity && { borderLeftWidth: 4, borderLeftColor: SEVERITY_COLOR[r.severity] },
                 ]}
                 onPress={() => handlePickCommon(r.code)}>
+                {r.severity && (
+                  <FontAwesome5 name={SEVERITY_ICON[r.severity]} size={13} color={SEVERITY_COLOR[r.severity]} solid />
+                )}
                 <Text style={[styles.commonCode, { color: colors.text }]}>{r.code}</Text>
                 <Text style={[styles.commonLabel, { color: colors.textSecondary }]} numberOfLines={2}>
                   {r.title_vi}
@@ -380,6 +404,9 @@ const styles = StyleSheet.create({
   blogLink: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 14 },
   blogLinkText: { fontSize: 12, fontWeight: '600' },
   commonTitle: { fontSize: 13, fontWeight: '700', marginBottom: 10 },
+  legendRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 10 },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  legendText: { fontSize: 11 },
   commonRow: {
     flexDirection: 'row',
     alignItems: 'center',
