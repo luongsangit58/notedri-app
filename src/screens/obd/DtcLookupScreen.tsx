@@ -183,23 +183,26 @@ export default function DtcLookupScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Gợi ý gõ-tới-đâu - chỉ hiện khi đang gõ dở, chưa có kết quả */}
+        {/* Gợi ý gõ-tới-đâu - chỉ hiện khi đang gõ dở, chưa có kết quả.
+            Rà soát 18/7 (user: "..." cắt 1 dòng khó hiểu, badge chữ lặp lại mọi dòng dài
+            dòng) - mô tả cho xuống tối đa 2 dòng thay vì cắt cụt 1 dòng, và thay badge chữ
+            lặp lại bằng viền màu trái theo mức độ (đủ nhận biết nhanh, đỡ rối mắt khi liệt
+            kê nhiều dòng liên tiếp). */}
         {suggestions.length > 0 && (
           <View style={[styles.suggestBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
             {suggestions.map((s, idx) => (
               <TouchableOpacity
                 key={s.code}
-                style={[styles.suggestRow, idx > 0 && { borderTopWidth: 1, borderTopColor: colors.border }]}
+                style={[
+                  styles.suggestRow,
+                  { borderLeftWidth: 4, borderLeftColor: SEVERITY_COLOR[s.severity] },
+                  idx > 0 && { borderTopWidth: 1, borderTopColor: colors.border },
+                ]}
                 onPress={() => handlePickCommon(s.code)}>
                 <Text style={[styles.commonCode, { color: colors.text }]}>{s.code}</Text>
-                <Text style={[styles.commonLabel, { color: colors.textSecondary }]} numberOfLines={1}>
+                <Text style={[styles.commonLabel, { color: colors.textSecondary }]} numberOfLines={2}>
                   {s.title_vi}
                 </Text>
-                <View style={[styles.badge, { backgroundColor: SEVERITY_COLOR[s.severity] + '22' }]}>
-                  <Text style={[styles.badgeText, { color: SEVERITY_COLOR[s.severity] }]}>
-                    {t(`dtc.severity_${s.severity}`)}
-                  </Text>
-                </View>
               </TouchableOpacity>
             ))}
           </View>
@@ -296,19 +299,16 @@ export default function DtcLookupScreen() {
             {commonResults.map((r) => (
               <TouchableOpacity
                 key={r.code}
-                style={[styles.commonRow, { backgroundColor: colors.card, borderColor: colors.border }]}
+                style={[
+                  styles.commonRow,
+                  { backgroundColor: colors.card, borderColor: colors.border },
+                  r.severity && { borderLeftWidth: 4, borderLeftColor: SEVERITY_COLOR[r.severity] },
+                ]}
                 onPress={() => handlePickCommon(r.code)}>
                 <Text style={[styles.commonCode, { color: colors.text }]}>{r.code}</Text>
-                <Text style={[styles.commonLabel, { color: colors.textSecondary }]} numberOfLines={1}>
+                <Text style={[styles.commonLabel, { color: colors.textSecondary }]} numberOfLines={2}>
                   {r.title_vi}
                 </Text>
-                {r.severity && (
-                  <View style={[styles.badge, { backgroundColor: SEVERITY_COLOR[r.severity] + '22' }]}>
-                    <Text style={[styles.badgeText, { color: SEVERITY_COLOR[r.severity] }]}>
-                      {t(`dtc.severity_${r.severity}`)}
-                    </Text>
-                  </View>
-                )}
               </TouchableOpacity>
             ))}
           </View>
