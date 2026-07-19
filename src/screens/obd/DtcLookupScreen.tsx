@@ -15,7 +15,7 @@ import { useNavigation } from '@react-navigation/native';
 import { obdApi, DtcLookupResult } from '../../api/obd';
 import { lookupDtcOffline, suggestDtcOffline, withDefaultDtcPrefix } from '../../services/obd/dtcOfflineDictionary';
 import AppBgPattern from '../../components/AppBgPattern';
-import { useColors } from '../../utils/theme';
+import { useColors, useThemeStore } from '../../utils/theme';
 import { formatVND } from '../../utils/format';
 import { BASE_URL } from '../../utils/api';
 import { useT } from '../../i18n';
@@ -46,16 +46,18 @@ const SEVERITY_ICON: Record<string, string> = {
 
 function SeverityMark({ severity, size = 13 }: { severity: string; size?: number }) {
   const color = SEVERITY_COLOR[severity];
+  const isDark = useThemeStore((s) => s.mode === 'dark');
   if (severity === 'warn') {
-    // Rà soát 18/7 (lần 2 - user: nền sáng nên đổi "!" về trắng cho đồng bộ với icon tam
-    // giác/tròn bên cạnh, vốn hiện dấu !/i dạng khoảng trống trắng trên khối màu đặc) -
-    // ưu tiên đồng bộ thị giác giữa 3 icon hơn tỉ lệ tương phản tối ưu tuyệt đối.
+    // Rà soát 18/7 (lần 3 - user: icon tam giác/tròn có dấu !/i dạng khoảng trống trong
+    // suốt nên TỰ ĐỘNG lộ màu nền thẻ phía sau (thẻ sáng -> trông trắng, thẻ tối -> trông
+    // đen) - khối vuông tự vẽ không có hiệu ứng trong suốt đó nên phải chọn màu tay theo
+    // đúng theme hiện tại để mô phỏng lại: sáng -> trắng, tối -> đen.
     return (
       <View style={{
         width: size, height: size, borderRadius: 2, backgroundColor: color,
         alignItems: 'center', justifyContent: 'center',
       }}>
-        <Text style={{ color: '#fff', fontSize: size * 0.7, fontWeight: '900', lineHeight: size * 0.85 }}>!</Text>
+        <Text style={{ color: isDark ? '#000' : '#fff', fontSize: size * 0.7, fontWeight: '900', lineHeight: size * 0.85 }}>!</Text>
       </View>
     );
   }
