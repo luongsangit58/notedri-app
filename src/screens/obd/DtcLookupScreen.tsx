@@ -34,12 +34,30 @@ const SEVERITY_COLOR: Record<string, string> = {
 };
 
 // Rà soát 18/7 (user: chỉ có viền màu chưa đủ rõ) - icon riêng theo mức độ, đi kèm chú giải
-// (xem SeverityLegend) để user không phải đoán ý nghĩa màu.
+// để user không phải đoán ý nghĩa màu. Rà soát 18/7 (lần 2 - user: Cảnh báo nên là hình
+// vuông thay vì tròn cho dễ phân biệt hình dạng với 2 mức còn lại) - FontAwesome5 Free (bộ
+// icon đóng gói offline trong @expo/vector-icons, xem glyphmaps/FontAwesome5Free.json)
+// KHÔNG có icon "exclamation-square"/"square-exclamation" nào cả, nên warn tự vẽ khối
+// vuông nhỏ + dấu "!" (SeverityMark bên dưới) thay vì dùng icon font.
 const SEVERITY_ICON: Record<string, string> = {
   critical: 'exclamation-triangle',
-  warn: 'exclamation-circle',
   info: 'info-circle',
 };
+
+function SeverityMark({ severity, size = 13 }: { severity: string; size?: number }) {
+  const color = SEVERITY_COLOR[severity];
+  if (severity === 'warn') {
+    return (
+      <View style={{
+        width: size, height: size, borderRadius: 2, backgroundColor: color,
+        alignItems: 'center', justifyContent: 'center',
+      }}>
+        <Text style={{ color: '#fff', fontSize: size * 0.7, fontWeight: '900', lineHeight: size * 0.85 }}>!</Text>
+      </View>
+    );
+  }
+  return <FontAwesome5 name={SEVERITY_ICON[severity]} size={size} color={color} solid />;
+}
 
 const CAN_DRIVE_COLOR: Record<string, string> = {
   yes: '#22C55E',
@@ -207,7 +225,7 @@ export default function DtcLookupScreen() {
                   idx > 0 && { borderTopWidth: 1, borderTopColor: colors.border },
                 ]}
                 onPress={() => handlePickCommon(s.code)}>
-                <FontAwesome5 name={SEVERITY_ICON[s.severity]} size={13} color={SEVERITY_COLOR[s.severity]} solid />
+                <SeverityMark severity={s.severity} />
                 <Text style={[styles.commonCode, { color: colors.text }]}>{s.code}</Text>
                 <Text style={[styles.commonLabel, { color: colors.textSecondary }]} numberOfLines={2}>
                   {s.title_vi}
@@ -310,7 +328,7 @@ export default function DtcLookupScreen() {
             <View style={styles.legendRow}>
               {(['critical', 'warn', 'info'] as const).map((sev) => (
                 <View key={sev} style={styles.legendItem}>
-                  <FontAwesome5 name={SEVERITY_ICON[sev]} size={11} color={SEVERITY_COLOR[sev]} solid />
+                  <SeverityMark severity={sev} size={11} />
                   <Text style={[styles.legendText, { color: colors.textSecondary }]}>
                     {t(`dtc.severity_${sev}`)}
                   </Text>
@@ -326,9 +344,7 @@ export default function DtcLookupScreen() {
                   r.severity && { borderLeftWidth: 4, borderLeftColor: SEVERITY_COLOR[r.severity] },
                 ]}
                 onPress={() => handlePickCommon(r.code)}>
-                {r.severity && (
-                  <FontAwesome5 name={SEVERITY_ICON[r.severity]} size={13} color={SEVERITY_COLOR[r.severity]} solid />
-                )}
+                {r.severity && <SeverityMark severity={r.severity} />}
                 <Text style={[styles.commonCode, { color: colors.text }]}>{r.code}</Text>
                 <Text style={[styles.commonLabel, { color: colors.textSecondary }]} numberOfLines={2}>
                   {r.title_vi}
