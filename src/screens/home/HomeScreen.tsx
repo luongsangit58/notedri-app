@@ -23,6 +23,7 @@ import { formatVND, formatKm } from '../../utils/format';
 import { flattenReminders } from '../../utils/reminders';
 import { getMostRecentPairing, PairedDevice } from '../../services/obd/pairedDevices';
 import { useObdSessionStore } from '../../store/obdSessionStore';
+import { useSelectedVehicleStore } from '../../store/selectedVehicleStore';
 import client from '../../api/client';
 
 function VehicleSelector({ vehicles, selectedId, onSelect }: {
@@ -155,7 +156,12 @@ export default function HomeScreen() {
   const vehicles: any[] = Array.isArray(vehiclesRaw?.data) ? vehiclesRaw.data
     : Array.isArray(vehiclesRaw) ? vehiclesRaw : [];
 
-  const [selectedVehicleId, setSelectedVehicleId] = useState<number | undefined>(undefined);
+  // Lưu TOÀN CỤC (không phải state riêng của Home) - để Lời nhắc/ODO/Đổ xăng mở
+  // qua tab bar/FAB (không có route.params.vehicleId) vẫn hiểu đúng xe đang xem
+  // thay vì luôn rơi về xe mặc định (tester báo bấm thẳng icon "Lời nhắc" ở tab
+  // bar vẫn hiện xe mặc định dù đang chọn xe khác trên Home).
+  const selectedVehicleId = useSelectedVehicleStore(s => s.selectedVehicleId) ?? undefined;
+  const setSelectedVehicleId = useSelectedVehicleStore(s => s.setSelectedVehicleId);
   const defaultVehicle = vehicles.find((v) => v.is_default) ?? vehicles[0];
   const vehicleId = selectedVehicleId ?? defaultVehicle?.id;
   const vehicle = vehicles.find((v) => v.id === vehicleId);

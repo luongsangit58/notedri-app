@@ -10,6 +10,7 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import dayjs from 'dayjs';
 import { useVehicles } from '../../hooks/useVehicles';
+import { useSelectedVehicleStore } from '../../store/selectedVehicleStore';
 import { useCreateRefuel } from '../../hooks/useRefuels';
 import { useFuelTypes } from '../../hooks/useFuelTypes';
 import OcrCamera, { ReceiptData } from '../../components/OcrCamera';
@@ -61,10 +62,15 @@ export default function AddRefuelScreen() {
 
   const defaultVehicle = vehicles.find((v: any) => v.is_default) ?? vehicles[0];
   // Xe đang chọn ở màn gọi tới (vd chi tiết xe) - ưu tiên xe này thay vì luôn
-  // nhảy về xe mặc định.
+  // nhảy về xe mặc định. Mở qua FAB "+" (không có route.params.vehicleId) ->
+  // dùng xe đang chọn trên Home (bỏ qua nếu đó là xe điện, danh sách đã lọc EV).
   const routeVehicleId: number | undefined = route.params?.vehicleId;
+  const homeSelectedVehicleId = useSelectedVehicleStore(s => s.selectedVehicleId);
+  const fallbackVehicleId = routeVehicleId
+    ?? (vehicles.some((v: any) => v.id === homeSelectedVehicleId) ? homeSelectedVehicleId : undefined)
+    ?? defaultVehicle?.id ?? null;
 
-  const [vehicleId, setVehicleId] = useState<number | null>(routeVehicleId ?? defaultVehicle?.id ?? null);
+  const [vehicleId, setVehicleId] = useState<number | null>(fallbackVehicleId);
   const [fuelTypeId, setFuelTypeId] = useState<number | null>(null);
   const [tongTien, setTongTien] = useState('');
   const [soLit, setSoLit] = useState('');
@@ -98,8 +104,8 @@ export default function AddRefuelScreen() {
 
   // Set default vehicle when vehicles load
   useEffect(() => {
-    if (!vehicleId) setVehicleId(routeVehicleId ?? defaultVehicle?.id ?? null);
-  }, [vehicles, routeVehicleId]);
+    if (!vehicleId) setVehicleId(fallbackVehicleId);
+  }, [vehicles, fallbackVehicleId]);
 
   // Clear voiceFeedback timer on unmount
   useEffect(() => {
@@ -345,7 +351,7 @@ export default function AddRefuelScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom', 'left', 'right']}>
       <AppBgPattern />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={[{ padding: 16 }, contentWide]}>

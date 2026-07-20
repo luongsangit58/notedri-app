@@ -17,6 +17,7 @@ import { useQueries, useQueryClient } from '@tanstack/react-query';
 import { odometerApi } from '../../api/odometer';
 import { useOdometer } from '../../hooks/useOdometer';
 import { useVehicles } from '../../hooks/useVehicles';
+import { useSelectedVehicleStore } from '../../store/selectedVehicleStore';
 import { useColors } from '../../utils/theme';
 import { formatKm } from '../../utils/format';
 import { useT } from '../../i18n';
@@ -448,7 +449,10 @@ export default function OdometerListScreen() {
   // Đi từ Trang chủ (xe đang chọn) -> mặc định lọc theo xe đó thay vì "Tất cả"
   // (tester báo: ODO tất cả không rõ của xe nào).
   const routeVehicleId: number | undefined = route.params?.vehicleId;
-  const [selectedVehicleId, setSelectedVehicleId] = useState<number | undefined>(routeVehicleId);
+  const homeSelectedVehicleId = useSelectedVehicleStore(s => s.selectedVehicleId);
+  const [selectedVehicleId, setSelectedVehicleId] = useState<number | undefined>(
+    routeVehicleId ?? homeSelectedVehicleId ?? undefined,
+  );
   const [refreshKey, setRefreshKey] = useState(0);
 
   const { data: vehiclesRaw } = useVehicles();

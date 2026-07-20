@@ -9,6 +9,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import dayjs from 'dayjs';
 import { useVehicles } from '../../hooks/useVehicles';
+import { useSelectedVehicleStore } from '../../store/selectedVehicleStore';
 import { useCreateOdometer } from '../../hooks/useOdometer';
 import { isTrackingActive } from '../../services/gps/GpsTripTracker';
 import OcrCamera from '../../components/OcrCamera';
@@ -35,7 +36,9 @@ export default function AddOdometerScreen() {
   const route = useRoute<any>();
   // Xe đang chọn ở màn gọi tới (vd Home/Danh sách ODO) - ưu tiên xe này thay vì
   // luôn nhảy về xe mặc định (tester báo: cập nhật ODO xe khác vẫn bị đẩy về xe mặc định).
+  // Mở qua FAB "+" (không có route.params.vehicleId) -> dùng xe đang chọn trên Home.
   const routeVehicleId: number | undefined = route.params?.vehicleId;
+  const homeSelectedVehicleId = useSelectedVehicleStore(s => s.selectedVehicleId);
   const { data: vehiclesData } = useVehicles();
   const createOdometer = useCreateOdometer();
 
@@ -43,8 +46,9 @@ export default function AddOdometerScreen() {
     : Array.isArray(vehiclesData) ? vehiclesData : [];
 
   const defaultVehicle = vehicles.find((v: any) => v.is_default) ?? vehicles[0];
+  const fallbackVehicleId = routeVehicleId ?? homeSelectedVehicleId ?? defaultVehicle?.id ?? null;
 
-  const [vehicleId, setVehicleId] = useState<number | null>(routeVehicleId ?? defaultVehicle?.id ?? null);
+  const [vehicleId, setVehicleId] = useState<number | null>(fallbackVehicleId);
   const [odo, setOdo] = useState('');
   const [ngay, setNgay] = useState(dayjs().format('YYYY-MM-DD'));
   const [ghiChu, setGhiChu] = useState('');
@@ -52,8 +56,8 @@ export default function AddOdometerScreen() {
   const [tracking, setTracking] = useState(false); // đang ghi hành trình GPS?
 
   useEffect(() => {
-    if (!vehicleId) setVehicleId(routeVehicleId ?? defaultVehicle?.id ?? null);
-  }, [vehicles, routeVehicleId]);
+    if (!vehicleId) setVehicleId(fallbackVehicleId);
+  }, [vehicles, fallbackVehicleId]);
 
   const currentVehicle = vehicles.find((v: any) => v.id === vehicleId);
 
@@ -106,7 +110,7 @@ export default function AddOdometerScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom', 'left', 'right']}>
       <AppBgPattern />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={[{ padding: 16 }, contentWide]}>

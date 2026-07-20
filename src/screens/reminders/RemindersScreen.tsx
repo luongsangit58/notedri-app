@@ -21,6 +21,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useReminders, useDeleteReminder, useDoneReminder, useSeedReminders, useConfirmAllReminders } from '../../hooks/useReminders';
 import { useVehicles } from '../../hooks/useVehicles';
+import { useSelectedVehicleStore } from '../../store/selectedVehicleStore';
 import ErrorView from '../../components/ErrorView';
 import { useColors } from '../../utils/theme';
 import { contentWide } from '../../utils/layout';
@@ -437,9 +438,14 @@ export default function RemindersScreen() {
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
   const { vehicleId } = (route.params ?? {}) as { vehicleId?: number };
+  // Mở thẳng qua icon "Lời nhắc" ở tab bar (không có route.params.vehicleId) ->
+  // dùng xe đang chọn trên Home thay vì rơi thẳng về xe mặc định (tester báo).
+  const homeSelectedVehicleId = useSelectedVehicleStore(s => s.selectedVehicleId);
   const { data: vehiclesData0 } = useVehicles();
   const vehicles0: any[] = Array.isArray(vehiclesData0?.data) ? vehiclesData0.data : Array.isArray(vehiclesData0) ? vehiclesData0 : [];
-  const resolvedVehicleId: number = vehicleId ?? vehicles0.find((v: any) => v.is_default)?.id ?? vehicles0[0]?.id;
+  const resolvedVehicleId: number = vehicleId
+    ?? (vehicles0.some((v: any) => v.id === homeSelectedVehicleId) ? homeSelectedVehicleId! : undefined)
+    ?? vehicles0.find((v: any) => v.is_default)?.id ?? vehicles0[0]?.id;
 
   const { data: remindersData, isLoading, isError, refetch, isFetching } = useReminders(resolvedVehicleId);
   const deleteReminder = useDeleteReminder();
