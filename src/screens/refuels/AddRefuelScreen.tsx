@@ -60,8 +60,11 @@ export default function AddRefuelScreen() {
     : [];
 
   const defaultVehicle = vehicles.find((v: any) => v.is_default) ?? vehicles[0];
+  // Xe đang chọn ở màn gọi tới (vd chi tiết xe) - ưu tiên xe này thay vì luôn
+  // nhảy về xe mặc định.
+  const routeVehicleId: number | undefined = route.params?.vehicleId;
 
-  const [vehicleId, setVehicleId] = useState<number | null>(defaultVehicle?.id ?? null);
+  const [vehicleId, setVehicleId] = useState<number | null>(routeVehicleId ?? defaultVehicle?.id ?? null);
   const [fuelTypeId, setFuelTypeId] = useState<number | null>(null);
   const [tongTien, setTongTien] = useState('');
   const [soLit, setSoLit] = useState('');
@@ -95,8 +98,8 @@ export default function AddRefuelScreen() {
 
   // Set default vehicle when vehicles load
   useEffect(() => {
-    if (!vehicleId && defaultVehicle) setVehicleId(defaultVehicle.id);
-  }, [vehicles]);
+    if (!vehicleId) setVehicleId(routeVehicleId ?? defaultVehicle?.id ?? null);
+  }, [vehicles, routeVehicleId]);
 
   // Clear voiceFeedback timer on unmount
   useEffect(() => {

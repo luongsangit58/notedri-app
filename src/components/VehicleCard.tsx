@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, ImageBackground } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useColors } from '../utils/theme';
 import { vehicleIcon } from '../utils/vehicleIcon';
+import { fuelTypeMeta } from '../utils/fuelType';
 import { useT } from '../i18n';
 
 // band có thể là string (key) hoặc object { key, label, color } từ API
@@ -51,8 +52,9 @@ export default function VehicleCard({ vehicle, onPress, score }: Props) {
   if (vehicle.nam)   subtitleParts.push(String(vehicle.nam));
   const subtitle = subtitleParts.join(' · ');
 
+  const fuel = fuelTypeMeta(vehicle);
+
   const row3Parts: string[] = [];
-  if (vehicle.fuel_type)        row3Parts.push(vehicle.fuel_type);
   if (vehicle.tank_capacity_l)  row3Parts.push(`${vehicle.tank_capacity_l}L`);
   if (vehicle.odo_hien_tai != null) {
     row3Parts.push(`ODO: ${Number(vehicle.odo_hien_tai).toLocaleString('vi-VN')}km`);
@@ -71,17 +73,30 @@ export default function VehicleCard({ vehicle, onPress, score }: Props) {
         )}
       </View>
 
-      {bandKey && bandLabel && score?.total != null && (
-        <View style={{
-          alignSelf: 'flex-start', marginTop: 6,
-          backgroundColor: bandColor(bandKey) + '22',
-          borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2,
-        }}>
-          <Text style={{ color: bandColor(bandKey), fontSize: 11, fontWeight: '700' }}>
-            {score.total} · {bandLabel}
-          </Text>
-        </View>
-      )}
+      <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
+        {vehicle.fuel_type && (
+          <View style={{
+            flexDirection: 'row', alignItems: 'center', gap: 5,
+            backgroundColor: fuel.color + '22',
+            borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2,
+          }}>
+            <FontAwesome5 name={fuel.icon} size={10} color={fuel.color} solid />
+            <Text style={{ color: fuel.color, fontSize: 11, fontWeight: '700' }}>
+              {vehicle.fuel_type}
+            </Text>
+          </View>
+        )}
+        {bandKey && bandLabel && score?.total != null && (
+          <View style={{
+            backgroundColor: bandColor(bandKey) + '22',
+            borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2,
+          }}>
+            <Text style={{ color: bandColor(bandKey), fontSize: 11, fontWeight: '700' }}>
+              {score.total} · {bandLabel}
+            </Text>
+          </View>
+        )}
+      </View>
 
       {subtitle ? (
         <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 4 }}>{subtitle}</Text>

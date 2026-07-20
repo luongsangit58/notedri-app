@@ -124,6 +124,17 @@ export default function EditVehicleScreen() {
       Alert.alert(t('vehicles.missing_info_title'), t('vehicles.name_required_msg'));
       return;
     }
+    // Validate năm sản xuất chỉ khi bấm lưu (không chặn lúc gõ), tránh hiện
+    // message tiếng Anh thô của backend ("The nam field must not be greater
+    // than 2026") - tester báo lỗi này.
+    const currentYear = new Date().getFullYear();
+    if (nam.trim()) {
+      const namNum = parseInt(nam.trim(), 10);
+      if (!Number.isFinite(namNum) || namNum < 1980 || namNum > currentYear) {
+        Alert.alert(t('vehicles.missing_info_title'), t('vehicles.year_invalid_msg', { max: currentYear }));
+        return;
+      }
+    }
 
     setApiError(null);
 

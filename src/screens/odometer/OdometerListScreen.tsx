@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AppBgPattern from '../../components/AppBgPattern';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useQueries, useQueryClient } from '@tanstack/react-query';
 import { odometerApi } from '../../api/odometer';
@@ -444,7 +444,11 @@ export default function OdometerListScreen() {
   });
 
   const navigation = useNavigation<any>();
-  const [selectedVehicleId, setSelectedVehicleId] = useState<number | undefined>(undefined);
+  const route = useRoute<any>();
+  // Đi từ Trang chủ (xe đang chọn) -> mặc định lọc theo xe đó thay vì "Tất cả"
+  // (tester báo: ODO tất cả không rõ của xe nào).
+  const routeVehicleId: number | undefined = route.params?.vehicleId;
+  const [selectedVehicleId, setSelectedVehicleId] = useState<number | undefined>(routeVehicleId);
   const [refreshKey, setRefreshKey] = useState(0);
 
   const { data: vehiclesRaw } = useVehicles();
@@ -511,7 +515,7 @@ export default function OdometerListScreen() {
       {/* FAB */}
       <TouchableOpacity
         style={styles.fab}
-        onPress={() => navigation.navigate('AddOdometer')}
+        onPress={() => navigation.navigate('AddOdometer', { vehicleId: selectedVehicleId })}
         activeOpacity={0.85}
       >
         <FontAwesome5 name="plus" size={22} color="#fff" solid />

@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AppBgPattern from '../../components/AppBgPattern';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import dayjs from 'dayjs';
 import { useVehicles } from '../../hooks/useVehicles';
@@ -32,6 +32,10 @@ export default function AddOdometerScreen() {
   };
 
   const navigation = useNavigation();
+  const route = useRoute<any>();
+  // Xe đang chọn ở màn gọi tới (vd Home/Danh sách ODO) - ưu tiên xe này thay vì
+  // luôn nhảy về xe mặc định (tester báo: cập nhật ODO xe khác vẫn bị đẩy về xe mặc định).
+  const routeVehicleId: number | undefined = route.params?.vehicleId;
   const { data: vehiclesData } = useVehicles();
   const createOdometer = useCreateOdometer();
 
@@ -40,7 +44,7 @@ export default function AddOdometerScreen() {
 
   const defaultVehicle = vehicles.find((v: any) => v.is_default) ?? vehicles[0];
 
-  const [vehicleId, setVehicleId] = useState<number | null>(defaultVehicle?.id ?? null);
+  const [vehicleId, setVehicleId] = useState<number | null>(routeVehicleId ?? defaultVehicle?.id ?? null);
   const [odo, setOdo] = useState('');
   const [ngay, setNgay] = useState(dayjs().format('YYYY-MM-DD'));
   const [ghiChu, setGhiChu] = useState('');
@@ -48,8 +52,8 @@ export default function AddOdometerScreen() {
   const [tracking, setTracking] = useState(false); // đang ghi hành trình GPS?
 
   useEffect(() => {
-    if (!vehicleId && defaultVehicle) setVehicleId(defaultVehicle.id);
-  }, [vehicles]);
+    if (!vehicleId) setVehicleId(routeVehicleId ?? defaultVehicle?.id ?? null);
+  }, [vehicles, routeVehicleId]);
 
   const currentVehicle = vehicles.find((v: any) => v.id === vehicleId);
 

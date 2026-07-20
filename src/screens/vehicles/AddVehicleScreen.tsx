@@ -196,6 +196,11 @@ export default function AddVehicleScreen() {
   const [selectedSpec, setSelectedSpec]   = useState<Spec | null>(null);
   const [showBrandPicker, setShowBrandPicker] = useState(false);
   const [showModelPicker, setShowModelPicker] = useState(false);
+  // Rà soát 20/7 (tester báo "thêm xe không thấy chọn hãng/model theo danh sách,
+  // phải gõ tay"): 2 ô Hãng/Model chữ luôn hiện NGAY DƯỚI picker khiến người dùng
+  // tưởng phải gõ tay - giờ ẩn đi, chỉ hiện khi bấm "Nhập tay" hoặc khi DB rỗng.
+  const [manualOverride, setManualOverride] = useState(false);
+  const showManualMakeModel = !hasCascade || manualOverride;
 
   // ── Derived cascade data ──────────────────────────────────────────────────
   const brandsForType = useMemo(() => {
@@ -291,6 +296,17 @@ export default function AddVehicleScreen() {
   // ── Submit ────────────────────────────────────────────────────────────────
   const handleSubmit = async () => {
     if (!ten.trim()) { Alert.alert(t('vehicles.missing_info_title'), t('vehicles.name_required_msg')); return; }
+    // Validate năm sản xuất tại đây (chỉ khi bấm lưu, không chặn lúc gõ) để tránh
+    // hiện message tiếng Anh thô của backend ("The nam field must not be greater
+    // than 2026") - tester báo lỗi này.
+    const currentYear = new Date().getFullYear();
+    if (nam.trim()) {
+      const namNum = parseInt(nam.trim(), 10);
+      if (!Number.isFinite(namNum) || namNum < 1980 || namNum > currentYear) {
+        Alert.alert(t('vehicles.missing_info_title'), t('vehicles.year_invalid_msg', { max: currentYear }));
+        return;
+      }
+    }
     setApiError(null);
     const payload: Record<string, any> = { ten: ten.trim(), fuel_type, is_default };
     payload.vehicle_type = dbVehicleType(vehicleType);
@@ -510,12 +526,14 @@ export default function AddVehicleScreen() {
               </View>
             )}
 
-            {/* Divider + manual fallback link */}
-            <View style={{ marginTop: 12, marginBottom: 4 }}>
-              <Text style={{ color: colors.textSecondary, fontSize: 11, textAlign: 'center' }}>
-                {t('add_vehicle.manual_fallback_hint')}
-              </Text>
-            </View>
+            {/* Divider + manual fallback link - bấm mới hiện 2 ô gõ tay bên dưới */}
+            {!manualOverride && (
+              <TouchableOpacity onPress={() => setManualOverride(true)} style={{ marginTop: 12, marginBottom: 4 }}>
+                <Text style={{ color: colors.primary, fontSize: 12, textAlign: 'center', fontWeight: '600' }}>
+                  {t('add_vehicle.manual_fallback_hint')}
+                </Text>
+              </TouchableOpacity>
+            )}
           </>
         ) : (
           /* ── Fallback text search khi DB trống ── */
@@ -549,23 +567,27 @@ export default function AddVehicleScreen() {
           </>
         )}
 
-        {/* ── Hãng xe (text, auto-filled) ── */}
-        <Text style={labelStyle}>{t('vehicles.make_label')}</Text>
-        <TextInput
-          style={inputStyle}
-          placeholder={t('vehicles.make_placeholder')}
-          placeholderTextColor={colors.textSecondary}
-          value={make} onChangeText={setMake} returnKeyType="next"
-        />
+        {showManualMakeModel && (
+          <>
+            {/* ── Hãng xe (text, auto-filled hoặc gõ tay) ── */}
+            <Text style={labelStyle}>{t('vehicles.make_label')}</Text>
+            <TextInput
+              style={inputStyle}
+              placeholder={t('vehicles.make_placeholder')}
+              placeholderTextColor={colors.textSecondary}
+              value={make} onChangeText={setMake} returnKeyType="next"
+            />
 
-        {/* ── Model xe (text, auto-filled) ── */}
-        <Text style={labelStyle}>{t('vehicles.model_label')}</Text>
-        <TextInput
-          style={inputStyle}
-          placeholder={t('vehicles.model_placeholder')}
-          placeholderTextColor={colors.textSecondary}
-          value={model} onChangeText={setModel} returnKeyType="next"
-        />
+            {/* ── Model xe (text, auto-filled hoặc gõ tay) ── */}
+            <Text style={labelStyle}>{t('vehicles.model_label')}</Text>
+            <TextInput
+              style={inputStyle}
+              placeholder={t('vehicles.model_placeholder')}
+              placeholderTextColor={colors.textSecondary}
+              value={model} onChangeText={setModel} returnKeyType="next"
+            />
+          </>
+        )}
 
         {/* ── Năm sản xuất ── */}
         <Text style={labelStyle}>{t('vehicles.year_label')}</Text>

@@ -14,6 +14,7 @@ import { useVehicles } from '../../hooks/useVehicles';
 import { useColors } from '../../utils/theme';
 import { useT } from '../../i18n';
 import { vehicleIcon } from '../../utils/vehicleIcon';
+import { fuelTypeMeta } from '../../utils/fuelType';
 import { useNotifications } from '../../hooks/useNotifications';
 import { useAuthStore } from '../../store/authStore';
 import AdMobBanner from '../../components/AdMobBanner';
@@ -47,6 +48,10 @@ function VehicleSelector({ vehicles, selectedId, onSelect }: {
         <Text style={{ color: colors.text, fontWeight: '700', fontSize: 16, flex: 1 }} numberOfLines={1}>
           {nameOf(current)}
         </Text>
+        {/* Icon nhiên liệu theo màu - đồng bộ cách hiển thị với danh sách "Xe của tôi" */}
+        {current.fuel_type && (
+          <FontAwesome5 name={fuelTypeMeta(current).icon} size={13} color={fuelTypeMeta(current).color} solid />
+        )}
         {vehicles.length > 1 && <FontAwesome5 name="chevron-down" size={13} color={colors.textSecondary} />}
       </TouchableOpacity>
 
@@ -61,9 +66,12 @@ function VehicleSelector({ vehicles, selectedId, onSelect }: {
                   onPress={() => { onSelect(item.id); setOpen(false); }}
                   style={{ padding: 16, borderBottomWidth: 1, borderBottomColor: colors.border, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                   <FontAwesome5 name={vehicleIcon(item)} size={14} color={item.id === selectedId ? colors.primary : colors.textSecondary} solid />
-                  <Text style={{ color: item.id === selectedId ? colors.primary : colors.text, fontWeight: item.id === selectedId ? '700' : '500', fontSize: 15 }}>
+                  <Text style={{ color: item.id === selectedId ? colors.primary : colors.text, fontWeight: item.id === selectedId ? '700' : '500', fontSize: 15, flex: 1 }}>
                     {nameOf(item)}
                   </Text>
+                  {item.fuel_type && (
+                    <FontAwesome5 name={fuelTypeMeta(item).icon} size={12} color={fuelTypeMeta(item).color} solid />
+                  )}
                 </TouchableOpacity>
               )}
             />
@@ -158,9 +166,11 @@ export default function HomeScreen() {
   // Hybrid KHÔNG tính là xe điện thuần (vẫn đổ xăng là chính).
   const isEv: boolean = !isHybrid && (vehicle?.is_ev ?? /điện|electric|\bev\b/i.test(String(vehicle?.fuel_type ?? '')));
   // Xe điện: thẻ nạp năng lượng dùng green gradient + chữ trắng (khác xe xăng amber/chữ tối).
-  const energyColors = (isEv ? ['#10b981', '#047857'] : ['#fcd34d', '#d97706']) as [string, string];
-  const energyText = isEv ? '#ffffff' : '#1c1917';
-  const energySub = isEv ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.55)';
+  // Xe hybrid: gradient xanh+cam (vừa xăng vừa điện) - rà soát 20/7 (tester báo card
+  // hybrid cũ ghép 2 dòng riêng "Cây xăng"/"Trạm sạc" trông rối).
+  const energyColors = (isEv ? ['#10b981', '#047857'] : isHybrid ? ['#10b981', '#f59e0b'] : ['#fcd34d', '#d97706']) as [string, string];
+  const energyText = (isEv || isHybrid) ? '#ffffff' : '#1c1917';
+  const energySub = (isEv || isHybrid) ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.55)';
 
   // Thẻ OBD quick-connect (C4): CHỈ hiện khi user có thiết bị đã ghép - user chưa
   // có adapter không bị spam; pairing dùng gần nhất quyết định xe mặc định.
@@ -314,7 +324,7 @@ export default function HomeScreen() {
         {topHighlight && (
           <TouchableOpacity
             activeOpacity={0.85}
-            onPress={() => nav.navigate('Management', { tab: 0, _ts: Date.now() })}
+            onPress={() => nav.navigate('Management', { tab: 0, vehicleId, _ts: Date.now() })}
             style={{
               borderRadius: 16, marginBottom: 12, overflow: 'hidden',
               borderWidth: 1, borderColor: topHighlight.remaining_days <= 0 ? '#ef4444' : colors.warning,
@@ -450,35 +460,20 @@ export default function HomeScreen() {
                 {isEv ? t('home.charging_hint') : t('home.refuel_subtitle')}
               </Text>
             </TouchableOpacity>
-            {/* Cây xăng gần đây (xe xăng/dầu/hybrid). Hybrid có thêm link Trạm sạc. */}
+            {/* Cây xăng/trạm sạc gần đây (xe xăng/dầu/hybrid). Hybrid gộp 1 dòng duy nhất
+                thay vì 2 dòng riêng cây xăng + trạm sạc (rà soát 20/7, tester báo rối mắt). */}
             {!isEv && (
             <>
-            <View style={{ height: 1, backgroundColor: 'rgba(0,0,0,0.12)' }} />
+            <View style={{ height: 1, backgroundColor: isHybrid ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.12)' }} />
             <TouchableOpacity
               activeOpacity={0.85}
               onPress={() => nav.navigate('NearbyStations', { standalone: true, mode: 'fuel', latitude: coords?.lat, longitude: coords?.lng })}
               style={{ paddingHorizontal: 12, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-              <FontAwesome5 name="map-marker-alt" size={9} color="rgba(0,0,0,0.65)" solid />
-              <Text style={{ color: 'rgba(0,0,0,0.65)', fontSize: 11, fontWeight: '600' }}>
-                {t('home.find_station')}
+              <FontAwesome5 name="map-marker-alt" size={9} color={isHybrid ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.65)'} solid />
+              <Text style={{ color: isHybrid ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.65)', fontSize: 11, fontWeight: '600' }}>
+                {isHybrid ? t('home.find_station_hybrid') : t('home.find_station')}
               </Text>
             </TouchableOpacity>
-            {isHybrid && (
-              <>
-              <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.25)' }} />
-              <TouchableOpacity
-                activeOpacity={0.85}
-                onPress={() => nav.navigate('NearbyStations', { standalone: true, mode: 'charging', latitude: coords?.lat, longitude: coords?.lng })}
-                // Cùng màu #10b981 với thẻ "Xe điện" (energyColors khi isEv) - bê nguyên tông màu
-                // thay vì bịa tông mới, để "sạc điện" luôn là 1 màu xuyên suốt cả 2 nhánh.
-                style={{ paddingHorizontal: 12, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#10b981' }}>
-                <FontAwesome5 name="charging-station" size={9} color="rgba(255,255,255,0.9)" solid />
-                <Text style={{ color: 'rgba(255,255,255,0.9)', fontSize: 11, fontWeight: '600' }}>
-                  {t('home.charging_short')}
-                </Text>
-              </TouchableOpacity>
-              </>
-            )}
             </>
             )}
           </LinearGradient>
@@ -488,7 +483,7 @@ export default function HomeScreen() {
             style={{ flex: 1, borderRadius: 16, overflow: 'hidden' }}>
             <TouchableOpacity
               activeOpacity={0.85}
-              onPress={() => nav.navigate('AddOdometer')}
+              onPress={() => nav.navigate('AddOdometer', { vehicleId })}
               style={{ padding: 12 }}>
               <View style={{
                 width: 36, height: 36, borderRadius: 18,
@@ -512,7 +507,7 @@ export default function HomeScreen() {
             <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.12)' }} />
             <TouchableOpacity
               activeOpacity={0.85}
-              onPress={() => nav.navigate('OdometerList')}
+              onPress={() => nav.navigate('OdometerList', { vehicleId })}
               style={{ paddingHorizontal: 12, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
               <FontAwesome5 name="history" size={9} color="rgba(255,255,255,0.7)" solid />
               <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11, fontWeight: '600' }}>
@@ -586,7 +581,7 @@ export default function HomeScreen() {
           <View style={{ backgroundColor: colors.surface, borderRadius: 14, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: colors.border }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
               <Text style={{ color: colors.text, fontWeight: '700', fontSize: 15 }}>{t('vehicles.upcoming_reminders')}</Text>
-              <TouchableOpacity onPress={() => nav.navigate('Management', { tab: 0, _ts: Date.now() })}>
+              <TouchableOpacity onPress={() => nav.navigate('Management', { tab: 0, vehicleId, _ts: Date.now() })}>
                 <Text style={{ color: colors.primary, fontSize: 13 }}>
                   {t('home.see_all')}
                 </Text>

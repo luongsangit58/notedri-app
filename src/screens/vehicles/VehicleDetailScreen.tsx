@@ -414,13 +414,13 @@ export default function VehicleDetailScreen() {
         <SectionHeader>{t('vehicle_detail.section_quick')}</SectionHeader>
         <View style={{ flexDirection: 'row', gap: 10, marginBottom: 8 }}>
           <TouchableOpacity
-            onPress={() => navigation.navigate('AddRefuel')}
+            onPress={() => navigation.navigate('AddRefuel', { vehicleId })}
             style={{ flex: 1, backgroundColor: colors.primary, padding: 14, borderRadius: 10, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6 }}>
             <FontAwesome5 name="gas-pump" size={14} color={colors.primaryText} solid />
             <Text style={{ color: colors.primaryText, fontWeight: '700' }}>{t('vehicles.detail_add_refuel')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            onPress={() => navigation.navigate('AddOdometer')}
+            onPress={() => navigation.navigate('AddOdometer', { vehicleId })}
             style={{ flex: 1, backgroundColor: colors.surface, padding: 14, borderRadius: 10, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6 }}>
             <FontAwesome5 name="road" size={14} color={colors.text} solid />
             <Text style={{ color: colors.text, fontWeight: '600' }}>{t('vehicle_detail.update_odo')}</Text>
