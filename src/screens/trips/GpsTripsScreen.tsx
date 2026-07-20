@@ -714,7 +714,7 @@ export default function GpsTripsScreen({ embedded }: { embedded?: boolean } = {}
   // embedded=true: hiển thị trong tab Thống kê -> KHÔNG tự thêm SafeAreaView(top) + header
   // (tab Thống kê đã có chrome trên) để tránh "block thừa" ở đầu. Standalone thì giữ nguyên.
   const Container: any = embedded ? View : SafeAreaView;
-  const containerProps: any = embedded ? {} : { edges: ['top'] };
+  const containerProps: any = embedded ? {} : { edges: ['top', 'left', 'right'] };
   return (
     <Container style={[styles.root, { backgroundColor: colors.background }]} {...containerProps}>
       <AppBgPattern />

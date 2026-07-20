@@ -12,6 +12,7 @@ import TimelineItem from '../../components/TimelineItem';
 import ErrorView from '../../components/ErrorView';
 import { useColors } from '../../utils/theme';
 import { useT } from '../../i18n';
+import { contentWide } from '../../utils/layout';
 
 type TypeFilter = 'all' | 'refuel' | 'service';
 
@@ -113,7 +114,7 @@ export default function TimelineScreen() {
             }
           />
         )}
-        contentContainerStyle={{ padding: 16 }}
+        contentContainerStyle={[{ padding: 16 }, contentWide]}
         refreshControl={
           <RefreshControl
             refreshing={isFetching && !isFetchingNextPage}

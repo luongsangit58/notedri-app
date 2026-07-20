@@ -12,6 +12,7 @@ import * as Notifications from 'expo-notifications';
 import { useNotifications, useMarkAllRead, useMarkRead } from '../../hooks/useNotifications';
 import { useColors } from '../../utils/theme';
 import { navigateFromUrl } from '../../utils/navigation';
+import { contentWide } from '../../utils/layout';
 import { useT } from '../../i18n';
 import AppBgPattern from '../../components/AppBgPattern';
 
@@ -156,7 +157,7 @@ export default function NotificationsScreen() {
   }, []));
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
+    <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
       <AppBgPattern />
       <View style={styles.header}>
         <Text style={styles.headerTitle}>{t('notifications.title')}</Text>
@@ -196,7 +197,7 @@ export default function NotificationsScreen() {
           ListEmptyComponent={<EmptyState styles={styles} />}
           onRefresh={refetch}
           refreshing={isRefetching}
-          contentContainerStyle={notifications.length === 0 ? styles.emptyList : styles.list}
+          contentContainerStyle={[notifications.length === 0 ? styles.emptyList : styles.list, contentWide]}
           ItemSeparatorComponent={() => <View style={styles.separator} />}
         />
       )}

@@ -7,6 +7,7 @@ import { useQuery } from '@tanstack/react-query';
 import client from '../../api/client';
 import LoadingView from '../../components/LoadingView';
 import { useColors } from '../../utils/theme';
+import { contentWide } from '../../utils/layout';
 import { useT } from '../../i18n';
 import { formatVND } from '../../utils/format';
 
@@ -142,11 +143,11 @@ export default function FuelPricesScreen() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom', 'left', 'right']}>
       <AppBgPattern />
       <ScrollView
         refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={colors.primary} />}
-        contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+        contentContainerStyle={[{ padding: 16, paddingBottom: 40 }, contentWide]}>
 
         <Text style={{ color: colors.text, fontWeight: '800', fontSize: 20, marginBottom: 4 }}>
           {t('fuel_prices.title')}

@@ -37,7 +37,7 @@ export default function ThongKeScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       {/* Tab bar - owns the top safe area */}
-      <View style={[styles.tabBar, { paddingTop: insets.top, backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+      <View style={[styles.tabBar, { paddingTop: insets.top, paddingLeft: insets.left, paddingRight: insets.right, backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         {TABS.map((t, i) => {
           const active = activeTab === i;
           return (

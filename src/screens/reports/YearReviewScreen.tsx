@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -61,6 +61,10 @@ export default function YearReviewScreen() {
   const t = useT();
   const route = useRoute<any>();
   const { yr, year } = route.params ?? {};
+  // Rà soát 20/7 (car head-unit landscape): thẻ recap này thiết kế dạng "story card" hẹp
+  // (hero số to + 2 tile) - để full-bleed trên màn ngang rộng sẽ kéo giãn xấu, nên cap + căn giữa.
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
 
   const km = yr?.km ?? null;
   const fuelCost = yr?.fuel_cost ?? null;
@@ -88,7 +92,11 @@ export default function YearReviewScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: NAVY }} edges={['bottom']}>
       <RecapBackground />
-      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 40 }}>
+      <ScrollView
+        contentContainerStyle={[
+          { padding: 20, paddingBottom: 40 },
+          isLandscape && { maxWidth: 480, alignSelf: 'center', width: '100%' },
+        ]}>
 
         {/* Header brand */}
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>

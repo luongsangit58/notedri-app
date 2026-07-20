@@ -46,9 +46,9 @@ export default function FeedbackScreen() {
   const canSubmit = noi_dung.trim().length >= 10 && !isPending;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom', 'left', 'right']}>
       <AppBgPattern />
-      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 40, width: '100%', maxWidth: 720, alignSelf: 'center' }} keyboardShouldPersistTaps="handled">
 
         <Text style={{ color: colors.text, fontWeight: '800', fontSize: 20, marginBottom: 4 }}>
           {t('feedback.heading')}

@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../store/authStore';
 import { profileApi } from '../../api/profile';
 import { geoApi, GeoItem } from '../../api/geo';
@@ -148,11 +149,13 @@ export default function EditProfileScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: colors.background }}>
+    // rà soát 20/7: header (title "Chỉnh sửa hồ sơ") đã che top-inset, ở đây chỉ cần
+    // left/right - head-unit ô tô landscape có thể có notch/viền 2 bên.
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['left', 'right']}>
       <AppBgPattern />
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ padding: 16 }}
+        contentContainerStyle={{ padding: 16, width: '100%', maxWidth: 720, alignSelf: 'center' }}
         keyboardShouldPersistTaps="handled"
       >
       {/* Section 1: Personal info */}
@@ -226,6 +229,6 @@ export default function EditProfileScreen() {
         </TouchableOpacity>
       </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }

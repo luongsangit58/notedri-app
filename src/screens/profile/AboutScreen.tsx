@@ -29,9 +29,9 @@ export default function AboutScreen() {
   const colors = useColors();
   const t = useT();
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom', 'left', 'right']}>
       <AppBgPattern />
-      <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 40, width: '100%', maxWidth: 720, alignSelf: 'center' }}>
 
         {/* Logo / Brand */}
         <View style={{ alignItems: 'center', paddingVertical: 32 }}>

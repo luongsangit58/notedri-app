@@ -19,6 +19,7 @@ import { useOdometer } from '../../hooks/useOdometer';
 import { useVehicles } from '../../hooks/useVehicles';
 import { useSelectedVehicleStore } from '../../store/selectedVehicleStore';
 import { useColors } from '../../utils/theme';
+import { contentWide } from '../../utils/layout';
 import { formatKm } from '../../utils/format';
 import { useT } from '../../i18n';
 
@@ -269,7 +270,7 @@ function SingleVehicleList({
       }
       ListFooterComponent={ListFooter}
       ListEmptyComponent={ListEmpty}
-      contentContainerStyle={allItems.length === 0 ? styles.emptyContainer : styles.listContent}
+      contentContainerStyle={allItems.length === 0 ? [styles.emptyContainer, contentWide] : [styles.listContent, contentWide]}
       refreshControl={
         <RefreshControl
           refreshing={refreshing}
@@ -370,7 +371,7 @@ function AllVehiclesList({
         <OdoCard item={item} onPress={() => onNavigateEdit(item.id)} />
       )}
       ListEmptyComponent={ListEmpty}
-      contentContainerStyle={allItems.length === 0 ? styles.emptyContainer : styles.listContent}
+      contentContainerStyle={allItems.length === 0 ? [styles.emptyContainer, contentWide] : [styles.listContent, contentWide]}
       refreshControl={
         <RefreshControl
           refreshing={refreshing}
@@ -447,7 +448,8 @@ export default function OdometerListScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   // Đi từ Trang chủ (xe đang chọn) -> mặc định lọc theo xe đó thay vì "Tất cả"
-  // (tester báo: ODO tất cả không rõ của xe nào).
+  // (tester báo: ODO tất cả không rõ của xe nào). Mở qua tab bar (không có
+  // route.params.vehicleId) -> vẫn dùng xe đang chọn trên Home thay vì "Tất cả".
   const routeVehicleId: number | undefined = route.params?.vehicleId;
   const homeSelectedVehicleId = useSelectedVehicleStore(s => s.selectedVehicleId);
   const [selectedVehicleId, setSelectedVehicleId] = useState<number | undefined>(
@@ -497,7 +499,7 @@ export default function OdometerListScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
+    <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
       <AppBgPattern />
       {FilterHeader}
 

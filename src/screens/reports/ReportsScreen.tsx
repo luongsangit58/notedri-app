@@ -14,6 +14,7 @@ import ErrorView from '../../components/ErrorView';
 import { useColors } from '../../utils/theme';
 import { useT } from '../../i18n';
 import { formatVND, formatKm } from '../../utils/format';
+import { contentWide } from '../../utils/layout';
 
 /* ─── helpers ─── */
 function fmtVnd(n: number | string | null | undefined): string {
@@ -419,7 +420,7 @@ function ReportContent({
           tintColor={colors.primary}
         />
       }
-      contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+      contentContainerStyle={[{ padding: 16, paddingBottom: 40 }, contentWide]}>
 
       {/* total cost banner */}
       {totalCost != null && (

@@ -52,6 +52,8 @@ export default function CustomTabBar({ state, descriptors, navigation }: BottomT
       backgroundColor: colors.surface,
       borderTopColor: colors.border,
       paddingBottom: insets.bottom,
+      paddingLeft: insets.left,
+      paddingRight: insets.right,
     }]}>
       {left.map(renderTab)}
       {/* khe giữa cho FAB */}

@@ -10,6 +10,7 @@ import { useNavigation } from '@react-navigation/native';
 import { servicesApi } from '../../api/services';
 import { useColors } from '../../utils/theme';
 import { formatVND } from '../../utils/format';
+import { contentWide } from '../../utils/layout';
 import { useT } from '../../i18n';
 
 /* ─── FA6 → FA5 icon name map ─── */
@@ -113,7 +114,7 @@ export default function GarageGuideScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }} edges={['bottom']}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }} edges={['bottom', 'left', 'right']}>
         <AppBgPattern />
         <ActivityIndicator color={colors.primary} size="large" />
       </SafeAreaView>
@@ -122,7 +123,7 @@ export default function GarageGuideScreen() {
 
   if (isError) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', padding: 24 }} edges={['bottom']}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', padding: 24 }} edges={['bottom', 'left', 'right']}>
         <AppBgPattern />
         <Text style={{ color: colors.error, fontWeight: '700', marginBottom: 12 }}>{t('common.error_load')}</Text>
         <TouchableOpacity onPress={() => refetch()}
@@ -134,9 +135,9 @@ export default function GarageGuideScreen() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom', 'left', 'right']}>
       <AppBgPattern />
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+      <ScrollView contentContainerStyle={[{ padding: 16, paddingBottom: 40 }, contentWide]}>
         {/* Subtitle */}
         <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 16, lineHeight: 18 }}>
           {t('services.garage_desc')}

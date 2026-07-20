@@ -6,6 +6,7 @@ import { useNavigation } from '@react-navigation/native';
 import dayjs from 'dayjs';
 import AppBgPattern from '../../components/AppBgPattern';
 import { useColors } from '../../utils/theme';
+import { contentWide } from '../../utils/layout';
 import { useT } from '../../i18n';
 import {
   useIncomingTransferRequests, useOutgoingTransferRequests, useRespondTransferRequest, useSharedHistory,
@@ -156,7 +157,7 @@ export default function VehicleTransferRequestsScreen() {
         <View style={{ width: 26 }} />
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: 16, gap: 20 }}>
+      <ScrollView contentContainerStyle={[{ padding: 16, gap: 20 }, contentWide]}>
         <Text style={{ color: colors.textSecondary, fontSize: 12, lineHeight: 18 }}>{t('transfer.screen_subtitle')}</Text>
 
         <View>

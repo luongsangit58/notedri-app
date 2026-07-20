@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, RefreshControl, Alert, ActivityIndicator,
-  TextInput, Modal, Image,
+  TextInput, Modal, Image, useWindowDimensions,
 } from 'react-native';
+import { contentWide } from '../../utils/layout';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
@@ -66,6 +67,10 @@ export default function PremiumScreen() {
   const [selectedPlan, setSelectedPlan] = useState<1 | 3 | 6 | 12>(3);
   const [payOrder, setPayOrder] = useState<OrderData | null>(null);
   const [payModalVisible, setPayModalVisible] = useState(false);
+  // useWindowDimensions (không dùng Dimensions.get tĩnh) để QR modal co lại đúng
+  // khi màn hình đang ở landscape thấp (head-unit ô tô), tránh tràn/clip.
+  const { height: winHeight } = useWindowDimensions();
+  const qrSize = winHeight < 500 ? 140 : 200;
 
   const FREE_FEATURES = [
     t('premium.free_feature_2_vehicles'),
@@ -166,7 +171,7 @@ export default function PremiumScreen() {
 
   if (isLoading) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }} edges={['bottom']}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }} edges={['bottom', 'left', 'right']}>
         <AppBgPattern />
         <ActivityIndicator color={AMBER} size="large" />
       </SafeAreaView>
@@ -174,11 +179,11 @@ export default function PremiumScreen() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom', 'left', 'right']}>
       <AppBgPattern />
       <ScrollView
         refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={AMBER} />}
-        contentContainerStyle={{ padding: 20, paddingBottom: 40 }}>
+        contentContainerStyle={[{ padding: 20, paddingBottom: 40 }, contentWide]}>
 
         {/* Header */}
         <View style={{ alignItems: 'center', marginBottom: 28 }}>
@@ -413,46 +418,50 @@ export default function PremiumScreen() {
       {/* Payment QR Modal */}
       <Modal visible={payModalVisible} animationType="slide" transparent onRequestClose={() => setPayModalVisible(false)}>
         <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' }}>
+          {/* maxHeight + ScrollView bên trong: trước đây nội dung cố định không cuộn được,
+              có thể tràn/bị cắt trên màn landscape thấp (head-unit ô tô). */}
           <View style={{
             backgroundColor: colors.background,
             borderTopLeftRadius: 20, borderTopRightRadius: 20,
-            padding: 20, paddingBottom: 40,
+            maxHeight: '90%',
           }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <Text style={{ color: colors.text, fontSize: 18, fontWeight: '800' }}>{t('premium.payment_title')}</Text>
-              <TouchableOpacity onPress={() => setPayModalVisible(false)} style={{ padding: 4 }}>
-                <FontAwesome5 name="times" size={18} color={colors.textSecondary} />
-              </TouchableOpacity>
-            </View>
+            <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <Text style={{ color: colors.text, fontSize: 18, fontWeight: '800' }}>{t('premium.payment_title')}</Text>
+                <TouchableOpacity onPress={() => setPayModalVisible(false)} style={{ padding: 4 }}>
+                  <FontAwesome5 name="times" size={18} color={colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
 
-            {payOrder && (
-              <>
-                <Image
-                  source={{ uri: payOrder.qr_url }}
-                  style={{ width: 200, height: 200, alignSelf: 'center', marginBottom: 16, borderRadius: 12 }}
-                  resizeMode="contain"
-                />
-                <View style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 14, gap: 10, marginBottom: 10 }}>
-                  <InfoRow label={t('premium.payment_bank')}    value={payOrder.bank_code} />
-                  <InfoRow label={t('premium.payment_account')} value={payOrder.bank_account} />
-                  <InfoRow label={t('premium.payment_holder')}  value={payOrder.bank_holder} />
-                  <InfoRow label={t('premium.payment_amount')}  value={formatVND(payOrder.amount)} amber bold />
-                  <InfoRow label={t('premium.payment_ref')}     value={payOrder.invoice_number} bold />
-                </View>
-                <Text style={{ color: colors.textSecondary, fontSize: 11, textAlign: 'center', marginBottom: 8 }}>
-                  {t('premium.payment_expires', { time: dayjs(payOrder.expires_at).format('HH:mm DD/MM/YYYY') })}
-                </Text>
-                {statusData?.status === 'paid' || statusData?.is_premium ? (
-                  <View style={{ backgroundColor: '#059669' + '22', borderRadius: 10, padding: 12, alignItems: 'center' }}>
-                    <Text style={{ color: '#059669', fontWeight: '700' }}>{t('premium.payment_success_msg')}</Text>
+              {payOrder && (
+                <>
+                  <Image
+                    source={{ uri: payOrder.qr_url }}
+                    style={{ width: qrSize, height: qrSize, alignSelf: 'center', marginBottom: 16, borderRadius: 12 }}
+                    resizeMode="contain"
+                  />
+                  <View style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 14, gap: 10, marginBottom: 10 }}>
+                    <InfoRow label={t('premium.payment_bank')}    value={payOrder.bank_code} />
+                    <InfoRow label={t('premium.payment_account')} value={payOrder.bank_account} />
+                    <InfoRow label={t('premium.payment_holder')}  value={payOrder.bank_holder} />
+                    <InfoRow label={t('premium.payment_amount')}  value={formatVND(payOrder.amount)} amber bold />
+                    <InfoRow label={t('premium.payment_ref')}     value={payOrder.invoice_number} bold />
                   </View>
-                ) : (
-                  <Text style={{ color: colors.textSecondary, fontSize: 12, textAlign: 'center' }}>
-                    {t('premium.payment_auto_check')}
+                  <Text style={{ color: colors.textSecondary, fontSize: 11, textAlign: 'center', marginBottom: 8 }}>
+                    {t('premium.payment_expires', { time: dayjs(payOrder.expires_at).format('HH:mm DD/MM/YYYY') })}
                   </Text>
-                )}
-              </>
-            )}
+                  {statusData?.status === 'paid' || statusData?.is_premium ? (
+                    <View style={{ backgroundColor: '#059669' + '22', borderRadius: 10, padding: 12, alignItems: 'center' }}>
+                      <Text style={{ color: '#059669', fontWeight: '700' }}>{t('premium.payment_success_msg')}</Text>
+                    </View>
+                  ) : (
+                    <Text style={{ color: colors.textSecondary, fontSize: 12, textAlign: 'center' }}>
+                      {t('premium.payment_auto_check')}
+                    </Text>
+                  )}
+                </>
+              )}
+            </ScrollView>
           </View>
         </View>
       </Modal>

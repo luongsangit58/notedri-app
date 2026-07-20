@@ -521,7 +521,7 @@ export default function RemindersScreen() {
   if (isError) return <ErrorView message={t('reminders.error_load_failed')} onRetry={refetch} />;
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
+    <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
       <AppBgPattern />
       <FlatList
         data={reminders}

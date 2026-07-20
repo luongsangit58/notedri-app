@@ -10,6 +10,7 @@ import * as Location from 'expo-location';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { refuelsApi } from '../../api/refuels';
 import { useColors } from '../../utils/theme';
+import { contentWide } from '../../utils/layout';
 import { useT } from '../../i18n';
 
 type Station = {
@@ -436,7 +437,7 @@ export default function NearbyStationsScreen() {
         data={stations}
         keyExtractor={(_, i) => String(i)}
         renderItem={renderStation}
-        contentContainerStyle={{ padding: 16 }}
+        contentContainerStyle={[{ padding: 16 }, contentWide]}
         ListHeaderComponent={
           <Text style={styles.listHeader}>
             {isCharging
@@ -475,7 +476,7 @@ export default function NearbyStationsScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
+    <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
       <AppBgPattern />
       <ModeToggle />
       {renderContent()}

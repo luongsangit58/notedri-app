@@ -58,7 +58,8 @@ function VehicleSelector({ vehicles, selectedId, onSelect }: {
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
         <Pressable style={{ flex: 1, backgroundColor: '#0008', justifyContent: 'center', padding: 32 }} onPress={() => setOpen(false)}>
-          <View style={{ backgroundColor: colors.surface, borderRadius: 14, overflow: 'hidden' }}>
+          {/* Cap bề rộng danh sách chọn xe - màn ngang (head-unit) rất rộng nên list không kéo dài hết ngang */}
+          <View style={{ backgroundColor: colors.surface, borderRadius: 14, overflow: 'hidden', width: '100%', maxWidth: 480, alignSelf: 'center' }}>
             <FlatList
               data={vehicles}
               keyExtractor={(v) => String(v.id)}
@@ -232,7 +233,7 @@ export default function HomeScreen() {
   const booting = vehiclesLoading;
   if (booting) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'left', 'right']}>
         <AppBgPattern />
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
           <ActivityIndicator size="large" color={colors.primary} />
@@ -242,7 +243,7 @@ export default function HomeScreen() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'left', 'right']}>
       <AppBgPattern />
       <ScrollView
         contentContainerStyle={{ padding: 16, paddingBottom: 40, width: '100%', maxWidth: 720, alignSelf: 'center' }}

@@ -10,6 +10,7 @@ import { getCachedCapability } from '../../services/obd/capabilityService';
 import AppBgPattern from '../../components/AppBgPattern';
 import { useColors } from '../../utils/theme';
 import { useT } from '../../i18n';
+import { contentWide } from '../../utils/layout';
 
 // Toàn bộ 13 PID trong PID_REGISTRY (obdParser.ts) - kể cả 5 PID CHƯA từng hiện
 // ở đâu trước 14/7 (fuel trim, áp suất khí nạp, nhiệt độ khí nạp, nhiệt độ môi
@@ -102,7 +103,7 @@ export default function OBDTechnicalScreen() {
         <View style={{ width: 32 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.body}>
+      <ScrollView contentContainerStyle={[styles.body, contentWide]}>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{t('obd.tech_subtitle')}</Text>
 
         {!isConnected && (

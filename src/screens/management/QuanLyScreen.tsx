@@ -33,7 +33,7 @@ export default function QuanLyScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       {/* Tab bar */}
-      <View style={[styles.tabBar, { paddingTop: insets.top, backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+      <View style={[styles.tabBar, { paddingTop: insets.top, paddingLeft: insets.left, paddingRight: insets.right, backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
         {TABS.map((tab, i) => {
           const active = activeTab === i;
           return (

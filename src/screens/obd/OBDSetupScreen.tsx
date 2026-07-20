@@ -24,6 +24,7 @@ import { useColors } from '../../utils/theme';
 import { useAuthStore } from '../../store/authStore';
 import { useT } from '../../i18n';
 import ObdConnectionGuide from '../../components/ObdConnectionGuide';
+import { contentWide } from '../../utils/layout';
 
 export default function OBDSetupScreen() {
   const navigation = useNavigation<any>();
@@ -208,7 +209,7 @@ export default function OBDSetupScreen() {
         <View style={{ width: 32 }} />
       </View>
 
-      <ScrollView style={styles.body} contentContainerStyle={{ paddingBottom: 32 }} keyboardShouldPersistTaps="handled">
+      <ScrollView style={styles.body} contentContainerStyle={[{ paddingBottom: 32 }, contentWide]} keyboardShouldPersistTaps="handled">
         {/* Status indicator */}
         <View style={[styles.statusCard, { backgroundColor: colors.card }]}>
           <FontAwesome5

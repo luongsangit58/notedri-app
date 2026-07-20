@@ -8,6 +8,7 @@ import {
   Share,
   Alert,
   Platform,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
@@ -22,6 +23,7 @@ import { openBatterySettings } from '../../services/gps/GpsTripTracker';
 import AppBgPattern from '../../components/AppBgPattern';
 import { useColors } from '../../utils/theme';
 import { useT } from '../../i18n';
+import { contentWide } from '../../utils/layout';
 
 // Rà soát 16/7 (góp ý user: giảm thao tác lúc lên xe - "1 chạm là kết nối"):
 // NFC tap-to-connect đã có sẵn (NfcSetupScreen) nhưng chỉ nằm ở 1 link nhỏ, ít
@@ -89,6 +91,8 @@ export default function OBDDashboardScreen() {
 
   const t = useT();
   const colors = useColors();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
   const {
     connectionState,
     smoothedSnapshot,
@@ -238,7 +242,7 @@ export default function OBDDashboardScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.body}>
+      <ScrollView contentContainerStyle={[styles.body, contentWide]}>
         {/* Connection status */}
         <View
           style={[
@@ -307,11 +311,17 @@ export default function OBDDashboardScreen() {
             const supported = capability
               ? tiles.filter((tile) => capability.supportedPids.includes(tile.pid))
               : tiles;
+            // Rà soát 20/7 (car head-unit landscape): 2 cột/hàng lãng phí bề
+            // ngang trên màn hình xe rộng - tài xế phải cuộn/dò mắt dọc để
+            // liếc nhanh. minWidth 80 của statStyles.box vẫn thoải mái với 4
+            // cột (4*80 + 3*8 gap = 344px, thấp hơn nhiều bề rộng thực tế của
+            // mọi head-unit landscape).
+            const cols = isLandscape ? 4 : 2;
             const rows = [];
-            for (let i = 0; i < supported.length; i += 2) {
+            for (let i = 0; i < supported.length; i += cols) {
               rows.push(
                 <View key={i} style={styles.statsRow}>
-                  {supported.slice(i, i + 2).map((tile) => tile.el)}
+                  {supported.slice(i, i + cols).map((tile) => tile.el)}
                 </View>,
               );
             }

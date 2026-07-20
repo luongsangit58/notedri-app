@@ -1,5 +1,5 @@
 import React from 'react';
-import { FlatList, View, Text, TouchableOpacity, RefreshControl } from 'react-native';
+import { FlatList, View, Text, TouchableOpacity, RefreshControl, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AppBgPattern from '../../components/AppBgPattern';
 import { useNavigation } from '@react-navigation/native';
@@ -18,23 +18,35 @@ export default function VehiclesScreen() {
   const { data, isLoading, isError, refetch, isFetching } = useVehicles();
   const navigation = useNavigation<any>();
   const { mutate: setDefault } = useSetDefaultVehicle();
+  // Rà soát 20/7 (car head-unit landscape): danh sách xe 1 cột trải rất rộng
+  // trên head-unit ngang, để trống nhiều 2 bên. 2 cột khi landscape VÀ có >1
+  // xe (không đáng chia cột khi chỉ 1 thẻ). key remount vì FlatList không cho
+  // đổi numColumns khi đã mount.
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
 
   if (isLoading) return <LoadingView />;
   if (isError) return <ErrorView message={t('vehicles.cannot_load_list')} onRetry={refetch} />;
 
   const vehicles: any[] = data?.data ?? data ?? [];
+  const numColumns = isLandscape && vehicles.length > 1 ? 2 : 1;
   const scores: Record<number, { total: number; band: string }> = data?.meta?.scores ?? {};
   const canAddVehicle: boolean = data?.meta?.can_add_vehicle ?? true;
   const vehicleLimit: number | null = data?.meta?.vehicle_limit ?? null;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom']}>
+    // + left/right: FAB "+" ở góc phải (right:20) có thể lọt vào bezel vật lý bên phải
+    // trên head-unit ô tô landscape - bottom-only không đủ ở cạnh dọc.
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom', 'left', 'right']}>
       <AppBgPattern />
       <FlatList
+        key={`vehicles-cols-${numColumns}`}
         data={vehicles}
+        numColumns={numColumns}
+        columnWrapperStyle={numColumns > 1 ? { gap: 12 } : undefined}
         keyExtractor={(item: any) => String(item.id)}
         renderItem={({ item }) => (
-          <View style={{ position: 'relative' }}>
+          <View style={{ position: 'relative', flex: numColumns > 1 ? 1 : undefined }}>
             <VehicleCard
               vehicle={item}
               onPress={() => navigation.navigate('VehicleDetail', { vehicleId: item.id, vehicleName: item.ten ?? item.name })}

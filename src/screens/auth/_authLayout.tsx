@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import {
-  View, KeyboardAvoidingView, ScrollView, Platform, Dimensions,
+  View, KeyboardAvoidingView, ScrollView, Platform, useWindowDimensions,
 } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 
@@ -48,7 +48,9 @@ const BG_ICONS = [
 const BG_ROTATIONS = [0, 15, -10, 20];
 
 export function BgPattern() {
-  const { width, height } = Dimensions.get('window');
+  // useWindowDimensions cập nhật khi xoay ngang/dọc -> hoạ tiết nền phủ đúng kích thước hiện tại
+  // (Dimensions.get tĩnh giữ kích thước dọc -> thiếu ở landscape), giống AppBgPattern.tsx.
+  const { width, height } = useWindowDimensions();
   const cols = Math.ceil(width / 90) + 1;
   const rows = Math.ceil(height / 90) + 2;
   const items = useMemo(
@@ -100,6 +102,9 @@ export function AuthContainer({ children, center = true }: AuthContainerProps) {
             justifyContent: center ? 'center' : 'flex-start',
             paddingHorizontal: 24,
             paddingVertical: 32,
+            width: '100%',
+            maxWidth: 480,
+            alignSelf: 'center',
           }}
           keyboardShouldPersistTaps="handled">
           {children}

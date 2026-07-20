@@ -15,6 +15,7 @@ import {
 import AppBgPattern from '../../components/AppBgPattern';
 import { useColors } from '../../utils/theme';
 import { useT } from '../../i18n';
+import { contentWide } from '../../utils/layout';
 
 const STATUS_COLOR: Record<SystemStatus, string> = {
   critical: '#EF4444',
@@ -139,7 +140,7 @@ export default function ObdSystemHealthScreen() {
         <View style={{ width: 32 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.body}>
+      <ScrollView contentContainerStyle={[styles.body, contentWide]}>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{t('obd.sys_health_subtitle')}</Text>
 
         {/* Chưa kết nối: không bịa trạng thái, nói thẳng cần kết nối */}

@@ -49,7 +49,7 @@ export default function OnboardingScreen({ navigation }: { navigation: any }) {
     <View style={{ flex: 1, backgroundColor: C.bg }}>
       <StatusBar barStyle="light-content" />
       <BgPattern />
-      <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
+      <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom', 'left', 'right']}>
         {/* Đổi ngôn ngữ (trái) + Bỏ qua (phải) */}
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 8 }}>
           <TouchableOpacity
@@ -75,19 +75,24 @@ export default function OnboardingScreen({ navigation }: { navigation: any }) {
           showsHorizontalScrollIndicator={false}
           onMomentumScrollEnd={onScroll}
           renderItem={({ item }) => (
+            // Item phải rộng bằng viewport (yêu cầu paging ngang) nhưng nội dung bên trong
+            // cap lại + căn giữa - màn ngang (head-unit) rất rộng nên chữ/icon không kéo dài
+            // hết bề ngang, khớp cap 480 dùng cho card ở _authLayout.tsx.
             <View style={{ width, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 36 }}>
-              <View style={{
-                width: 108, height: 108, borderRadius: 30, marginBottom: 36,
-                backgroundColor: C.primary + '1f', alignItems: 'center', justifyContent: 'center',
-              }}>
-                <FontAwesome5 name={item.icon} size={46} color={C.primary} solid />
+              <View style={{ width: '100%', maxWidth: 480, alignSelf: 'center', alignItems: 'center' }}>
+                <View style={{
+                  width: 108, height: 108, borderRadius: 30, marginBottom: 36,
+                  backgroundColor: C.primary + '1f', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <FontAwesome5 name={item.icon} size={46} color={C.primary} solid />
+                </View>
+                <Text style={{ color: C.text, fontSize: 24, fontWeight: '800', textAlign: 'center', marginBottom: 14 }}>
+                  {item.title}
+                </Text>
+                <Text style={{ color: C.textMuted, fontSize: 15, lineHeight: 23, textAlign: 'center' }}>
+                  {item.desc}
+                </Text>
               </View>
-              <Text style={{ color: C.text, fontSize: 24, fontWeight: '800', textAlign: 'center', marginBottom: 14 }}>
-                {item.title}
-              </Text>
-              <Text style={{ color: C.textMuted, fontSize: 15, lineHeight: 23, textAlign: 'center' }}>
-                {item.desc}
-              </Text>
             </View>
           )}
         />
@@ -107,7 +112,7 @@ export default function OnboardingScreen({ navigation }: { navigation: any }) {
         </View>
 
         {/* CTA */}
-        <View style={{ paddingHorizontal: 24, paddingBottom: 12 }}>
+        <View style={{ paddingHorizontal: 24, paddingBottom: 12, width: '100%', maxWidth: 480, alignSelf: 'center' }}>
           <TouchableOpacity
             onPress={next}
             style={{ backgroundColor: C.primary, paddingVertical: 16, borderRadius: 14, alignItems: 'center' }}>

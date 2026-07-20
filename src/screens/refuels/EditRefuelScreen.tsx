@@ -10,6 +10,7 @@ import { useDeleteRefuel } from '../../hooks/useRefuels';
 import { refuelsApi } from '../../api/refuels';
 import client from '../../api/client';
 import { useColors } from '../../utils/theme';
+import { contentWide } from '../../utils/layout';
 import { useT } from '../../i18n';
 import DatePickerField from '../../components/DatePickerField';
 import MoneyInput, { toMoneyRaw } from '../../components/MoneyInput';
@@ -143,10 +144,10 @@ export default function EditRefuelScreen() {
   const isBusy = updating || deleteRefuel.isPending;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom', 'left', 'right']}>
       <AppBgPattern />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+        <ScrollView contentContainerStyle={[{ padding: 16, paddingBottom: 40 }, contentWide]}>
 
           {/* Loại xăng */}
           <FieldLabel>{t('vehicles.fuel_type_label')}</FieldLabel>

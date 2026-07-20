@@ -15,6 +15,7 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import { useRefuels } from '../../hooks/useRefuels';
 import { useVehicles } from '../../hooks/useVehicles';
 import { useColors } from '../../utils/theme';
+import { contentWide } from '../../utils/layout';
 import { formatVND, formatKm } from '../../utils/format';
 import { useT } from '../../i18n';
 
@@ -298,7 +299,7 @@ export default function RefuelsListScreen() {
       </View>;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom', 'left', 'right']}>
       <AppBgPattern />
       <FlatList
         data={allItems}
@@ -314,8 +315,8 @@ export default function RefuelsListScreen() {
         ListEmptyComponent={ListEmpty}
         contentContainerStyle={
           allItems.length === 0
-            ? { flexGrow: 1, paddingHorizontal: 16, paddingBottom: 88 }
-            : { paddingHorizontal: 16, paddingBottom: 88 }
+            ? [{ flexGrow: 1, paddingHorizontal: 16, paddingBottom: 88 }, contentWide]
+            : [{ paddingHorizontal: 16, paddingBottom: 88 }, contentWide]
         }
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />

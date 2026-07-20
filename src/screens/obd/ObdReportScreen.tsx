@@ -14,6 +14,7 @@ import ObdTrendChart from './ObdTrendChart';
 import AppBgPattern from '../../components/AppBgPattern';
 import { useColors } from '../../utils/theme';
 import { useT } from '../../i18n';
+import { contentWide } from '../../utils/layout';
 
 const TREND_DAYS = 30;
 
@@ -185,7 +186,7 @@ export default function ObdReportScreen() {
               </Text>
             </View>
           ) : (
-            <ScrollView contentContainerStyle={styles.body}>
+            <ScrollView contentContainerStyle={[styles.body, contentWide]}>
               <Text style={[styles.sessionMeta, { color: colors.textSecondary }]}>
                 {t('obd.trend_days', { days: TREND_DAYS })} · {t('obd.trend_tap_hint')}
               </Text>
@@ -207,7 +208,7 @@ export default function ObdReportScreen() {
       ) : (
         <>
         <TabRow tab={tab} onChange={setTab} />
-        <ScrollView contentContainerStyle={styles.body}>
+        <ScrollView contentContainerStyle={[styles.body, contentWide]}>
           <Text style={[styles.sessionMeta, { color: colors.textSecondary }]}>
             {dayjs(latest.connected_at).format('DD/MM/YYYY HH:mm')} · {latest.device_name ?? 'OBD2'}
           </Text>

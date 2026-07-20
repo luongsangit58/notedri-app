@@ -7,6 +7,7 @@ import AppBgPattern from '../../components/AppBgPattern';
 import { useColors } from '../../utils/theme';
 import { useT } from '../../i18n';
 import { isNfcSupported, isNfcEnabled, writeVehicleTag, cancelNfcSession } from '../../services/nfc/NfcService';
+import { contentWide } from '../../utils/layout';
 
 type Status = 'idle' | 'writing' | 'success' | 'error' | 'unsupported' | 'disabled';
 
@@ -65,7 +66,7 @@ export default function NfcSetupScreen() {
         <View style={{ width: 32 }} />
       </View>
 
-      <View style={styles.body}>
+      <View style={[styles.body, contentWide]}>
         {/* Hướng dẫn gọn (góp ý user 16/7: chưa từng ghép thẻ thì không biết mua
             gì/dán đâu) - chỉ hiện khi CHƯA thành công, tránh thừa sau khi xong. */}
         {status === 'idle' && (

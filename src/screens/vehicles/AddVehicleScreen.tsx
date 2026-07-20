@@ -381,7 +381,12 @@ export default function AddVehicleScreen() {
         onClose={() => setShowModelPicker(false)}
       />
 
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
+      {/* Rà soát 20/7 (car head-unit landscape): form full-bleed chỉ padding trên
+          màn rộng khiến các ô nhập kéo dài hết cỡ, khó đọc - cap 720 (form dày chữ,
+          giống HomeScreen) thay vì 1024 (dùng cho danh sách/thẻ). */}
+      <ScrollView
+        contentContainerStyle={[{ padding: 16, paddingBottom: 40 }, { width: '100%', maxWidth: 720, alignSelf: 'center' }]}
+        keyboardShouldPersistTaps="handled">
 
         {/* Error banner */}
         {apiError ? (
@@ -692,7 +697,12 @@ export default function AddVehicleScreen() {
             onPress={pickPhoto}
             style={{
               backgroundColor: colors.surface, borderRadius: 10, borderWidth: 1,
-              borderColor: colors.border, borderStyle: 'dashed', height: 120,
+              borderColor: colors.border, borderStyle: 'dashed',
+              // Rà soát 20/7 (khớp fix 17/7 của EditVehicleScreen): height cố định 120px
+              // trên toàn chiều rộng tạo khung quá dẹt trên màn rộng (landscape/head-unit),
+              // buộc resizeMode="cover" cắt cụt ảnh. aspectRatio 4:3 khớp `aspect: [4, 3]`
+              // ở pickPhoto() bên dưới nên ảnh không bị cắt thêm lần nữa khi hiển thị lại.
+              aspectRatio: 4 / 3,
               alignItems: 'center', justifyContent: 'center', overflow: 'hidden',
             }}>
             {photo ? (

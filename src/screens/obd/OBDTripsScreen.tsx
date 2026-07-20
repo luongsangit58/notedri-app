@@ -18,6 +18,7 @@ import { useColors } from '../../utils/theme';
 import { formatVND, formatVNDShort, formatKm } from '../../utils/format';
 import { useAuthStore } from '../../store/authStore';
 import { useT } from '../../i18n';
+import { contentWide } from '../../utils/layout';
 import dayjs from 'dayjs';
 
 function formatDuration(seconds: number): string {
@@ -246,7 +247,7 @@ export default function OBDTripsScreen() {
         <FlatList
           data={trips}
           keyExtractor={(item: any) => String(item.id)}
-          contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
+          contentContainerStyle={[{ padding: 16, paddingBottom: 32 }, contentWide]}
           renderItem={renderTrip}
           refreshControl={
             <RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={colors.primary} />

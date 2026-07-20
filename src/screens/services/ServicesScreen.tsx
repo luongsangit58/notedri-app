@@ -200,7 +200,7 @@ export default function ServicesScreen() {
 
   if (isLoading && allItems.length === 0) {
     return (
-      <SafeAreaView style={styles.center} edges={['bottom']}>
+      <SafeAreaView style={styles.center} edges={['bottom', 'left', 'right']}>
         <AppBgPattern />
         <ActivityIndicator color={colors.primary} size="large" />
       </SafeAreaView>
@@ -208,7 +208,7 @@ export default function ServicesScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
+    <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
       <AppBgPattern />
       <FlatList
         data={filteredItems}

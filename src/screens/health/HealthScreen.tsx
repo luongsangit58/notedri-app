@@ -11,6 +11,7 @@ import { useVehicles } from '../../hooks/useVehicles';
 import { vehiclesApi } from '../../api/vehicles';
 import client from '../../api/client';
 import { useColors } from '../../utils/theme';
+import { contentWide } from '../../utils/layout';
 import { useT, useI18nStore } from '../../i18n';
 
 /* ─── types ─── */
@@ -526,7 +527,7 @@ export default function HealthScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom']}>
       <AppBgPattern />
       <ScrollView
-        contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
+        contentContainerStyle={[{ padding: 16, paddingBottom: 40 }, contentWide]}
         refreshControl={
           <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor={colors.primary} />
         }>

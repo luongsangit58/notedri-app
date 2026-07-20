@@ -167,9 +167,11 @@ export default function ProfileScreen() {
   const initial = user?.name?.charAt(0)?.toUpperCase() ?? 'U';
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom', 'left', 'right']}>
       <AppBgPattern />
-      <ScrollView>
+      {/* rà soát 20/7: cap bề rộng + căn giữa - head-unit ô tô landscape rộng không nên kéo giãn
+          danh sách cài đặt hết cỡ ngang (giống HomeScreen). */}
+      <ScrollView contentContainerStyle={{ width: '100%', maxWidth: 720, alignSelf: 'center' }}>
         {/* Avatar + vòng level (chạm để xem Thành tích) */}
         <View style={{ alignItems: 'center', paddingVertical: 32 }}>
           <TouchableOpacity activeOpacity={0.85} onPress={() => navigation.navigate('Achievements')} style={{ alignItems: 'center', marginBottom: 10 }}>

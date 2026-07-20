@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet,
-  RefreshControl, ActivityIndicator, Animated, Easing,
+  RefreshControl, ActivityIndicator, Animated, Easing, useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -10,6 +10,7 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import { achievementsApi, Badge, AchievementLevel, LevelItem } from '../../api/achievements';
 import AppBgPattern from '../../components/AppBgPattern';
 import { useColors } from '../../utils/theme';
+import { contentWide } from '../../utils/layout';
 import { useT } from '../../i18n';
 
 // FA6-only icons → FA5 fallbacks
@@ -301,7 +302,8 @@ function EarnedGlow({ color }: { color: string }) {
 }
 
 // ===== Badge Card =====
-function BadgeCard({ b }: { b: Badge }) {
+// `cols` chỉ ảnh hưởng bề rộng thẻ (grid dùng flexWrap + width %) - xem chỗ gọi.
+function BadgeCard({ b, cols }: { b: Badge; cols: number }) {
   const colors = useColors();
   const t = useT();
   const isPremiumLocked = b.locked_premium;
@@ -326,10 +328,14 @@ function BadgeCard({ b }: { b: Badge }) {
       : colors.surface;
   const earnedColor = isHiddenEarned ? '#a855f7' : '#10b981';
 
+  // 2 cột trên điện thoại dọc; 3/4 cột khi landscape (head-unit ô tô) để đỡ trải rộng
+  // từng thẻ nhỏ - xem width tính theo cols ở AchievementsScreen.
+  const badgeWidthPct = cols >= 4 ? '23%' : cols === 3 ? '31%' : '48%';
   return (
     <View style={[
       styles.badge,
       {
+        width: badgeWidthPct,
         backgroundColor: cardBg,
         borderColor: isPremiumLocked
           ? '#f59e0b33'
@@ -405,6 +411,12 @@ export default function AchievementsScreen() {
   const is_premium = data?.is_premium ?? false;
   const free_ceiling_hit = data?.free_ceiling_hit ?? false;
 
+  // Rà soát 20/7 (car head-unit landscape): lưới huy hiệu cố định 2 cột trải quá rộng
+  // trên màn ngang - lên 4 cột khi landscape thay vì để mỗi thẻ nhỏ lọt thỏm giữa khoảng trắng.
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const cols = isLandscape ? 4 : 2;
+
   // Group badges by tier - include hidden+unearned (shown as Bí mật)
   const tierNums = [1, 2, 3, 4];
   const grouped = tierNums
@@ -430,7 +442,7 @@ export default function AchievementsScreen() {
         <ActivityIndicator color={colors.primary} style={{ marginTop: 40 }} />
       ) : (
         <ScrollView
-          contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
+          contentContainerStyle={[{ padding: 16, paddingBottom: 40 }, contentWide]}
           refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={colors.primary} />}>
 
           {/* Hero card: level + ladder */}
@@ -461,7 +473,7 @@ export default function AchievementsScreen() {
                   )}
                 </View>
                 <View style={styles.grid}>
-                  {g.badges.map(b => <BadgeCard key={b.key} b={b} />)}
+                  {g.badges.map(b => <BadgeCard key={b.key} b={b} cols={cols} />)}
                 </View>
               </View>
             );
@@ -541,10 +553,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#f59e0b', alignItems: 'center', justifyContent: 'center',
   },
 
-  // Badge grid
+  // Badge grid (width % set inline per `cols` - xem BadgeCard)
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   badge: {
-    width: '48%', borderRadius: 14, borderWidth: 1, padding: 12, alignItems: 'center',
+    borderRadius: 14, borderWidth: 1, padding: 12, alignItems: 'center',
   },
   badgeIcon: {
     width: 44, height: 44, borderRadius: 22, marginBottom: 8,

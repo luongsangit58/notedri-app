@@ -19,6 +19,7 @@ import { useColors, useThemeStore } from '../../utils/theme';
 import { formatVND } from '../../utils/format';
 import { BASE_URL } from '../../utils/api';
 import { useT } from '../../i18n';
+import { contentWide } from '../../utils/layout';
 
 // Nối DTC → blog (checklist "E - nối mã DTC → bài blog"): chỉ 1 bài blog VN
 // hiện thực sự khớp mọi mã DTC (giải thích đèn Check Engine + mã P0xxx +
@@ -179,7 +180,7 @@ export default function DtcLookupScreen() {
         <View style={{ width: 32 }} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={[styles.body, contentWide]} keyboardShouldPersistTaps="handled">
         <Text style={[styles.hint, { color: colors.textSecondary }]}>{t('dtc.lookup_hint')}</Text>
 
         {/* Search row */}

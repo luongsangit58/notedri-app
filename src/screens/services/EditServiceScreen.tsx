@@ -50,6 +50,9 @@ export default function EditServiceScreen() {
     scrollContent: {
       padding: 16,
       paddingBottom: 32,
+      width: '100%',
+      maxWidth: 720,
+      alignSelf: 'center',
     },
     chipRow: {
       marginBottom: 14,
@@ -226,7 +229,7 @@ export default function EditServiceScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container} edges={['bottom']}>
+      <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
         <AppBgPattern />
         <View style={styles.loadingContainer}>
           <ActivityIndicator color={colors.primary} size="large" />

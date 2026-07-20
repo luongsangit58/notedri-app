@@ -9,6 +9,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { odometerApi } from '../../api/odometer';
 import { useUpdateOdometer, useDeleteOdometer } from '../../hooks/useOdometer';
 import { useColors } from '../../utils/theme';
+import { contentWide } from '../../utils/layout';
 import { useT } from '../../i18n';
 import DatePickerField from '../../components/DatePickerField';
 
@@ -202,10 +203,10 @@ export default function EditOdometerScreen() {
   const isBusy = updating || deleteOdometer.isPending;
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom', 'left', 'right']}>
       <AppBgPattern />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView contentContainerStyle={styles.scrollContent}>
+        <ScrollView contentContainerStyle={[styles.scrollContent, contentWide]}>
 
           {/* Header row */}
           <View style={styles.header}>

@@ -11,6 +11,7 @@ import { vehiclesApi } from '../../api/vehicles';
 import { servicesApi } from '../../api/services';
 import AppBgPattern from '../../components/AppBgPattern';
 import { useColors } from '../../utils/theme';
+import { contentWide } from '../../utils/layout';
 import { formatVND, formatKm } from '../../utils/format';
 import dayjs from 'dayjs';
 import { useT } from '../../i18n';
@@ -296,7 +297,7 @@ export default function DossierScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 100 }}>
+      <ScrollView contentContainerStyle={[{ padding: 16, paddingBottom: 100 }, contentWide]}>
 
         {/* Vehicle profile card */}
         <View style={{ backgroundColor: colors.surface, borderRadius: 14, padding: 16, marginBottom: 14 }}>

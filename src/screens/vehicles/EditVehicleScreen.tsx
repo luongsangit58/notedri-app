@@ -225,8 +225,10 @@ export default function EditVehicleScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom']}>
       <AppBgPattern />
+      {/* Rà soát 20/7 (car head-unit landscape): cap 720 khớp AddVehicleScreen
+          (form dày chữ, cùng ý tưởng contentWide của HomeScreen nhưng hẹp hơn). */}
       <ScrollView
-        contentContainerStyle={{ padding: 16, paddingBottom: 40 }}
+        contentContainerStyle={[{ padding: 16, paddingBottom: 40 }, { width: '100%', maxWidth: 720, alignSelf: 'center' }]}
         keyboardShouldPersistTaps="handled">
 
         {apiError ? (
