@@ -1,5 +1,6 @@
 import { BleManager, Device, State, Characteristic, BleRestoredState, BleErrorCode } from 'react-native-ble-plx';
 import { Platform, PermissionsAndroid } from 'react-native';
+import * as Location from 'expo-location';
 import { useI18nStore } from '../../i18n';
 import { useObdSessionStore } from '../../store/obdSessionStore';
 
@@ -29,6 +30,16 @@ export type SessionLogEntry = { t: number; cmd: string; res: string };
 export type LinkQuality = 'good' | 'fair' | 'poor' | 'unknown';
 
 const RECONNECT_DELAYS_MS = [1000, 3000, 6000];
+
+// Chip Bluetooth rẻ tiền trên đầu Android ô tô (firmware BLE non chuẩn/lỗi) có
+// thể không phản hồi connectToDevice() trong thời gian hợp lý - dùng option
+// `timeout` gốc của thư viện (native, tự huỷ connection attempt khi hết giờ,
+// KHÔNG phải Promise.race phía JS vốn để lại 1 tiến trình connect native chạy
+// ngầm dù JS đã "bỏ cuộc") để đảm bảo luôn thoát ra được và retry thay vì kẹt
+// "Đang kết nối..." vĩnh viễn. Đây là lớp bảo vệ MỀM duy nhất code làm được
+// cho lỗi firmware thật sự - không sửa được chip, chỉ đảm bảo app không đứng
+// hình vì nó.
+const CONNECT_TIMEOUT_MS = 12000;
 
 function delay(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
@@ -302,11 +313,7 @@ class BleService {
       }
 
       try {
-        const device = await this.manager.connectToDevice(deviceId, {
-          autoConnect: false,
-          requestMTU: 512,
-          timeout: 8000,
-        });
+        const device = await this.connectWithMtuFallback(deviceId, 8000);
         await this.attachToDevice(device);
 
         // User có thể đã bấm "Ngắt kết nối" TRONG LÚC connectToDevice/attachToDevice
@@ -339,16 +346,44 @@ class BleService {
 
   async requestPermissions(): Promise<boolean> {
     if (Platform.OS === 'android') {
-      const result = await PermissionsAndroid.requestMultiple([
-        PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
-        PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
-        PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-      ]);
-      return Object.values(result).every(
-        (r) => r === PermissionsAndroid.RESULTS.GRANTED
+      // BLUETOOTH_SCAN/BLUETOOTH_CONNECT chỉ tồn tại từ Android 12 (API 31) trở
+      // lên. Trên đầu Android ô tô đời cũ (vd Unisoc UMS512, thường Android
+      // 9/10), xin 2 quyền này qua requestMultiple khiến vài ROM tuỳ biến trả
+      // về "denied" cho quyền không tồn tại thay vì bỏ qua, làm cả nhóm luôn
+      // fail vĩnh viễn (báo cáo 20/7: mở Cài đặt ứng dụng cũng không có mục
+      // Bluetooth để bật vì quyền đó không áp dụng cho OS này). Trước 12,
+      // BLUETOOTH/BLUETOOTH_ADMIN là quyền cài-đặt-thời (không cần xin runtime)
+      // nên chỉ cần xin vị trí để quét BLE.
+      if (Platform.Version >= 31) {
+        const result = await PermissionsAndroid.requestMultiple([
+          PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
+          PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
+          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+        ]);
+        return Object.values(result).every(
+          (r) => r === PermissionsAndroid.RESULTS.GRANTED
+        );
+      }
+      const result = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
       );
+      return result === PermissionsAndroid.RESULTS.GRANTED;
     }
     return true;
+  }
+
+  /**
+   * Android: startDeviceScan() trả về DANH SÁCH RỖNG (không lỗi) nếu quyền vị
+   * trí đã cấp nhưng công tắc "Vị trí" (Location Services) toàn hệ thống đang
+   * TẮT - yêu cầu của OS khi app không khai báo neverForLocation cho
+   * BLUETOOTH_SCAN. Đầu Android ô tô không có GPS rời thường tắt sẵn công tắc
+   * này (báo cáo 20/7: quét mãi không thấy Vgate dù Bluetooth đã bật, quyền
+   * đã cấp) - phải phát hiện TRƯỚC khi quét để báo đúng nguyên nhân, nếu không
+   * user chỉ thấy "không tìm thấy thiết bị" chung chung và bó tay.
+   */
+  async isLocationServicesEnabled(): Promise<boolean> {
+    if (Platform.OS !== 'android') return true;
+    return Location.hasServicesEnabledAsync().catch(() => true);
   }
 
   /**
@@ -462,6 +497,13 @@ class BleService {
       case BleErrorCode.BluetoothInUnknownState:
       case BleErrorCode.BluetoothResetting:
         return this.bleError('BT_TIMEOUT');
+      case BleErrorCode.DeviceConnectionFailed:
+        // Bao gồm cả trường hợp native `timeout` option (ConnectionOptions)
+        // hết giờ - chip BLE của thiết bị không phản hồi kịp GATT connect.
+        // Đây là lỗi phần cứng/firmware thật sự (không sửa được), chỉ dịch
+        // lại message cho rõ + gợi ý thử lại thay vì để lộ message tiếng Anh
+        // gốc từ native SDK.
+        return new Error(useI18nStore.getState().t('obd.connect_hw_timeout'));
       default:
         return error;
     }
@@ -502,6 +544,35 @@ class BleService {
   // sẽ cùng ghi vào responseBuffer dùng chung -> dữ liệu lẫn lộn giữa 2 phiên.
   private connecting = false;
 
+  /**
+   * Chip BLE rẻ tiền (thường gặp trên đầu Android ô tô) có thể treo/rớt khi
+   * thương lượng MTU lớn (512 byte, cần để đọc response OBD dài không bị cắt
+   * khúc) - firmware yếu chỉ quen với MTU mặc định 23 byte. Timeout mỗi lần
+   * thử là lớp chặn "treo vĩnh viễn"; thử lại 1 lần KHÔNG xin MTU lớn trước
+   * khi báo lỗi hẳn - đây là điều duy nhất code có thể làm cho lỗi firmware
+   * thật sự (không sửa được chip, chỉ tăng khả năng vẫn kết nối được ở MTU
+   * thấp hơn, chấp nhận response OBD có thể bị chia nhiều gói hơn).
+   */
+  private async connectWithMtuFallback(deviceId: string, timeoutMs = CONNECT_TIMEOUT_MS): Promise<Device> {
+    try {
+      return await this.manager.connectToDevice(deviceId, {
+        autoConnect: false,
+        requestMTU: 512,
+        timeout: timeoutMs,
+      });
+    } catch {
+      await this.manager.cancelDeviceConnection(deviceId).catch(() => {});
+      try {
+        return await this.manager.connectToDevice(deviceId, {
+          autoConnect: false,
+          timeout: timeoutMs,
+        });
+      } catch (fallbackError: any) {
+        throw this.translateBleError(fallbackError);
+      }
+    }
+  }
+
   async connect(deviceId: string): Promise<void> {
     if (this.connecting || this.connectedDevice) {
       // Gắn .code để caller (useObd) phân biệt được: đây là lời gọi "thua" trong
@@ -519,10 +590,7 @@ class BleService {
       // Phiên mới = log mới; log phiên cũ giữ nguyên tới lúc này để user kịp xuất sau khi ngắt.
       this.sessionLog = [];
 
-      const device = await this.manager.connectToDevice(deviceId, {
-        autoConnect: false,
-        requestMTU: 512,
-      }).catch((error) => { throw this.translateBleError(error); });
+      const device = await this.connectWithMtuFallback(deviceId);
 
       await this.attachToDevice(device);
       this.sessionStartedAt = Date.now();

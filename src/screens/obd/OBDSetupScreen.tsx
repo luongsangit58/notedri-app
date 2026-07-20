@@ -268,6 +268,16 @@ export default function OBDSetupScreen() {
               <Text style={{ color: '#fff', fontWeight: '600', fontSize: 13 }}>{t('obd.open_app_settings')}</Text>
             </TouchableOpacity>
           )}
+          {/* Công tắc Vị trí toàn hệ thống TẮT - quét BLE luôn rỗng dù quyền đã
+              cấp (rà soát 20/7, đầu Android ô tô không GPS). Mở thẳng màn cài đặt
+              Vị trí (không phải cài đặt app - đây là công tắc hệ thống). */}
+          {errorMessage === t('obd.location_services_off') && (
+            <TouchableOpacity
+              style={{ marginTop: 8, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8, backgroundColor: '#3B82F6' }}
+              onPress={() => Linking.sendIntent('android.settings.LOCATION_SOURCE_SETTINGS').catch(() => Linking.openSettings())}>
+              <Text style={{ color: '#fff', fontWeight: '600', fontSize: 13 }}>{t('obd.open_location_settings')}</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Device list - map thay FlatList (đã nằm trong ScrollView, số thiết bị

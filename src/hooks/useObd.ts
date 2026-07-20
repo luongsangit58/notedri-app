@@ -150,6 +150,17 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
       return;
     }
 
+    // Quyền vị trí đã cấp KHÔNG có nghĩa quét được - công tắc Vị trí toàn hệ
+    // thống còn phải BẬT (yêu cầu của Android cho BLE scan). Kiểm tra riêng vì
+    // đây là lỗi im lặng (scan chạy "thành công" nhưng luôn rỗng), không phải
+    // lỗi permission nên requestPermissions() ở trên không bắt được.
+    const locationEnabled = await bleService.isLocationServicesEnabled();
+    if (!locationEnabled) {
+      setConnectionState('error');
+      setErrorMessage(useI18nStore.getState().t('obd.location_services_off'));
+      return;
+    }
+
     setConnectionState('scanning');
 
     try {

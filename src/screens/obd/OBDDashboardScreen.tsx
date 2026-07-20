@@ -45,11 +45,16 @@ function StatBox({
   color?: string;
 }) {
   const colors = useColors();
+  // Công thức đổi PID OBD (vd A*100/255 cho tải máy/bướm ga) sinh nhiễu số
+  // thực (13.7399999999999998) do lỗi làm tròn dấu phẩy động - hiển thị thẳng
+  // giá trị raw như trước sẽ tràn ô. Làm tròn 1 chữ số thập phân trước khi in.
+  const displayValue =
+    typeof value === 'number' ? Math.round(value * 10) / 10 : value;
   return (
     <View style={[statStyles.box, { backgroundColor: colors.card }]}>
       <FontAwesome5 name={icon} size={16} color={color} />
       <Text style={[statStyles.value, { color: colors.text }]}>
-        {value !== null ? `${value}${unit ?? ''}` : '-'}
+        {displayValue !== null ? `${displayValue}${unit ?? ''}` : '-'}
       </Text>
       <Text style={[statStyles.label, { color: colors.textSecondary }]}>{label}</Text>
     </View>
