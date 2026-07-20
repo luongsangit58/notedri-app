@@ -230,7 +230,15 @@ export default function OBDDashboardScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <AppBgPattern />
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+        {/* Đi thẳng về Trang chủ (phản hồi 20/7): trước đây goBack() lần theo
+            đúng stack lúc vào (Home → chi tiết xe → Setup → Dashboard qua
+            replace()), user phải bấm back nhiều lần mới ra được trang chủ.
+            Dashboard là điểm cuối luồng kết nối - "back" ở đây nên có nghĩa
+            "xong việc, về nhà" chứ không phải lần lại lịch sử điều hướng. */}
+        <TouchableOpacity
+          onPress={() => navigation.navigate('Tabs', { screen: 'Dashboard' })}
+          style={styles.backBtn}
+        >
           <FontAwesome5 name="arrow-left" size={18} color={colors.text} />
         </TouchableOpacity>
         <View>

@@ -542,6 +542,7 @@ const en = {
   "obd.location_services_off": "Location must be turned on to scan for Bluetooth - this is an Android requirement, not the app tracking you.",
   "obd.open_location_settings": "Open Location settings",
   "obd.connect_hw_timeout": "Connection took too long to respond - this device's Bluetooth chip may be the cause. Retry or restart the car screen.",
+  "obd.scan_start_failed": "Couldn't start the Bluetooth scan - this can happen after scanning too many times in a row. Wait about a minute and try again, or turn Bluetooth off and on on the car screen.",
   "obd.report_title": "OBD Data Analysis",
   "obd.report_entry_desc": "ECU metrics (RPM, temperature, voltage...) from the latest session",
   "obd.report_empty": "No data yet. Connect OBD2 once to generate your first report.",

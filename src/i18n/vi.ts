@@ -543,6 +543,7 @@ const vi = {
   "obd.location_services_off": "Cần bật Vị trí (Location) để quét Bluetooth - đây là yêu cầu của Android, không phải app dùng vị trí để theo dõi bạn.",
   "obd.open_location_settings": "Mở cài đặt Vị trí",
   "obd.connect_hw_timeout": "Kết nối quá lâu không phản hồi - có thể do chip Bluetooth của thiết bị này. Thử lại hoặc khởi động lại màn hình ô tô.",
+  "obd.scan_start_failed": "Không thể bắt đầu quét Bluetooth - có thể do quét quá nhiều lần liên tục vừa rồi. Đợi khoảng 1 phút rồi thử lại, hoặc tắt Bluetooth bật lại trên màn hình ô tô.",
   "obd.report_title": "Phân tích dữ liệu OBD",
   "obd.report_entry_desc": "Chỉ số ECU (vòng tua, nhiệt độ, điện áp...) từ phiên kết nối gần nhất",
   "obd.report_empty": "Chưa có dữ liệu. Kết nối OBD2 một lần để tạo báo cáo đầu tiên.",

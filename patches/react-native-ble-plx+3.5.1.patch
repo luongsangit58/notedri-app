@@ -18,7 +18,7 @@ index 4f1fd5d..1b5fbbe 100644
    return rootProject.hasProperty("newArchEnabled") && rootProject.getProperty("newArchEnabled") == "true"
  }
 diff --git a/node_modules/react-native-ble-plx/android/src/main/java/com/bleplx/adapter/BleModule.java b/node_modules/react-native-ble-plx/android/src/main/java/com/bleplx/adapter/BleModule.java
-index 44392b6..7dedd93 100755
+index 44392b6..7dedd93 100644
 --- a/node_modules/react-native-ble-plx/android/src/main/java/com/bleplx/adapter/BleModule.java
 +++ b/node_modules/react-native-ble-plx/android/src/main/java/com/bleplx/adapter/BleModule.java
 @@ -1065,8 +1065,20 @@ public class BleModule extends ReactContextBaseJavaModule implements BleAdapter

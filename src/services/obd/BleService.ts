@@ -371,13 +371,19 @@ class BleService {
           PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
           PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
         ]);
-        return Object.values(result).every(
+        const granted = Object.values(result).every(
           (r) => r === PermissionsAndroid.RESULTS.GRANTED
         );
+        // Ghi rõ TỪNG quyền (không chỉ true/false gộp) - khi ROM tuỳ biến deny
+        // riêng 1 quyền trong nhóm, log gộp không phân biệt được quyền nào bị
+        // chặn so với quyền không tồn tại trên OS đó.
+        this.logSession('#permission', Object.entries(result).map(([k, v]) => `${k}=${v}`).join(','));
+        return granted;
       }
       const result = await PermissionsAndroid.request(
         PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
       );
+      this.logSession('#permission', `ACCESS_FINE_LOCATION=${result} (API<31, BLUETOOTH_SCAN/CONNECT không áp dụng)`);
       return result === PermissionsAndroid.RESULTS.GRANTED;
     }
     return true;
@@ -394,7 +400,9 @@ class BleService {
    */
   async isLocationServicesEnabled(): Promise<boolean> {
     if (Platform.OS !== 'android') return true;
-    return Location.hasServicesEnabledAsync().catch(() => true);
+    const enabled = await Location.hasServicesEnabledAsync().catch(() => true);
+    this.logSession('#location_services', String(enabled));
+    return enabled;
   }
 
   /**
@@ -414,8 +422,10 @@ class BleService {
         this.manager.enable(),
         new Promise((_, reject) => setTimeout(() => reject(new Error('ENABLE_TIMEOUT')), 2000)),
       ]);
+      this.logSession('#enable_bluetooth', 'ok');
       return true;
-    } catch {
+    } catch (e: any) {
+      this.logSession('#enable_bluetooth', `failed: ${e?.message ?? 'unknown'}`);
       return false;
     }
   }
@@ -447,11 +457,12 @@ class BleService {
    * TẮT (bật lên là xong) hay máy không hỗ trợ (Sang phản hồi 14/7: app không
    * rõ có kiểm tra trạng thái Bluetooth máy hay không).
    */
-  private bleError(code: 'BT_OFF' | 'BT_UNSUPPORTED' | 'BT_TIMEOUT'): Error {
+  private bleError(code: 'BT_OFF' | 'BT_UNSUPPORTED' | 'BT_TIMEOUT' | 'SCAN_START_FAILED'): Error {
     const t = useI18nStore.getState().t;
     const msg =
       code === 'BT_OFF' ? t('obd.bluetooth_off')
       : code === 'BT_UNSUPPORTED' ? t('obd.bluetooth_unsupported')
+      : code === 'SCAN_START_FAILED' ? t('obd.scan_start_failed')
       : t('obd.bluetooth_unavailable');
     const err = new Error(msg) as Error & { code?: string };
     err.code = code;
@@ -463,6 +474,7 @@ class BleService {
     // trạng thái TẮT/không-hỗ-trợ được phát hiện ngay, không phụ thuộc thời điểm
     // adapter phát sự kiện (nguồn cơn "app không kiểm tra được trạng thái BT").
     const current = await this.getBluetoothState();
+    this.logSession('#ble_state', current);
     if (current === State.PoweredOn) return;
     if (current === State.PoweredOff) throw this.bleError('BT_OFF');
     if (current === State.Unsupported) throw this.bleError('BT_UNSUPPORTED');
@@ -474,6 +486,7 @@ class BleService {
         if (state === State.PoweredOn) {
           clearTimeout(timer);
           subscription.remove();
+          this.logSession('#ble_state', `${state} (sau ${current})`);
           resolve();
         } else if (state === State.PoweredOff) {
           clearTimeout(timer);
@@ -487,6 +500,7 @@ class BleService {
       }, true);
       timer = setTimeout(() => {
         subscription.remove();
+        this.logSession('#ble_state', `timeout - kẹt ở ${current}`);
         reject(this.bleError('BT_TIMEOUT'));
       }, 5000);
     });
@@ -508,6 +522,16 @@ class BleService {
       case BleErrorCode.BluetoothInUnknownState:
       case BleErrorCode.BluetoothResetting:
         return this.bleError('BT_TIMEOUT');
+      case BleErrorCode.ScanStartFailed:
+        // Android chặn ("throttle") app gọi startScan() quá nhiều lần trong
+        // thời gian ngắn (bật/tắt BT, đổi "hiện tất cả thiết bị", bấm "Quét
+        // lại" liên tục lúc test) - lệnh quét sau đó luôn fail ngay lập tức
+        // với message gốc "Cannot start scanning operation" không dịch được
+        // (báo cáo 20/7: lỗi này vẫn hiện tiếng Anh dù đã sửa quyền/Location).
+        // Không có cách nào code tự gỡ throttle - chỉ báo đúng nguyên nhân +
+        // hướng khắc phục (đợi ít phút hoặc tắt bật lại Bluetooth) thay vì để
+        // lộ message native khó hiểu.
+        return this.bleError('SCAN_START_FAILED');
       case BleErrorCode.DeviceConnectionFailed:
         // Bao gồm cả trường hợp native `timeout` option (ConnectionOptions)
         // hết giờ - chip BLE của thiết bị không phản hồi kịp GATT connect.
@@ -520,30 +544,84 @@ class BleService {
     }
   }
 
+  // ScanStartFailed đa số là lỗi ĐĂNG KÝ TẠM THỜI (native scanner của lần quét
+  // trước chưa kịp huỷ hẳn khi lần quét mới đăng ký ngay - hay gặp vì
+  // startScan() ở useObd gọi stop() rồi start() lại gần như cùng 1 tick khi
+  // quyền/Location đã sẵn có từ trước) hoặc Android tự chặn app quét quá nhiều
+  // lần liên tục trong 30s. Cả 2 trường hợp đều CÓ THỂ tự qua nếu đợi 1 chút
+  // rồi thử lại - không cần user tự bấm "Quét lại". Chỉ retry cho ĐÚNG mã lỗi
+  // này (không phải BT tắt hay lỗi khác) vì nguyên nhân của các mã khác không
+  // hết chỉ vì đợi.
+  private static readonly SCAN_START_RETRY_DELAYS_MS = [800, 2000];
+
   scanForDevices(
     onFound: (device: ObdDevice) => void,
     onError: (error: Error) => void,
     showAll = false
   ): () => void {
     const found = new Set<string>();
-    this.manager.startDeviceScan(null, { allowDuplicates: false }, (error, device) => {
-      if (error) { onError(this.translateBleError(error)); return; }
-      if (!device || !device.name) return;
-      const name = device.name.toUpperCase();
-      // 'VLINK' bắt buộc phải có: Vgate iCar Pro BLE 4.0 quảng bá tên "IOS-Vlink",
-      // không chứa OBD/ELM/VGATE/ICAR - thiếu nó là quét không bao giờ thấy adapter.
-      const isKnownAdapter =
-        name.includes('OBD') || name.includes('ELM') ||
-        name.includes('VGATE') || name.includes('VEEPEAK') ||
-        name.includes('VLINK') || name.includes('ICAR');
-      if (showAll || isKnownAdapter) {
-        if (!found.has(device.id)) {
-          found.add(device.id);
-          onFound({ id: device.id, name: device.name });
+    // Ghi cả thiết bị KHÔNG tên và thiết bị bị bộ lọc whitelist loại - khi user
+    // báo "quét không thấy" mà không có log này thì không phân biệt được là
+    // scanner không nhận được quảng bá nào cả (lỗi adapter/chip xe), hay CÓ
+    // nhận được nhưng tên adapter lạ bị lọc mất (chỉ cần bật "hiện tất cả").
+    let unnamedCount = 0;
+    let filteredOut = 0;
+    let stopped = false;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+    let retryAttempt = 0;
+
+    const beginScan = () => {
+      this.logSession('#scan', `start showAll=${showAll}${retryAttempt > 0 ? ` (retry ${retryAttempt})` : ''}`);
+      this.manager.startDeviceScan(null, { allowDuplicates: false }, (error, device) => {
+        if (stopped) return;
+        if (error) {
+          if (
+            error.errorCode === BleErrorCode.ScanStartFailed &&
+            retryAttempt < BleService.SCAN_START_RETRY_DELAYS_MS.length
+          ) {
+            const waitMs = BleService.SCAN_START_RETRY_DELAYS_MS[retryAttempt];
+            retryAttempt++;
+            this.logSession('#scan', `ScanStartFailed - tự thử lại sau ${waitMs}ms`);
+            this.manager.stopDeviceScan();
+            retryTimer = setTimeout(() => {
+              retryTimer = null;
+              if (!stopped) beginScan();
+            }, waitMs);
+            return;
+          }
+          const translated = this.translateBleError(error);
+          this.logSession('#scan', `error: ${translated.message} (native code=${error.errorCode})`);
+          onError(translated);
+          return;
         }
-      }
-    });
-    return () => this.manager.stopDeviceScan();
+        if (!device || !device.name) { unnamedCount++; return; }
+        const name = device.name.toUpperCase();
+        // 'VLINK' bắt buộc phải có: Vgate iCar Pro BLE 4.0 quảng bá tên "IOS-Vlink",
+        // không chứa OBD/ELM/VGATE/ICAR - thiếu nó là quét không bao giờ thấy adapter.
+        const isKnownAdapter =
+          name.includes('OBD') || name.includes('ELM') ||
+          name.includes('VGATE') || name.includes('VEEPEAK') ||
+          name.includes('VLINK') || name.includes('ICAR');
+        if (showAll || isKnownAdapter) {
+          if (!found.has(device.id)) {
+            found.add(device.id);
+            this.logSession('#scan', `found "${device.name}" ${device.id} rssi=${device.rssi ?? '?'}`);
+            onFound({ id: device.id, name: device.name });
+          }
+        } else {
+          filteredOut++;
+        }
+      });
+    };
+
+    beginScan();
+
+    return () => {
+      stopped = true;
+      if (retryTimer) { clearTimeout(retryTimer); retryTimer = null; }
+      this.manager.stopDeviceScan();
+      this.logSession('#scan', `stop - found=${found.size} filteredOut=${filteredOut} unnamed=${unnamedCount}`);
+    };
   }
 
   stopScan() {
