@@ -8,6 +8,12 @@ import {
   readPermanentDtcCodes,
   readFreezeFrame,
   reinitElm327AfterReconnect,
+  readRpm,
+  readSpeed,
+  readThrottle,
+  readFuelLevel,
+  readOilTemp,
+  readAmbientAirTemp,
   ObdSnapshot,
   DtcCode,
   FreezeFrameSnapshot,
@@ -19,6 +25,13 @@ import { useObdSessionStore } from '../../store/obdSessionStore';
 import { startObdKeepAlive, stopObdKeepAlive } from './obdKeepAliveService';
 import { syncDtcNotifications } from './dtcNotificationStore';
 import { ewmaStep } from '../../utils/ewma';
+import { getSessionVin, VehicleCapability } from './capabilityService';
+import { obdPollingScheduler } from './obdPollingScheduler';
+import { obdSessionStateMachine } from './obdSessionStateMachine';
+import { createLogger } from './obdLogger';
+
+const dtcLog = createLogger('dtc');
+const perfLog = createLogger('performance');
 
 /**
  * Live monitor OBD (quyết định 14/7: GPS là nguồn CHUYẾN ĐI duy nhất - fixture #5
@@ -51,7 +64,10 @@ const BACKGROUND_GAP_THRESHOLD_MS = 15000;
 // dừng) - KHÔNG phải app/adapter lỗi. 3 lần vừa đủ để loại nhiễu 1 lần đọc lẻ.
 const VEHICLE_UNRESPONSIVE_THRESHOLD = 3;
 
-let timer: ReturnType<typeof setInterval> | null = null;
+// Tầng medium (bản thân poll() giữ nguyên nhịp/logic cũ) chạy qua
+// obdPollingScheduler thay vì setInterval thô (mục 3 yêu cầu cải tiến) - xem
+// obdLiveMonitor.start()/.stop() bên dưới.
+let running = false;
 let inFlight = false;
 let skipBeat = false;
 let pollCount = 0;
@@ -120,8 +136,17 @@ let sessionPendingDtcCount = 0;
 // Permanent DTC (mode 0A): gần như tĩnh trong 1 phiên, chỉ đọc 1 lần.
 let sessionPermanentDtcCount = 0;
 let permanentDtcChecked = false;
-// Freeze Frame (mode 02): chụp 1 lần cho mã DTC MỚI đầu tiên trong phiên.
-let freezeFrame: FreezeFrameSnapshot | null = null;
+// Freeze Frame (mode 02): chụp cho MỖI mã DTC mới riêng biệt trong phiên (tối
+// đa MAX_FREEZE_FRAMES mã để không tốn round-trip vô hạn trên phiên nhiều lỗi
+// bất thường) - trước đây chỉ chụp cho mã đầu tiên, các mã mới xuất hiện sau
+// cùng phiên không có freeze frame.
+const MAX_FREEZE_FRAMES = 5;
+let freezeFrames: Record<string, FreezeFrameSnapshot> = {};
+let lastConfirmedDtc: DtcCode[] = [];
+let lastPendingDtc: DtcCode[] = [];
+let lastPermanentDtc: DtcCode[] = [];
+let sessionCapability: VehicleCapability | null = null;
+let sessionStartedAtMs: number | null = null;
 
 function feed(agg: Agg, v: number | null): void {
   if (v === null) return;
@@ -139,9 +164,13 @@ function resetSessionStats(): void {
   smoothedCoolantTempC = null; smoothedThrottlePct = null; smoothedControlModuleVoltage = null;
   engineRunSeconds = 0; drivingSeconds = 0; currentPhase = 'engine_off';
   sessionPendingDtcCount = 0; sessionPermanentDtcCount = 0; permanentDtcChecked = false;
-  freezeFrame = null;
+  freezeFrames = {};
+  lastConfirmedDtc = []; lastPendingDtc = []; lastPermanentDtc = [];
+  sessionCapability = null;
+  sessionStartedAtMs = Date.now();
   lastPollAt = null; backgroundGapCount = 0; backgroundGapSecondsTotal = 0;
   consecutiveAllNullPolls = 0; vehicleUnresponsiveNotified = false;
+  obdSessionStateMachine.clearHistory();
 }
 
 /** Snapshot chuẩn hoá cuối phiên - null khi phiên không có dữ liệu nào. */
@@ -167,7 +196,10 @@ export function buildSessionSummary(): Record<string, unknown> | null {
     session_phase: currentPhase,
     pending_dtc_count: sessionPendingDtcCount,
     permanent_dtc_count: sessionPermanentDtcCount,
-    freeze_frame: freezeFrame,
+    // Giữ freeze_frame (số ít, mã ĐẦU tiên) cho phía tiêu thụ cũ không đổi -
+    // freeze_frames (số nhiều, theo mã) là dữ liệu mới, đầy đủ hơn.
+    freeze_frame: Object.values(freezeFrames)[0] ?? null,
+    freeze_frames: freezeFrames,
     harsh_brake_count: harshBrakeCount,
     harsh_accel_count: harshAccelCount,
     // Số lần / tổng giây "khoảng trống nền" (fixture #5) trong phiên - phân biệt
@@ -178,6 +210,28 @@ export function buildSessionSummary(): Record<string, unknown> | null {
     // Thời lượng phiên (không phải quãng đường - OBD live-monitor không theo dõi
     // quãng đường, GPS là nguồn chuyến duy nhất) làm đơn vị chuẩn hoá mật độ.
     driving_score: scoreFromCounts(harshBrakeCount, harshAccelCount, bleService.getSessionAgeSeconds() / 60),
+    // Chuẩn hoá cho Vehicle Timeline (mục 8 yêu cầu cải tiến) - CHỈ chuẩn hoá dữ
+    // liệu, chưa dựng UI/Timeline đầy đủ.
+    start_time: sessionStartedAtMs ? new Date(sessionStartedAtMs).toISOString() : null,
+    end_time: new Date().toISOString(),
+    vin: getSessionVin(),
+    capability: sessionCapability
+      ? { supportedPids: sessionCapability.supportedPids, discoveredAt: sessionCapability.discoveredAt }
+      : null,
+    session_state: obdSessionStateMachine.getState(),
+    // Cắt tail (rà soát pull mới nhất từ backend, ObdController::storeSession()):
+    // toàn bộ `summary` bị GIỚI HẠN 8192 byte và bị XOÁ SẠCH (không phải cắt bớt)
+    // nếu vượt - lịch sử đầy đủ (tối đa MAX_HISTORY=200 mục) một mình đã có thể
+    // vượt ngưỡng này, kéo theo mất luôn coolant_max/driving_score/dtc_count...
+    // Backend hiện chỉ cần biết CHUỖI trạng thái gần nhất (chuẩn hoá dữ liệu, chưa
+    // dùng Timeline đầy đủ) - lịch sử ĐẦY ĐỦ vẫn có qua obdSessionStateMachine.getHistory()
+    // cho tiêu thụ TẠI MÁY nếu cần sau này.
+    session_state_history: obdSessionStateMachine.getHistory().slice(-20),
+    dtc_snapshot: {
+      confirmed: lastConfirmedDtc,
+      pending: lastPendingDtc,
+      permanent: lastPermanentDtc,
+    },
   };
 }
 
@@ -188,6 +242,29 @@ const pendingDtcListeners = new Set<(codes: DtcCode[]) => void>();
 const permanentDtcListeners = new Set<(codes: DtcCode[]) => void>();
 const findingListeners = new Set<(findings: Finding[]) => void>();
 const vehicleUnresponsiveListeners = new Set<() => void>();
+
+// Fast/Slow tier (mục 3 yêu cầu cải tiến) - độc lập với poll() (tầng medium,
+// giữ nguyên như cũ). Không đụng tới pollCount/aggregate/DTC/rule - chỉ phát
+// thêm dữ liệu tần suất khác cho UI cần đọc nhanh hơn (kim đồng hồ RPM/tốc độ)
+// hoặc chậm hơn (nhiên liệu/nhiệt độ dầu/nhiệt độ môi trường).
+export type FastSnapshot = { rpm: number | null; speedKmh: number | null; throttlePct: number | null; timestamp: number };
+export type SlowSnapshot = { fuelLevelPct: number | null; oilTempC: number | null; ambientAirTempC: number | null; timestamp: number };
+const fastSnapshotListeners = new Set<(s: FastSnapshot) => void>();
+const slowSnapshotListeners = new Set<(s: SlowSnapshot) => void>();
+
+async function pollFastTier(): Promise<void> {
+  if (!bleService.isConnected()) return;
+  const [rpm, speedKmh, throttlePct] = await Promise.all([readRpm(), readSpeed(), readThrottle()]);
+  fastSnapshotListeners.forEach((fn) => fn({ rpm, speedKmh, throttlePct, timestamp: Date.now() }));
+}
+
+async function pollSlowTier(): Promise<void> {
+  if (!bleService.isConnected()) return;
+  const [fuelLevelPct, oilTempC, ambientAirTempC] = await Promise.all([
+    readFuelLevel(), readOilTemp(), readAmbientAirTemp(),
+  ]);
+  slowSnapshotListeners.forEach((fn) => fn({ fuelLevelPct, oilTempC, ambientAirTempC, timestamp: Date.now() }));
+}
 
 async function poll(): Promise<void> {
   if (inFlight || !bleService.isConnected()) return;
@@ -280,6 +357,11 @@ async function poll(): Promise<void> {
     } else {
       currentPhase = 'engine_off';
     }
+    // Vehicle Session State Machine (mục 4 yêu cầu cải tiến): tái dùng đúng
+    // currentPhase vừa suy ra ở trên, không tính lại logic rpm/speed lần 2.
+    if (currentPhase === 'driving') obdSessionStateMachine.setDriving();
+    else if (currentPhase === 'idle') obdSessionStateMachine.setEngineIdle();
+    else obdSessionStateMachine.setEngineOff();
     if (snapshot.speedKmh !== null) {
       if (maxSpeed === null || snapshot.speedKmh > maxSpeed) maxSpeed = snapshot.speedKmh;
       if (snapshot.speedKmh === 0) {
@@ -313,16 +395,20 @@ async function poll(): Promise<void> {
     // DTC: sớm ở vòng 2 rồi mỗi ~5 phút
     if (pollCount === 2 || pollCount % DTC_EVERY_N_POLLS === 0) {
       const codes = await readDtcCodes();
+      lastConfirmedDtc = codes;
       if (codes.length > 0) {
         sessionDtcCount = codes.length;
         dtcListeners.forEach((fn) => fn(codes));
+        dtcLog.info('mode 03 confirmed DTC', codes.map((c) => c.code));
         // Báo server các mã CHƯA báo trong phiên này (fire-and-forget)
         const fresh = codes.filter((c) => !reportedCodes.has(c.code));
-        // Freeze Frame (mode 02): chụp NGAY thông số ECU tại thời điểm phát hiện
-        // mã MỚI - chỉ 1 lần/phiên (mã đầu tiên đáng giá nhất, không đọc lại
-        // cho mã mới phát hiện sau đó cùng phiên).
-        if (fresh.length > 0 && !freezeFrame) {
-          freezeFrame = await readFreezeFrame();
+        // Freeze Frame (mode 02): chụp thông số ECU cho MỖI mã MỚI riêng biệt
+        // (tối đa MAX_FREEZE_FRAMES/phiên) - trước đây chỉ chụp mã đầu tiên.
+        for (const c of fresh) {
+          if (Object.keys(freezeFrames).length >= MAX_FREEZE_FRAMES) break;
+          if (freezeFrames[c.code]) continue;
+          freezeFrames[c.code] = await readFreezeFrame();
+          dtcLog.info('freeze frame captured', c.code);
         }
         if (fresh.length > 0 && activeVehicleId) {
           fresh.forEach((c) => reportedCodes.add(c.code));
@@ -341,11 +427,15 @@ async function poll(): Promise<void> {
       // tục) nhưng KHÔNG báo server/không gộp dtc_count chính thức - ý nghĩa
       // khác DTC đã xác nhận, tránh báo động giả ("Phát hiện lỗi đang hình thành").
       const pending = await readPendingDtcCodes();
+      lastPendingDtc = pending;
       // Rà soát 16/7: gán lại toàn bộ (không chỉ khi length>0) - mã đang hình
       // thành có thể tự hết giữa phiên; trước đây chỉ set khi >0 nên count kẹt
       // ở đỉnh cũ, không bao giờ về 0 dù xe đã sạch mã pending.
       sessionPendingDtcCount = pending.length;
-      if (pending.length > 0) pendingDtcListeners.forEach((fn) => fn(pending));
+      if (pending.length > 0) {
+        pendingDtcListeners.forEach((fn) => fn(pending));
+        dtcLog.info('mode 07 pending DTC (đang hình thành)', pending.map((c) => c.code));
+      }
 
       // Mode 0A - Permanent DTC: gần như tĩnh trong 1 phiên (chỉ tự xoá sau
       // nhiều chu kỳ lái đạt chuẩn) - chỉ cần đọc 1 LẦN, không lặp mỗi 5 phút
@@ -353,9 +443,11 @@ async function poll(): Promise<void> {
       if (!permanentDtcChecked) {
         permanentDtcChecked = true;
         const permanent = await readPermanentDtcCodes();
+        lastPermanentDtc = permanent;
         if (permanent.length > 0) {
           sessionPermanentDtcCount = permanent.length;
           permanentDtcListeners.forEach((fn) => fn(permanent));
+          dtcLog.info('mode 0A permanent DTC', permanent.map((c) => c.code));
         }
       }
     }
@@ -363,21 +455,33 @@ async function poll(): Promise<void> {
     // Poll lỗi thoáng qua - bỏ qua, vòng sau thử lại
   } finally {
     inFlight = false;
+    perfLog.debug(`medium poll #${pollCount} done`);
   }
 }
 
 export const obdLiveMonitor = {
   isRunning(): boolean {
-    return timer !== null;
+    return running;
   },
 
   getVehicleId(): number | null {
     return activeVehicleId;
   },
 
+  /** Capability đã dò/cache của phiên hiện tại - chỉ để CHUẨN HOÁ session
+   * summary (mục 8 yêu cầu cải tiến), không dùng để gate PID (đã có
+   * setActivePidWhitelist bên ObdReader.ts từ trước). */
+  setSessionCapability(capability: VehicleCapability | null): void {
+    sessionCapability = capability;
+  },
+
+  getSessionState() {
+    return obdSessionStateMachine.getState();
+  },
+
   /** Bắt đầu theo phiên kết nối - gọi sau khi connect thành công. */
   start(vehicleId: number): void {
-    if (timer) {
+    if (running) {
       // Đổi xe giữa chừng (hiếm): coi như phiên MỚI cho xe mới - phải reset TOÀN
       // BỘ thống kê tích luỹ (không chỉ reportedCodes), nếu không coolant/voltage/
       // idle-rpm/findings đang tích cho xe CŨ sẽ bị báo cáo nhầm gắn vào lịch sử
@@ -396,15 +500,26 @@ export const obdLiveMonitor = {
     resetSessionStats();
     // Tải rule mới nhất đúng lúc sắp dùng - không chặn vòng poll đầu tiên
     refreshRulesFromServer().catch(() => {});
-    timer = setInterval(() => void poll(), POLL_INTERVAL_MS);
+
+    // Polling Scheduler (mục 3 yêu cầu cải tiến): tầng medium = đúng poll() cũ,
+    // không đổi hành vi/test hiện có. Tầng fast/slow là bổ sung mới, độc lập.
+    obdPollingScheduler.register({ id: 'core-medium', tier: 'medium', intervalMs: POLL_INTERVAL_MS, run: poll });
+    obdPollingScheduler.register({ id: 'core-fast', tier: 'fast', run: pollFastTier });
+    obdPollingScheduler.register({ id: 'core-slow', tier: 'slow', run: pollSlowTier });
+    obdPollingScheduler.start();
+    running = true;
+
     // Gap nền thật (fixture #5, 16/7): giữ tiến trình JS sống khi khoá màn hình
     // lúc đang lái - xem obdKeepAliveService.ts.
     startObdKeepAlive().catch(() => {});
   },
 
   stop(): void {
-    if (timer) clearInterval(timer);
-    timer = null;
+    obdPollingScheduler.stop();
+    obdPollingScheduler.unregister('core-medium');
+    obdPollingScheduler.unregister('core-fast');
+    obdPollingScheduler.unregister('core-slow');
+    running = false;
     activeVehicleId = null;
     stopObdKeepAlive().catch(() => {});
   },
@@ -421,6 +536,19 @@ export const obdLiveMonitor = {
   onSmoothedSnapshot(fn: (s: ObdSnapshot) => void): () => void {
     smoothedSnapshotListeners.add(fn);
     return () => smoothedSnapshotListeners.delete(fn);
+  },
+
+  /** Tầng fast (250-500ms): rpm/speed/throttle - dữ liệu "tức thời" cho kim
+   * đồng hồ, KHÔNG dùng cho thống kê phiên/rule engine (vẫn ở tầng medium). */
+  onFastSnapshot(fn: (s: FastSnapshot) => void): () => void {
+    fastSnapshotListeners.add(fn);
+    return () => fastSnapshotListeners.delete(fn);
+  },
+
+  /** Tầng slow (30-60s): nhiên liệu/nhiệt độ dầu/nhiệt độ môi trường. */
+  onSlowSnapshot(fn: (s: SlowSnapshot) => void): () => void {
+    slowSnapshotListeners.add(fn);
+    return () => slowSnapshotListeners.delete(fn);
   },
 
   onDtcFound(fn: (codes: DtcCode[]) => void): () => void {
@@ -470,6 +598,11 @@ bleService.addReconnectedListener(() => {
 });
 
 bleService.addDisconnectListener(() => {
+  // Vehicle Session State Machine (mục 4): STOPPED trước khi tổng hợp summary
+  // (session_state_history phản ánh đúng đuôi phiên), DISCONNECTED sau khi
+  // obdLiveMonitor.stop() chạy xong ở cuối handler này.
+  obdSessionStateMachine.setStopped();
+
   // Telemetry retention (ý #14): đọc vehicleId TRƯỚC khi store bị clear
   // (BleService fire listener trước rồi mới clear); consumeSessionInfo đọc-rồi-xoá.
   const info = bleService.consumeSessionInfo();
@@ -508,4 +641,5 @@ bleService.addDisconnectListener(() => {
   }
 
   obdLiveMonitor.stop();
+  obdSessionStateMachine.setDisconnected();
 });

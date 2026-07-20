@@ -48,6 +48,7 @@ export default function OBDSetupScreen() {
     startScan,
     stopScan,
     connect,
+    refreshCapability,
   } = useObdConnection(vehicleId, vehicleName);
 
   // Guard: redirect to PremiumScreen if user is not premium. Đợi userSynced để không đá nhầm
@@ -125,6 +126,11 @@ export default function OBDSetupScreen() {
     if (ok) {
       navigation.replace('OBDDashboard', { vehicleId, vehicleName, deviceName, consumptionOfficial });
     }
+  }
+
+  async function handleRefreshCapability() {
+    await refreshCapability();
+    Alert.alert(t('obd.refresh_capability'), t('obd.refresh_capability_done'));
   }
 
   async function handleExportLog() {
@@ -332,6 +338,15 @@ export default function OBDSetupScreen() {
             <Text style={[styles.actionBtnText, { color: colors.textSecondary }]}>{t('obd.export_log')}</Text>
           </TouchableOpacity>
         </View>
+        {connectionState === 'connected' && (
+          <TouchableOpacity
+            style={[styles.actionBtn, { borderColor: colors.border, marginTop: 12 }]}
+            onPress={handleRefreshCapability}
+          >
+            <FontAwesome5 name="sync" size={13} color={colors.textSecondary} />
+            <Text style={[styles.actionBtnText, { color: colors.textSecondary }]}>{t('obd.refresh_capability')}</Text>
+          </TouchableOpacity>
+        )}
       </ScrollView>
     </SafeAreaView>
   );

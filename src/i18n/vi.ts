@@ -464,6 +464,8 @@ const vi = {
   "obd.show_all_devices": "Hiện tất cả thiết bị",
   "obd.export_log": "Xuất log phiên (gỡ lỗi)",
   "obd.export_log_empty": "Chưa có dữ liệu trong phiên này. Kết nối với xe trước rồi xuất lại.",
+  "obd.refresh_capability": "Làm mới dữ liệu xe",
+  "obd.refresh_capability_done": "Đã đọc lại VIN và danh sách cảm biến xe hỗ trợ.",
   "dtc.lookup_title": "Tra mã lỗi OBD",
   "dtc.entry_desc": "Gõ mã lỗi (P0420...) để biết ý nghĩa, mức độ, chi phí",
   "dtc.lookup_hint": "Nhập mã lỗi từ máy quét hoặc garage đọc cho bạn để biết ý nghĩa, mức độ nghiêm trọng và chi phí sửa tham khảo.",

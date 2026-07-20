@@ -463,6 +463,8 @@ const en = {
   "obd.show_all_devices": "Show all devices",
   "obd.export_log": "Export session log (debug)",
   "obd.export_log_empty": "No data in this session yet. Connect to the car first, then export again.",
+  "obd.refresh_capability": "Refresh vehicle data",
+  "obd.refresh_capability_done": "VIN and supported sensor list have been re-read from the vehicle.",
   "dtc.lookup_title": "DTC code lookup",
   "dtc.entry_desc": "Type a fault code (P0420...) to see meaning, severity, cost",
   "dtc.lookup_hint": "Enter a fault code from a scanner or one your garage read out, to see its meaning, severity and estimated repair cost.",

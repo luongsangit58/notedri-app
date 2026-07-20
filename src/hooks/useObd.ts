@@ -5,6 +5,7 @@ import { bleService, ConnectionState, ObdDevice } from '../services/obd/BleServi
 import { initializeElm327, readSnapshot, setActivePidWhitelist, ObdSnapshot } from '../services/obd/ObdReader';
 import { getCachedCapability, discoverCapability, clearCapability, readCurrentVin, VehicleCapability } from '../services/obd/capabilityService';
 import { obdLiveMonitor } from '../services/obd/obdLiveMonitor';
+import { obdSessionStateMachine } from '../services/obd/obdSessionStateMachine';
 import { flushPendingObdSessions } from '../services/obd/ObdSessionSyncQueue';
 import { Finding } from '../services/obd/diagnosticEngine';
 import { savePairing } from '../services/obd/pairedDevices';
@@ -56,8 +57,8 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
 
   // Capability (R8): cache có sẵn thì dùng ngay, chưa có thì dò 1 lần sau kết nối.
   // Nạp whitelist cho ObdReader để poll bỏ qua PID xe không hỗ trợ (ý #18).
-  const loadCapability = useCallback(async (allowDiscover: boolean) => {
-    const cached = await getCachedCapability(vehicleId).catch(() => null);
+  const loadCapability = useCallback(async (allowDiscover: boolean, force = false) => {
+    const cached = force ? null : await getCachedCapability(vehicleId).catch(() => null);
 
     // Bản ghi đã có VIN từ lần dò trước -> đọc VIN xe đang cắm để so. Khác nhau
     // = đang cắm xe KHÁC vào bản ghi này: cảnh báo + DÒ LẠI capability (whitelist
@@ -71,17 +72,25 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
         const fresh = await discoverCapability(vehicleId).catch(() => null);
         setActivePidWhitelist(fresh?.supportedPids ?? null);
         setCapability(fresh);
+        obdLiveMonitor.setSessionCapability(fresh);
         return;
       }
     }
 
     let cap = cached;
     if (!cap && allowDiscover) {
-      cap = await discoverCapability(vehicleId).catch(() => null);
+      cap = await discoverCapability(vehicleId, force ? { force: true } : undefined).catch(() => null);
     }
     setActivePidWhitelist(cap?.supportedPids ?? null);
     setCapability(cap);
+    obdLiveMonitor.setSessionCapability(cap);
   }, [vehicleId]);
+
+  /** User bấm "Làm mới" (mục 1+2 yêu cầu cải tiến): buộc đọc lại VIN + dò lại
+   * capability thật, bỏ qua mọi cache hiện có - không dùng cho luồng tự động. */
+  const refreshCapability = useCallback(async () => {
+    await loadCapability(true, true);
+  }, [loadCapability]);
 
   // Quyết định 14/7: GPS là nguồn CHUYẾN ĐI duy nhất. OBD chỉ còn live monitor
   // (poll số liệu + canh DTC + rule engine) sống theo phiên BLE - hook là VIEW.
@@ -208,13 +217,16 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
     setVinMismatch(null); // xoá cảnh báo VIN của phiên trước
     setConnectionState('connecting');
     setErrorMessage(null);
+    obdSessionStateMachine.setConnecting();
 
     // Sự kiện disconnect/reconnect đã được subscribe bằng listener trong effect
     // ở trên (đa-listener C5 tầng 2) - không còn gán callback đơn ở đây.
     try {
       await bleService.connect(deviceId);
+      obdSessionStateMachine.setConnected();
       const result = await initializeElm327();
       if (!result.ok) throw new Error('Khong the khoi tao ELM327');
+      obdSessionStateMachine.setElmReady();
 
       setConnectionState('connected');
       setWarning(
@@ -256,6 +268,11 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
         // mọi lần quét sau sẽ không bao giờ thấy nó nữa (phải rút cắm lại mới hiện).
         // Đây chính là lỗi "chỉ connect được đúng 1 lần" - fixture #1.
         await bleService.disconnect().catch(() => {});
+        // Chưa tới ELM_READY - đưa state machine về DISCONNECTED thay vì kẹt ở
+        // CONNECTING/CONNECTED dở dang (khớp bleService.disconnect() ở trên).
+        // Bỏ qua nhánh CONNECT_IN_PROGRESS: phiên đó KHÔNG thuộc lời gọi này,
+        // trạng thái thật thuộc về luồng kia đang thắng.
+        obdSessionStateMachine.setDisconnected();
       }
       setConnectionState('error');
       setErrorMessage(e.message);
@@ -277,6 +294,13 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
   useEffect(() => {
     if (bleService.isConnected()) {
       setConnectionState('connected');
+      // App relaunch với phiên BLE OS-level vẫn sống (iOS background restore):
+      // state machine module-level mới khởi tạo lại từ DISCONNECTED dù xe thật
+      // đã ELM_READY từ trước - đưa lại đúng chuỗi 1 lần (no-op nếu đã đúng rồi,
+      // vì mỗi setter tự bỏ qua cạnh không hợp lệ - xem obdSessionStateMachine.ts).
+      obdSessionStateMachine.setConnecting();
+      obdSessionStateMachine.setConnected();
+      obdSessionStateMachine.setElmReady();
       // Nạp capability từ cache; CHO PHÉP dò lại nếu cache trống (fixture #5:
       // gỡ app cài lại là mất cache → cả phiên poll thừa 2 PID NO DATA mỗi vòng)
       loadCapability(true).catch(() => {});
@@ -314,5 +338,6 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
     stopScan,
     connect,
     disconnect,
+    refreshCapability,
   };
 }
