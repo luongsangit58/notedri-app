@@ -51,6 +51,7 @@ export default function VehiclesScreen() {
               vehicle={item}
               onPress={() => navigation.navigate('VehicleDetail', { vehicleId: item.id, vehicleName: item.ten ?? item.name })}
               score={scores[item.id] ?? null}
+              compact={numColumns > 1}
             />
             <TouchableOpacity
               onPress={() => navigation.navigate('EditVehicle', { vehicleId: item.id })}

@@ -328,9 +328,9 @@ function BadgeCard({ b, cols }: { b: Badge; cols: number }) {
       : colors.surface;
   const earnedColor = isHiddenEarned ? '#a855f7' : '#10b981';
 
-  // 2 cột trên điện thoại dọc; 3/4 cột khi landscape (head-unit ô tô) để đỡ trải rộng
-  // từng thẻ nhỏ - xem width tính theo cols ở AchievementsScreen.
-  const badgeWidthPct = cols >= 4 ? '23%' : cols === 3 ? '31%' : '48%';
+  // 2 cột trên điện thoại dọc; 4 cột khi landscape (head-unit ô tô) để đỡ trải rộng
+  // từng thẻ nhỏ - xem width tính theo cols ở AchievementsScreen (cols chỉ nhận 2 hoặc 4).
+  const badgeWidthPct = cols >= 4 ? '23%' : '48%';
   return (
     <View style={[
       styles.badge,

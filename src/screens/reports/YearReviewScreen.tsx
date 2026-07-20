@@ -90,7 +90,7 @@ export default function YearReviewScreen() {
   const totalCost = (Number(fuelCost ?? 0) + Number(serviceCost ?? 0)) || null;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: NAVY }} edges={['bottom']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: NAVY }} edges={['bottom', 'left', 'right']}>
       <RecapBackground />
       <ScrollView
         contentContainerStyle={[

@@ -17,6 +17,10 @@ interface Props {
   vehicle: any;
   onPress?: () => void;
   score?: HealthScore | null;
+  // true khi card hiển thị ở lưới 2 cột (landscape head-unit) - card hẹp hơn nhưng
+  // nút "Sửa" đè tuyệt đối ở VehiclesScreen vẫn cùng kích thước cố định, nên chỉ
+  // cần chừa chỗ nhỏ hơn thay vì 120px (vốn tính cho card full-width 1 cột).
+  compact?: boolean;
 }
 
 const BAND_KEY: Record<string, string> = {
@@ -27,7 +31,7 @@ const BAND_KEY: Record<string, string> = {
   critical:  'vehicle_card.health_critical',
 };
 
-export default function VehicleCard({ vehicle, onPress, score }: Props) {
+export default function VehicleCard({ vehicle, onPress, score, compact }: Props) {
   const colors = useColors();
   const t = useT();
   const name = vehicle.ten ?? vehicle.name;
@@ -63,7 +67,7 @@ export default function VehicleCard({ vehicle, onPress, score }: Props) {
 
   const inner = (
     <>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingRight: 120 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingRight: compact ? 100 : 120 }}>
         <FontAwesome5 name={vehicleIcon(vehicle)} size={14} color={colors.primary} solid />
         <Text numberOfLines={1} style={{ color: colors.text, fontSize: 16, fontWeight: '700', flexShrink: 1 }}>
           {name}
