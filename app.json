@@ -3,7 +3,7 @@
     "name": "NoteDri",
     "slug": "notedri-app",
     "scheme": "notedri",
-    "version": "1.1.7",
+    "version": "1.1.6",
     "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
