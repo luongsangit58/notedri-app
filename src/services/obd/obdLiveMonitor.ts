@@ -510,8 +510,13 @@ export const obdLiveMonitor = {
     running = true;
 
     // Gap nền thật (fixture #5, 16/7): giữ tiến trình JS sống khi khoá màn hình
-    // lúc đang lái - xem obdKeepAliveService.ts.
-    startObdKeepAlive().catch(() => {});
+    // lúc đang lái - xem obdKeepAliveService.ts. Ghi lại kết quả (chạy được hay
+    // bị bỏ qua vì lý do gì) vào chính session log xuất ra - rà soát 20/7: khoảng
+    // lặng dài bất thường vẫn thấy trong fixture nhưng không cách nào xác nhận
+    // được lúc đó keep-alive có chạy hay đã âm thầm bỏ qua.
+    startObdKeepAlive()
+      .then((status) => bleService.logDiagnostic('#keepalive', status))
+      .catch(() => bleService.logDiagnostic('#keepalive', 'error'));
   },
 
   stop(): void {

@@ -77,6 +77,17 @@ class BleService {
     return this.sessionLog;
   }
 
+  /**
+   * Cho phép module KHÁC (vd obdKeepAliveService) ghi 1 dòng chẩn đoán vào
+   * đúng session log xuất ra cùng fixture - trước đây trạng thái keep-alive
+   * (chạy được hay bị bỏ qua vì thiếu quyền) không hề xuất hiện trong log xuất
+   * ra, nên khi có khoảng lặng dài bất thường (rà soát 20/7, fixture 13/7) chỉ
+   * đoán được nguyên nhân chứ không xác nhận được.
+   */
+  logDiagnostic(tag: string, detail: string): void {
+    this.logSession(tag, detail);
+  }
+
   // Listener set (C5 tầng 2): NHIỀU bên cùng nghe sự kiện kết nối - UI hook của
   // từng màn + obdTripManager toàn cục. Trước đây là callback đơn (gán đè nhau).
   private disconnectListeners = new Set<() => void>();
@@ -544,6 +555,17 @@ class BleService {
   // sẽ cùng ghi vào responseBuffer dùng chung -> dữ liệu lẫn lộn giữa 2 phiên.
   private connecting = false;
 
+  // Lỗi trạng thái adapter (BT tắt/không hỗ trợ/đang reset...) không liên quan
+  // gì tới MTU - thử lại ngay lập tức chỉ tốn thêm 1 timeout đầy đủ (tới 12s)
+  // trước khi báo đúng lỗi, không giúp kết nối thành công hơn.
+  private static readonly ADAPTER_STATE_ERROR_CODES: ReadonlySet<BleErrorCode> = new Set([
+    BleErrorCode.BluetoothPoweredOff,
+    BleErrorCode.BluetoothUnsupported,
+    BleErrorCode.BluetoothUnauthorized,
+    BleErrorCode.BluetoothInUnknownState,
+    BleErrorCode.BluetoothResetting,
+  ]);
+
   /**
    * Chip BLE rẻ tiền (thường gặp trên đầu Android ô tô) có thể treo/rớt khi
    * thương lượng MTU lớn (512 byte, cần để đọc response OBD dài không bị cắt
@@ -560,7 +582,10 @@ class BleService {
         requestMTU: 512,
         timeout: timeoutMs,
       });
-    } catch {
+    } catch (error: any) {
+      if (BleService.ADAPTER_STATE_ERROR_CODES.has(error?.errorCode)) {
+        throw this.translateBleError(error);
+      }
       await this.manager.cancelDeviceConnection(deviceId).catch(() => {});
       try {
         return await this.manager.connectToDevice(deviceId, {

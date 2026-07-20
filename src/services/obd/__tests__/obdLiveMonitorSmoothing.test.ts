@@ -18,6 +18,7 @@ jest.mock('../BleService', () => ({
     getSessionAgeSeconds: () => 9,
     addReconnectedListener: () => () => {},
     addDisconnectListener: () => () => {},
+    logDiagnostic: () => {},
   },
 }));
 

@@ -7,14 +7,18 @@ import {
   StyleSheet,
   Share,
   Alert,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Location from 'expo-location';
 import { useObdConnection } from '../../hooks/useObd';
 import { bleService, LinkQuality } from '../../services/obd/BleService';
 import { findingCostLabel } from '../../services/obd/findingCost';
+import { requestKeepAlivePermissions, startObdKeepAlive } from '../../services/obd/obdKeepAliveService';
+import { openBatterySettings } from '../../services/gps/GpsTripTracker';
 import AppBgPattern from '../../components/AppBgPattern';
 import { useColors } from '../../utils/theme';
 import { useT } from '../../i18n';
@@ -29,6 +33,14 @@ import { useT } from '../../i18n';
 // lần kết nối sẽ gây phiền hơn là hữu ích).
 function nfcNudgeKey(vehicleId: number): string {
   return `obd_nfc_nudge_shown_${vehicleId}`;
+}
+
+// Rà soát 20/7 (khoảng lặng ~13 phút thấy trong fixture khi khoá màn hình lúc
+// lái): user chỉ dùng OBD2 không đi qua luồng bật GPS trip nên không bao giờ
+// cấp quyền vị trí nền - obdKeepAliveService luôn no-op âm thầm. Nhắc 1
+// LẦN/xe, chỉ khi quyền CHƯA có (khỏi làm phiền nếu đã cấp qua GPS trip rồi).
+function keepAliveNudgeKey(vehicleId: number): string {
+  return `obd_keepalive_nudge_shown_${vehicleId}`;
 }
 
 function StatBox({
@@ -140,9 +152,52 @@ export default function OBDDashboardScreen() {
     return () => clearInterval(timer);
   }, [isConnected]);
 
-  // Nhắc ghép thẻ NFC (rà soát 16/7) - xem comment nfcNudgeKey() ở đầu file.
+  // Nhắc bật chạy nền (rà soát 20/7) - xem comment keepAliveNudgeKey() ở đầu
+  // file. Chạy TRƯỚC nhắc NFC (settle xong mới cho nhắc NFC hiện) để 2 Alert
+  // không chồng lên nhau ngay lúc vừa kết nối xong.
+  const [keepAliveNudgeSettled, setKeepAliveNudgeSettled] = useState(false);
   useEffect(() => {
     if (!isConnected || !vehicleId) return;
+    if (Platform.OS !== 'android') { setKeepAliveNudgeSettled(true); return; }
+    let cancelled = false;
+    // Chỉ setState nếu effect chưa bị dọn (màn hình chưa unmount) - Alert vẫn
+    // có thể còn mở sau khi user đã rời màn hình (vd bấm back trong lúc đang
+    // hiện dialog), bấm nút lúc đó không được setState trên component đã unmount.
+    const settle = () => { if (!cancelled) setKeepAliveNudgeSettled(true); };
+    (async () => {
+      const key = keepAliveNudgeKey(vehicleId);
+      const shown = await AsyncStorage.getItem(key);
+      const alreadyGranted = (await Location.getBackgroundPermissionsAsync().catch(() => null))?.status === 'granted';
+      if (shown || alreadyGranted || cancelled) { settle(); return; }
+      await AsyncStorage.setItem(key, '1');
+      Alert.alert(
+        t('obd.keepalive_nudge_title'),
+        t('obd.keepalive_nudge_body'),
+        [
+          { text: t('gps_trips.later'), style: 'cancel', onPress: settle },
+          {
+            text: t('obd.keepalive_nudge_cta'),
+            onPress: async () => {
+              const granted = await requestKeepAlivePermissions();
+              // Phiên OBD hiện tại đã start() TRƯỚC khi user cấp quyền ở đây -
+              // keep-alive lúc đó đã bỏ qua (skipped_no_permission) và sẽ KHÔNG
+              // tự thử lại. Gọi lại ngay để có tác dụng cho phiên đang chạy,
+              // không phải đợi tới lần kết nối sau.
+              if (granted) await startObdKeepAlive().then((s) => bleService.logDiagnostic('#keepalive', s));
+              await openBatterySettings();
+              settle();
+            },
+          },
+        ],
+        { onDismiss: settle },
+      );
+    })();
+    return () => { cancelled = true; };
+  }, [isConnected, vehicleId]);
+
+  // Nhắc ghép thẻ NFC (rà soát 16/7) - xem comment nfcNudgeKey() ở đầu file.
+  useEffect(() => {
+    if (!isConnected || !vehicleId || !keepAliveNudgeSettled) return;
     let cancelled = false;
     (async () => {
       const key = nfcNudgeKey(vehicleId);
@@ -165,7 +220,7 @@ export default function OBDDashboardScreen() {
       );
     })();
     return () => { cancelled = true; };
-  }, [isConnected, vehicleId]);
+  }, [isConnected, vehicleId, keepAliveNudgeSettled]);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
