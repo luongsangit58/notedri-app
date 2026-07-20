@@ -17,3 +17,29 @@ index 4f1fd5d..1b5fbbe 100644
  def isNewArchitectureEnabled() {
    return rootProject.hasProperty("newArchEnabled") && rootProject.getProperty("newArchEnabled") == "true"
  }
+diff --git a/node_modules/react-native-ble-plx/android/src/main/java/com/bleplx/adapter/BleModule.java b/node_modules/react-native-ble-plx/android/src/main/java/com/bleplx/adapter/BleModule.java
+index 44392b6..7dedd93 100755
+--- a/node_modules/react-native-ble-plx/android/src/main/java/com/bleplx/adapter/BleModule.java
++++ b/node_modules/react-native-ble-plx/android/src/main/java/com/bleplx/adapter/BleModule.java
+@@ -1065,8 +1065,20 @@ public class BleModule extends ReactContextBaseJavaModule implements BleAdapter
+       .subscribe(onAdapterStateChangeCallback::onEvent);
+   }
+ 
++  // NoteDri patch: PackageManager.FEATURE_BLUETOOTH_LE is the documented Android
++  // API for this check, but several cheap Android car head-unit ROMs (Unisoc/
++  // Allwinner "car stereo" AOSP builds) never declare it even though the radio
++  // genuinely supports BLE (confirmed: same units already pair Bluetooth
++  // Classic audio fine). Trusting only the manifest flag falsely tells users
++  // "this device doesn't support Bluetooth BLE" on hardware that would actually
++  // work. Fall back to "adapter exists" when the flag is false - virtually
++  // every Bluetooth radio shipped since the BLE era (2011+) supports both
++  // Classic and LE on the same chip, so a present BluetoothAdapter is a good
++  // enough signal; a truly LE-incapable device just fails later at scan/connect
++  // with a clear error instead of being blocked upfront by a buggy ROM flag.
+   private boolean supportsBluetoothLowEnergy() {
+-    return context.getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE);
++    return context.getPackageManager().hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)
++      || bluetoothAdapter != null;
+   }
+ 
+   @BluetoothState
