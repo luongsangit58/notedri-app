@@ -1,4 +1,4 @@
-import { BleManager, Device, State, Characteristic, BleRestoredState, BleErrorCode } from 'react-native-ble-plx';
+import { BleManager, Device, State, Characteristic, BleRestoredState, BleErrorCode, ScanMode } from 'react-native-ble-plx';
 import { Platform, PermissionsAndroid } from 'react-native';
 import Constants from 'expo-constants';
 import * as Location from 'expo-location';
@@ -586,19 +586,26 @@ class BleService {
   // này (không phải BT tắt hay lỗi khác) vì nguyên nhân của các mã khác không
   // hết chỉ vì đợi.
   //
-  // Bước cuối (legacyScan: false, rà soát 21/7 - fixture Honda Jazz V 2017 vẫn
-  // fail "internal error code 7" ngay cả sau khi tắt/bật lại Bluetooth thật):
-  // 1 số ROM đầu Android ô tô chỉ lỗi ở API quét "legacy" (mặc định của thư
-  // viện) - API quét "extended advertising" (legacyScan=false, cần Android 8+,
-  // mọi máy đang gặp lỗi này đều thoả) dùng đường native khác trong cùng
-  // BluetoothLeScanner, có thể không dính đúng lỗi ROM đó. Thử 1 lần trước khi
-  // báo lỗi hẳn - rẻ hơn nhiều so với đổi hẳn thư viện BLE khác (vốn cũng gọi
-  // chung API BluetoothLeScanner.startScan() ở tầng dưới, khả năng không giúp
-  // được gì nếu lỗi thật sự ở tầng framework/ROM).
-  private static readonly SCAN_START_RETRY_STEPS: ReadonlyArray<{ delayMs: number; legacyScan?: boolean }> = [
+  // Bước cuối (legacyScan: false + scanMode: LowLatency, rà soát 21/7 - fixture
+  // Honda Jazz V 2017 vẫn fail "internal error (code 7)" ngay cả sau khi
+  // tắt/bật lại Bluetooth thật): 1 số ROM đầu Android ô tô chỉ lỗi ở tổ hợp
+  // API quét MẶC ĐỊNH của thư viện (legacy scan + scan mode LowPower) - đổi cả
+  // 2 tham số cùng lúc ở lần thử CUỐI (không tách thêm 1 bước riêng cho từng
+  // tham số - mỗi bước cộng thêm độ trễ user phải chờ trước khi thấy lỗi/kết
+  // quả, trong khi mục tiêu ở đây là "có tổ hợp nào chạy được không", không
+  // phải cô lập chính xác biến nào là nguyên nhân). "Code 7" vượt quá 6 mã lỗi
+  // scan AOSP có tài liệu chính thức (1-6) - gần như chắc chắn là mã do chính
+  // ROM/chipset hãng tự thêm, càng củng cố đây là lỗi ROM chứ không phải
+  // react-native-ble-plx gọi sai tham số chuẩn. Rẻ hơn nhiều so với đổi hẳn
+  // thư viện BLE khác (vốn cũng gọi chung API BluetoothLeScanner.startScan()
+  // ở tầng dưới, khả năng không giúp được gì nếu lỗi thật sự ở tầng
+  // framework/ROM).
+  private static readonly SCAN_START_RETRY_STEPS: ReadonlyArray<{
+    delayMs: number; legacyScan?: boolean; scanMode?: ScanMode;
+  }> = [
     { delayMs: 800 },
     { delayMs: 2000 },
-    { delayMs: 2000, legacyScan: false },
+    { delayMs: 2000, legacyScan: false, scanMode: ScanMode.LowLatency },
   ];
 
   // Rà soát 21/7 (fixture Honda Jazz V 2017: 3 lần quét liên tiếp trong 44s đều
@@ -675,10 +682,15 @@ class BleService {
       // Bước RETRY trước đó (nếu có) quyết định option của LẦN GỌI HIỆN TẠI -
       // retryAttempt đã được ++ trước khi schedule beginScan() này chạy.
       const step = retryAttempt > 0 ? BleService.SCAN_START_RETRY_STEPS[retryAttempt - 1] : null;
-      const scanOptions = { allowDuplicates: false, ...(step?.legacyScan === false ? { legacyScan: false } : {}) };
+      const scanOptions = {
+        allowDuplicates: false,
+        ...(step?.legacyScan === false ? { legacyScan: false } : {}),
+        ...(step?.scanMode !== undefined ? { scanMode: step.scanMode } : {}),
+      };
+      const stepTag = step?.legacyScan === false ? ` legacyScan=false scanMode=${step.scanMode}` : '';
       this.logSession(
         '#scan',
-        `start showAll=${showAll}${retryAttempt > 0 ? ` (retry ${retryAttempt}${step?.legacyScan === false ? ', legacyScan=false' : ''})` : ''}`
+        `start showAll=${showAll}${retryAttempt > 0 ? ` (retry ${retryAttempt}${stepTag})` : ''}`
       );
       this.manager.startDeviceScan(null, scanOptions, (error, device) => {
         if (stopped) return;
@@ -701,7 +713,7 @@ class BleService {
             this.logSession(
               '#scan',
               `ScanStartFailed (reason=${nativeReason}) - tự thử lại sau ${nextStep.delayMs}ms` +
-                (nextStep.legacyScan === false ? ' (legacyScan=false)' : '')
+                (nextStep.legacyScan === false ? ` (legacyScan=false, scanMode=${nextStep.scanMode})` : '')
             );
             this.manager.stopDeviceScan();
             retryTimer = setTimeout(() => {
