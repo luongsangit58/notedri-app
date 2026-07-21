@@ -13,8 +13,11 @@ import Dial from './Dial';
 const PREVIEW_VALUE = 130;
 
 export default function GaugeThemePicker({
-  visible, selectedId, onSelect, onClose,
-}: { visible: boolean; selectedId: string; onSelect: (id: string) => void; onClose: () => void }) {
+  visible, selectedId, vehicleName, onSelect, onClose,
+}: {
+  visible: boolean; selectedId: string; vehicleName?: string;
+  onSelect: (id: string) => void; onClose: () => void;
+}) {
   const colors = useColors();
   const t = useT();
   const navigation = useNavigation<any>();
@@ -37,9 +40,18 @@ export default function GaugeThemePicker({
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <Pressable style={{ flex: 1, backgroundColor: '#0008', justifyContent: 'center', padding: 24 }} onPress={onClose}>
         <Pressable style={{ backgroundColor: colors.surface, borderRadius: 16, padding: 16, width: '100%', maxWidth: 420, alignSelf: 'center' }}>
-          <Text style={{ color: colors.text, fontWeight: '800', fontSize: 16, marginBottom: 12 }}>
+          <Text style={{ color: colors.text, fontWeight: '800', fontSize: 16, marginBottom: 2 }}>
             {t('obd.gauge_theme_picker_title')}
           </Text>
+          {/* Nhắc rõ đây là lựa chọn RIÊNG cho xe đang kết nối - lưu theo vehicleId,
+              không áp dụng chung cho mọi xe của user (xem gaugeThemes.ts). */}
+          {vehicleName ? (
+            <Text style={{ color: colors.textSecondary, fontSize: 12, marginBottom: 12 }}>
+              {t('obd.gauge_theme_picker_subtitle', { vehicle: vehicleName })}
+            </Text>
+          ) : (
+            <View style={{ marginBottom: 8 }} />
+          )}
           {GAUGE_THEMES.map((theme) => {
             const locked = !!theme.isPremiumOnly && !isPremium;
             const active = theme.id === selectedId;

@@ -600,6 +600,7 @@ const vi = {
   "obd.no_data_warning": "Kết nối được nhưng không đọc được dữ liệu xe. Thử nổ máy và kết nối lại, hoặc kiểm tra xe có hỗ trợ OBD2 (2005+).",
   "obd.stat_speed": "Tốc độ",
   "obd.gauge_theme_picker_title": "Chọn giao diện đồng hồ",
+  "obd.gauge_theme_picker_subtitle": "Áp dụng riêng cho {{vehicle}} - xe khác không đổi theo",
   "obd.stat_engine_load": "Tải động cơ",
   "obd.stat_coolant": "Nhiệt độ nước",
   "obd.stat_fuel": "Xăng còn",

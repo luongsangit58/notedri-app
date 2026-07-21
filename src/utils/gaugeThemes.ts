@@ -32,22 +32,17 @@ export function pickGaugeTheme(id?: string | null): GaugeTheme {
   return GAUGE_THEMES.find((th) => th.id === id) ?? GAUGE_THEMES[0];
 }
 
-export function pickGaugeThemeForVehicle(vehicleMake?: string | null): GaugeTheme {
-  if (vehicleMake) {
-    const match = GAUGE_THEMES.find((th) =>
-      th.brands?.some((b) => b.toLowerCase() === vehicleMake.toLowerCase())
-    );
-    if (match) return match;
-  }
-  return GAUGE_THEMES[0];
+// Lưu theo TỪNG XE (vehicleId) - 1 user có thể có nhiều xe, mỗi xe muốn 1
+// theme khác nhau (vd logo hãng xe riêng khi có ảnh thật). Trước đây dùng
+// chung 1 key toàn app -> đổi theme ở xe A cũng đổi luôn hiển thị ở xe B.
+function themeKey(vehicleId: number): string {
+  return `obd_gauge_theme_id_${vehicleId}`;
 }
 
-const SELECTED_THEME_KEY = 'obd_gauge_theme_id';
-
-export async function getSelectedGaugeThemeId(): Promise<string> {
-  return (await AsyncStorage.getItem(SELECTED_THEME_KEY).catch(() => null)) ?? 'default';
+export async function getSelectedGaugeThemeId(vehicleId: number): Promise<string> {
+  return (await AsyncStorage.getItem(themeKey(vehicleId)).catch(() => null)) ?? 'default';
 }
 
-export async function setSelectedGaugeThemeId(id: string): Promise<void> {
-  await AsyncStorage.setItem(SELECTED_THEME_KEY, id).catch(() => {});
+export async function setSelectedGaugeThemeId(vehicleId: number, id: string): Promise<void> {
+  await AsyncStorage.setItem(themeKey(vehicleId), id).catch(() => {});
 }

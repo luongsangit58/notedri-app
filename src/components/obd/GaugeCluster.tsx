@@ -12,8 +12,10 @@ import GaugeThemePicker from './GaugeThemePicker';
 import Dial from './Dial';
 
 export default function GaugeCluster({
-  snapshot, capability, isConnected,
+  vehicleId, vehicleName, snapshot, capability, isConnected,
 }: {
+  vehicleId: number;
+  vehicleName?: string;
   snapshot: ObdSnapshot | null;
   capability: VehicleCapability | null;
   isConnected: boolean;
@@ -22,12 +24,13 @@ export default function GaugeCluster({
   const colors = useColors();
   const dialSize = 190;
 
-  // Theme chọn lưu ở AsyncStorage (chung toàn app, không theo xe) - đọc 1 lần
-  // lúc mount; đổi theme trong GaugeThemePicker cập nhật cả state lẫn storage.
+  // Theme chọn lưu ở AsyncStorage THEO TỪNG XE (1 user có thể có nhiều xe,
+  // mỗi xe có thể muốn 1 theme khác nhau) - đọc lại mỗi khi vehicleId đổi;
+  // đổi theme trong GaugeThemePicker cập nhật cả state lẫn storage của xe này.
   const [themeId, setThemeId] = useState('default');
   useEffect(() => {
-    getSelectedGaugeThemeId().then(setThemeId);
-  }, []);
+    getSelectedGaugeThemeId(vehicleId).then(setThemeId);
+  }, [vehicleId]);
   // Kiểm tra lại is_premium NGAY LÚC HIỂN THỊ, không chỉ lúc chọn (GaugeThemePicker
   // chỉ chặn lúc CHỌN) - Premium hết hạn/bị huỷ sau khi đã chọn theme khoá, hoặc
   // storage bị chỉnh tay, đều phải rơi về theme mặc định thay vì tiếp tục dùng
@@ -71,10 +74,11 @@ export default function GaugeCluster({
       <GaugeThemePicker
         visible={pickerVisible}
         selectedId={theme.id}
+        vehicleName={vehicleName}
         onClose={() => setPickerVisible(false)}
         onSelect={(id) => {
           setThemeId(id);
-          setSelectedGaugeThemeId(id);
+          setSelectedGaugeThemeId(vehicleId, id);
         }}
       />
     </View>

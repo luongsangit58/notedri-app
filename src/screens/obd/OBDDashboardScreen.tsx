@@ -331,7 +331,7 @@ export default function OBDDashboardScreen() {
       )}
 
       {viewMode === 'gauge' ? (
-        <GaugeCluster snapshot={snap} capability={capability} isConnected={isConnected} />
+        <GaugeCluster vehicleId={vehicleId} vehicleName={vehicleName} snapshot={snap} capability={capability} isConnected={isConnected} />
       ) : (
       <ScrollView contentContainerStyle={[styles.body, contentWide]}>
         {/* Connection status */}
