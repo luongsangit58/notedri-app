@@ -17,6 +17,7 @@ Master navigation index for all project documentation.
 | Find a shared component | [component-inventory.md](component-inventory.md) |
 | Understand BLE OBD2 / GPS services | [services-guide.md](services-guide.md) |
 | Know which API endpoint to call | [api-integration.md](api-integration.md) |
+| Verify a formula/threshold against source | [ALGORITHMS.md](ALGORITHMS.md) |
 | Set up local development | [development-guide.md](development-guide.md) |
 | Build and release to stores | [deployment-guide.md](deployment-guide.md) |
 
@@ -67,6 +68,10 @@ Deep-dive documentation for all 6 service classes. Each service includes:
 - Dependencies and permissions
 - Error handling and iOS considerations
 - Service lifecycle summary (boot → active → logout)
+
+### [ALGORITHMS.md](ALGORITHMS.md)
+
+Tiếng Việt. Mọi thuật toán/công thức thực sự triển khai trong app (OBD2 parsing/reliability/rule engine, EWMA gauge smoothing, Driving Score, GPS trip detection, VIN decode, OCR) — mỗi mục có công thức nguyên văn + `file:dòng` để đối chiếu. Có phần "Luồng dữ liệu liên-repo" giải thích ranh giới với backend.
 
 ### [api-integration.md](api-integration.md)
 
