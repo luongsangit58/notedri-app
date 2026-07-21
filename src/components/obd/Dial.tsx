@@ -56,6 +56,14 @@ export default function Dial({
   const display = value != null ? Math.round(value) : null;
   const showReadout = size >= 100;
   const showTicks = size >= 100;
+  // Rà soát (góp ý user: chữ số to đè lên mặt đồng hồ) - cỡ chữ trước đây cố
+  // định (30/11/11) không co theo `size`, nên ở dial nhỏ hơn (bản xem trước
+  // theme ~100-150px) số 4 chữ số (vd "3200") tràn ra ngoài viền kính. Co theo
+  // đúng tỉ lệ `size`, có chặn min/max để không quá nhỏ/quá to ở 2 đầu.
+  const valueFontSize = Math.max(14, Math.min(30, size * 0.16));
+  const unitFontSize = Math.max(9, Math.min(12, size * 0.065));
+  const labelFontSize = Math.max(9, Math.min(12, size * 0.065));
+  const minMaxFontSize = Math.max(8, Math.min(11, size * 0.06));
 
   return (
     <View style={[
@@ -94,8 +102,8 @@ export default function Dial({
 
       {showReadout && (
         <>
-          <Text style={[styles.minMax, { color: colors.textSecondary, bottom: size * 0.1, left: size * 0.12 }]}>{min}</Text>
-          <Text style={[styles.minMax, { color: colors.textSecondary, bottom: size * 0.1, right: size * 0.12 }]}>{max}</Text>
+          <Text allowFontScaling={false} style={[styles.minMax, { color: colors.textSecondary, bottom: size * 0.1, left: size * 0.12, fontSize: minMaxFontSize }]}>{min}</Text>
+          <Text allowFontScaling={false} style={[styles.minMax, { color: colors.textSecondary, bottom: size * 0.1, right: size * 0.12, fontSize: minMaxFontSize }]}>{max}</Text>
         </>
       )}
 
@@ -111,10 +119,10 @@ export default function Dial({
       <View style={[styles.pivot, { width: size * 0.07, height: size * 0.07, borderRadius: size * 0.035, backgroundColor: accent }]} />
 
       {showReadout && (
-        <View style={[styles.readout, { top: size * 0.58 }]}>
-          <Text style={[styles.value, { color: colors.text }]}>{display ?? '-'}</Text>
-          <Text style={[styles.unit, { color: colors.textSecondary }]}>{unit}</Text>
-          {label ? <Text style={[styles.label, { color: colors.textSecondary }]}>{label}</Text> : null}
+        <View style={[styles.readout, { top: size * 0.58, maxWidth: size * 0.62 }]}>
+          <Text allowFontScaling={false} numberOfLines={1} adjustsFontSizeToFit style={[styles.value, { color: colors.text, fontSize: valueFontSize }]}>{display ?? '-'}</Text>
+          <Text allowFontScaling={false} numberOfLines={1} style={[styles.unit, { color: colors.textSecondary, fontSize: unitFontSize }]}>{unit}</Text>
+          {label ? <Text allowFontScaling={false} numberOfLines={1} style={[styles.label, { color: colors.textSecondary, fontSize: labelFontSize }]}>{label}</Text> : null}
         </View>
       )}
     </View>

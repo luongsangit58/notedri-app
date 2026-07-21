@@ -7,10 +7,17 @@ import { useT } from '../../i18n';
 import { useAuthStore } from '../../store/authStore';
 import { GAUGE_THEMES, GaugeTheme } from '../../utils/gaugeThemes';
 import Dial from './Dial';
+import StatBox from './StatBox';
 
 // Giá trị demo cố định cho ảnh xem trước (không phải số liệu thật) - chọn ~65%
 // thang đo để kim lệch rõ khỏi vị trí thẳng đứng, nhìn giống ảnh preview hơn.
 const PREVIEW_VALUE = 130;
+
+// Rà soát (góp ý user: xem trước chỉ thấy 2 đồng hồ, chưa thấy các thông số
+// khác) - Dashboard thật (GaugeCluster) còn có hàng ô thông số phụ (nước làm
+// mát, xăng, điện áp...) tuỳ xe hỗ trợ PID nào. Bản xem trước không có dữ liệu
+// xe thật để biết PID nào khả dụng, nên minh hoạ bằng 3 ô demo phổ biến nhất -
+// để user hình dung đúng bố cục Dashboard thật, không phải chỉ có 2 đồng hồ.
 
 export default function GaugeThemePicker({
   visible, selectedId, vehicleName, onSelect, onClose,
@@ -80,6 +87,16 @@ export default function GaugeThemePicker({
                   <Dial value={PREVIEW_VALUE} min={0} max={220} label={t('obd.stat_speed')} unit="km/h" accent={previewTheme.accent} size={previewDialSize} animate={false} />
                   <Dial value={3200} min={0} max={8000} label="RPM" unit="rpm" accent="#8B5CF6" size={previewDialSize} animate={false} />
                 </View>
+
+                {/* Demo 3 ô thông số phụ - Dashboard thật còn có hàng ô này
+                    dưới 2 đồng hồ (tuỳ xe hỗ trợ PID nào), không phải chỉ có
+                    2 đồng hồ như trước đây user tưởng. */}
+                <View style={{ flexDirection: 'row', gap: 8, marginTop: 14, width: '100%' }}>
+                  <StatBox label={t('obd.stat_coolant')} value={88} unit="°C" icon="thermometer-half" color="#EF4444" />
+                  <StatBox label={t('obd.stat_fuel')} value={62} unit="%" icon="gas-pump" color="#10B981" />
+                  <StatBox label={t('obd.stat_voltage')} value={13.8} unit="V" icon="battery-full" color="#6366F1" />
+                </View>
+
                 <Text style={{ color: colors.text, fontWeight: '800', fontSize: 16, marginTop: 14 }}>{previewTheme.name}</Text>
                 {locked && (
                   <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>
