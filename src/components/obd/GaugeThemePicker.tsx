@@ -24,8 +24,12 @@ export default function GaugeThemePicker({
   const isPremium = useAuthStore((s) => s.user?.is_premium ?? false);
   // Rà soát (góp ý user: xoay ngang bị lỗi hiển thị) - dialSize preview cố
   // định 190px trước đây không co theo màn hình, tràn trên landscape thấp.
+  // Preview giờ hiện ĐỦ 2 đồng hồ (Tốc độ + Vòng tua) cạnh nhau như Dashboard
+  // thật (rà soát 2: trước đây chỉ vẽ 1 đồng hồ Tốc độ, khiến user tưởng
+  // Dashboard thật cũng chỉ có 1 đồng hồ) - cỡ nhỏ hơn bản preview 1 đồng hồ
+  // cũ để 2 cái vẫn vừa chiều rộng modal (maxWidth 420).
   const { width, height } = useWindowDimensions();
-  const previewDialSize = Math.max(130, Math.min(190, Math.min(width, height) * 0.4));
+  const previewDialSize = Math.max(100, Math.min(150, Math.min(width, height) * 0.3));
 
   // Chạm 1 theme -> xem TRƯỚC bản demo to (giống hệt đồng hồ thật trong
   // GaugeCluster), rồi mới bấm xác nhận dùng - trước đây chạm là áp dụng
@@ -70,7 +74,12 @@ export default function GaugeThemePicker({
               </TouchableOpacity>
 
               <View style={{ alignItems: 'center', paddingVertical: 12 }}>
-                <Dial value={PREVIEW_VALUE} min={0} max={220} label={t('obd.stat_speed')} unit="km/h" accent={previewTheme.accent} size={previewDialSize} animate={false} />
+                {/* Đủ 2 đồng hồ như Dashboard thật - RPM luôn màu tím cố định
+                    (khớp GaugeCluster), chỉ Tốc độ đổi theo màu theme. */}
+                <View style={{ flexDirection: 'row', gap: 12, justifyContent: 'center' }}>
+                  <Dial value={PREVIEW_VALUE} min={0} max={220} label={t('obd.stat_speed')} unit="km/h" accent={previewTheme.accent} size={previewDialSize} animate={false} />
+                  <Dial value={3200} min={0} max={8000} label="RPM" unit="rpm" accent="#8B5CF6" size={previewDialSize} animate={false} />
+                </View>
                 <Text style={{ color: colors.text, fontWeight: '800', fontSize: 16, marginTop: 14 }}>{previewTheme.name}</Text>
                 {locked && (
                   <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>
