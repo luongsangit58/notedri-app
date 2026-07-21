@@ -599,6 +599,7 @@ const en = {
   "obd.no_data_warning": "Connected but cannot read vehicle data. Try restarting the engine and reconnecting, or check that your car supports OBD2 (2005+).",
   "obd.stat_speed": "Speed",
   "obd.gauge_theme_picker_title": "Choose gauge theme",
+  "obd.gauge_theme_entry_title": "Gauge theme",
   "obd.gauge_theme_picker_subtitle": "Applies only to {{vehicle}} - other vehicles keep their own",
   "obd.stat_engine_load": "Engine load",
   "obd.stat_coolant": "Coolant temp",
