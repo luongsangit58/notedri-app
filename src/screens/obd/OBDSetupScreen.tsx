@@ -46,11 +46,23 @@ export default function OBDSetupScreen() {
     connectionState,
     foundDevices,
     errorMessage,
+    scanCooldownUntil,
     startScan,
     stopScan,
     connect,
     refreshCapability,
   } = useObdConnection(vehicleId, vehicleName);
+
+  // Đếm ngược giây còn lại của cooldown quét (xem comment scanCooldownUntil ở
+  // useObd.ts) - chỉ chạy interval khi thực sự có cooldown đang chờ.
+  const [cooldownLeft, setCooldownLeft] = useState(0);
+  useEffect(() => {
+    if (!scanCooldownUntil) { setCooldownLeft(0); return; }
+    const tick = () => setCooldownLeft(Math.max(0, Math.ceil((scanCooldownUntil - Date.now()) / 1000)));
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [scanCooldownUntil]);
 
   // Guard: redirect to PremiumScreen if user is not premium. Đợi userSynced để không đá nhầm
   // user Premium thật ra màn nâng cấp chỉ vì cache lúc cold-start chưa kịp làm mới is_premium.
@@ -302,14 +314,18 @@ export default function OBDSetupScreen() {
           </View>
         )}
 
-        {/* Retry scan */}
+        {/* Retry scan - khoá đúng số giây cooldown còn lại thay vì để user bấm
+            lại ngay và tự khoá throttle của Android chặt hơn (xem BleService). */}
         {!isScanning && !isConnecting && (
           <TouchableOpacity
-            style={[styles.scanBtn, { borderColor: '#3B82F6' }]}
+            style={[styles.scanBtn, { borderColor: '#3B82F6', opacity: cooldownLeft > 0 ? 0.5 : 1 }]}
             onPress={() => startScan(showAllDevices)}
+            disabled={cooldownLeft > 0}
           >
             <FontAwesome5 name="sync" size={14} color="#3B82F6" />
-            <Text style={[styles.scanBtnText, { color: '#3B82F6' }]}>{t('obd.scan_retry')}</Text>
+            <Text style={[styles.scanBtnText, { color: '#3B82F6' }]}>
+              {cooldownLeft > 0 ? t('obd.scan_retry_cooldown', { seconds: cooldownLeft }) : t('obd.scan_retry')}
+            </Text>
           </TouchableOpacity>
         )}
 

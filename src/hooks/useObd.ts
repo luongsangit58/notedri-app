@@ -48,6 +48,11 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
   // qua onFindings() - KHÔNG đổi, chỉ thêm lựa chọn hiển thị mượt hơn.
   const [smoothedSnapshot, setSmoothedSnapshot] = useState<ObdSnapshot | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  // Thời điểm (epoch ms) được phép quét lại - set khi ScanStartFailed do chạm
+  // ngưỡng throttle của Android (xem BleService.recordScanStartAndGetCooldownMs).
+  // Màn hình dùng để khoá nút "Quét lại" đúng thời gian còn lại thay vì để user
+  // bấm lại ngay và tự khoá throttle chặt hơn.
+  const [scanCooldownUntil, setScanCooldownUntil] = useState<number | null>(null);
   const [warning, setWarning] = useState<ObdWarning>(null);
   const [capability, setCapability] = useState<VehicleCapability | null>(null);
   // Toàn vẹn dữ liệu (Sang duyệt 14/7): VIN xe đang cắm KHÁC VIN bản ghi này đã
@@ -162,6 +167,7 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
     }
 
     setConnectionState('scanning');
+    setScanCooldownUntil(null);
 
     try {
       await bleService.waitForBleReady();
@@ -200,6 +206,7 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
       (error) => {
         setConnectionState('error');
         setErrorMessage(error.message);
+        setScanCooldownUntil(error.cooldownMs ? Date.now() + error.cooldownMs : null);
       },
       showAll
     );
@@ -341,6 +348,7 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
     smoothedSnapshot,
     findings,
     errorMessage,
+    scanCooldownUntil,
     warning,
     capability,
     vinMismatch,

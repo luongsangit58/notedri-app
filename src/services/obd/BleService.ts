@@ -554,9 +554,34 @@ class BleService {
   // hết chỉ vì đợi.
   private static readonly SCAN_START_RETRY_DELAYS_MS = [800, 2000];
 
+  // Rà soát 21/7 (fixture Honda Jazz V 2017: 3 lần quét liên tiếp trong 44s đều
+  // fail ngay từ startDeviceScan() đầu tiên, không lần nào hồi phục): mỗi lần
+  // ScanStartFailed cũ tự retry 2 lần → MỖI lần user bấm "Quét lại" đã tốn 3
+  // cặp start/stop native. Android có giới hạn ngầm ~5 lần start/stop scan
+  // trong 30s (SCAN_FAILED_SCANNING_TOO_FREQUENTLY) - việc tự retry dồn dập
+  // này TỰ GÂY RA đúng cái throttle nó đang cố né, càng bấm càng khoá chặt hơn
+  // vì không lần nào có cơ hội hồi phục. Đếm số lần start trong cửa sổ trượt
+  // 30s (dưới ngưỡng thật ~5 để còn chừa margin); nếu đã chạm ngưỡng thì BỎ
+  // QUA auto-retry (retry lúc này chỉ đổ thêm dầu vào lửa) và báo lỗi kèm số
+  // giây thực sự phải đợi hết cửa sổ, thay vì lại thử ngay.
+  private static readonly SCAN_THROTTLE_WINDOW_MS = 30000;
+  private static readonly SCAN_THROTTLE_MAX_STARTS = 4;
+  private scanStartTimestamps: number[] = [];
+
+  private recordScanStartAndGetCooldownMs(): number {
+    const now = Date.now();
+    this.scanStartTimestamps = this.scanStartTimestamps.filter(
+      (t) => now - t < BleService.SCAN_THROTTLE_WINDOW_MS
+    );
+    this.scanStartTimestamps.push(now);
+    if (this.scanStartTimestamps.length < BleService.SCAN_THROTTLE_MAX_STARTS) return 0;
+    const oldest = this.scanStartTimestamps[0];
+    return Math.max(0, BleService.SCAN_THROTTLE_WINDOW_MS - (now - oldest));
+  }
+
   scanForDevices(
     onFound: (device: ObdDevice) => void,
-    onError: (error: Error) => void,
+    onError: (error: Error & { cooldownMs?: number }) => void,
     showAll = false
   ): () => void {
     const found = new Set<string>();
@@ -571,17 +596,27 @@ class BleService {
     let retryAttempt = 0;
 
     const beginScan = () => {
+      const cooldownMs = this.recordScanStartAndGetCooldownMs();
       this.logSession('#scan', `start showAll=${showAll}${retryAttempt > 0 ? ` (retry ${retryAttempt})` : ''}`);
       this.manager.startDeviceScan(null, { allowDuplicates: false }, (error, device) => {
         if (stopped) return;
         if (error) {
+          // reason/message gốc từ native (bleScanException.getMessage() - phía
+          // Android gộp CHUNG 6 lý do onScanFailed() khác nhau, kể cả lý do
+          // KHÔNG liên quan throttle như FEATURE_UNSUPPORTED/OUT_OF_HARDWARE_
+          // RESOURCES, vào cùng 1 errorCode=600 và không lộ mã lý do gốc qua
+          // androidErrorCode (luôn null cho lỗi scan) - đây là dấu vết DUY
+          // NHẤT còn lại để sau này phân biệt "throttle tự hồi phục" khỏi
+          // "chip/driver đầu Android không hỗ trợ quét" (không sửa được từ JS).
+          const nativeReason = error.reason ?? error.message ?? '?';
           if (
             error.errorCode === BleErrorCode.ScanStartFailed &&
+            cooldownMs === 0 &&
             retryAttempt < BleService.SCAN_START_RETRY_DELAYS_MS.length
           ) {
             const waitMs = BleService.SCAN_START_RETRY_DELAYS_MS[retryAttempt];
             retryAttempt++;
-            this.logSession('#scan', `ScanStartFailed - tự thử lại sau ${waitMs}ms`);
+            this.logSession('#scan', `ScanStartFailed (reason=${nativeReason}) - tự thử lại sau ${waitMs}ms`);
             this.manager.stopDeviceScan();
             retryTimer = setTimeout(() => {
               retryTimer = null;
@@ -589,8 +624,15 @@ class BleService {
             }, waitMs);
             return;
           }
-          const translated = this.translateBleError(error);
-          this.logSession('#scan', `error: ${translated.message} (native code=${error.errorCode})`);
+          const translated: Error & { cooldownMs?: number } = this.translateBleError(error);
+          if (error.errorCode === BleErrorCode.ScanStartFailed && cooldownMs > 0) {
+            translated.cooldownMs = cooldownMs;
+          }
+          this.logSession(
+            '#scan',
+            `error: ${translated.message} (native code=${error.errorCode}, reason=${nativeReason}` +
+              `${cooldownMs > 0 ? `, cooldown=${Math.ceil(cooldownMs / 1000)}s` : ''})`
+          );
           onError(translated);
           return;
         }

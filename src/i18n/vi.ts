@@ -511,6 +511,7 @@ const vi = {
   "obd.guide_step3": "3. Bật Bluetooth, bấm \"Quét lại\"",
   "obd.guide_recommended": "Dùng Vgate iCar Pro bản BLE 4.0 - bản BT 3.0 không kết nối được.",
   "obd.scan_retry": "Quét lại",
+  "obd.scan_retry_cooldown": "Quét lại ({{seconds}}s)",
   "obd.connected": "Đã kết nối",
   "obd.disconnected": "Mất kết nối",
   "obd.reconnecting": "Đang kết nối lại...",

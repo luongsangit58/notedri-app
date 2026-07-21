@@ -510,6 +510,7 @@ const en = {
   "obd.guide_step3": "3. Enable Bluetooth, tap \"Scan again\"",
   "obd.guide_recommended": "Use a Vgate iCar Pro BLE 4.0 - the BT 3.0 version won't connect.",
   "obd.scan_retry": "Scan again",
+  "obd.scan_retry_cooldown": "Scan again ({{seconds}}s)",
   "obd.connected": "Connected",
   "obd.disconnected": "Disconnected",
   "obd.reconnecting": "Reconnecting...",
