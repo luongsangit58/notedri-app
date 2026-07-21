@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Modal, Pressable } from 'react-native';
+import { View, Text, TouchableOpacity, Modal, Pressable, ScrollView, useWindowDimensions } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useColors } from '../../utils/theme';
@@ -22,6 +22,10 @@ export default function GaugeThemePicker({
   const t = useT();
   const navigation = useNavigation<any>();
   const isPremium = useAuthStore((s) => s.user?.is_premium ?? false);
+  // Rà soát (góp ý user: xoay ngang bị lỗi hiển thị) - dialSize preview cố
+  // định 190px trước đây không co theo màn hình, tràn trên landscape thấp.
+  const { width, height } = useWindowDimensions();
+  const previewDialSize = Math.max(130, Math.min(190, Math.min(width, height) * 0.4));
 
   // Chạm 1 theme -> xem TRƯỚC bản demo to (giống hệt đồng hồ thật trong
   // GaugeCluster), rồi mới bấm xác nhận dùng - trước đây chạm là áp dụng
@@ -51,7 +55,11 @@ export default function GaugeThemePicker({
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={close}>
       <Pressable style={{ flex: 1, backgroundColor: '#0008', justifyContent: 'center', padding: 24 }} onPress={close}>
-        <Pressable style={{ backgroundColor: colors.surface, borderRadius: 16, padding: 16, width: '100%', maxWidth: 420, alignSelf: 'center' }}>
+        {/* maxHeight + ScrollView bên trong: card cố định trước đây có thể tràn/
+            bị cắt trên màn landscape thấp (đầu Android ô tô) khi cộng dồn nút
+            back + dial preview + tên theme + nút CTA. */}
+        <Pressable style={{ backgroundColor: colors.surface, borderRadius: 16, width: '100%', maxWidth: 420, maxHeight: '90%', alignSelf: 'center' }}>
+        <ScrollView contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled">
           {previewTheme ? (
             <>
               <TouchableOpacity
@@ -62,7 +70,7 @@ export default function GaugeThemePicker({
               </TouchableOpacity>
 
               <View style={{ alignItems: 'center', paddingVertical: 12 }}>
-                <Dial value={PREVIEW_VALUE} min={0} max={220} label={t('obd.stat_speed')} unit="km/h" accent={previewTheme.accent} size={190} animate={false} />
+                <Dial value={PREVIEW_VALUE} min={0} max={220} label={t('obd.stat_speed')} unit="km/h" accent={previewTheme.accent} size={previewDialSize} animate={false} />
                 <Text style={{ color: colors.text, fontWeight: '800', fontSize: 16, marginTop: 14 }}>{previewTheme.name}</Text>
                 {locked && (
                   <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>
@@ -134,6 +142,7 @@ export default function GaugeThemePicker({
               </TouchableOpacity>
             </>
           )}
+        </ScrollView>
         </Pressable>
       </Pressable>
     </Modal>

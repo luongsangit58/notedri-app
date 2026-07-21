@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, ScrollView, useWindowDimensions } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useColors } from '../../utils/theme';
 import { useT } from '../../i18n';
@@ -22,7 +22,13 @@ export default function GaugeCluster({
 }) {
   const t = useT();
   const colors = useColors();
-  const dialSize = 190;
+  // Rà soát (góp ý user: xoay ngang/dọc bị lỗi hiển thị) - dialSize cố định
+  // 190px trước đây không co theo màn hình, tràn/chữ chồng lên nhau trên màn
+  // landscape thấp (đúng thiết bị mục tiêu: đầu Android ô tô). Co theo CẠNH
+  // NGẮN HƠN của màn hình (đúng cho cả 2 hướng xoay), chặn trong khoảng
+  // 130-190 để không quá nhỏ trên màn rất hẹp.
+  const { width, height } = useWindowDimensions();
+  const dialSize = Math.max(130, Math.min(190, Math.min(width, height) * 0.42));
 
   // Theme chọn lưu ở AsyncStorage THEO TỪNG XE (1 user có thể có nhiều xe,
   // mỗi xe có thể muốn 1 theme khác nhau) - đọc lại mỗi khi vehicleId đổi;
@@ -53,7 +59,7 @@ export default function GaugeCluster({
     : secondaryTiles;
 
   return (
-    <View style={[styles.root, !isConnected && snapshot ? { opacity: 0.5 } : null]}>
+    <View style={{ flex: 1 }}>
       <TouchableOpacity
         onPress={() => setPickerVisible(true)}
         style={[styles.themeBtn, { backgroundColor: colors.card }]}
@@ -61,15 +67,22 @@ export default function GaugeCluster({
         <FontAwesome5 name="palette" size={16} color={theme.accent} solid />
       </TouchableOpacity>
 
-      <View style={styles.dialsRow}>
-        <Dial value={snapshot?.speedKmh ?? null} min={0} max={220} label={t('obd.stat_speed')} unit="km/h" accent={theme.accent} size={dialSize} />
-        <Dial value={snapshot?.rpm ?? null} min={0} max={8000} label="RPM" unit="rpm" accent="#8B5CF6" size={dialSize} />
-      </View>
-      {secondary.length > 0 && (
-        <View style={styles.secondaryRow}>
-          {secondary.map((tile) => tile.el)}
+      {/* ScrollView thay vì View cố định flex:1 - dialSize co theo màn hình rồi
+          nhưng vẫn cần cuộn dự phòng cho màn landscape rất thấp/nhiều PID phụ
+          cùng lúc, tránh cắt mất nội dung mà không có cách nào xem tiếp. */}
+      <ScrollView
+        contentContainerStyle={[styles.root, !isConnected && snapshot ? { opacity: 0.5 } : null]}
+      >
+        <View style={styles.dialsRow}>
+          <Dial value={snapshot?.speedKmh ?? null} min={0} max={220} label={t('obd.stat_speed')} unit="km/h" accent={theme.accent} size={dialSize} />
+          <Dial value={snapshot?.rpm ?? null} min={0} max={8000} label="RPM" unit="rpm" accent="#8B5CF6" size={dialSize} />
         </View>
-      )}
+        {secondary.length > 0 && (
+          <View style={styles.secondaryRow}>
+            {secondary.map((tile) => tile.el)}
+          </View>
+        )}
+      </ScrollView>
 
       <GaugeThemePicker
         visible={pickerVisible}
@@ -86,7 +99,7 @@ export default function GaugeCluster({
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16, padding: 16 },
+  root: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', gap: 16, padding: 16 },
   themeBtn: {
     position: 'absolute', top: 8, right: 8, zIndex: 1,
     width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center',
