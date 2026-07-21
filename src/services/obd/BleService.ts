@@ -585,7 +585,21 @@ class BleService {
   // rồi thử lại - không cần user tự bấm "Quét lại". Chỉ retry cho ĐÚNG mã lỗi
   // này (không phải BT tắt hay lỗi khác) vì nguyên nhân của các mã khác không
   // hết chỉ vì đợi.
-  private static readonly SCAN_START_RETRY_DELAYS_MS = [800, 2000];
+  //
+  // Bước cuối (legacyScan: false, rà soát 21/7 - fixture Honda Jazz V 2017 vẫn
+  // fail "internal error code 7" ngay cả sau khi tắt/bật lại Bluetooth thật):
+  // 1 số ROM đầu Android ô tô chỉ lỗi ở API quét "legacy" (mặc định của thư
+  // viện) - API quét "extended advertising" (legacyScan=false, cần Android 8+,
+  // mọi máy đang gặp lỗi này đều thoả) dùng đường native khác trong cùng
+  // BluetoothLeScanner, có thể không dính đúng lỗi ROM đó. Thử 1 lần trước khi
+  // báo lỗi hẳn - rẻ hơn nhiều so với đổi hẳn thư viện BLE khác (vốn cũng gọi
+  // chung API BluetoothLeScanner.startScan() ở tầng dưới, khả năng không giúp
+  // được gì nếu lỗi thật sự ở tầng framework/ROM).
+  private static readonly SCAN_START_RETRY_STEPS: ReadonlyArray<{ delayMs: number; legacyScan?: boolean }> = [
+    { delayMs: 800 },
+    { delayMs: 2000 },
+    { delayMs: 2000, legacyScan: false },
+  ];
 
   // Rà soát 21/7 (fixture Honda Jazz V 2017: 3 lần quét liên tiếp trong 44s đều
   // fail ngay từ startDeviceScan() đầu tiên, không lần nào hồi phục): mỗi lần
@@ -658,8 +672,15 @@ class BleService {
 
     const beginScan = () => {
       const cooldownMs = this.recordScanStartAndGetCooldownMs();
-      this.logSession('#scan', `start showAll=${showAll}${retryAttempt > 0 ? ` (retry ${retryAttempt})` : ''}`);
-      this.manager.startDeviceScan(null, { allowDuplicates: false }, (error, device) => {
+      // Bước RETRY trước đó (nếu có) quyết định option của LẦN GỌI HIỆN TẠI -
+      // retryAttempt đã được ++ trước khi schedule beginScan() này chạy.
+      const step = retryAttempt > 0 ? BleService.SCAN_START_RETRY_STEPS[retryAttempt - 1] : null;
+      const scanOptions = { allowDuplicates: false, ...(step?.legacyScan === false ? { legacyScan: false } : {}) };
+      this.logSession(
+        '#scan',
+        `start showAll=${showAll}${retryAttempt > 0 ? ` (retry ${retryAttempt}${step?.legacyScan === false ? ', legacyScan=false' : ''})` : ''}`
+      );
+      this.manager.startDeviceScan(null, scanOptions, (error, device) => {
         if (stopped) return;
         if (error) {
           // reason/message gốc từ native (bleScanException.getMessage() - phía
@@ -673,16 +694,20 @@ class BleService {
           if (
             error.errorCode === BleErrorCode.ScanStartFailed &&
             cooldownMs === 0 &&
-            retryAttempt < BleService.SCAN_START_RETRY_DELAYS_MS.length
+            retryAttempt < BleService.SCAN_START_RETRY_STEPS.length
           ) {
-            const waitMs = BleService.SCAN_START_RETRY_DELAYS_MS[retryAttempt];
+            const nextStep = BleService.SCAN_START_RETRY_STEPS[retryAttempt];
             retryAttempt++;
-            this.logSession('#scan', `ScanStartFailed (reason=${nativeReason}) - tự thử lại sau ${waitMs}ms`);
+            this.logSession(
+              '#scan',
+              `ScanStartFailed (reason=${nativeReason}) - tự thử lại sau ${nextStep.delayMs}ms` +
+                (nextStep.legacyScan === false ? ' (legacyScan=false)' : '')
+            );
             this.manager.stopDeviceScan();
             retryTimer = setTimeout(() => {
               retryTimer = null;
               if (!stopped) beginScan();
-            }, waitMs);
+            }, nextStep.delayMs);
             return;
           }
           const translated: Error & { cooldownMs?: number } = this.translateBleError(error);
