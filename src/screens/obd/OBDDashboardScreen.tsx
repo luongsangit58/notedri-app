@@ -15,6 +15,8 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
+import { StatusBar } from 'expo-status-bar';
+import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { useObdConnection } from '../../hooks/useObd';
 import { bleService, LinkQuality } from '../../services/obd/BleService';
 import { findingCostLabel } from '../../services/obd/findingCost';
@@ -24,6 +26,8 @@ import AppBgPattern from '../../components/AppBgPattern';
 import { useColors } from '../../utils/theme';
 import { useT } from '../../i18n';
 import { contentWide } from '../../utils/layout';
+import StatBox from '../../components/obd/StatBox';
+import GaugeCluster from '../../components/obd/GaugeCluster';
 
 // Rà soát 16/7 (góp ý user: giảm thao tác lúc lên xe - "1 chạm là kết nối"):
 // NFC tap-to-connect đã có sẵn (NfcSetupScreen) nhưng chỉ nằm ở 1 link nhỏ, ít
@@ -44,42 +48,6 @@ function nfcNudgeKey(vehicleId: number): string {
 function keepAliveNudgeKey(vehicleId: number): string {
   return `obd_keepalive_nudge_shown_${vehicleId}`;
 }
-
-function StatBox({
-  label,
-  value,
-  unit,
-  icon,
-  color = '#3B82F6',
-}: {
-  label: string;
-  value: string | number | null;
-  unit?: string;
-  icon: string;
-  color?: string;
-}) {
-  const colors = useColors();
-  // Công thức đổi PID OBD (vd A*100/255 cho tải máy/bướm ga) sinh nhiễu số
-  // thực (13.7399999999999998) do lỗi làm tròn dấu phẩy động - hiển thị thẳng
-  // giá trị raw như trước sẽ tràn ô. Làm tròn 1 chữ số thập phân trước khi in.
-  const displayValue =
-    typeof value === 'number' ? Math.round(value * 10) / 10 : value;
-  return (
-    <View style={[statStyles.box, { backgroundColor: colors.card }]}>
-      <FontAwesome5 name={icon} size={16} color={color} />
-      <Text style={[statStyles.value, { color: colors.text }]}>
-        {displayValue !== null ? `${displayValue}${unit ?? ''}` : '-'}
-      </Text>
-      <Text style={[statStyles.label, { color: colors.textSecondary }]}>{label}</Text>
-    </View>
-  );
-}
-
-const statStyles = StyleSheet.create({
-  box: { flex: 1, borderRadius: 10, padding: 12, alignItems: 'center', gap: 4, minWidth: 80 },
-  value: { fontSize: 20, fontWeight: '700' },
-  label: { fontSize: 11, textAlign: 'center' },
-});
 
 export default function OBDDashboardScreen() {
   const navigation = useNavigation<any>();
@@ -147,6 +115,19 @@ export default function OBDDashboardScreen() {
   const snap = smoothedSnapshot;
   const isConnected = connectionState === 'connected';
   const isReconnecting = connectionState === 'reconnecting';
+
+  // Chế độ "Đồng hồ" (kim tốc độ/vòng tua kiểu scanner chuyên nghiệp, dành cho
+  // gắn cố định trên xe) - toggle tại chỗ, KHÔNG điều hướng sang màn hình khác,
+  // vì useObdConnection chỉ đồng bộ trạng thái qua listener sự kiện lúc mount
+  // (không có bước đọc trạng thái hiện tại) - mount lại hook ở 1 route riêng có
+  // thể hiện sai "đã ngắt kết nối" cho tới khi có sự kiện tiếp theo.
+  const [viewMode, setViewMode] = useState<'grid' | 'gauge'>('grid');
+  useEffect(() => {
+    if (viewMode !== 'gauge') return;
+    const tag = 'obd-gauge-dashboard';
+    activateKeepAwakeAsync(tag).catch(() => {});
+    return () => { deactivateKeepAwake(tag).catch(() => {}); };
+  }, [viewMode]);
 
   // Badge chất lượng kết nối (ý #16): chỉ hiện khi có vấn đề, sóng tốt thì im lặng
   const [linkQuality, setLinkQuality] = useState<LinkQuality>('unknown');
@@ -226,6 +207,86 @@ export default function OBDDashboardScreen() {
     return () => { cancelled = true; };
   }, [isConnected, vehicleId, keepAliveNudgeSettled]);
 
+  // Rà soát (đảm bảo không mất cảnh báo an toàn ở chế độ Đồng hồ): findings
+  // Diagnostic Engine (kể cả severity critical/can_drive:'stop'), VIN lệch và
+  // dấu "mất sóng" trước đây CHỈ nằm trong ScrollView của lưới số liệu - tài xế
+  // đang ở chế độ Đồng hồ (đúng lúc lái xe) sẽ không thấy cảnh báo nguy hiểm.
+  // Giữ nguyên khối JSX gốc trong nhánh lưới bên dưới (không đổi hành vi/thứ tự
+  // đã có), chỉ thêm 1 bản hiện SONG SONG ở nhánh Đồng hồ.
+  const safetyAlerts = (
+    <>
+      {vinMismatch && (
+        <View style={[styles.warningBanner, { backgroundColor: '#B45309' }]}>
+          <FontAwesome5 name="car-crash" size={13} color="#FEF3C7" solid />
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.warningText, { fontWeight: '700' }]}>
+              {t('obd.vin_mismatch_title', { name: vehicleName || 'xe này' })}
+            </Text>
+            <Text style={[styles.warningText, { fontSize: 11, opacity: 0.9, marginTop: 2 }]}>
+              {t('obd.vin_mismatch_desc')}
+            </Text>
+          </View>
+        </View>
+      )}
+
+      {warning?.type === 'no_data' && (
+        <View style={styles.warningBanner}>
+          <FontAwesome5 name="exclamation-triangle" size={13} color="#FEF3C7" solid />
+          <View style={{ flex: 1 }}>
+            <Text style={styles.warningText}>{t('obd.no_data_warning')}</Text>
+            {warning.rawResponse ? (
+              <Text style={[styles.warningText, { fontSize: 10, opacity: 0.65, marginTop: 4 }]}>
+                Raw: {warning.rawResponse.replace(/[\r\n]+/g, ' ').trim().slice(0, 60)}
+              </Text>
+            ) : null}
+          </View>
+        </View>
+      )}
+
+      {findings.map((f) => {
+        const cost = findingCostLabel(f.related_dtc);
+        return (
+        <View
+          key={f.ruleId}
+          style={[
+            styles.warningBanner,
+            { backgroundColor: f.severity === 'critical' ? '#B91C1C' : '#B45309' },
+          ]}>
+          <FontAwesome5
+            name={f.can_drive === 'stop' ? 'hand-paper' : 'exclamation-triangle'}
+            size={13}
+            color="#FEF3C7"
+            solid
+          />
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.warningText, { fontWeight: '700' }]}>
+              {f.title_vi}{f.beta ? ` (${t('obd.finding_beta')})` : ''}
+            </Text>
+            <Text style={[styles.warningText, { fontSize: 11, opacity: 0.9, marginTop: 2 }]}>
+              {f.action_vi}
+            </Text>
+            {cost && (
+              <Text style={[styles.warningText, { fontSize: 11, opacity: 0.85, marginTop: 3, fontStyle: 'italic' }]}>
+                {t('obd.finding_cost', { range: cost })}
+              </Text>
+            )}
+          </View>
+        </View>
+        );
+      })}
+
+      {!isConnected && snap && (
+        <View style={[styles.warningBanner, { backgroundColor: '#78716C22' }]}>
+          <FontAwesome5 name="pause-circle" size={13} color="#A8A29E" solid />
+          <Text style={[styles.warningText, { color: '#A8A29E', fontSize: 12 }]}>
+            {t('obd.data_paused')}
+          </Text>
+        </View>
+      )}
+    </>
+  );
+  const hasSafetyAlerts = !!vinMismatch || warning?.type === 'no_data' || findings.length > 0 || (!isConnected && !!snap);
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <AppBgPattern />
@@ -245,11 +306,33 @@ export default function OBDDashboardScreen() {
           <Text style={[styles.title, { color: colors.text }]}>{t('obd.dashboard_title')}</Text>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{deviceName}</Text>
         </View>
-        <TouchableOpacity onPress={handleDisconnect} style={styles.disconnectBtn}>
-          <FontAwesome5 name="times" size={18} color="#EF4444" />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+          <TouchableOpacity
+            onPress={() => setViewMode((m) => (m === 'grid' ? 'gauge' : 'grid'))}
+            style={styles.disconnectBtn}
+          >
+            <FontAwesome5 name={viewMode === 'grid' ? 'tachometer-alt' : 'th-large'} size={18} color={colors.primary} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleDisconnect} style={styles.disconnectBtn}>
+            <FontAwesome5 name="times" size={18} color="#EF4444" />
+          </TouchableOpacity>
+        </View>
       </View>
 
+      {/* Chế độ Đồng hồ: giữ màn hình sáng + ẩn status bar hệ thống, đúng tinh
+          thần "gắn cố định trên xe" - không ẩn header của app (vẫn cần lối
+          thoát/ngắt kết nối), chỉ ẩn thanh trạng thái Android/iOS. */}
+      <StatusBar hidden={viewMode === 'gauge'} />
+
+      {viewMode === 'gauge' && hasSafetyAlerts && (
+        <ScrollView style={styles.gaugeAlerts} contentContainerStyle={styles.gaugeAlertsContent}>
+          {safetyAlerts}
+        </ScrollView>
+      )}
+
+      {viewMode === 'gauge' ? (
+        <GaugeCluster snapshot={snap} capability={capability} isConnected={isConnected} />
+      ) : (
       <ScrollView contentContainerStyle={[styles.body, contentWide]}>
         {/* Connection status */}
         <View
@@ -512,6 +595,7 @@ export default function OBDDashboardScreen() {
           <FontAwesome5 name="chevron-right" size={12} color={colors.textSecondary} />
         </TouchableOpacity>
       </ScrollView>
+      )}
     </SafeAreaView>
   );
 }
@@ -556,6 +640,11 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 10,
   },
+  // Giới hạn chiều cao khối cảnh báo hiện phía trên GaugeCluster ở chế độ Đồng
+  // hồ - nhiều findings cùng lúc vẫn cuộn được trong khối này, không đẩy 2
+  // đồng hồ kim xuống khỏi màn hình.
+  gaugeAlerts: { maxHeight: '38%', flexGrow: 0 },
+  gaugeAlertsContent: { padding: 12, gap: 8 },
   warningBanner: {
     flexDirection: 'row',
     alignItems: 'flex-start',

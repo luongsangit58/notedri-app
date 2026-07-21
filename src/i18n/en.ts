@@ -594,6 +594,7 @@ const en = {
   // to the technical standard, matching web's convention (OBD2 = feature name, OBD2 = standard name).
   "obd.no_data_warning": "Connected but cannot read vehicle data. Try restarting the engine and reconnecting, or check that your car supports OBD2 (2005+).",
   "obd.stat_speed": "Speed",
+  "obd.gauge_theme_picker_title": "Choose gauge theme",
   "obd.stat_engine_load": "Engine load",
   "obd.stat_coolant": "Coolant temp",
   "obd.stat_fuel": "Fuel level",
