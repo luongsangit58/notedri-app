@@ -114,6 +114,39 @@ export default function OBDSetupScreen() {
     }
   }
 
+  // Rà soát 21/7 (fixture Honda Jazz V 2017: quét fail "internal error code 7"
+  // ngay từ lần quét ĐẦU của phiên sạch - khả năng đăng ký quét BLE cũ ở tầng
+  // OS chưa được giải phóng, tắt/bật lại Bluetooth thật sẽ xoá trạng thái đó).
+  // Cảnh báo TRƯỚC vì đây là hành động PHỤ (tắt cả Bluetooth khác trên xe: cuộc
+  // gọi, nhạc...) - không tự động làm khi quét fail, phải là user chủ động bấm.
+  const [restartingBt, setRestartingBt] = useState(false);
+  function handleRestartBluetooth() {
+    Alert.alert(
+      t('obd.restart_bt_confirm_title'),
+      t('obd.restart_bt_confirm_body'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('obd.restart_bt_confirm_cta'),
+          onPress: async () => {
+            if (restartingBt) return;
+            setRestartingBt(true);
+            try {
+              const ok = await bleService.restartBluetooth();
+              if (ok) {
+                startScan(showAllDevices);
+              } else if (Platform.OS === 'android') {
+                Linking.sendIntent('android.settings.BLUETOOTH_SETTINGS').catch(() => Linking.openSettings());
+              }
+            } finally {
+              setRestartingBt(false);
+            }
+          },
+        },
+      ],
+    );
+  }
+
   useEffect(() => {
     if (!isPremium) return;
     // Đang kết nối sẵn (user quay lại màn này khi phiên trước còn sống) → vào thẳng
@@ -289,6 +322,21 @@ export default function OBDSetupScreen() {
               style={{ marginTop: 8, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8, backgroundColor: '#3B82F6' }}
               onPress={() => Linking.sendIntent('android.settings.LOCATION_SOURCE_SETTINGS').catch(() => Linking.openSettings())}>
               <Text style={{ color: '#fff', fontWeight: '600', fontSize: 13 }}>{t('obd.open_location_settings')}</Text>
+            </TouchableOpacity>
+          )}
+          {/* Quét fail lặp lại/đang cooldown (rà soát 21/7) - khả năng đăng ký
+              quét BLE cũ ở tầng OS chưa được giải phóng. Chỉ hiện trên Android:
+              iOS/Android 13+ không cho app tự tắt/bật Bluetooth. */}
+          {Platform.OS === 'android' && cooldownLeft > 0 && (
+            <TouchableOpacity
+              style={[{ marginTop: 8, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8, backgroundColor: '#3B82F6' }, restartingBt && { opacity: 0.6 }]}
+              onPress={handleRestartBluetooth}
+              disabled={restartingBt}>
+              {restartingBt ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={{ color: '#fff', fontWeight: '600', fontSize: 13 }}>{t('obd.restart_bt_cta')}</Text>
+              )}
             </TouchableOpacity>
           )}
         </View>

@@ -1,5 +1,6 @@
 import { BleManager, Device, State, Characteristic, BleRestoredState, BleErrorCode } from 'react-native-ble-plx';
 import { Platform, PermissionsAndroid } from 'react-native';
+import Constants from 'expo-constants';
 import * as Location from 'expo-location';
 import { useI18nStore } from '../../i18n';
 import { useObdSessionStore } from '../../store/obdSessionStore';
@@ -430,6 +431,38 @@ class BleService {
     }
   }
 
+  /**
+   * Rà soát 21/7: quét fail "internal error (code 7)" ngay từ lần quét ĐẦU của
+   * phiên sạch (không phải app tự gây throttle) thường do đăng ký quét BLE cũ
+   * ở tầng OS chưa được giải phóng - tắt/bật lại Bluetooth thật (qua Cài đặt hệ
+   * thống) sẽ xoá trạng thái đó, nhưng không tự tay kiểm chứng được trên xe
+   * thật. Hàm này làm ĐÚNG thao tác đó (disable rồi enable adapter) NGAY trong
+   * app - KHÔNG tự động gọi lúc quét fail (tắt Bluetooth sẽ ngắt cả các kết nối
+   * BT khác trên xe: cuộc gọi, nhạc... nếu đang dùng - phải là hành động user
+   * BẤM, có cảnh báo trước, không phải side-effect ngầm). Cùng giới hạn API
+   * như tryEnableBluetooth(): Android 13+ chặn cả disable()/enable() lập trình
+   * - trả false để UI hướng dẫn mở Cài đặt hệ thống thay vì treo im lặng.
+   */
+  async restartBluetooth(): Promise<boolean> {
+    if (Platform.OS !== 'android') return false;
+    try {
+      await Promise.race([
+        this.manager.disable(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('DISABLE_TIMEOUT')), 2000)),
+      ]);
+      await delay(500);
+      await Promise.race([
+        this.manager.enable(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('ENABLE_TIMEOUT')), 2000)),
+      ]);
+      this.logSession('#restart_bluetooth', 'ok');
+      return true;
+    } catch (e: any) {
+      this.logSession('#restart_bluetooth', `failed: ${e?.message ?? 'unknown'}`);
+      return false;
+    }
+  }
+
   /** Đọc trạng thái Bluetooth hiện tại (tức thì) - cho UI check sớm trước khi quét. */
   async getBluetoothState(): Promise<State> {
     try {
@@ -579,11 +612,39 @@ class BleService {
     return Math.max(0, BleService.SCAN_THROTTLE_WINDOW_MS - (now - oldest));
   }
 
+  /**
+   * Rà soát 21/7 (fixture Honda Jazz V 2017: scan fail "internal error code 7"
+   * ngay từ lần quét ĐẦU của phiên sạch - không phải app tự gây throttle, khả
+   * năng là driver/ROM riêng của đầu Android đó, hoặc đăng ký quét BLE cũ chưa
+   * được giải phóng ở tầng OS). Không tự tay được trên xe thật để xác nhận -
+   * ghi cấu hình máy (model/hãng/bản ROM/Android version/version app) vào
+   * đúng session log xuất ra, để so sánh được giữa các đầu Android khác nhau
+   * và giữa các lần fail/thành công mà không cần ngồi trên xe. CHỈ ghi 1 lần/
+   * phiên (sessionLog rỗng = phiên mới) - gọi lại nhiều lần khi user bấm "Quét
+   * lại" không lặp lại dòng này.
+   */
+  private logDeviceInfoOnce(): void {
+    if (this.sessionLog.length > 0) return;
+    if (Platform.OS === 'android') {
+      const c = Platform.constants as {
+        Release?: string; Brand?: string; Manufacturer?: string; Model?: string; Fingerprint?: string;
+      };
+      this.logSession(
+        '#device_info',
+        `Android ${c.Release ?? '?'} (API ${Platform.Version}) - ${c.Brand ?? '?'}/${c.Manufacturer ?? '?'} ${c.Model ?? '?'}` +
+          ` - fp=${c.Fingerprint ?? '?'} - app v${Constants.expoConfig?.version ?? '?'}`
+      );
+    } else {
+      this.logSession('#device_info', `${Platform.OS} ${Platform.Version} - app v${Constants.expoConfig?.version ?? '?'}`);
+    }
+  }
+
   scanForDevices(
     onFound: (device: ObdDevice) => void,
     onError: (error: Error & { cooldownMs?: number }) => void,
     showAll = false
   ): () => void {
+    this.logDeviceInfoOnce();
     const found = new Set<string>();
     // Ghi cả thiết bị KHÔNG tên và thiết bị bị bộ lọc whitelist loại - khi user
     // báo "quét không thấy" mà không có log này thì không phân biệt được là
