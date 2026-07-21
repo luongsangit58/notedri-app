@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useColors } from '../../utils/theme';
 
 // Tách riêng khỏi GaugeCluster để GaugeThemePicker dùng lại làm ảnh xem trước
@@ -9,6 +10,13 @@ import { useColors } from '../../utils/theme';
 // 4-5h) - đúng hình dáng đồng hồ tốc độ/vòng tua cơ khí quen thuộc.
 const SWEEP_DEG = 270;
 const START_DEG = -135;
+
+// Rà soát (góp ý user: mặt đồng hồ trông "thô", chưa chuyên nghiệp) - 9 vạch
+// chia độ đều trên cung 270° (giống đồng hồ cơ thật, không cần label từng vạch,
+// chỉ cần MIN/MAX ở 2 đầu là đủ định vị). Ẩn ở size nhỏ (mini preview 56px) vì
+// dày đặc quá ở kích thước đó trông rối hơn là rõ ràng.
+const TICK_COUNT = 9;
+const TICK_ANGLES = Array.from({ length: TICK_COUNT }, (_, i) => START_DEG + (i / (TICK_COUNT - 1)) * SWEEP_DEG);
 
 function valueToAngle(value: number, min: number, max: number): number {
   const clamped = Math.max(min, Math.min(max, value));
@@ -47,12 +55,43 @@ export default function Dial({
   const needleLength = size / 2 - size * 0.095;
   const display = value != null ? Math.round(value) : null;
   const showReadout = size >= 100;
+  const showTicks = size >= 100;
 
   return (
     <View style={[
       styles.dial,
-      { width: size, height: size, borderRadius: size / 2, borderWidth: Math.max(2, size * 0.03), backgroundColor: colors.card, borderColor: accent + '55' },
+      {
+        width: size, height: size, borderRadius: size / 2, borderWidth: Math.max(2, size * 0.03),
+        backgroundColor: colors.card, borderColor: accent + '55',
+        // Đổ bóng tạo chiều sâu - trước đây mặt đồng hồ phẳng lỳ, trông như 1
+        // hình tròn vẽ tay hơn là 1 mặt kính đồng hồ thật.
+        shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 8,
+        elevation: 6,
+      },
     ]}>
+      {/* Vạch chia độ quanh viền trong - chỉ cần vạch, không cần số ở mỗi vạch
+          (MIN/MAX 2 đầu đã đủ định vị, giống đồng hồ cơ thật). */}
+      {showTicks && TICK_ANGLES.map((deg, i) => (
+        <View
+          key={i}
+          pointerEvents="none"
+          style={{ position: 'absolute', width: size, height: size, alignItems: 'center', transform: [{ rotate: `${deg}deg` }] }}>
+          <View style={{
+            width: Math.max(1.5, size * 0.012), height: size * 0.08, marginTop: size * 0.05,
+            backgroundColor: colors.textSecondary, borderRadius: 1, opacity: 0.55,
+          }} />
+        </View>
+      ))}
+
+      {/* Sheen kính - dải sáng chéo góc trên-trái mờ dần, giả lập ánh phản
+          chiếu trên mặt kính cong thay vì màu phẳng 1 khối. */}
+      <LinearGradient
+        pointerEvents="none"
+        colors={['rgba(255,255,255,0.16)', 'rgba(255,255,255,0)']}
+        start={{ x: 0.15, y: 0.05 }} end={{ x: 0.6, y: 0.6 }}
+        style={{ position: 'absolute', width: size, height: size, borderRadius: size / 2 }}
+      />
+
       {showReadout && (
         <>
           <Text style={[styles.minMax, { color: colors.textSecondary, bottom: size * 0.1, left: size * 0.12 }]}>{min}</Text>
