@@ -722,8 +722,35 @@ class BleService {
             }, nextStep.delayMs);
             return;
           }
-          const translated: Error & { cooldownMs?: number } = this.translateBleError(error);
-          if (error.errorCode === BleErrorCode.ScanStartFailed && cooldownMs > 0) {
+          // retryAttempt === STEPS.length nghĩa là CẢ 3 lần retry (kể cả bước
+          // cuối legacyScan=false/scanMode khác) đều đã được LÊN LỊCH VÀ CHẠY
+          // thành công (không bị chặn bởi cooldownMs ở bất kỳ bước nào) - tức
+          // ScanStartFailed lặp lại ở MỌI tổ hợp tham số đã thử, không phải do
+          // app tự chạm ngưỡng throttle. LƯU Ý: không được dùng cooldownMs===0
+          // ở ĐÂY để suy luận - đúng bằng thiết kế, lần thử CUỐI (4 lượt native
+          // start liên tiếp trong vài giây) tự nó CHẠM ngưỡng
+          // SCAN_THROTTLE_MAX_STARTS=4, nên cooldownMs ở lần thử cuối LUÔN > 0
+          // dù có tự gây throttle hay không - dùng nhầm biến này từng khiến
+          // nhánh BT_UNSUPPORTED bên dưới không bao giờ chạy được (rà soát
+          // 22/7, phát hiện khi truy lại đúng log Honda Jazz). Xác nhận thực
+          // tế bằng test nRF Connect trên đúng máy đang lỗi: "Device doesn't
+          // support BLE" - đây là dấu hiệu tin cậy của máy KHÔNG hỗ trợ BLE
+          // thật, dù manager.state() vẫn báo PoweredOn (ble-plx không phát
+          // hiện đúng bằng State.Unsupported trên 1 số ROM/chip). Báo đúng
+          // nguyên nhân thay vì gợi ý "đợi 1 phút rồi thử lại" (sẽ không bao
+          // giờ hết).
+          const exhaustedAllFallbacks =
+            error.errorCode === BleErrorCode.ScanStartFailed &&
+            retryAttempt === BleService.SCAN_START_RETRY_STEPS.length;
+          const translated: Error & { cooldownMs?: number } = exhaustedAllFallbacks
+            ? this.bleError('BT_UNSUPPORTED')
+            : this.translateBleError(error);
+          // KHÔNG gắn cooldownMs khi đã kết luận BT_UNSUPPORTED - dù cooldownMs
+          // tính được ở lần thử cuối vẫn > 0 (do chính 4 lượt native start liên
+          // tiếp của retry chain gây ra, xem comment ở exhaustedAllFallbacks),
+          // gắn vào sẽ khiến UI hiện đếm ngược "đợi Xs rồi thử lại" - ngụ ý sai
+          // rằng chờ sẽ hết, trong khi đây là giới hạn phần cứng vĩnh viễn.
+          if (!exhaustedAllFallbacks && error.errorCode === BleErrorCode.ScanStartFailed && cooldownMs > 0) {
             translated.cooldownMs = cooldownMs;
           }
           this.logSession(
