@@ -25,6 +25,7 @@ import { useAuthStore } from '../../store/authStore';
 import { useT } from '../../i18n';
 import ObdConnectionGuide from '../../components/ObdConnectionGuide';
 import { contentWide } from '../../utils/layout';
+import ClassicSppSpike from '../../components/obd/ClassicSppSpike';
 
 export default function OBDSetupScreen() {
   const navigation = useNavigation<any>();
@@ -422,6 +423,8 @@ export default function OBDSetupScreen() {
             <Text style={[styles.actionBtnText, { color: colors.textSecondary }]}>{t('obd.refresh_capability')}</Text>
           </TouchableOpacity>
         )}
+
+        <ClassicSppSpike />
       </ScrollView>
     </SafeAreaView>
   );

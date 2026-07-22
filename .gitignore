@@ -16,6 +16,10 @@ credentials.json
 /android
 /ios
 
+# Gradle cache/build output generated when building local Expo modules (modules/*/android)
+modules/**/android/.gradle/
+modules/**/android/build/
+
 # Local build outputs (EAS local build / bundletool) - not source, don't commit
 *.aab
 *.apk
