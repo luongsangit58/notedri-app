@@ -65,10 +65,18 @@ export type DtcSuggestion = { code: string; title_vi: string; severity: RawEntry
  * Map đã dựng sẵn trong bộ nhớ (lookupDtcOffline ở trên), KHÔNG gọi mạng: cùng nguồn
  * dữ liệu offline, chi phí chỉ là 1 lượt duyệt ~300 mã trong RAM (dưới 1ms), không có
  * chi phí mạng/debounce nào để lo về hiệu năng.
+ *
+ * Rà soát 22/7 (user báo gõ chữ hệ thống "P" trước không ăn thua, phải gõ số mới
+ * bắt đầu search): ngưỡng cũ yêu cầu prefix >= 2 ký tự. Gõ SỐ trước luôn đạt 2 ký
+ * tự ngay từ phím đầu tiên nhờ withDefaultDtcPrefix tự thêm "P" (vd gõ "0" ->
+ * normalized "P0"), nhưng gõ CHỮ hệ thống trước (P/C/B/U) thì ký tự đầu tiên chỉ
+ * dài 1 (chưa có "P" nào để cộng thêm) -> không hiện gợi ý gì, tạo cảm giác màn
+ * hình "đứng" đúng lúc người dùng gõ chữ. Hạ ngưỡng còn 1 ký tự để gõ riêng "P",
+ * "C", "B" hay "U" cũng hiện ngay các mã thuộc hệ đó, đối xứng với đường gõ số.
  */
 export function suggestDtcOffline(prefix: string, limit = 8): DtcSuggestion[] {
   const p = prefix.trim().toUpperCase();
-  if (p.length < 2) return [];
+  if (p.length < 1) return [];
 
   if (!byCode) {
     byCode = new Map(

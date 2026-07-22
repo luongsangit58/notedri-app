@@ -13,6 +13,8 @@ import client from '../../api/client';
 import { useColors } from '../../utils/theme';
 import { contentWide } from '../../utils/layout';
 import { useT, useI18nStore } from '../../i18n';
+import NoriAvatar from '../../components/nori/NoriAvatar';
+import { noriMoodFromScore } from '../../services/nori/nori';
 
 /* ─── types ─── */
 type OrganStatus = 'urgent' | 'warn' | 'info' | 'ok' | 'na';
@@ -291,17 +293,28 @@ function HealthCard({ vehicle, health, loading, onAddReminder, onCta, history, h
             <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>{plate}</Text>
           ) : null}
         </View>
-        {/* Score badge */}
-        {total != null && (
-          <View style={{
-            width: 60, height: 60, borderRadius: 30,
-            borderWidth: 3, borderColor: scoreColor(total),
-            alignItems: 'center', justifyContent: 'center',
-            backgroundColor: colors.card, marginLeft: 12,
-          }}>
-            <Text style={{ color: scoreColor(total), fontSize: 20, fontWeight: '800' }}>{total}</Text>
-          </View>
-        )}
+        {/* Nori: avatar biểu cảm theo tình trạng xe, số điểm hiện thành badge nhỏ
+            đè góc dưới-phải (thay cho vòng tròn số đơn thuần trước đây). */}
+        <View style={{ marginLeft: 12 }}>
+          <NoriAvatar
+            mood={noriMoodFromScore(
+              total,
+              organs.some(o => o.status === 'urgent'),
+              organs.some(o => o.status === 'warn'),
+            )}
+            size={56}
+          />
+          {total != null && (
+            <View style={{
+              position: 'absolute', bottom: -4, right: -6,
+              backgroundColor: colors.card, borderRadius: 10,
+              borderWidth: 1.5, borderColor: scoreColor(total),
+              paddingHorizontal: 6, paddingVertical: 1,
+            }}>
+              <Text style={{ color: scoreColor(total), fontSize: 11, fontWeight: '800' }}>{total}</Text>
+            </View>
+          )}
+        </View>
         {loading && <ActivityIndicator color={colors.primary} style={{ marginLeft: 12 }} />}
       </View>
 

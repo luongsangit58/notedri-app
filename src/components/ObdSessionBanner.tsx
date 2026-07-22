@@ -7,11 +7,19 @@ import { useT } from '../i18n';
 
 /**
  * Toast chuyển trạng thái kết nối (Sang góp ý 14/7: "đã kết nối/mất kết nối
- * chưa có phản hồi rõ"): hiện 2,5s ở đỉnh màn hình khi trạng thái ĐỔI -
- * kết nối xong, nối lại thành công, mất kết nối hẳn. Bổ trợ cho pill (trạng
- * thái liên tục) bằng phản hồi tức thời tại thời điểm chuyển.
+ * chưa có phản hồi rõ"): hiện ở đỉnh màn hình khi trạng thái ĐỔI - kết nối
+ * xong, nối lại thành công, mất kết nối hẳn. Bổ trợ cho pill (trạng thái
+ * liên tục) bằng phản hồi tức thời tại thời điểm chuyển.
+ *
+ * Rà soát 22/7 (góp ý user: trên màn hình xe luôn bật, có lúc thông báo tắt
+ * trước khi kịp đọc): 2,5s cố định là quá ngắn cho ngữ cảnh lái xe (mắt không
+ * luôn ở màn hình). Tăng thời lượng và cho chạm-để-tắt sớm thay vì khoá cứng
+ * pointerEvents="none".
  */
-function useTransitionToast(): string | null {
+const TOAST_DURATION_MS = 4500;
+const TOAST_DURATION_SAVED_MS = 6000; // tin "phiên đã lưu N phút" dài hơn, cần đọc lâu hơn
+
+function useTransitionToast(): [string | null, () => void] {
   const t = useT();
   const { connected, reconnecting, vehicleName, lastSessionSaved } = useObdSessionStore();
   const [toast, setToast] = useState<string | null>(null);
@@ -21,6 +29,7 @@ function useTransitionToast(): string | null {
   useEffect(() => {
     const was = prev.current;
     let message: string | null = null;
+    let justSaved = false;
 
     if (!was.connected && connected) {
       message = was.reconnecting
@@ -32,7 +41,7 @@ function useTransitionToast(): string | null {
       // chuyển false (xem obdLiveMonitor.ts) - tức phiên có dữ liệu thật - báo
       // rõ đã tổng hợp/lưu thay vì chỉ "mất kết nối" chung chung. Chỉ dùng khi
       // vừa mới ghi (<5s) để không hiện nhầm cho 1 phiên đã lưu từ rất lâu trước.
-      const justSaved = lastSessionSaved && Date.now() - lastSessionSaved.ts < 5000 && lastSessionSaved.samples > 0;
+      justSaved = !!(lastSessionSaved && Date.now() - lastSessionSaved.ts < 5000 && lastSessionSaved.samples > 0);
       message = justSaved
         ? t('obd.toast_session_saved', { minutes: Math.max(1, Math.round(lastSessionSaved!.durationSeconds / 60)) })
         : t('obd.toast_disconnected');
@@ -42,12 +51,20 @@ function useTransitionToast(): string | null {
     if (message) {
       setToast(message);
       if (timer.current) clearTimeout(timer.current);
-      timer.current = setTimeout(() => setToast(null), 2500);
+      timer.current = setTimeout(
+        () => setToast(null),
+        justSaved ? TOAST_DURATION_SAVED_MS : TOAST_DURATION_MS,
+      );
     }
     return () => { if (timer.current) clearTimeout(timer.current); };
   }, [connected, reconnecting]);
 
-  return toast;
+  const dismiss = () => {
+    if (timer.current) clearTimeout(timer.current);
+    setToast(null);
+  };
+
+  return [toast, dismiss];
 }
 
 // Các màn đã tự hiển thị trạng thái OBD - banner ở đó là thừa
@@ -63,7 +80,7 @@ export default function ObdSessionBanner() {
   const t = useT();
   const { connected, reconnecting, vehicleId, vehicleName } = useObdSessionStore();
   const [routeName, setRouteName] = useState<string | undefined>(undefined);
-  const toast = useTransitionToast();
+  const [toast, dismissToast] = useTransitionToast();
 
   useEffect(() => {
     const update = () => {
@@ -74,10 +91,13 @@ export default function ObdSessionBanner() {
     return unsubscribe;
   }, [connected, reconnecting]);
 
-  // Toast render ĐỘC LẬP với pill: toast "mất kết nối" bắn đúng lúc pill biến mất
+  // Toast render ĐỘC LẬP với pill: toast "mất kết nối" bắn đúng lúc pill biến mất.
+  // pointerEvents="auto" + onPress: cho tắt sớm bằng tay khi đã đọc xong, thay vì
+  // chặn hết tương tác bên dưới cho tới khi hết giờ.
   const toastView = toast ? (
-    <View
-      pointerEvents="none"
+    <TouchableOpacity
+      activeOpacity={0.85}
+      onPress={dismissToast}
       style={{
         position: 'absolute',
         top: 60,
@@ -93,7 +113,7 @@ export default function ObdSessionBanner() {
         shadowOffset: { width: 0, height: 3 },
       }}>
       <Text style={{ color: '#fff', fontSize: 13, fontWeight: '600' }}>{toast}</Text>
-    </View>
+    </TouchableOpacity>
   ) : null;
 
   if (!connected && !reconnecting) return toastView;

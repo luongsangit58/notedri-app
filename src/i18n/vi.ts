@@ -1453,6 +1453,16 @@ const vi = {
   "management.tab_health": "Kiểm tra xe",
   "management.tab_reminders": "Lời nhắc",
 
+  // ==== Nori - linh vật báo cáo sức khỏe xe ====
+  "nori.card_title": "Nori báo cáo hôm nay",
+  "nori.happy": "Xe khỏe re, chưa thấy gì bất thường!",
+  "nori.warn": "Có vài điểm cần để ý, xem chi tiết nhé.",
+  "nori.urgent": "Có vấn đề cần xử lý sớm, xem ngay nhé!",
+  "nori.unknown": "Chưa đủ dữ liệu để Nori đánh giá hôm nay.",
+  "nori.warn_detail": "Nori thấy: {{issue}} - xem chi tiết nhé.",
+  "nori.obd_live_note": "Đang kết nối OBD2 - theo dõi trực tiếp",
+  "nori.daily_notification_title": "Nori báo cáo sức khỏe xe - {{name}}",
+
 } as const;
 
 export default vi;

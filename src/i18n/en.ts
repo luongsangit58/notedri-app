@@ -1453,6 +1453,16 @@ const en = {
   "management.tab_health": "Vehicle check",
   "management.tab_reminders": "Reminders",
 
+  // ==== Nori - vehicle health mascot ====
+  "nori.card_title": "Nori's report today",
+  "nori.happy": "Your car's doing great, nothing unusual!",
+  "nori.warn": "A few things worth checking, see details.",
+  "nori.urgent": "Something needs attention soon, check now!",
+  "nori.unknown": "Not enough data for Nori to assess today.",
+  "nori.warn_detail": "Nori spotted: {{issue}} - see details.",
+  "nori.obd_live_note": "OBD2 connected - live monitoring",
+  "nori.daily_notification_title": "Nori's vehicle health report - {{name}}",
+
 } as const;
 
 export default en;
