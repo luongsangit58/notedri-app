@@ -9,6 +9,13 @@ export type PairedDevice = {
   // Mốc kết nối thành công gần nhất (ms epoch) - nuôi trạng thái "lâu không thấy
   // thiết bị" ở màn chi tiết xe (ý #12/#13: nudge passive, không bắn push làm phiền).
   lastConnectedAt?: number;
+  // Transport của lần kết nối gần nhất (22/7) - "bleDeviceId" thực chất là địa
+  // chỉ MAC khi transport='classic' (không phải BLE GATT id), nhưng giữ tên
+  // field cũ để không phải migrate dữ liệu đã lưu. Thiếu field (pairing lưu
+  // trước 22/7) coi như 'ble' - hành vi cũ, không đổi cho user hiện tại.
+  // Dùng để OBDSetupScreen tự chuyển đúng mode + tự kết nối lại (auto-reconnect
+  // cho Classic, xem targetTransport ở đó) thay vì luôn mặc định BLE.
+  transport?: 'ble' | 'classic';
 };
 
 async function readAll(): Promise<PairedDevice[]> {

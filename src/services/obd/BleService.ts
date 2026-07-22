@@ -4,6 +4,17 @@ import Constants from 'expo-constants';
 import * as Location from 'expo-location';
 import { useI18nStore } from '../../i18n';
 import { useObdSessionStore } from '../../store/obdSessionStore';
+import NotedriBtPairing from '../../../modules/notedri-bt-pairing/src/NotedriBtPairingModule';
+
+// Transport thứ 2 (22/7) cho đầu Android ô tô có chip/ROM không quét/kết nối
+// BLE được (xem BT_UNSUPPORTED + fixture Honda Jazz V 2017) nhưng Bluetooth
+// Classic (SPP) vẫn hoạt động bình thường - đúng quy trình Vgate khuyến nghị
+// cho Android ("Android-Vlink", PIN 1234, xem NotedriBtPairingModule.kt).
+// sendCommand()/attachToDevice tương ứng dùng CHUNG 1 responseBuffer/command
+// queue/session log/reconnect-grace với BLE - chỉ khác ở cách ghi/đọc byte
+// thô (characteristic GATT vs socket RFCOMM), để mọi lớp phía trên (ObdReader,
+// obdLiveMonitor...) không cần biết đang nói chuyện qua transport nào.
+type Transport = 'ble' | 'classic';
 
 // KHÔNG hardcode characteristic UUID (bài học fixture 13/7: Vgate iCar Pro thật
 // có service e7810a71 nhưng KHÔNG có characteristic be781a71-... từng hardcode -
@@ -57,6 +68,19 @@ class BleService {
   private responseBuffer: string = '';
   private responseResolver: ((value: string) => void) | null = null;
   private responseRejecter: ((err: Error) => void) | null = null;
+
+  // Transport đang hoạt động (null = chưa kết nối) - dùng để mọi hàm dùng
+  // chung (sendCommand, disconnect...) biết rẽ nhánh đúng, thay vì suy luận
+  // ngầm từ 2 field connectedDevice/classicAddress (dễ lệch nếu quên set 1
+  // trong 2 ở đâu đó).
+  private activeTransport: Transport | null = null;
+  // Tương đương connectedDevice nhưng cho Classic - địa chỉ MAC (đồng thời
+  // dùng làm "deviceId" cho savePairing()/NFC, xem getDeviceId()).
+  private classicAddress: string | null = null;
+  private classicDeviceName: string | null = null;
+  private classicPin = '1234';
+  private classicDataSubscription: { remove: () => void } | null = null;
+  private classicDisconnectSubscription: { remove: () => void } | null = null;
 
   // Serial command queue: each sendCommand chains onto this promise so
   // commands are guaranteed to execute one at a time.
@@ -201,6 +225,7 @@ class BleService {
   private async attachToDevice(device: Device): Promise<void> {
     await device.discoverAllServicesAndCharacteristics();
     this.connectedDevice = device;
+    this.activeTransport = 'ble';
 
     const services = await device.services();
     this.logSession('#device', `${device.name ?? '?'} ${device.id}`);
@@ -262,18 +287,7 @@ class BleService {
       chosen.rx.uuid,
       (error, characteristic) => {
         if (error || !characteristic?.value) return;
-        const chunk = atob(characteristic.value);
-        this.responseBuffer += chunk;
-
-        if (this.responseBuffer.includes('>')) {
-          const response = this.responseBuffer.replace('>', '').trim();
-          this.responseBuffer = '';
-          if (this.responseResolver) {
-            this.responseResolver(response);
-            this.responseResolver = null;
-            this.responseRejecter = null;
-          }
-        }
+        this.handleIncomingChunk(characteristic.value);
       }
     ) as unknown as Characteristic;
 
@@ -281,22 +295,76 @@ class BleService {
     device.onDisconnected(() => this.handleDeviceDisconnected(device.id));
   }
 
+  // Dùng chung cho CẢ BLE (characteristic.value) lẫn Classic (event onClassicData)
+  // - cả 2 đều đưa tới đây 1 đoạn base64 (cùng bảng mã atob/btoa), tự gộp vào
+  // responseBuffer và resolve lệnh đang chờ khi thấy dấu '>' (ELM327 kết thúc
+  // mọi phản hồi bằng ký tự này, xem readUntilPrompt() phía native Classic).
+  private handleIncomingChunk(base64: string): void {
+    const chunk = atob(base64);
+    this.responseBuffer += chunk;
+
+    if (this.responseBuffer.includes('>')) {
+      const response = this.responseBuffer.replace('>', '').trim();
+      this.responseBuffer = '';
+      if (this.responseResolver) {
+        this.responseResolver(response);
+        this.responseResolver = null;
+        this.responseRejecter = null;
+      }
+    }
+  }
+
+  // Đăng ký nghe dữ liệu/mất-kết-nối từ module Classic - tương đương
+  // monitorCharacteristicForService()/device.onDisconnected() bên BLE.
+  private attachClassicListeners(): void {
+    this.classicDataSubscription = NotedriBtPairing.addListener('onClassicData', (event) => {
+      this.handleIncomingChunk(event.data);
+    });
+    this.classicDisconnectSubscription = NotedriBtPairing.addListener('onClassicDisconnected', (event) => {
+      // Ghi lý do gốc từ native (EOF/lỗi socket/đóng chủ động) vào log phiên
+      // TRƯỚC khi dọn dẹp - thiếu dòng này thì log xuất ra không phân biệt được
+      // "remote tự ngắt" với "lỗi đọc/ghi" khi user gửi log nhờ chẩn đoán.
+      this.logSession('#disconnect', `classic - ${event?.reason ?? 'unknown'}`);
+      this.detachClassicListeners();
+      const address = this.classicAddress;
+      this.handleTransportDisconnected(address, 'classic');
+    });
+  }
+
+  private detachClassicListeners(): void {
+    this.classicDataSubscription?.remove();
+    this.classicDataSubscription = null;
+    this.classicDisconnectSubscription?.remove();
+    this.classicDisconnectSubscription = null;
+  }
+
   private handleDeviceDisconnected(deviceId: string): void {
+    this.handleTransportDisconnected(deviceId, 'ble');
+  }
+
+  // Tổng quát hoá cho cả 2 transport (22/7) - BLE gọi qua handleDeviceDisconnected()
+  // ở trên (giữ nguyên tên cũ cho device.onDisconnected() callback), Classic gọi
+  // thẳng từ listener onClassicDisconnected. Logic reconnect-grace/telemetry/
+  // session-store dùng CHUNG, chỉ khác cách thử kết nối lại (xem attemptReconnect).
+  private handleTransportDisconnected(id: string | null, transport: Transport): void {
     this.connectedDevice = null;
     this.notifyCharacteristic = null;
+    this.classicAddress = null;
+    this.activeTransport = null;
     this.responseBuffer = '';
     this.commandQueue = Promise.resolve(); // Drain queue
 
     // Reject any in-flight command
     if (this.responseRejecter) {
-      this.responseRejecter(new Error('BLE disconnected'));
+      this.responseRejecter(new Error(transport === 'classic' ? 'Classic Bluetooth disconnected' : 'BLE disconnected'));
       this.responseResolver = null;
       this.responseRejecter = null;
     }
 
-    // disconnect() chủ động gọi cancelConnection -> callback này vẫn bắn:
-    // không được thử reconnect khi user cố tình ngắt. Cũng chặn re-entry
-    // khi một attempt reconnect vừa attach xong lại rớt ngay (vòng lặp lo).
+    // disconnect() chủ động gọi cancelConnection/disconnectClassic -> callback
+    // này vẫn bắn: không được thử reconnect khi user cố tình ngắt. Cũng chặn
+    // re-entry khi một attempt reconnect vừa attach xong lại rớt ngay (vòng
+    // lặp lo).
     if (this.intentionalDisconnect || this.reconnecting) {
       if (!this.reconnecting) {
         // Fire listener TRƯỚC khi clear store: telemetry cần đọc vehicleId
@@ -306,10 +374,18 @@ class BleService {
       return;
     }
 
-    void this.attemptReconnect(deviceId);
+    if (!id) {
+      // Không có địa chỉ/id để thử lại (không nên xảy ra trong luồng bình
+      // thường) - báo mất kết nối hẳn thay vì gọi attemptReconnect(null).
+      this.disconnectListeners.forEach((fn) => fn());
+      useObdSessionStore.getState().clear();
+      return;
+    }
+
+    void this.attemptReconnect(id, transport);
   }
 
-  private async attemptReconnect(deviceId: string): Promise<void> {
+  private async attemptReconnect(id: string, transport: Transport): Promise<void> {
     this.reconnecting = true;
     this.logSession('#disconnect', 'unexpected - reconnect grace start');
 
@@ -325,16 +401,34 @@ class BleService {
       }
 
       try {
-        const device = await this.connectWithMtuFallback(deviceId, 8000);
-        await this.attachToDevice(device);
+        // Giữ tham chiếu device BLE (nếu có) để còn cancelConnection() được
+        // trong nhánh race-check bên dưới - khai báo ngoài if/else vì cả 2
+        // nhánh đều có thể cần kiểm tra lại sau khi attach/connectClassic xong.
+        let bleDevice: Device | null = null;
+        if (transport === 'ble') {
+          bleDevice = await this.connectWithMtuFallback(id, 8000);
+          await this.attachToDevice(bleDevice);
+        } else {
+          await NotedriBtPairing.connectClassic(id, this.classicPin);
+          this.activeTransport = 'classic';
+          this.classicAddress = id;
+          this.attachClassicListeners();
+        }
 
-        // User có thể đã bấm "Ngắt kết nối" TRONG LÚC connectToDevice/attachToDevice
-        // ở trên đang chạy (connectedDevice lúc đó là null nên disconnect() không có
-        // gì để cancelConnection - chỉ set cờ này) - nếu không kiểm tra lại ở đây,
+        // User có thể đã bấm "Ngắt kết nối" TRONG LÚC kết nối lại ở trên đang
+        // chạy (connectedDevice/classicAddress lúc đó là null nên disconnect()
+        // không có gì để huỷ - chỉ set cờ này) - nếu không kiểm tra lại ở đây,
         // phiên vừa bị user ngắt sẽ "tự hồi sinh" ngay sau khi attach xong.
         if (this.intentionalDisconnect) {
-          try { await device.cancelConnection(); } catch {}
+          if (transport === 'ble' && bleDevice) {
+            try { await bleDevice.cancelConnection(); } catch {}
+          } else if (transport === 'classic') {
+            this.detachClassicListeners();
+            try { await NotedriBtPairing.disconnectClassic(); } catch {}
+          }
           this.connectedDevice = null;
+          this.classicAddress = null;
+          this.activeTransport = null;
           this.notifyCharacteristic = null;
           this.reconnecting = false;
           return;
@@ -844,7 +938,7 @@ class BleService {
   }
 
   async connect(deviceId: string): Promise<void> {
-    if (this.connecting || this.connectedDevice) {
+    if (this.connecting || this.connectedDevice || this.classicAddress) {
       // Gắn .code để caller (useObd) phân biệt được: đây là lời gọi "thua" trong
       // 1 cặp double-tap, KHÔNG PHẢI lỗi kết nối thật - không được dọn dẹp
       // (disconnect()) phiên đang được luồng kia xử lý.
@@ -870,6 +964,53 @@ class BleService {
         reconnecting: false,
         deviceName: this.sessionDeviceName,
       });
+    } finally {
+      this.connecting = false;
+    }
+  }
+
+  /**
+   * Kết nối qua Bluetooth Classic (SPP) thay vì BLE - cho đầu Android ô tô có
+   * chip/ROM không quét/kết nối BLE được (xem BT_UNSUPPORTED, fixture Honda
+   * Jazz V 2017) nhưng Classic vẫn hoạt động bình thường. address phải là
+   * thiết bị ĐÃ GHÉP NỐI qua Cài đặt Bluetooth hệ thống trước (PIN 1234 cho
+   * "Android-Vlink") - xem discoverDevices() ở NotedriBtPairingModule.kt,
+   * module không tự quét/ghép nối mới đáng tin cậy trên các ROM này.
+   * sendCommand()/disconnect()/reconnect-grace dùng CHUNG code với BLE - chỉ
+   * khác cách ghi/đọc byte thô, xem handleIncomingChunk()/_sendCommandInternal().
+   */
+  async connectClassic(address: string, name: string, pin = '1234'): Promise<void> {
+    if (this.connecting || this.connectedDevice || this.classicAddress) {
+      const err = new Error(useI18nStore.getState().t('obd.connect_in_progress'));
+      (err as Error & { code?: string }).code = 'CONNECT_IN_PROGRESS';
+      throw err;
+    }
+    this.connecting = true;
+    try {
+      this.intentionalDisconnect = false;
+      this.linkResults = [];
+      this.sessionLog = [];
+      this.classicPin = pin;
+
+      await NotedriBtPairing.connectClassic(address, pin);
+      this.activeTransport = 'classic';
+      this.classicAddress = address;
+      this.classicDeviceName = name;
+      this.attachClassicListeners();
+
+      this.sessionStartedAt = Date.now();
+      this.sessionDeviceName = name;
+      this.logSession('#device', `${name} ${address} (classic)`);
+      useObdSessionStore.getState().patch({
+        connected: true,
+        reconnecting: false,
+        deviceName: this.sessionDeviceName,
+      });
+    } catch (e) {
+      this.classicAddress = null;
+      this.classicDeviceName = null;
+      this.activeTransport = null;
+      throw e;
     } finally {
       this.connecting = false;
     }
@@ -901,7 +1042,7 @@ class BleService {
   }
 
   private _sendCommandInternal(command: string, timeoutMs: number): Promise<string> {
-    if (!this.connectedDevice) {
+    if (!this.connectedDevice && !this.classicAddress) {
       return Promise.reject(new Error(useI18nStore.getState().t('obd.not_connected')));
     }
 
@@ -935,10 +1076,14 @@ class BleService {
       };
 
       const encoded = btoa(command + '\r');
-      // Dùng đúng kiểu ghi mà characteristic TX hỗ trợ (dò được lúc attach)
-      const writePromise = this.writeWithResponse
-        ? device.writeCharacteristicWithResponseForService(this.activeServiceUuid, this.writeCharUuid, encoded)
-        : device.writeCharacteristicWithoutResponseForService(this.activeServiceUuid, this.writeCharUuid, encoded);
+      // Cùng payload base64 cho cả 2 transport - chỉ khác đường ghi (characteristic
+      // GATT vs socket RFCOMM). Dùng đúng kiểu ghi mà characteristic TX hỗ trợ
+      // (dò được lúc attach) cho nhánh BLE.
+      const writePromise = this.activeTransport === 'classic'
+        ? NotedriBtPairing.writeClassic(encoded)
+        : this.writeWithResponse
+          ? device!.writeCharacteristicWithResponseForService(this.activeServiceUuid, this.writeCharUuid, encoded)
+          : device!.writeCharacteristicWithoutResponseForService(this.activeServiceUuid, this.writeCharUuid, encoded);
       writePromise.catch((err) => {
         clearTimeout(timer);
         this.responseResolver = null;
@@ -952,8 +1097,8 @@ class BleService {
 
   async disconnect(): Promise<void> {
     // Chặn reconnect grace: đây là ngắt CHỦ ĐỘNG của user. KHÔNG clear store ở
-    // đây - handleDeviceDisconnected (do cancelConnection kích) fire listener
-    // trước rồi mới clear, để telemetry còn đọc được vehicleId.
+    // đây - handleTransportDisconnected (do cancelConnection/disconnectClassic
+    // kích) fire listener trước rồi mới clear, để telemetry còn đọc được vehicleId.
     this.intentionalDisconnect = true;
     if (this.connectedDevice) {
       try {
@@ -962,6 +1107,17 @@ class BleService {
         // Already disconnected — ignore
       }
       this.connectedDevice = null;
+    } else if (this.classicAddress) {
+      // KHÔNG tự detachClassicListeners()/clear state ở đây - để event
+      // onClassicDisconnected (native luôn phát ra sau khi đóng socket, xem
+      // NotedriBtPairingModule.kt) tự chảy qua handleTransportDisconnected(),
+      // giống hệt cách BLE dựa vào device.onDisconnected() sau cancelConnection().
+      // Một điểm dọn dẹp DUY NHẤT, tránh 2 nơi cùng dọn nửa vời gây lệch trạng thái.
+      try {
+        await NotedriBtPairing.disconnectClassic();
+      } catch {
+        // Already disconnected — ignore
+      }
     } else {
       // Không có kết nối nào (gọi thừa) - dọn store cho chắc
       useObdSessionStore.getState().clear();
@@ -970,15 +1126,15 @@ class BleService {
   }
 
   isConnected(): boolean {
-    return this.connectedDevice !== null;
+    return this.connectedDevice !== null || this.classicAddress !== null;
   }
 
   getDeviceId(): string | null {
-    return this.connectedDevice?.id ?? null;
+    return this.connectedDevice?.id ?? this.classicAddress ?? null;
   }
 
   getDeviceName(): string | null {
-    return this.connectedDevice?.name ?? this.sessionDeviceName;
+    return this.connectedDevice?.name ?? this.classicDeviceName ?? this.sessionDeviceName;
   }
 
   destroy() {

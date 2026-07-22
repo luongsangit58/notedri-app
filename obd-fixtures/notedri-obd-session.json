@@ -1,0 +1,516 @@
+{
+ "exported_at": "2026-07-22T11:00:58.637Z",
+ "vehicle": "Honda Jazz V 2017",
+ "entries": [
+  {
+   "t": 1784717811085,
+   "cmd": "#permission",
+   "res": "ACCESS_FINE_LOCATION=granted (API<31, BLUETOOTH_SCAN/CONNECT không áp dụng)"
+  },
+  {
+   "t": 1784717811107,
+   "cmd": "#location_services",
+   "res": "true"
+  },
+  {
+   "t": 1784717811152,
+   "cmd": "#ble_state",
+   "res": "PoweredOn"
+  },
+  {
+   "t": 1784717811152,
+   "cmd": "#scan",
+   "res": "start showAll=false"
+  },
+  {
+   "t": 1784717811326,
+   "cmd": "#scan",
+   "res": "ScanStartFailed (reason=Scan failed because of an internal error (code 7)) - tự thử lại sau 800ms"
+  },
+  {
+   "t": 1784717812130,
+   "cmd": "#scan",
+   "res": "start showAll=false (retry 1)"
+  },
+  {
+   "t": 1784717812150,
+   "cmd": "#scan",
+   "res": "ScanStartFailed (reason=Scan failed because of an internal error (code 7)) - tự thử lại sau 2000ms"
+  },
+  {
+   "t": 1784717814160,
+   "cmd": "#scan",
+   "res": "start showAll=false (retry 2)"
+  },
+  {
+   "t": 1784717814167,
+   "cmd": "#scan",
+   "res": "ScanStartFailed (reason=Scan failed because of an internal error (code 7)) - tự thử lại sau 2000ms (legacyScan=false, scanMode=2)"
+  },
+  {
+   "t": 1784717814403,
+   "cmd": "#scan",
+   "res": "stop - found=0 filteredOut=0 unnamed=0"
+  },
+  {
+   "t": 1784717814403,
+   "cmd": "#classic_spike",
+   "res": "discoverDevices: start"
+  },
+  {
+   "t": 1784717826413,
+   "cmd": "#classic_spike",
+   "res": "discoverDevices: found 1 - Android-Vlink(13:E0:2F:8D:48:3F,bonded)"
+  },
+  {
+   "t": 1784717826454,
+   "cmd": "#permission",
+   "res": "ACCESS_FINE_LOCATION=granted (API<31, BLUETOOTH_SCAN/CONNECT không áp dụng)"
+  },
+  {
+   "t": 1784717826455,
+   "cmd": "#location_services",
+   "res": "true"
+  },
+  {
+   "t": 1784717826492,
+   "cmd": "#ble_state",
+   "res": "PoweredOn"
+  },
+  {
+   "t": 1784717826492,
+   "cmd": "#scan",
+   "res": "start showAll=false"
+  },
+  {
+   "t": 1784717826513,
+   "cmd": "#scan",
+   "res": "error: Không thể bắt đầu quét Bluetooth - có thể do quét quá nhiều lần liên tục vừa rồi. Đợi khoảng 1 phút rồi thử lại, hoặc tắt Bluetooth bật lại trên màn hình ô tô. (native code=600, reason=Scan failed because of an internal error (code 7), cooldown=15s)"
+  },
+  {
+   "t": 1784717828236,
+   "cmd": "#scan",
+   "res": "stop - found=0 filteredOut=0 unnamed=0"
+  },
+  {
+   "t": 1784717828236,
+   "cmd": "#classic_spike",
+   "res": "pairAndTestAtz: start 13:E0:2F:8D:48:3F pin=1234"
+  },
+  {
+   "t": 1784717842278,
+   "cmd": "#classic_spike",
+   "res": "pairAndTestAtz: error - Call to function 'NotedriBtPairing.pairAndTestAtz' has been rejected.\n→ Caused by: java.io.IOException: read failed, socket might closed or timeout, read ret: -1"
+  },
+  {
+   "t": 1784717842337,
+   "cmd": "#permission",
+   "res": "ACCESS_FINE_LOCATION=granted (API<31, BLUETOOTH_SCAN/CONNECT không áp dụng)"
+  },
+  {
+   "t": 1784717842338,
+   "cmd": "#location_services",
+   "res": "true"
+  },
+  {
+   "t": 1784717842376,
+   "cmd": "#ble_state",
+   "res": "PoweredOn"
+  },
+  {
+   "t": 1784717842376,
+   "cmd": "#scan",
+   "res": "start showAll=false"
+  },
+  {
+   "t": 1784717842403,
+   "cmd": "#scan",
+   "res": "ScanStartFailed (reason=Scan failed because of an internal error (code 7)) - tự thử lại sau 800ms"
+  },
+  {
+   "t": 1784717843210,
+   "cmd": "#scan",
+   "res": "start showAll=false (retry 1)"
+  },
+  {
+   "t": 1784717843218,
+   "cmd": "#scan",
+   "res": "error: Không thể bắt đầu quét Bluetooth - có thể do quét quá nhiều lần liên tục vừa rồi. Đợi khoảng 1 phút rồi thử lại, hoặc tắt Bluetooth bật lại trên màn hình ô tô. (native code=600, reason=Scan failed because of an internal error (code 7), cooldown=1s)"
+  },
+  {
+   "t": 1784717855528,
+   "cmd": "#scan",
+   "res": "stop - found=0 filteredOut=0 unnamed=0"
+  },
+  {
+   "t": 1784717855528,
+   "cmd": "#classic_spike",
+   "res": "discoverDevices: start"
+  },
+  {
+   "t": 1784717867538,
+   "cmd": "#classic_spike",
+   "res": "discoverDevices: found 1 - Android-Vlink(13:E0:2F:8D:48:3F,bonded)"
+  },
+  {
+   "t": 1784717867580,
+   "cmd": "#permission",
+   "res": "ACCESS_FINE_LOCATION=granted (API<31, BLUETOOTH_SCAN/CONNECT không áp dụng)"
+  },
+  {
+   "t": 1784717867580,
+   "cmd": "#location_services",
+   "res": "true"
+  },
+  {
+   "t": 1784717867620,
+   "cmd": "#ble_state",
+   "res": "PoweredOn"
+  },
+  {
+   "t": 1784717867620,
+   "cmd": "#scan",
+   "res": "start showAll=false"
+  },
+  {
+   "t": 1784717867628,
+   "cmd": "#scan",
+   "res": "ScanStartFailed (reason=Scan failed because of an internal error (code 7)) - tự thử lại sau 800ms"
+  },
+  {
+   "t": 1784717868440,
+   "cmd": "#scan",
+   "res": "start showAll=false (retry 1)"
+  },
+  {
+   "t": 1784717868451,
+   "cmd": "#scan",
+   "res": "error: Không thể bắt đầu quét Bluetooth - có thể do quét quá nhiều lần liên tục vừa rồi. Đợi khoảng 1 phút rồi thử lại, hoặc tắt Bluetooth bật lại trên màn hình ô tô. (native code=600, reason=Scan failed because of an internal error (code 7), cooldown=4s)"
+  },
+  {
+   "t": 1784717882627,
+   "cmd": "#scan",
+   "res": "stop - found=0 filteredOut=0 unnamed=0"
+  },
+  {
+   "t": 1784717941710,
+   "cmd": "#classic_spike",
+   "res": "pairAndTestAtz: start 13:E0:2F:8D:48:3F pin=123"
+  },
+  {
+   "t": 1784717943529,
+   "cmd": "#classic_spike",
+   "res": "pairAndTestAtz: ok response=\r\rELM327 v2.3\r\r>"
+  },
+  {
+   "t": 1784717943566,
+   "cmd": "#permission",
+   "res": "ACCESS_FINE_LOCATION=granted (API<31, BLUETOOTH_SCAN/CONNECT không áp dụng)"
+  },
+  {
+   "t": 1784717943567,
+   "cmd": "#location_services",
+   "res": "true"
+  },
+  {
+   "t": 1784717943603,
+   "cmd": "#ble_state",
+   "res": "PoweredOn"
+  },
+  {
+   "t": 1784717943603,
+   "cmd": "#scan",
+   "res": "start showAll=false"
+  },
+  {
+   "t": 1784717943623,
+   "cmd": "#scan",
+   "res": "ScanStartFailed (reason=Scan failed because of an internal error (code 7)) - tự thử lại sau 800ms"
+  },
+  {
+   "t": 1784717944434,
+   "cmd": "#scan",
+   "res": "start showAll=false (retry 1)"
+  },
+  {
+   "t": 1784717944442,
+   "cmd": "#scan",
+   "res": "ScanStartFailed (reason=Scan failed because of an internal error (code 7)) - tự thử lại sau 2000ms"
+  },
+  {
+   "t": 1784717946450,
+   "cmd": "#scan",
+   "res": "start showAll=false (retry 2)"
+  },
+  {
+   "t": 1784717946460,
+   "cmd": "#scan",
+   "res": "ScanStartFailed (reason=Scan failed because of an internal error (code 7)) - tự thử lại sau 2000ms (legacyScan=false, scanMode=2)"
+  },
+  {
+   "t": 1784717947225,
+   "cmd": "#scan",
+   "res": "stop - found=0 filteredOut=0 unnamed=0"
+  },
+  {
+   "t": 1784717947225,
+   "cmd": "#classic_spike",
+   "res": "pairAndTestAtz: start 13:E0:2F:8D:48:3F pin=123"
+  },
+  {
+   "t": 1784717948603,
+   "cmd": "#classic_spike",
+   "res": "pairAndTestAtz: ok response=ATZ\r\r\rELM327 v2.3\r\r>"
+  },
+  {
+   "t": 1784717948645,
+   "cmd": "#permission",
+   "res": "ACCESS_FINE_LOCATION=granted (API<31, BLUETOOTH_SCAN/CONNECT không áp dụng)"
+  },
+  {
+   "t": 1784717948646,
+   "cmd": "#location_services",
+   "res": "true"
+  },
+  {
+   "t": 1784717948681,
+   "cmd": "#ble_state",
+   "res": "PoweredOn"
+  },
+  {
+   "t": 1784717948681,
+   "cmd": "#scan",
+   "res": "start showAll=false"
+  },
+  {
+   "t": 1784717948692,
+   "cmd": "#scan",
+   "res": "error: Không thể bắt đầu quét Bluetooth - có thể do quét quá nhiều lần liên tục vừa rồi. Đợi khoảng 1 phút rồi thử lại, hoặc tắt Bluetooth bật lại trên màn hình ô tô. (native code=600, reason=Scan failed because of an internal error (code 7), cooldown=25s)"
+  },
+  {
+   "t": 1784717950851,
+   "cmd": "#scan",
+   "res": "stop - found=0 filteredOut=0 unnamed=0"
+  },
+  {
+   "t": 1784717950851,
+   "cmd": "#classic_spike",
+   "res": "pairAndTestAtz: start 13:E0:2F:8D:48:3F pin=123"
+  },
+  {
+   "t": 1784717952256,
+   "cmd": "#classic_spike",
+   "res": "pairAndTestAtz: ok response=ATZ\r\r\rELM327 v2.3\r\r>"
+  },
+  {
+   "t": 1784717952296,
+   "cmd": "#permission",
+   "res": "ACCESS_FINE_LOCATION=granted (API<31, BLUETOOTH_SCAN/CONNECT không áp dụng)"
+  },
+  {
+   "t": 1784717952298,
+   "cmd": "#location_services",
+   "res": "true"
+  },
+  {
+   "t": 1784717952337,
+   "cmd": "#ble_state",
+   "res": "PoweredOn"
+  },
+  {
+   "t": 1784717952337,
+   "cmd": "#scan",
+   "res": "start showAll=false"
+  },
+  {
+   "t": 1784717952379,
+   "cmd": "#scan",
+   "res": "error: Không thể bắt đầu quét Bluetooth - có thể do quét quá nhiều lần liên tục vừa rồi. Đợi khoảng 1 phút rồi thử lại, hoặc tắt Bluetooth bật lại trên màn hình ô tô. (native code=600, reason=Scan failed because of an internal error (code 7), cooldown=22s)"
+  },
+  {
+   "t": 1784717955381,
+   "cmd": "#scan",
+   "res": "stop - found=0 filteredOut=0 unnamed=0"
+  },
+  {
+   "t": 1784717955381,
+   "cmd": "#classic_spike",
+   "res": "discoverDevices: start"
+  },
+  {
+   "t": 1784717967395,
+   "cmd": "#classic_spike",
+   "res": "discoverDevices: found 1 - Android-Vlink(13:E0:2F:8D:48:3F,bonded)"
+  },
+  {
+   "t": 1784717967438,
+   "cmd": "#permission",
+   "res": "ACCESS_FINE_LOCATION=granted (API<31, BLUETOOTH_SCAN/CONNECT không áp dụng)"
+  },
+  {
+   "t": 1784717967440,
+   "cmd": "#location_services",
+   "res": "true"
+  },
+  {
+   "t": 1784717967476,
+   "cmd": "#ble_state",
+   "res": "PoweredOn"
+  },
+  {
+   "t": 1784717967476,
+   "cmd": "#scan",
+   "res": "start showAll=false"
+  },
+  {
+   "t": 1784717967511,
+   "cmd": "#scan",
+   "res": "error: Không thể bắt đầu quét Bluetooth - có thể do quét quá nhiều lần liên tục vừa rồi. Đợi khoảng 1 phút rồi thử lại, hoặc tắt Bluetooth bật lại trên màn hình ô tô. (native code=600, reason=Undocumented scan throttle (code 2147483646), suggested retry date is Wed Jul 22 17:59:33 GMT+07:00 2026, cooldown=7s)"
+  },
+  {
+   "t": 1784717970454,
+   "cmd": "#scan",
+   "res": "stop - found=0 filteredOut=0 unnamed=0"
+  },
+  {
+   "t": 1784717970454,
+   "cmd": "#classic_spike",
+   "res": "pairAndTestAtz: start 13:E0:2F:8D:48:3F pin=1234"
+  },
+  {
+   "t": 1784717972338,
+   "cmd": "#classic_spike",
+   "res": "pairAndTestAtz: ok response=ATZ\r\r\rELM327 v2.3\r\r>"
+  },
+  {
+   "t": 1784717972377,
+   "cmd": "#permission",
+   "res": "ACCESS_FINE_LOCATION=granted (API<31, BLUETOOTH_SCAN/CONNECT không áp dụng)"
+  },
+  {
+   "t": 1784717972378,
+   "cmd": "#location_services",
+   "res": "true"
+  },
+  {
+   "t": 1784717972419,
+   "cmd": "#ble_state",
+   "res": "PoweredOn"
+  },
+  {
+   "t": 1784717972419,
+   "cmd": "#scan",
+   "res": "start showAll=false"
+  },
+  {
+   "t": 1784717972454,
+   "cmd": "#scan",
+   "res": "error: Không thể bắt đầu quét Bluetooth - có thể do quét quá nhiều lần liên tục vừa rồi. Đợi khoảng 1 phút rồi thử lại, hoặc tắt Bluetooth bật lại trên màn hình ô tô. (native code=600, reason=Undocumented scan throttle (code 2147483646), suggested retry date is Wed Jul 22 17:59:33 GMT+07:00 2026, cooldown=2s)"
+  },
+  {
+   "t": 1784717987428,
+   "cmd": "#scan",
+   "res": "stop - found=0 filteredOut=0 unnamed=0"
+  },
+  {
+   "t": 1784717987477,
+   "cmd": "#classic_spike",
+   "res": "discoverDevices: start"
+  },
+  {
+   "t": 1784717999484,
+   "cmd": "#classic_spike",
+   "res": "discoverDevices: found 0 - "
+  },
+  {
+   "t": 1784717999534,
+   "cmd": "#permission",
+   "res": "ACCESS_FINE_LOCATION=granted (API<31, BLUETOOTH_SCAN/CONNECT không áp dụng)"
+  },
+  {
+   "t": 1784717999535,
+   "cmd": "#location_services",
+   "res": "true"
+  },
+  {
+   "t": 1784717999571,
+   "cmd": "#ble_state",
+   "res": "PoweredOn"
+  },
+  {
+   "t": 1784717999571,
+   "cmd": "#scan",
+   "res": "start showAll=false"
+  },
+  {
+   "t": 1784717999575,
+   "cmd": "#scan",
+   "res": "ScanStartFailed (reason=Scan failed because of an internal error (code 7)) - tự thử lại sau 800ms"
+  },
+  {
+   "t": 1784718000390,
+   "cmd": "#scan",
+   "res": "start showAll=false (retry 1)"
+  },
+  {
+   "t": 1784718000398,
+   "cmd": "#scan",
+   "res": "ScanStartFailed (reason=Scan failed because of an internal error (code 7)) - tự thử lại sau 2000ms"
+  },
+  {
+   "t": 1784718002405,
+   "cmd": "#scan",
+   "res": "start showAll=false (retry 2)"
+  },
+  {
+   "t": 1784718002413,
+   "cmd": "#scan",
+   "res": "error: Không thể bắt đầu quét Bluetooth - có thể do quét quá nhiều lần liên tục vừa rồi. Đợi khoảng 1 phút rồi thử lại, hoặc tắt Bluetooth bật lại trên màn hình ô tô. (native code=600, reason=Scan failed because of an internal error (code 7), cooldown=1s)"
+  },
+  {
+   "t": 1784718009096,
+   "cmd": "#scan",
+   "res": "stop - found=0 filteredOut=0 unnamed=0"
+  },
+  {
+   "t": 1784718009096,
+   "cmd": "#classic_spike",
+   "res": "discoverDevices: start"
+  },
+  {
+   "t": 1784718021105,
+   "cmd": "#classic_spike",
+   "res": "discoverDevices: found 0 - "
+  },
+  {
+   "t": 1784718021109,
+   "cmd": "#permission",
+   "res": "ACCESS_FINE_LOCATION=granted (API<31, BLUETOOTH_SCAN/CONNECT không áp dụng)"
+  },
+  {
+   "t": 1784718021155,
+   "cmd": "#location_services",
+   "res": "true"
+  },
+  {
+   "t": 1784718021191,
+   "cmd": "#ble_state",
+   "res": "PoweredOn"
+  },
+  {
+   "t": 1784718021191,
+   "cmd": "#scan",
+   "res": "start showAll=false"
+  },
+  {
+   "t": 1784718021197,
+   "cmd": "#scan",
+   "res": "error: Không thể bắt đầu quét Bluetooth - có thể do quét quá nhiều lần liên tục vừa rồi. Đợi khoảng 1 phút rồi thử lại, hoặc tắt Bluetooth bật lại trên màn hình ô tô. (native code=600, reason=Scan failed because of an internal error (code 7), cooldown=9s)"
+  },
+  {
+   "t": 1784718036195,
+   "cmd": "#scan",
+   "res": "stop - found=0 filteredOut=0 unnamed=0"
+  }
+ ]
+}

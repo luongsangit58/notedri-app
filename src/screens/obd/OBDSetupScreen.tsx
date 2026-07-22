@@ -25,7 +25,7 @@ import { useAuthStore } from '../../store/authStore';
 import { useT } from '../../i18n';
 import ObdConnectionGuide from '../../components/ObdConnectionGuide';
 import { contentWide } from '../../utils/layout';
-import ClassicSppSpike from '../../components/obd/ClassicSppSpike';
+import NotedriBtPairing, { ClassicBtDevice } from '../../../modules/notedri-bt-pairing/src/NotedriBtPairingModule';
 
 export default function OBDSetupScreen() {
   const navigation = useNavigation<any>();
@@ -51,6 +51,7 @@ export default function OBDSetupScreen() {
     startScan,
     stopScan,
     connect,
+    connectClassic,
     refreshCapability,
   } = useObdConnection(vehicleId, vehicleName);
 
@@ -76,6 +77,41 @@ export default function OBDSetupScreen() {
   // Toggle "hiện tất cả thiết bị": một số adapter quảng bá tên lạ (không chứa
   // OBD/ELM/VLINK...) sẽ bị bộ lọc mặc định bỏ qua - bật lên để hiện mọi thiết bị BLE có tên.
   const [showAllDevices, setShowAllDevices] = useState(false);
+
+  // Rà soát 22/7: 1 số đầu Android ô tô có chip/ROM không quét/kết nối BLE
+  // được (xem BT_UNSUPPORTED) nhưng Bluetooth Classic (SPP) vẫn hoạt động -
+  // cho user tự chuyển sang mode này thay vì kẹt cứng ở BLE luôn báo lỗi.
+  // Classic chỉ có trên Android (module native không có bản iOS).
+  const [connectMode, setConnectMode] = useState<'ble' | 'classic'>('ble');
+  const [classicDevices, setClassicDevices] = useState<ClassicBtDevice[]>([]);
+  const [loadingClassicDevices, setLoadingClassicDevices] = useState(false);
+  const [classicError, setClassicError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (connectMode !== 'classic') return;
+    // Dừng hẳn vòng quét+retry BLE khi chuyển sang Classic - 2 mode không cần
+    // chạy song song, và tránh chiếm radio khi Classic mở socket RFCOMM.
+    stopScan();
+  }, [connectMode, stopScan]);
+
+  async function loadClassicDevices() {
+    setLoadingClassicDevices(true);
+    setClassicError(null);
+    try {
+      const found = await NotedriBtPairing.discoverDevices();
+      setClassicDevices(found);
+    } catch (e: any) {
+      setClassicError(e?.message ?? String(e));
+    } finally {
+      setLoadingClassicDevices(false);
+    }
+  }
+
+  // Nạp danh sách ngay khi vào mode Classic - đỡ user phải bấm thêm 1 nhịp.
+  useEffect(() => {
+    if (connectMode === 'classic') loadClassicDevices();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [connectMode]);
 
   // Nhận biết Bluetooth CHỦ ĐỘNG: BT bật lại (từ Cài đặt/Control Center) -> tự
   // quét luôn, user không phải bấm "Quét lại". Dùng ref (không phải state) - chỉ
@@ -225,21 +261,86 @@ export default function OBDSetupScreen() {
     await doConnect(deviceId, deviceName).finally(release);
   }
 
+  async function doConnectClassic(address: string, name: string) {
+    const ok = await connectClassic(address, name);
+    if (ok) {
+      navigation.replace('OBDDashboard', { vehicleId, vehicleName, deviceName: name, consumptionOfficial });
+    }
+  }
+
+  async function handleConnectClassic(device: ClassicBtDevice) {
+    if (handlingTapRef.current) return;
+    handlingTapRef.current = true;
+    const release = () => { handlingTapRef.current = false; };
+    // 1 thiết bị - 1 xe (giống handleConnect ở BLE): hỏi trước nếu thiết bị
+    // này đang ghép với xe KHÁC.
+    const existing = await getPairingForDevice(device.address).catch(() => null);
+    if (existing && existing.vehicleId !== vehicleId && existing.vehicleName) {
+      Alert.alert(
+        t('obd.pair_switch_title'),
+        t('obd.pair_switch_body', { old: existing.vehicleName, new: vehicleName || t('obd.pair_this_vehicle') }),
+        [
+          { text: t('common.cancel'), style: 'cancel', onPress: release },
+          {
+            text: t('obd.pair_switch_ok'),
+            onPress: () => { void doConnectClassic(device.address, device.name).finally(release); },
+          },
+        ],
+      );
+      return;
+    }
+    await doConnectClassic(device.address, device.name).finally(release);
+  }
+
   // Auto-connect foreground (ý #17): thiết bị đã từng ghép với XE NÀY xuất hiện
   // trong kết quả quét là tự kết nối luôn, không bắt user chạm danh sách mỗi lần.
   // User vẫn "thắng" được auto: chạm thiết bị khác trước khi thiết bị ghép lộ diện.
   const [pairedDeviceId, setPairedDeviceId] = useState<string | null>(null);
+  // Transport của lần kết nối gần nhất (22/7) - quyết định tự chuyển mode +
+  // auto-connect nên dò ở danh sách BLE hay Classic (xem savePairing() ở useObd.ts).
+  const [pairedTransport, setPairedTransport] = useState<'ble' | 'classic'>('ble');
   useEffect(() => {
-    getPairingForVehicle(vehicleId).then((p) => setPairedDeviceId(p?.bleDeviceId ?? null));
+    getPairingForVehicle(vehicleId).then((p) => {
+      setPairedDeviceId(p?.bleDeviceId ?? null);
+      setPairedTransport(p?.transport ?? 'ble');
+    });
   }, [vehicleId]);
+
+  // NFC tag chỉ mang theo deviceId (viết lúc đó có thể là địa chỉ Classic) -
+  // tra lại đúng transport đã lưu cho CHÍNH thiết bị này, không dùng chung
+  // pairedTransport ở trên (có thể thuộc 1 pairing KHÁC nếu xe đổi thiết bị).
+  const [nfcTransport, setNfcTransport] = useState<'ble' | 'classic'>('ble');
+  useEffect(() => {
+    if (!autoConnectDeviceId) return;
+    getPairingForDevice(autoConnectDeviceId).then((p) => setNfcTransport(p?.transport ?? 'ble'));
+  }, [autoConnectDeviceId]);
+
+  const autoTargetId = autoConnectDeviceId ?? (suppressAutoConnect ? null : pairedDeviceId);
+  const autoTargetTransport = autoConnectDeviceId ? nfcTransport : pairedTransport;
+
+  // Tự chuyển sang mode Classic khi thiết bị nhớ được lại là Classic - tránh
+  // mắc kẹt ở màn BLE báo lỗi/không thấy gì trong khi thiết bị thật sự ở mode
+  // kia. Chỉ chuyển 1 chiều (BLE -> Classic khi có target) - không tự đẩy user
+  // đang xem Classic quay lại BLE.
+  useEffect(() => {
+    if (autoTargetId && autoTargetTransport === 'classic') setConnectMode('classic');
+  }, [autoTargetId, autoTargetTransport]);
 
   // One Tap Connect: NFC (biết trước deviceId) ưu tiên hơn bộ nhớ ghép thiết bị.
   useEffect(() => {
-    const targetId = autoConnectDeviceId ?? (suppressAutoConnect ? null : pairedDeviceId);
-    if (!targetId || connectionState !== 'scanning') return;
-    const match = foundDevices.find((d) => d.id === targetId);
+    if (!autoTargetId || autoTargetTransport !== 'ble' || connectionState !== 'scanning') return;
+    const match = foundDevices.find((d) => d.id === autoTargetId);
     if (match) handleConnect(match.id, match.name);
-  }, [autoConnectDeviceId, pairedDeviceId, foundDevices, connectionState]);
+  }, [autoTargetId, autoTargetTransport, foundDevices, connectionState]);
+
+  // Tương đương bản trên nhưng cho Classic (22/7) - danh sách đã ghép nạp gần
+  // như tức thì (không phải quét sống ~10s như trước), khớp địa chỉ là tự kết
+  // nối ngay, không bắt user tự bấm chọn lại mỗi lần mở màn.
+  useEffect(() => {
+    if (!autoTargetId || autoTargetTransport !== 'classic') return;
+    const match = classicDevices.find((d) => d.address === autoTargetId);
+    if (match) handleConnectClassic(match);
+  }, [autoTargetId, autoTargetTransport, classicDevices]);
 
   const isScanning = connectionState === 'scanning';
   const isConnecting = connectionState === 'connecting';
@@ -256,6 +357,82 @@ export default function OBDSetupScreen() {
       </View>
 
       <ScrollView style={styles.body} contentContainerStyle={[{ paddingBottom: 32 }, contentWide]} keyboardShouldPersistTaps="handled">
+        {/* Chuyển BLE/Classic (22/7) - Classic chỉ có trên Android (module native
+            không có bản iOS), ẩn hẳn toggle trên iOS thay vì hiện disabled. */}
+        {Platform.OS === 'android' && (
+          <View style={[styles.modeToggle, { backgroundColor: colors.card }]}>
+            <TouchableOpacity
+              style={[styles.modeToggleBtn, connectMode === 'ble' && styles.modeToggleBtnActive]}
+              onPress={() => setConnectMode('ble')}
+              disabled={isConnecting}
+            >
+              <Text style={[styles.modeToggleText, { color: connectMode === 'ble' ? '#fff' : colors.textSecondary }]}>
+                {t('obd.connect_mode_ble')}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.modeToggleBtn, connectMode === 'classic' && styles.modeToggleBtnActive]}
+              onPress={() => setConnectMode('classic')}
+              disabled={isConnecting}
+            >
+              <Text style={[styles.modeToggleText, { color: connectMode === 'classic' ? '#fff' : colors.textSecondary }]}>
+                {t('obd.connect_mode_classic')}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {connectMode === 'classic' ? (
+          <>
+            <Text style={{ color: colors.textSecondary, fontSize: 12.5, marginTop: 12, lineHeight: 18 }}>
+              {t('obd.classic_guide')}
+            </Text>
+
+            {classicDevices.length > 0 && (
+              <View style={{ marginTop: 16 }}>
+                {classicDevices.map((item, index) => (
+                  <TouchableOpacity
+                    key={item.address ?? `classic-${index}`}
+                    style={[styles.deviceRow, { backgroundColor: colors.card }]}
+                    onPress={() => handleConnectClassic(item)}
+                    disabled={isConnecting}
+                  >
+                    <FontAwesome5 name="car" size={16} color="#3B82F6" />
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.deviceName, { color: colors.text }]}>{item.name}</Text>
+                      {item.bonded && (
+                        <Text style={{ fontSize: 11, color: colors.textSecondary }}>{t('obd.classic_bonded_tag')}</Text>
+                      )}
+                    </View>
+                    <FontAwesome5 name="chevron-right" size={14} color={colors.textSecondary} />
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+
+            {!loadingClassicDevices && classicDevices.length === 0 && !classicError && (
+              <Text style={{ color: colors.textSecondary, fontSize: 12, textAlign: 'center', marginTop: 16 }}>
+                {t('obd.classic_no_devices')}
+              </Text>
+            )}
+
+            {classicError && <Text style={[styles.errorText, { marginTop: 16 }]}>{classicError}</Text>}
+
+            <TouchableOpacity
+              style={[styles.scanBtn, { borderColor: '#3B82F6', opacity: loadingClassicDevices ? 0.6 : 1 }]}
+              onPress={loadClassicDevices}
+              disabled={loadingClassicDevices}
+            >
+              {loadingClassicDevices ? (
+                <ActivityIndicator color="#3B82F6" size="small" />
+              ) : (
+                <FontAwesome5 name="sync" size={14} color="#3B82F6" />
+              )}
+              <Text style={[styles.scanBtnText, { color: '#3B82F6' }]}>{t('obd.classic_load_devices')}</Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+        <>
         {/* Status indicator */}
         <View style={[styles.statusCard, { backgroundColor: colors.card }]}>
           <FontAwesome5
@@ -272,7 +449,10 @@ export default function OBDSetupScreen() {
               ? t('obd.no_device_found')
               : t('obd.devices_found', { n: foundDevices.length })}
           </Text>
-          {isScanning && pairedDeviceId && !autoConnectDeviceId && (
+          {/* Chỉ hiện gợi ý "đang tự kết nối" khi pairing nhớ được ĐÚNG là BLE -
+              pairing Classic sẽ không bao giờ xuất hiện trong foundDevices (quét
+              BLE), hiện gợi ý này lúc đó là hứa suông. */}
+          {isScanning && pairedDeviceId && pairedTransport === 'ble' && !autoConnectDeviceId && (
             <Text style={{ color: colors.textSecondary, fontSize: 12, textAlign: 'center' }}>
               {t('obd.auto_connect_hint')}
             </Text>
@@ -390,6 +570,8 @@ export default function OBDSetupScreen() {
             trackColor={{ true: '#3B82F6' }}
           />
         </View>
+        </>
+        )}
 
         {/* Hướng dẫn kết nối (component chỉn chu thay card 3 dòng cũ) */}
         <ObdConnectionGuide />
@@ -424,7 +606,6 @@ export default function OBDSetupScreen() {
           </TouchableOpacity>
         )}
 
-        <ClassicSppSpike stopBleScan={stopScan} resumeBleScan={() => startScan(showAllDevices)} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -493,4 +674,8 @@ const styles = StyleSheet.create({
   showAllLabel: { fontSize: 14, fontWeight: '500' },
   btActionBtn: { marginTop: 8, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8, backgroundColor: '#3B82F6' },
   btActionBtnText: { color: '#fff', fontWeight: '600', fontSize: 13 },
+  modeToggle: { flexDirection: 'row', borderRadius: 10, padding: 4, gap: 4 },
+  modeToggleBtn: { flex: 1, paddingVertical: 10, borderRadius: 8, alignItems: 'center' },
+  modeToggleBtnActive: { backgroundColor: '#3B82F6' },
+  modeToggleText: { fontSize: 13, fontWeight: '600' },
 });

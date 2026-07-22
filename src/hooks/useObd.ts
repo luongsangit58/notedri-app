@@ -236,6 +236,67 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
 
   // --- Connect ---
 
+  // Phần chung SAU KHI transport (BLE hoặc Classic) đã kết nối xong ở tầng
+  // BleService - init ELM327, dò capability, khởi động live monitor, lưu
+  // pairing... KHÔNG liên quan gì tới BLE/Classic cụ thể, nên connect() và
+  // connectClassic() dùng chung, chỉ khác bước connect ban đầu ở trên.
+  const finishConnect = useCallback(async (pairingId: string, transport: 'ble' | 'classic'): Promise<boolean> => {
+    obdSessionStateMachine.setConnected();
+    const result = await initializeElm327();
+    if (!result.ok) throw new Error('Khong the khoi tao ELM327');
+    obdSessionStateMachine.setElmReady();
+
+    setConnectionState('connected');
+    setWarning(
+      result.dataAvailable
+        ? null
+        : { type: 'no_data', rawResponse: result.rawRpmResponse },
+    );
+
+    // Dò capability TRƯỚC snapshot đầu tiên để whitelist kịp áp dụng
+    // (chỉ dò khi xe đang trả dữ liệu - xe tắt máy thì bitmap cũng NO DATA)
+    await loadCapability(result.dataAvailable);
+
+    // Trạng thái toàn cục (C5): thẻ Home/chi tiết xe + banner biết đang nối xe nào
+    useObdSessionStore.getState().patch({ vehicleId, vehicleName: vehicleName ?? null });
+
+    // Live monitor sống theo phiên kết nối (thay trip manager)
+    obdLiveMonitor.start(vehicleId);
+
+    // E2: đẩy nốt phiên còn tồn trong hàng đợi (rút cáp lúc offline lần trước).
+    // Điểm nghiệp vụ chắc chắn có mạng-hoạt-động-lại gần nhất, mirror cách GPS
+    // flush trong GpsTripTracker sau khi chốt chuyến.
+    flushPendingObdSessions().catch(() => {});
+
+    const snap = await readSnapshot();
+    setLiveSnapshot(snap);
+
+    // Ghi nhớ thiết bị này thuộc xe nào (+ transport, 22/7) - để BLE restore
+    // (iOS background), NFC tag, và OBDSetupScreen tự chuyển đúng mode +
+    // auto-reconnect Classic sau này tự nhận diện đúng xe/đúng đường kết nối
+    // mà không cần user chọn lại.
+    savePairing({ bleDeviceId: pairingId, vehicleId, vehicleName: vehicleName ?? '', transport }).catch(() => {});
+    return true;
+  }, [vehicleId, vehicleName, loadCapability]);
+
+  // Chung cho cả connect() và connectClassic() khi bước connect transport ban
+  // đầu ném lỗi - dọn dẹp transport dở dang + đưa state machine/UI về đúng
+  // trạng thái lỗi, TRỪ trường hợp "thua" double-tap (CONNECT_IN_PROGRESS,
+  // xem comment trong connect() gốc).
+  const handleConnectError = useCallback((e: any) => {
+    if (e?.code !== 'CONNECT_IN_PROGRESS') {
+      // NHẢ kết nối dở dang: adapter/socket đang bị app giữ sẽ không sẵn sàng
+      // cho lần thử sau (BLE: ngừng quảng bá tên - lỗi "chỉ connect được đúng
+      // 1 lần", fixture #1; Classic: socket vẫn mở phía adapter).
+      bleService.disconnect().catch(() => {});
+      // Chưa tới ELM_READY - đưa state machine về DISCONNECTED thay vì kẹt ở
+      // CONNECTING/CONNECTED dở dang.
+      obdSessionStateMachine.setDisconnected();
+    }
+    setConnectionState('error');
+    setErrorMessage(e.message);
+  }, []);
+
   // Trả về true/false để caller CHỈ điều hướng khi kết nối thật sự thành công -
   // trước đây Setup nhảy vào Dashboard kể cả khi init lỗi (fixture #1).
   const connect = useCallback(async (deviceId: string): Promise<boolean> => {
@@ -249,62 +310,37 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
     // ở trên (đa-listener C5 tầng 2) - không còn gán callback đơn ở đây.
     try {
       await bleService.connect(deviceId);
-      obdSessionStateMachine.setConnected();
-      const result = await initializeElm327();
-      if (!result.ok) throw new Error('Khong the khoi tao ELM327');
-      obdSessionStateMachine.setElmReady();
-
-      setConnectionState('connected');
-      setWarning(
-        result.dataAvailable
-          ? null
-          : { type: 'no_data', rawResponse: result.rawRpmResponse },
-      );
-
-      // Dò capability TRƯỚC snapshot đầu tiên để whitelist kịp áp dụng
-      // (chỉ dò khi xe đang trả dữ liệu - xe tắt máy thì bitmap cũng NO DATA)
-      await loadCapability(result.dataAvailable);
-
-      // Trạng thái toàn cục (C5): thẻ Home/chi tiết xe + banner biết đang nối xe nào
-      useObdSessionStore.getState().patch({ vehicleId, vehicleName: vehicleName ?? null });
-
-      // Live monitor sống theo phiên kết nối (thay trip manager)
-      obdLiveMonitor.start(vehicleId);
-
-      // E2: đẩy nốt phiên còn tồn trong hàng đợi (rút cáp lúc offline lần trước).
-      // Điểm nghiệp vụ chắc chắn có mạng-hoạt-động-lại gần nhất, mirror cách GPS
-      // flush trong GpsTripTracker sau khi chốt chuyến.
-      flushPendingObdSessions().catch(() => {});
-
-      const snap = await readSnapshot();
-      setLiveSnapshot(snap);
-
-      // Ghi nhớ thiết bị này thuộc xe nào - để BLE restore (iOS background) và
-      // NFC tag sau này tự nhận diện đúng xe mà không cần user chọn lại.
-      savePairing({ bleDeviceId: deviceId, vehicleId, vehicleName: vehicleName ?? '' }).catch(() => {});
-      return true;
+      return await finishConnect(deviceId, 'ble');
     } catch (e: any) {
       // "Thua" trong 1 cặp double-tap (BleService.connect() phát hiện đã có
       // luồng khác đang connecting/connected): KHÔNG được disconnect() - phiên
       // đó không thuộc về lời gọi này, dọn dẹp nhầm sẽ ngắt kết nối vừa thành
       // công của luồng kia + set nhầm intentionalDisconnect khiến rớt sóng thật
       // sau đó không còn tự reconnect được nữa.
-      if (e?.code !== 'CONNECT_IN_PROGRESS') {
-        // NHẢ kết nối BLE dở dang: adapter đang bị app giữ sẽ NGỪNG quảng bá tên,
-        // mọi lần quét sau sẽ không bao giờ thấy nó nữa (phải rút cắm lại mới hiện).
-        // Đây chính là lỗi "chỉ connect được đúng 1 lần" - fixture #1.
-        await bleService.disconnect().catch(() => {});
-        // Chưa tới ELM_READY - đưa state machine về DISCONNECTED thay vì kẹt ở
-        // CONNECTING/CONNECTED dở dang (khớp bleService.disconnect() ở trên).
-        // Bỏ qua nhánh CONNECT_IN_PROGRESS: phiên đó KHÔNG thuộc lời gọi này,
-        // trạng thái thật thuộc về luồng kia đang thắng.
-        obdSessionStateMachine.setDisconnected();
-      }
-      setConnectionState('error');
-      setErrorMessage(e.message);
+      handleConnectError(e);
       return false;
     }
-  }, [stopScan, vehicleId, vehicleName, loadCapability]);
+  }, [stopScan, finishConnect, handleConnectError]);
+
+  // Kết nối qua Bluetooth Classic (SPP, 22/7) - cho đầu Android ô tô không quét/
+  // kết nối BLE được (xem BT_UNSUPPORTED). address PHẢI là thiết bị đã ghép nối
+  // qua Cài đặt Bluetooth hệ thống trước (xem discoverDevices() ở
+  // NotedriBtPairingModule.kt) - hook này không tự quét/ghép nối mới.
+  const connectClassic = useCallback(async (address: string, name: string): Promise<boolean> => {
+    stopScan();
+    setVinMismatch(null);
+    setConnectionState('connecting');
+    setErrorMessage(null);
+    obdSessionStateMachine.setConnecting();
+
+    try {
+      await bleService.connectClassic(address, name);
+      return await finishConnect(address, 'classic');
+    } catch (e: any) {
+      handleConnectError(e);
+      return false;
+    }
+  }, [stopScan, finishConnect, handleConnectError]);
 
   const disconnect = useCallback(async () => {
     await bleService.disconnect();
@@ -365,6 +401,7 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
     startScan,
     stopScan,
     connect,
+    connectClassic,
     disconnect,
     refreshCapability,
   };
