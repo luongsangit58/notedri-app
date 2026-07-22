@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Alert, ActivityIndicator, Platform } from 'react-native';
 import NotedriBtPairing, { ClassicBtDevice } from '../../../modules/notedri-bt-pairing/src/NotedriBtPairingModule';
+import { bleService } from '../../services/obd/BleService';
 
 /**
  * Spike TẠM THỜI (22/7, xem [[feedback-obd-android-headunit-fixes]] memory) -
@@ -19,17 +20,27 @@ export default function ClassicSppSpike() {
 
   if (Platform.OS !== 'android') return null;
 
+  // Ghi vào ĐÚNG session log mà nút "Xuất log phiên (gỡ lỗi)" đã xuất - user
+  // quen sẵn cách lấy log này, khỏi phải chụp màn hình/mô tả lại bằng lời
+  // (rà soát 22/7, user hỏi có log để gửi không nếu máy không chạy được).
   async function handleScan() {
     setScanning(true);
     setDevices([]);
+    bleService.logDiagnostic('#classic_spike', 'discoverDevices: start');
     try {
       const found = await NotedriBtPairing.discoverDevices();
       setDevices(found);
+      bleService.logDiagnostic(
+        '#classic_spike',
+        `discoverDevices: found ${found.length} - ${found.map((d) => `${d.name}(${d.address}${d.bonded ? ',bonded' : ''})`).join('; ')}`
+      );
       if (found.length === 0) {
         Alert.alert('Spike Classic BT', 'Không tìm thấy thiết bị nào.');
       }
     } catch (e: any) {
-      Alert.alert('Quét thất bại', e?.message ?? String(e));
+      const msg = e?.message ?? String(e);
+      bleService.logDiagnostic('#classic_spike', `discoverDevices: error - ${msg}`);
+      Alert.alert('Quét thất bại', msg);
     } finally {
       setScanning(false);
     }
@@ -37,11 +48,15 @@ export default function ClassicSppSpike() {
 
   async function handleTest(device: ClassicBtDevice) {
     setTestingAddress(device.address);
+    bleService.logDiagnostic('#classic_spike', `pairAndTestAtz: start ${device.address} pin=${pin.trim()}`);
     try {
       const response = await NotedriBtPairing.pairAndTestAtz(device.address, pin.trim());
+      bleService.logDiagnostic('#classic_spike', `pairAndTestAtz: ok response=${response}`);
       Alert.alert('Thành công', `Phản hồi ATZ:\n${response}`);
     } catch (e: any) {
-      Alert.alert('Thất bại', e?.message ?? String(e));
+      const msg = e?.message ?? String(e);
+      bleService.logDiagnostic('#classic_spike', `pairAndTestAtz: error - ${msg}`);
+      Alert.alert('Thất bại', msg);
     } finally {
       setTestingAddress(null);
     }
