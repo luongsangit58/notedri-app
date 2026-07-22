@@ -15,6 +15,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import java.io.InputStream
 import java.io.OutputStream
 import java.util.UUID
@@ -25,6 +26,14 @@ import kotlin.coroutines.resumeWithException
 // Vgate) đều đăng ký service này, không cần dò như BLE (GATT service UUID tuỳ
 // hãng, xem PREFERRED_SERIAL_SERVICE_PREFIXES trong BleService.ts).
 private val SPP_UUID: UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB")
+
+// Rà soát 22/7 (log thật: "discoverDevices: start" rồi im lặng mãi, app "cứ
+// quay") - chờ ACTION_DISCOVERY_FINISHED không giới hạn thời gian là SAI, ROM
+// này đã biết có vấn đề với BLE nên không thể giả định tầng Classic discovery
+// luôn phát đúng broadcast kết thúc. 12s ~ thời lượng 1 chu kỳ discovery cổ
+// điển của Android (thường 10-13s) - quá giờ vẫn phải trả về những gì đã có
+// (tối thiểu là danh sách ĐÃ ghép nối, thu thập trước khi chờ) thay vì treo.
+private const val DISCOVERY_TIMEOUT_MS = 12_000L
 
 class BtPairingException(message: String) : CodedException(message)
 
@@ -83,44 +92,51 @@ class NotedriBtPairingModule : Module() {
       found[d.address] = mapOf("address" to d.address, "name" to (d.name ?: d.address), "bonded" to true)
     }
 
-    suspendCancellableCoroutine<Unit> { cont ->
-      val receiver = object : BroadcastReceiver() {
-        override fun onReceive(ctx: Context, intent: Intent) {
-          when (intent.action) {
-            BluetoothDevice.ACTION_FOUND -> {
-              @Suppress("DEPRECATION")
-              val device = intent.getParcelableExtra<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE) ?: return
-              // Không ghi đè entry "bonded=true" đã có sẵn từ getBondedDevices()
-              // bằng entry "bonded=false" của cùng địa chỉ quét được lại.
-              if (!found.containsKey(device.address)) {
-                found[device.address] = mapOf(
-                  "address" to device.address,
-                  "name" to (device.name ?: device.address),
-                  "bonded" to false
-                )
+    // withTimeoutOrNull thay vì chờ vô hạn: quá DISCOVERY_TIMEOUT_MS thì HUỶ
+    // coroutine (kích hoạt invokeOnCancellation bên dưới, tự gỡ receiver) và
+    // tiếp tục chạy xuống dòng cuối - trả về những gì đã gom được (tối thiểu
+    // là danh sách đã ghép nối) thay vì không bao giờ resolve.
+    withTimeoutOrNull(DISCOVERY_TIMEOUT_MS) {
+      suspendCancellableCoroutine<Unit> { cont ->
+        val receiver = object : BroadcastReceiver() {
+          override fun onReceive(ctx: Context, intent: Intent) {
+            when (intent.action) {
+              BluetoothDevice.ACTION_FOUND -> {
+                @Suppress("DEPRECATION")
+                val device = intent.getParcelableExtra<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE) ?: return
+                // Không ghi đè entry "bonded=true" đã có sẵn từ getBondedDevices()
+                // bằng entry "bonded=false" của cùng địa chỉ quét được lại.
+                if (!found.containsKey(device.address)) {
+                  found[device.address] = mapOf(
+                    "address" to device.address,
+                    "name" to (device.name ?: device.address),
+                    "bonded" to false
+                  )
+                }
               }
-            }
-            BluetoothAdapter.ACTION_DISCOVERY_FINISHED -> {
-              context.unregisterReceiver(this)
-              if (cont.isActive) cont.resume(Unit)
+              BluetoothAdapter.ACTION_DISCOVERY_FINISHED -> {
+                try { context.unregisterReceiver(this) } catch (_: Exception) {}
+                if (cont.isActive) cont.resume(Unit)
+              }
             }
           }
         }
-      }
-      val filter = IntentFilter().apply {
-        addAction(BluetoothDevice.ACTION_FOUND)
-        addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED)
-      }
-      ContextCompat.registerReceiver(context, receiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
-      cont.invokeOnCancellation { context.unregisterReceiver(receiver) }
+        val filter = IntentFilter().apply {
+          addAction(BluetoothDevice.ACTION_FOUND)
+          addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED)
+        }
+        ContextCompat.registerReceiver(context, receiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
+        cont.invokeOnCancellation { try { context.unregisterReceiver(receiver) } catch (_: Exception) {} }
 
-      adapter.cancelDiscovery()
-      val started = adapter.startDiscovery()
-      if (!started) {
-        context.unregisterReceiver(receiver)
-        cont.resumeWithException(BtPairingException("Không bắt đầu quét được (startDiscovery trả về false)"))
+        adapter.cancelDiscovery()
+        val started = adapter.startDiscovery()
+        if (!started) {
+          try { context.unregisterReceiver(receiver) } catch (_: Exception) {}
+          cont.resumeWithException(BtPairingException("Không bắt đầu quét được (startDiscovery trả về false)"))
+        }
       }
     }
+    adapter.cancelDiscovery()
 
     return found.values.toList()
   }
