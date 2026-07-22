@@ -4,6 +4,7 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import { useColors } from '../../utils/theme';
 import { useT } from '../../i18n';
 import { ObdSnapshot } from '../../services/obd/ObdReader';
+import { FastSnapshot } from '../../services/obd/obdLiveMonitor';
 import { VehicleCapability } from '../../services/obd/capabilityService';
 import { pickGaugeTheme, getSelectedGaugeThemeId, setSelectedGaugeThemeId, GAUGE_THEMES } from '../../utils/gaugeThemes';
 import { useAuthStore } from '../../store/authStore';
@@ -12,11 +13,15 @@ import GaugeThemePicker from './GaugeThemePicker';
 import Dial from './Dial';
 
 export default function GaugeCluster({
-  vehicleId, vehicleName, snapshot, capability, isConnected,
+  vehicleId, vehicleName, snapshot, fastSnapshot, capability, isConnected,
 }: {
   vehicleId: number;
   vehicleName?: string;
   snapshot: ObdSnapshot | null;
+  // Tầng poll nhanh (500ms, RAW không làm mượt) - góp ý user: kim đồng hồ cảm
+  // giác trễ so với xe thật (snapshot tầng medium 3s + EWMA). Optional vì màn
+  // hình khác (vd VehicleDetailScreen mở picker theme) không có nguồn này.
+  fastSnapshot?: FastSnapshot | null;
   capability: VehicleCapability | null;
   isConnected: boolean;
 }) {
@@ -46,6 +51,11 @@ export default function GaugeCluster({
   const theme = selectedTheme.isPremiumOnly && !isPremium ? GAUGE_THEMES[0] : selectedTheme;
   const [pickerVisible, setPickerVisible] = useState(false);
 
+  // Ưu tiên fastSnapshot (500ms, raw) cho kim đồng hồ - rơi về snapshot (3s)
+  // khi chưa có mẫu fast nào (vừa kết nối, hoặc màn hình không truyền prop này).
+  const gaugeSpeedKmh = fastSnapshot?.speedKmh ?? snapshot?.speedKmh ?? null;
+  const gaugeRpm = fastSnapshot?.rpm ?? snapshot?.rpm ?? null;
+
   const secondaryTiles = [
     { pid: '05', el: <StatBox key="05" label={t('obd.stat_coolant')} value={snapshot?.coolantTempC ?? null} unit="°C" icon="thermometer-half" color="#EF4444" /> },
     { pid: '2F', el: <StatBox key="2F" label={t('obd.stat_fuel')} value={snapshot?.fuelLevelPct ?? null} unit="%" icon="gas-pump" color="#10B981" /> },
@@ -74,8 +84,8 @@ export default function GaugeCluster({
         contentContainerStyle={[styles.root, !isConnected && snapshot ? { opacity: 0.5 } : null]}
       >
         <View style={styles.dialsRow}>
-          <Dial value={snapshot?.speedKmh ?? null} min={0} max={220} label={t('obd.stat_speed')} unit="km/h" accent={theme.accent} size={dialSize} />
-          <Dial value={snapshot?.rpm ?? null} min={0} max={8000} label="RPM" unit="rpm" accent="#8B5CF6" size={dialSize} />
+          <Dial value={gaugeSpeedKmh} min={0} max={220} label={t('obd.stat_speed')} unit="km/h" accent={theme.accent} size={dialSize} />
+          <Dial value={gaugeRpm} min={0} max={8000} label="RPM" unit="rpm" accent="#8B5CF6" size={dialSize} />
         </View>
         {secondary.length > 0 && (
           <View style={styles.secondaryRow}>

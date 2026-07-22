@@ -4,7 +4,7 @@ import { obdApi } from '../api/obd';
 import { bleService, ConnectionState, ObdDevice } from '../services/obd/BleService';
 import { initializeElm327, readSnapshot, setActivePidWhitelist, ObdSnapshot } from '../services/obd/ObdReader';
 import { getCachedCapability, discoverCapability, clearCapability, readCurrentVin, VehicleCapability } from '../services/obd/capabilityService';
-import { obdLiveMonitor } from '../services/obd/obdLiveMonitor';
+import { obdLiveMonitor, FastSnapshot } from '../services/obd/obdLiveMonitor';
 import { obdSessionStateMachine } from '../services/obd/obdSessionStateMachine';
 import { flushPendingObdSessions } from '../services/obd/ObdSessionSyncQueue';
 import { Finding } from '../services/obd/diagnosticEngine';
@@ -47,6 +47,12 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
   // BLE (mục 12 kiểm toán 16/07). Rule engine/DTC vẫn dựa trên liveSnapshot RAW
   // qua onFindings() - KHÔNG đổi, chỉ thêm lựa chọn hiển thị mượt hơn.
   const [smoothedSnapshot, setSmoothedSnapshot] = useState<ObdSnapshot | null>(null);
+  // Tầng poll NHANH (500ms, RAW không làm mượt) - đã có sẵn trong obdLiveMonitor
+  // (pollFastTier, xây riêng cho kim đồng hồ tốc độ/vòng tua) nhưng trước đây
+  // chưa hook nào subscribe nên chưa dùng tới. Góp ý user: đồng hồ cảm giác
+  // trễ so với xe thật - nối vào đây để GaugeCluster lấy tốc độ/RPM tức thời
+  // hơn hẳn so với tầng medium (3s) dùng cho lưới số liệu còn lại.
+  const [fastSnapshot, setFastSnapshot] = useState<FastSnapshot | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   // Thời điểm (epoch ms) được phép quét lại - set khi ScanStartFailed do chạm
   // ngưỡng throttle của Android (xem BleService.recordScanStartAndGetCooldownMs).
@@ -105,6 +111,7 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
     const unsubs = [
       obdLiveMonitor.onSnapshot((snap) => setLiveSnapshot(snap)),
       obdLiveMonitor.onSmoothedSnapshot((snap) => setSmoothedSnapshot(snap)),
+      obdLiveMonitor.onFastSnapshot((snap) => setFastSnapshot(snap)),
       obdLiveMonitor.onFindings((f) => setFindings(f)),
       obdLiveMonitor.onDtcFound(() => {
         qc.invalidateQueries({ queryKey: ['obd', 'dtc', vehicleId] });
@@ -113,6 +120,7 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
         setConnectionState('disconnected');
         setLiveSnapshot(null);
         setSmoothedSnapshot(null);
+        setFastSnapshot(null);
         setFindings([]);
         setVinMismatch(null);
       }),
@@ -346,6 +354,7 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
     foundDevices,
     liveSnapshot,
     smoothedSnapshot,
+    fastSnapshot,
     findings,
     errorMessage,
     scanCooldownUntil,

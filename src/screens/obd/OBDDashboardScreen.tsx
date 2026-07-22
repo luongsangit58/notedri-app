@@ -64,6 +64,7 @@ export default function OBDDashboardScreen() {
   const {
     connectionState,
     smoothedSnapshot,
+    fastSnapshot,
     findings,
     warning,
     capability,
@@ -331,7 +332,7 @@ export default function OBDDashboardScreen() {
       )}
 
       {viewMode === 'gauge' ? (
-        <GaugeCluster vehicleId={vehicleId} vehicleName={vehicleName} snapshot={snap} capability={capability} isConnected={isConnected} />
+        <GaugeCluster vehicleId={vehicleId} vehicleName={vehicleName} snapshot={snap} fastSnapshot={fastSnapshot} capability={capability} isConnected={isConnected} />
       ) : (
       <ScrollView contentContainerStyle={[styles.body, contentWide]}>
         {/* Connection status */}
@@ -390,7 +391,7 @@ export default function OBDDashboardScreen() {
         <View style={[styles.statsGrid, !isConnected && snap ? { opacity: 0.5 } : null]}>
           {(() => {
             const tiles = [
-              { pid: '0D', el: <StatBox key="0D" label={t('obd.stat_speed')} value={snap?.speedKmh ?? null} unit=" km/h" icon="tachometer-alt" color="#3B82F6" /> },
+              { pid: '0D', el: <StatBox key="0D" label={t('obd.stat_speed')} value={snap?.speedKmh !== null ? Math.round(snap?.speedKmh ?? 0) : null} unit=" km/h" icon="tachometer-alt" color="#3B82F6" /> },
               { pid: '0C', el: <StatBox key="0C" label="RPM" value={snap?.rpm !== null ? Math.round(snap?.rpm ?? 0) : null} icon="cogs" color="#8B5CF6" /> },
               { pid: '04', el: <StatBox key="04" label={t('obd.stat_engine_load')} value={snap?.engineLoadPct ?? null} unit="%" icon="fire" color="#F59E0B" /> },
               { pid: '05', el: <StatBox key="05" label={t('obd.stat_coolant')} value={snap?.coolantTempC ?? null} unit="°C" icon="thermometer-half" color="#EF4444" /> },

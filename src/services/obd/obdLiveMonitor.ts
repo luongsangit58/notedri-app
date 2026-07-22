@@ -300,7 +300,12 @@ async function poll(): Promise<void> {
     // Gauge hiển thị: bản MƯỢT (EWMA) của snapshot, phát riêng cho màn hình nào
     // muốn đỡ giật hình - rule engine bên dưới vẫn dùng `snapshot` RAW, không đổi.
     smoothedRpm = ewmaStep(smoothedRpm, snapshot.rpm);
-    smoothedSpeedKmh = ewmaStep(smoothedSpeedKmh, snapshot.speedKmh);
+    // Rà soát (góp ý user: tốc độ hiện số lẻ vd "9,5km/h" và bị trễ - xe dừng
+    // hẳn rồi số vẫn giảm dần thêm chục giây) - EWMA alpha=0.3 trên nhịp 3s
+    // khiến giá trị giảm dần 0.7^n thay vì rớt về 0 ngay khi xe dừng thật. Tốc
+    // độ (PID 0D) vốn là số nguyên từ ECU, không nhiễu lượng tử hoá như RPM/
+    // nhiệt độ đọc analog nên không cần làm mượt - dùng thẳng giá trị RAW.
+    smoothedSpeedKmh = snapshot.speedKmh;
     smoothedEngineLoadPct = ewmaStep(smoothedEngineLoadPct, snapshot.engineLoadPct);
     smoothedCoolantTempC = ewmaStep(smoothedCoolantTempC, snapshot.coolantTempC);
     smoothedThrottlePct = ewmaStep(smoothedThrottlePct, snapshot.throttlePct);
