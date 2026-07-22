@@ -12,6 +12,7 @@ import expo.modules.kotlin.exception.CodedException
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
@@ -34,6 +35,15 @@ private val SPP_UUID: UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34
 // điển của Android (thường 10-13s) - quá giờ vẫn phải trả về những gì đã có
 // (tối thiểu là danh sách ĐÃ ghép nối, thu thập trước khi chờ) thay vì treo.
 private const val DISCOVERY_TIMEOUT_MS = 12_000L
+
+// Rà soát 22/7: ảnh chụp thực tế cho thấy chính Car Scanner (app đối chứng,
+// KHÔNG phải NoteDri) cũng hiện "Connection problems" lúc 14:46 rồi tự kết
+// nối thành công lúc 14:47 - chỉ cách nhau 1 phút, không đổi gì khác ngoài
+// việc bấm CONNECT lại. Kết nối Classic trên đúng phần cứng này vốn chập
+// chờn cho MỌI app, không phải lỗi riêng của NoteDri - cần tự thử lại vài
+// lần thay vì báo lỗi ngay sau 1 lần fail, giống cách BleService.ts đã làm
+// cho BLE (RECONNECT_DELAYS_MS).
+private val CONNECT_RETRY_DELAYS_MS = longArrayOf(1500, 2500)
 
 class BtPairingException(message: String) : CodedException(message)
 
@@ -163,13 +173,26 @@ class NotedriBtPairingModule : Module() {
     // ngắt. "Insecure" bỏ qua bước mã hoá/xác thực đó - thử trước, nếu vẫn lỗi
     // mới rơi về "secure" (đối xứng với cách xử lý fallback MTU/legacyScan bên
     // BLE - thử phương án rẻ nhất trước, không cần biết chắc cái nào đúng).
-    return withContext(Dispatchers.IO) {
+    //
+    // Bọc thêm vòng thử lại (xem comment CONNECT_RETRY_DELAYS_MS) - kết nối
+    // chập chờn không phải lỗi 1 lần là hết, retry mới phản ánh đúng thực tế
+    // Car Scanner cũng gặp.
+    var lastError: Exception = BtPairingException("Không kết nối được")
+    for (attempt in 0..CONNECT_RETRY_DELAYS_MS.size) {
+      if (attempt > 0) delay(CONNECT_RETRY_DELAYS_MS[attempt - 1])
       try {
-        connectAndSendAtz(device, insecure = true)
-      } catch (_: Exception) {
-        connectAndSendAtz(device, insecure = false)
+        return withContext(Dispatchers.IO) {
+          try {
+            connectAndSendAtz(device, insecure = true)
+          } catch (_: Exception) {
+            connectAndSendAtz(device, insecure = false)
+          }
+        }
+      } catch (e: Exception) {
+        lastError = e
       }
     }
+    throw lastError
   }
 
   private fun connectAndSendAtz(device: BluetoothDevice, insecure: Boolean): String {
