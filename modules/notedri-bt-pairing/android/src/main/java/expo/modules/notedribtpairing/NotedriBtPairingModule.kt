@@ -12,7 +12,9 @@ import expo.modules.kotlin.exception.CodedException
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
@@ -50,6 +52,15 @@ private val CONNECT_RETRY_DELAYS_MS = longArrayOf(1500, 2500)
 // CHANGED cũng phải có giới hạn, không thì 1 lần ghép nối kẹt là treo cả
 // pairAndTestAtz() mãi mãi, không bao giờ tới được vòng retry connect.
 private const val BOND_TIMEOUT_MS = 15_000L
+
+// Rà soát 22/7 (trả lời câu hỏi "nếu Android-Vlink đang kết nối với thiết bị
+// khác thì sao"): module Serial Bluetooth giá rẻ (ELM327 clone) hầu như chỉ
+// nhận 1 kết nối tại 1 thời điểm - nếu bận, BluetoothSocket.connect()/read()
+// có thể block khá lâu theo timeout ngầm KHÔNG rõ ràng của hệ thống, không có
+// tham số timeout riêng để truyền vào. Đóng socket từ 1 coroutine canh gác
+// song song (connectAndSendAtz) là cách chuẩn để ép lệnh đang block ném lỗi
+// ngay, thay vì phụ thuộc hệ thống.
+private const val CONNECT_ATTEMPT_TIMEOUT_MS = 10_000L
 
 class BtPairingException(message: String) : CodedException(message)
 
@@ -187,12 +198,10 @@ class NotedriBtPairingModule : Module() {
     for (attempt in 0..CONNECT_RETRY_DELAYS_MS.size) {
       if (attempt > 0) delay(CONNECT_RETRY_DELAYS_MS[attempt - 1])
       try {
-        return withContext(Dispatchers.IO) {
-          try {
-            connectAndSendAtz(device, insecure = true)
-          } catch (_: Exception) {
-            connectAndSendAtz(device, insecure = false)
-          }
+        return try {
+          connectAndSendAtz(device, insecure = true)
+        } catch (_: Exception) {
+          connectAndSendAtz(device, insecure = false)
         }
       } catch (e: Exception) {
         lastError = e
@@ -201,22 +210,35 @@ class NotedriBtPairingModule : Module() {
     throw lastError
   }
 
-  private fun connectAndSendAtz(device: BluetoothDevice, insecure: Boolean): String {
+  private suspend fun connectAndSendAtz(device: BluetoothDevice, insecure: Boolean): String = coroutineScope {
     val socket = if (insecure) {
       device.createInsecureRfcommSocketToServiceRecord(SPP_UUID)
     } else {
       device.createRfcommSocketToServiceRecord(SPP_UUID)
     }
+    // BluetoothSocket không có tham số timeout cho connect()/read() - đóng
+    // socket từ coroutine canh gác này ép lệnh đang block (nếu có) ném lỗi
+    // ngay khi hết CONNECT_ATTEMPT_TIMEOUT_MS, thay vì phụ thuộc timeout ngầm
+    // của hệ thống (không rõ bao lâu, đặc biệt khi adapter đang bận với 1
+    // kết nối khác).
+    val watchdog = launch {
+      delay(CONNECT_ATTEMPT_TIMEOUT_MS)
+      try { socket.close() } catch (_: Exception) {}
+    }
     try {
-      socket.connect()
-      // Vài module Serial giá rẻ cần 1 khoảng lặng ngắn sau connect() trước
-      // khi nhận byte đầu tiên - ghi ngay có thể rơi vào lúc firmware chưa kịp
-      // chuyển sang chế độ nhận lệnh (thực hành phổ biến với HC-05/06 clone).
-      Thread.sleep(150)
-      socket.outputStream.write("ATZ\r".toByteArray())
-      socket.outputStream.flush()
-      return readUntilPrompt(socket.inputStream)
+      withContext(Dispatchers.IO) {
+        socket.connect()
+        // Vài module Serial giá rẻ cần 1 khoảng lặng ngắn sau connect() trước
+        // khi nhận byte đầu tiên - ghi ngay có thể rơi vào lúc firmware chưa
+        // kịp chuyển sang chế độ nhận lệnh (thực hành phổ biến với HC-05/06
+        // clone).
+        Thread.sleep(150)
+        socket.outputStream.write("ATZ\r".toByteArray())
+        socket.outputStream.flush()
+        readUntilPrompt(socket.inputStream)
+      }
     } finally {
+      watchdog.cancel()
       try { socket.close() } catch (_: Exception) {}
     }
   }
