@@ -1,6 +1,5 @@
-// Nori: linh vật báo cáo sức khỏe xe hàng ngày - logic tâm trạng thuần (không
-// phụ thuộc React/i18n) để dùng chung giữa HomeScreen, HealthScreen và lịch
-// thông báo hằng ngày.
+// Nori: linh vật báo cáo sức khỏe xe - logic tâm trạng thuần (không phụ thuộc
+// React/i18n) để dùng chung giữa card Nori ở HomeScreen và avatar ở HealthScreen.
 export type NoriMood = 'happy' | 'warn' | 'urgent' | 'unknown';
 
 export const NORI_MOOD_COLOR: Record<NoriMood, string> = {

@@ -1461,7 +1461,6 @@ const vi = {
   "nori.unknown": "Chưa đủ dữ liệu để Nori đánh giá hôm nay.",
   "nori.warn_detail": "Nori thấy: {{issue}} - xem chi tiết nhé.",
   "nori.obd_live_note": "Đang kết nối OBD2 - theo dõi trực tiếp",
-  "nori.daily_notification_title": "Nori báo cáo sức khỏe xe - {{name}}",
 
 } as const;
 

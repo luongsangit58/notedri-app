@@ -78,6 +78,11 @@ function AppLoader({ children }: { children: React.ReactNode }) {
     // AppLoader luôn mount lúc cold-start bất kể đã đăng nhập hay chưa - còn Login/Profile thì
     // tuỳ trạng thái mà có thể không phải màn hình được mở lại.
     void recoverPendingGoogleAuthIfAny();
+    // Rà soát 22/7: bản build trước từng lên lịch 1 thông báo local hàng ngày cho Nori
+    // (đã bỏ - trùng với push sức khỏe xe thông minh hơn backend đã có sẵn). Huỷ 1 lần
+    // ở đây để dọn nốt thông báo đã lỡ lên lịch trên máy đã cài bản build đó, tránh nó
+    // cứ bắn mãi dù code lên lịch đã không còn.
+    Notifications.cancelScheduledNotificationAsync('nori-daily-digest').catch(() => {});
   }, []);
 
   // Ép tạo BleManager sớm - bắt buộc để restoreStateIdentifier (iOS background BLE

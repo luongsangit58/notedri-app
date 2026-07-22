@@ -26,9 +26,6 @@ import { useObdSessionStore } from '../../store/obdSessionStore';
 import { useSelectedVehicleStore } from '../../store/selectedVehicleStore';
 import client from '../../api/client';
 import NoriDailyCard from '../../components/nori/NoriDailyCard';
-import { vehiclesApi } from '../../api/vehicles';
-import { noriMoodFromScore } from '../../services/nori/nori';
-import { scheduleNoriDailyDigest } from '../../services/nori/noriDailyDigest';
 
 function VehicleSelector({ vehicles, selectedId, onSelect }: {
   vehicles: any[]; selectedId?: number; onSelect: (id: number) => void;
@@ -224,38 +221,6 @@ export default function HomeScreen() {
     .sort((a, b) => (a.remaining_days ?? 9999) - (b.remaining_days ?? 9999));
   const topHighlight = upcomingAll.find((r) => r.remaining_days != null && r.remaining_days <= 30) ?? null;
   const upcoming = upcomingAll.slice(0, 3);
-
-  // Nori: sức khỏe xe (CÙNG queryKey với HealthScreen - dùng chung cache, không
-  // bắn thêm request nếu user đã mở màn Sức khỏe). Dùng để lên lịch báo cáo
-  // hàng ngày - xem effect bên dưới.
-  const { data: noriHealthRaw } = useQuery({
-    queryKey: ['vehicles', vehicleId, 'health'],
-    queryFn: () => vehiclesApi.health(vehicleId!).then((r) => r.data),
-    enabled: !!vehicleId,
-    retry: 1,
-  });
-  const noriHealth: any = noriHealthRaw?.data ?? noriHealthRaw ?? null;
-  const noriTotal: number | null = noriHealth?.score?.total ?? (noriHealth?.health_score != null ? Number(noriHealth.health_score) : null);
-  const noriOrgans: any[] = Array.isArray(noriHealth?.organs) ? noriHealth.organs : [];
-  const noriHasUrgent = noriOrgans.some((o) => o.status === 'urgent');
-  const noriHasWarn = noriOrgans.some((o) => o.status === 'warn');
-  const noriTopIssue = noriOrgans.find((o) => o.status === 'urgent') ?? noriOrgans.find((o) => o.status === 'warn');
-
-  // Lên lịch lại thông báo "Nori báo cáo hàng ngày" (20h) mỗi khi có nội dung
-  // MỚI - so sánh chuỗi đã lên lịch lần trước để không gọi lại API notification
-  // vô ích mỗi lần query refetch với cùng dữ liệu.
-  const lastNoriDigestRef = React.useRef<string | null>(null);
-  useEffect(() => {
-    if (!vehicleId || !vehicleName) return;
-    const mood = noriMoodFromScore(noriTotal, noriHasUrgent, noriHasWarn);
-    const bodyKey = noriTopIssue?.label ? 'nori.warn_detail' : `nori.${mood}`;
-    const bodyParams = noriTopIssue?.label ? { issue: noriTopIssue.label } : undefined;
-    const body = t(bodyKey as any, bodyParams as any);
-    const digestSignature = `${vehicleId}|${body}`;
-    if (lastNoriDigestRef.current === digestSignature) return;
-    lastNoriDigestRef.current = digestSignature;
-    scheduleNoriDailyDigest(t('nori.daily_notification_title', { name: vehicleName }), body);
-  }, [vehicleId, vehicleName, noriTotal, noriHasUrgent, noriHasWarn, noriTopIssue?.label, t]);
 
   const onRefresh = () => { refetchVehicles(); refetchRem(); refetchDash(); };
 

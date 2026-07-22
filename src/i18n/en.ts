@@ -1461,7 +1461,6 @@ const en = {
   "nori.unknown": "Not enough data for Nori to assess today.",
   "nori.warn_detail": "Nori spotted: {{issue}} - see details.",
   "nori.obd_live_note": "OBD2 connected - live monitoring",
-  "nori.daily_notification_title": "Nori's vehicle health report - {{name}}",
 
 } as const;
 
