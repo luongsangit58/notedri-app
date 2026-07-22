@@ -3,8 +3,9 @@ import { View, Text, StyleSheet } from 'react-native';
 import Svg, { Defs, Pattern, Rect } from 'react-native-svg';
 import { monoFontFamily } from '../../../../theme/fonts';
 import { useT } from '../../../../i18n';
-import { CockpitLayoutProps } from '../types';
+import { CockpitLayoutProps, CockpitMetricValue } from '../types';
 import { PRIMARY_METRIC_KEYS, FEATURED_SECONDARY_KEYS } from '../../../../constants/obdMetrics';
+import { useCountingNumber } from '../../../../hooks/useCountingNumber';
 
 // Premium "HUD Đua xe" - bản sắc CỐ ĐỊNH (nền carbon tối, số vòng tua khổng
 // lồ, dải shift-light) không đổi theo theme sáng/tối app - đây chính là lý do
@@ -18,10 +19,28 @@ const PALETTE = {
 const SHIFT_SEGMENTS = 8;
 const SHIFT_HOT_FROM = 6;
 
-export default function RacingLayout({ metrics, isPortrait }: CockpitLayoutProps) {
+// Component RIÊNG cho từng ô - xem lý do trong CardsLayout.tsx (không gọi
+// hook trực tiếp trong .map vì số ô có thể đổi giữa các lần render).
+function MiniStat({ item, animate }: { item: CockpitMetricValue; animate?: boolean }) {
+  const t = useT();
+  const { def, value } = item;
+  const display = useCountingNumber(value, 1, animate);
+  return (
+    <View style={[styles.mini, { borderColor: PALETTE.border }]}>
+      <Text style={[styles.miniLabel, { color: PALETTE.textDim }]} numberOfLines={1}>{t(def.labelKey)}</Text>
+      <Text style={[styles.miniVal, { color: PALETTE.text, fontFamily: monoFontFamily }]} numberOfLines={1}>
+        {display ?? '-'}{def.unit}
+      </Text>
+    </View>
+  );
+}
+
+export default function RacingLayout({ metrics, isPortrait, animate }: CockpitLayoutProps) {
   const t = useT();
   const speed = metrics.find((m) => m.def.key === 'speedKmh');
   const rpm = metrics.find((m) => m.def.key === 'rpm');
+  const speedDisplay = useCountingNumber(speed?.value ?? null, 0, animate);
+  const rpmDisplay = useCountingNumber(rpm?.value ?? null, 0, animate);
   const rpmFrac = rpm ? Math.max(0, Math.min(1, (rpm.value ?? 0) / rpm.def.max)) : 0;
   const litSegments = Math.round(rpmFrac * SHIFT_SEGMENTS);
   const secondary = metrics.filter((m) => !PRIMARY_METRIC_KEYS.includes(m.def.key));
@@ -43,7 +62,7 @@ export default function RacingLayout({ metrics, isPortrait }: CockpitLayoutProps
 
       <View style={styles.speedBadge}>
         <Text style={[styles.speedVal, { color: PALETTE.speedColor, fontFamily: monoFontFamily }]}>
-          {speed?.value != null ? Math.round(speed.value) : '-'}
+          {speedDisplay ?? '-'}
         </Text>
         <Text style={[styles.speedUnit, { color: PALETTE.textDim }]}>km/h</Text>
       </View>
@@ -54,7 +73,7 @@ export default function RacingLayout({ metrics, isPortrait }: CockpitLayoutProps
           numberOfLines={1}
           adjustsFontSizeToFit
         >
-          {rpm?.value != null ? Math.round(rpm.value).toLocaleString('vi-VN') : '-'}
+          {rpmDisplay != null ? Number(rpmDisplay).toLocaleString('vi-VN') : '-'}
         </Text>
         <Text style={[styles.rpmUnit, { color: PALETTE.textDim }]}>{t('obd.stat_rpm')}</Text>
 
@@ -78,14 +97,7 @@ export default function RacingLayout({ metrics, isPortrait }: CockpitLayoutProps
 
       {featured.length > 0 && (
         <View style={styles.secondaryRow}>
-          {featured.map(({ def, value }) => (
-            <View key={def.key} style={[styles.mini, { borderColor: PALETTE.border }]}>
-              <Text style={[styles.miniLabel, { color: PALETTE.textDim }]} numberOfLines={1}>{t(def.labelKey)}</Text>
-              <Text style={[styles.miniVal, { color: PALETTE.text, fontFamily: monoFontFamily }]} numberOfLines={1}>
-                {value != null ? Math.round(value * 10) / 10 : '-'}{def.unit}
-              </Text>
-            </View>
-          ))}
+          {featured.map((item) => <MiniStat key={item.def.key} item={item} animate={animate} />)}
         </View>
       )}
     </View>

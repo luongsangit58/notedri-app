@@ -4,8 +4,9 @@ import Svg, { Defs, RadialGradient, Stop, Rect } from 'react-native-svg';
 import ArcGauge from '../primitives/ArcGauge';
 import { serifFontFamily } from '../../../../theme/fonts';
 import { useT } from '../../../../i18n';
-import { CockpitLayoutProps } from '../types';
+import { CockpitLayoutProps, CockpitMetricValue } from '../types';
 import { PRIMARY_METRIC_KEYS, FEATURED_SECONDARY_KEYS } from '../../../../constants/obdMetrics';
+import { useCountingNumber } from '../../../../hooks/useCountingNumber';
 
 // Premium "Cổ điển" - bản sắc CỐ ĐỊNH (mặt kem/crôm, kim đỏ mảnh) gợi bảng
 // đồng hồ xe cổ thập niên 60-70, không đổi theo theme sáng/tối app.
@@ -13,6 +14,22 @@ const PALETTE = {
   bg1: '#F3E7C9', bg2: '#E7D6A6', chrome: '#B08D4F', needle: '#B3231C',
   text: '#2A2016', textDim: '#6B5A3D', track: '#E3D3A9',
 };
+
+// Component RIÊNG cho từng ô - xem lý do trong CardsLayout.tsx (không gọi
+// hook trực tiếp trong .map vì số ô có thể đổi giữa các lần render).
+function MiniStat({ item, animate }: { item: CockpitMetricValue; animate?: boolean }) {
+  const t = useT();
+  const { def, value } = item;
+  const display = useCountingNumber(value, 1, animate);
+  return (
+    <View style={[styles.mini, { borderColor: PALETTE.chrome, backgroundColor: PALETTE.bg1 + 'CC' }]}>
+      <Text style={[styles.miniLabel, { color: PALETTE.textDim, fontFamily: serifFontFamily }]} numberOfLines={1}>{t(def.labelKey)}</Text>
+      <Text style={[styles.miniVal, { color: PALETTE.text, fontFamily: serifFontFamily }]} numberOfLines={1}>
+        {display ?? '-'}{def.unit}
+      </Text>
+    </View>
+  );
+}
 
 export default function RetroLayout({ metrics, size, isPortrait, animate }: CockpitLayoutProps) {
   const t = useT();
@@ -54,14 +71,7 @@ export default function RetroLayout({ metrics, size, isPortrait, animate }: Cock
 
       {featured.length > 0 && (
         <View style={styles.secondaryRow}>
-          {featured.map(({ def, value }) => (
-            <View key={def.key} style={[styles.mini, { borderColor: PALETTE.chrome, backgroundColor: PALETTE.bg1 + 'CC' }]}>
-              <Text style={[styles.miniLabel, { color: PALETTE.textDim, fontFamily: serifFontFamily }]} numberOfLines={1}>{t(def.labelKey)}</Text>
-              <Text style={[styles.miniVal, { color: PALETTE.text, fontFamily: serifFontFamily }]} numberOfLines={1}>
-                {value != null ? Math.round(value * 10) / 10 : '-'}{def.unit}
-              </Text>
-            </View>
-          ))}
+          {featured.map((item) => <MiniStat key={item.def.key} item={item} animate={animate} />)}
         </View>
       )}
     </View>

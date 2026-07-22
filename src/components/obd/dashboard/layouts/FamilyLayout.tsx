@@ -2,8 +2,9 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useT } from '../../../../i18n';
-import { CockpitLayoutProps } from '../types';
+import { CockpitLayoutProps, CockpitMetricValue } from '../types';
 import { ObdMetricKey } from '../../../../constants/obdMetrics';
+import { useCountingNumber } from '../../../../hooks/useCountingNumber';
 
 // Premium "Gia đình" - bản sắc CỐ ĐỊNH (pastel nhạt, thẻ bo tròn mềm, chữ to)
 // chỉ giữ 4 chỉ số thiết yếu nhất - hợp người lớn tuổi/không rành kỹ thuật,
@@ -14,8 +15,27 @@ const PALETTE = { bg: '#EFF6FF', card: '#FFFFFF', value: '#1D4ED8', label: '#6B7
 // hiển thị đủ 8) - đúng tinh thần "tối giản, hợp người không rành kỹ thuật".
 const FAMILY_KEYS: ObdMetricKey[] = ['speedKmh', 'fuelLevelPct', 'coolantTempC', 'controlModuleVoltage'];
 
-export default function FamilyLayout({ metrics, isPortrait }: CockpitLayoutProps) {
+// Component RIÊNG cho từng thẻ - xem lý do trong CardsLayout.tsx (không gọi
+// hook trực tiếp trong .map vì số thẻ có thể đổi giữa các lần render tuỳ PID xe hỗ trợ).
+function FamilyCard({ item, cols, animate }: { item: CockpitMetricValue; cols: number; animate?: boolean }) {
   const t = useT();
+  const { def, value } = item;
+  const display = useCountingNumber(value, 1, animate);
+  return (
+    <View style={{ width: `${100 / cols}%`, padding: 6 }}>
+      <View style={[styles.card, { backgroundColor: PALETTE.card }]}>
+        <FontAwesome5 name={def.icon} size={22} color={PALETTE.value} solid />
+        <Text style={[styles.val, { color: PALETTE.value }]} numberOfLines={1} adjustsFontSizeToFit>
+          {display ?? '-'}
+        </Text>
+        <Text style={[styles.unit, { color: PALETTE.label }]}>{def.unit}</Text>
+        <Text style={[styles.label, { color: PALETTE.label }]} numberOfLines={1}>{t(def.labelKey)}</Text>
+      </View>
+    </View>
+  );
+}
+
+export default function FamilyLayout({ metrics, isPortrait, animate }: CockpitLayoutProps) {
   const shown = FAMILY_KEYS
     .map((k) => metrics.find((m) => m.def.key === k))
     .filter((x): x is NonNullable<typeof x> => !!x);
@@ -23,18 +43,7 @@ export default function FamilyLayout({ metrics, isPortrait }: CockpitLayoutProps
 
   return (
     <View style={[styles.root, { backgroundColor: PALETTE.bg }]}>
-      {shown.map(({ def, value }) => (
-        <View key={def.key} style={{ width: `${100 / cols}%`, padding: 6 }}>
-          <View style={[styles.card, { backgroundColor: PALETTE.card }]}>
-            <FontAwesome5 name={def.icon} size={22} color={PALETTE.value} solid />
-            <Text style={[styles.val, { color: PALETTE.value }]} numberOfLines={1} adjustsFontSizeToFit>
-              {value != null ? Math.round(value * 10) / 10 : '-'}
-            </Text>
-            <Text style={[styles.unit, { color: PALETTE.label }]}>{def.unit}</Text>
-            <Text style={[styles.label, { color: PALETTE.label }]} numberOfLines={1}>{t(def.labelKey)}</Text>
-          </View>
-        </View>
-      ))}
+      {shown.map((item) => <FamilyCard key={item.def.key} item={item} cols={cols} animate={animate} />)}
     </View>
   );
 }

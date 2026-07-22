@@ -2,9 +2,39 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import RingProgress from '../primitives/RingProgress';
-import { useCockpitPalette } from '../../../../theme/cockpitPalettes';
+import { useCockpitPalette, CockpitPalette } from '../../../../theme/cockpitPalettes';
 import { useT } from '../../../../i18n';
-import { CockpitLayoutProps } from '../types';
+import { CockpitLayoutProps, CockpitMetricValue } from '../types';
+import { useCountingNumber } from '../../../../hooks/useCountingNumber';
+
+// Component RIÊNG cho từng thẻ (không gọi hook ngay trong .map của layout) -
+// bắt buộc vì `metrics` có thể đổi SỐ LƯỢNG giữa các lần render (capability
+// dò được PID hỗ trợ sau khi kết nối) - gọi hook trong callback .map trực
+// tiếp sẽ vi phạm rules-of-hooks khi số lượng phần tử thay đổi.
+function MetricCard({ item, ringSize, cols, palette, animate }: {
+  item: CockpitMetricValue; ringSize: number; cols: number; palette: CockpitPalette; animate?: boolean;
+}) {
+  const t = useT();
+  const { def, value } = item;
+  const display = useCountingNumber(value, 1, animate);
+  const ringColor = def.key === 'speedKmh' ? palette.accent : def.key === 'rpm' ? palette.accent2 : def.color;
+  return (
+    <View style={{ width: `${100 / cols}%`, padding: 6 }}>
+      <View style={[styles.card, { backgroundColor: palette.surface, borderColor: palette.border }]}>
+        <RingProgress value={value} max={def.max} size={ringSize} trackColor={palette.surface2} fillColor={ringColor} animate={animate}>
+          <FontAwesome5 name={def.icon} size={ringSize * 0.32} color={ringColor} solid />
+        </RingProgress>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={[styles.val, { color: palette.text }]} numberOfLines={1}>
+            {display ?? '-'}
+            <Text style={{ fontSize: 10, fontWeight: '600', color: palette.textDim }}> {def.unit}</Text>
+          </Text>
+          <Text style={[styles.label, { color: palette.textDim }]} numberOfLines={1}>{t(def.labelKey)}</Text>
+        </View>
+      </View>
+    </View>
+  );
+}
 
 // Style MIỄN PHÍ #2 - lưới thẻ có vòng tiến độ riêng từng chỉ số, giống
 // Torque Pro (đúng bố cục ".stage-b" trong bản thiết kế). Theo theme sáng/tối
@@ -14,30 +44,13 @@ import { CockpitLayoutProps } from '../types';
 // các thẻ tăng lên để đỡ cảm giác nhồi nhét khi đủ 8 thẻ cùng lúc.
 export default function CardsLayout({ metrics, ringSize, isPortrait, animate }: CockpitLayoutProps) {
   const p = useCockpitPalette();
-  const t = useT();
   const cols = isPortrait ? 2 : 4;
 
   return (
     <View style={[styles.grid, { backgroundColor: p.bg, borderColor: p.border }]}>
-      {metrics.map(({ def, value }) => {
-        const ringColor = def.key === 'speedKmh' ? p.accent : def.key === 'rpm' ? p.accent2 : def.color;
-        return (
-          <View key={def.key} style={{ width: `${100 / cols}%`, padding: 6 }}>
-            <View style={[styles.card, { backgroundColor: p.surface, borderColor: p.border }]}>
-              <RingProgress value={value} max={def.max} size={ringSize} trackColor={p.surface2} fillColor={ringColor} animate={animate}>
-                <FontAwesome5 name={def.icon} size={ringSize * 0.32} color={ringColor} solid />
-              </RingProgress>
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={[styles.val, { color: p.text }]} numberOfLines={1}>
-                  {value != null ? Math.round(value * 10) / 10 : '-'}
-                  <Text style={{ fontSize: 10, fontWeight: '600', color: p.textDim }}> {def.unit}</Text>
-                </Text>
-                <Text style={[styles.label, { color: p.textDim }]} numberOfLines={1}>{t(def.labelKey)}</Text>
-              </View>
-            </View>
-          </View>
-        );
-      })}
+      {metrics.map((item) => (
+        <MetricCard key={item.def.key} item={item} ringSize={ringSize} cols={cols} palette={p} animate={animate} />
+      ))}
     </View>
   );
 }

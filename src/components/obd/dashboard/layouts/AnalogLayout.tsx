@@ -5,16 +5,18 @@ import { useCockpitPalette } from '../../../../theme/cockpitPalettes';
 import { useT } from '../../../../i18n';
 import { CockpitLayoutProps, CockpitMetricValue } from '../types';
 import { FEATURED_SECONDARY_KEYS } from '../../../../constants/obdMetrics';
+import { useCountingNumber } from '../../../../hooks/useCountingNumber';
 
-function MiniStat({ item }: { item: CockpitMetricValue }) {
+function MiniStat({ item, animate }: { item: CockpitMetricValue; animate?: boolean }) {
   const p = useCockpitPalette();
   const t = useT();
   const { def, value } = item;
+  const display = useCountingNumber(value, 1, animate);
   return (
     <View style={[styles.mini, { backgroundColor: p.surface, borderColor: p.border }]}>
       <Text style={[styles.miniLabel, { color: p.textDim }]} numberOfLines={1}>{t(def.labelKey)}</Text>
       <Text style={[styles.miniVal, { color: p.text }]} numberOfLines={1}>
-        {value != null ? Math.round(value * 10) / 10 : '-'}
+        {display ?? '-'}
         <Text style={{ fontSize: 10, fontWeight: '600', color: p.textDim }}> {def.unit}</Text>
       </Text>
     </View>
@@ -59,7 +61,7 @@ export default function AnalogLayout({ metrics, size, isPortrait, animate }: Coc
       </View>
       {featured.length > 0 && (
         <View style={styles.sideStack}>
-          {featured.map((item) => <MiniStat key={item.def.key} item={item} />)}
+          {featured.map((item) => <MiniStat key={item.def.key} item={item} animate={animate} />)}
         </View>
       )}
     </View>

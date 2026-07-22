@@ -3,7 +3,8 @@ import { View, Text, StyleSheet } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import RingProgress from '../primitives/RingProgress';
 import { useT } from '../../../../i18n';
-import { CockpitLayoutProps } from '../types';
+import { CockpitLayoutProps, CockpitMetricValue } from '../types';
+import { useCountingNumber } from '../../../../hooks/useCountingNumber';
 
 // Premium · Doanh nghiệp "Thương hiệu riêng" - khung UI cho gara/hãng
 // taxi/đội xe, bán theo hợp đồng B2B riêng (không theo user lẻ). Badge logo
@@ -12,8 +13,31 @@ import { CockpitLayoutProps } from '../types';
 // gaugeThemes.ts về premium-gate là bước tối thiểu).
 const PALETTE = { bg1: '#1A1A1A', bg2: '#2B2B2B', surface: '#232323', border: '#3A3A3A', text: '#F5F5F5', textDim: '#9CA3AF', accent: '#9CA3AF' };
 
-export default function FleetLayout({ metrics, ringSize, isPortrait, animate }: CockpitLayoutProps) {
+// Component RIÊNG cho từng thẻ - xem lý do trong CardsLayout.tsx (không gọi
+// hook trực tiếp trong .map vì số lượng `metrics` có thể đổi giữa các lần render).
+function MetricCard({ item, ringSize, cols, animate }: { item: CockpitMetricValue; ringSize: number; cols: number; animate?: boolean }) {
   const t = useT();
+  const { def, value } = item;
+  const display = useCountingNumber(value, 1, animate);
+  return (
+    <View style={{ width: `${100 / cols}%`, padding: 6 }}>
+      <View style={[styles.card, { backgroundColor: PALETTE.surface, borderColor: PALETTE.border }]}>
+        <RingProgress value={value} max={def.max} size={ringSize} trackColor={PALETTE.border} fillColor={PALETTE.accent} animate={animate}>
+          <FontAwesome5 name={def.icon} size={ringSize * 0.32} color={PALETTE.accent} solid />
+        </RingProgress>
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <Text style={[styles.val, { color: PALETTE.text }]} numberOfLines={1}>
+            {display ?? '-'}
+            <Text style={{ fontSize: 10, fontWeight: '600', color: PALETTE.textDim }}> {def.unit}</Text>
+          </Text>
+          <Text style={[styles.label, { color: PALETTE.textDim }]} numberOfLines={1}>{t(def.labelKey)}</Text>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+export default function FleetLayout({ metrics, ringSize, isPortrait, animate }: CockpitLayoutProps) {
   const cols = isPortrait ? 2 : 4;
 
   return (
@@ -23,21 +47,8 @@ export default function FleetLayout({ metrics, ringSize, isPortrait, animate }: 
       </View>
 
       <View style={styles.grid}>
-        {metrics.map(({ def, value }) => (
-          <View key={def.key} style={{ width: `${100 / cols}%`, padding: 6 }}>
-            <View style={[styles.card, { backgroundColor: PALETTE.surface, borderColor: PALETTE.border }]}>
-              <RingProgress value={value} max={def.max} size={ringSize} trackColor={PALETTE.border} fillColor={PALETTE.accent} animate={animate}>
-                <FontAwesome5 name={def.icon} size={ringSize * 0.32} color={PALETTE.accent} solid />
-              </RingProgress>
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <Text style={[styles.val, { color: PALETTE.text }]} numberOfLines={1}>
-                  {value != null ? Math.round(value * 10) / 10 : '-'}
-                  <Text style={{ fontSize: 10, fontWeight: '600', color: PALETTE.textDim }}> {def.unit}</Text>
-                </Text>
-                <Text style={[styles.label, { color: PALETTE.textDim }]} numberOfLines={1}>{t(def.labelKey)}</Text>
-              </View>
-            </View>
-          </View>
+        {metrics.map((item) => (
+          <MetricCard key={item.def.key} item={item} ringSize={ringSize} cols={cols} animate={animate} />
         ))}
       </View>
     </View>

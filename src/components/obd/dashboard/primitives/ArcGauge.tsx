@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
+import { useCountingNumber } from '../../../../hooks/useCountingNumber';
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
 
@@ -59,7 +60,9 @@ export default function ArcGauge({
   const rotate = progress.interpolate({ inputRange: [0, 1], outputRange: ['-90deg', '90deg'] });
 
   const needleLength = size / 2 - size * 0.1;
-  const display = value != null ? Math.round(value) : null;
+  // Số liệu ĐẾM mượt theo cùng nhịp với kim/cung (góp ý user: bản đầu chỉ có
+  // kim/cung chạy mượt, con số nhảy khựng ngay lập tức) - xem useCountingNumber.
+  const display = useCountingNumber(value, 0, animate);
   const valueFontSize = Math.max(14, Math.min(32, size * 0.17));
   const unitFontSize = Math.max(9, Math.min(12, size * 0.065));
   const labelFontSize = Math.max(9, Math.min(12, size * 0.065));

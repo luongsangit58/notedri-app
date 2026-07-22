@@ -4,16 +4,35 @@ import { monoFontFamily } from '../../../../theme/fonts';
 import { useT } from '../../../../i18n';
 import { CockpitLayoutProps } from '../types';
 import { FEATURED_SECONDARY_KEYS } from '../../../../constants/obdMetrics';
+import { useCountingNumber } from '../../../../hooks/useCountingNumber';
 
 // Premium "Ban đêm" - bản sắc CỐ ĐỊNH (đơn sắc đỏ trên nền đen tuyệt đối),
 // nguyên lý buồng lái máy bay ban đêm, giữ mắt quen bóng tối khi lái xa -
 // không đổi theo theme sáng/tối app (đây LÀ chế độ tối, luôn tối).
 const PALETTE = { bg: '#000000', red: '#FF3B30', redDim: '#8A2620' };
 
-export default function NightLayout({ metrics, isPortrait }: CockpitLayoutProps) {
+function MiniStat({ label, value, unit, animate }: {
+  label: string;
+  value: number | null;
+  unit: string;
+  animate?: boolean;
+}) {
+  const display = useCountingNumber(value, 1, animate);
+  return (
+    <View style={styles.mini}>
+      <Text style={[styles.miniLabel, { color: PALETTE.redDim, fontFamily: monoFontFamily }]} numberOfLines={1}>{label}</Text>
+      <Text style={[styles.miniVal, { color: PALETTE.red, fontFamily: monoFontFamily }]} numberOfLines={1}>
+        {display ?? '-'}{unit}
+      </Text>
+    </View>
+  );
+}
+
+export default function NightLayout({ metrics, isPortrait, animate = true }: CockpitLayoutProps) {
   const t = useT();
   const speed = metrics.find((m) => m.def.key === 'speedKmh');
   const secondary = metrics.filter((m) => m.def.key !== 'speedKmh');
+  const speedDisplay = useCountingNumber(speed?.value ?? null, 0, animate);
   const featured = FEATURED_SECONDARY_KEYS
     .map((k) => secondary.find((s) => s.def.key === k))
     .filter((x): x is NonNullable<typeof x> => !!x);
@@ -25,19 +44,14 @@ export default function NightLayout({ metrics, isPortrait }: CockpitLayoutProps)
         numberOfLines={1}
         adjustsFontSizeToFit
       >
-        {speed?.value != null ? Math.round(speed.value) : '-'}
+        {speedDisplay ?? '-'}
       </Text>
       <Text style={[styles.speedUnit, { color: PALETTE.redDim, fontFamily: monoFontFamily }]}>KM/H</Text>
 
       {featured.length > 0 && (
         <View style={styles.secondaryRow}>
           {featured.map(({ def, value }) => (
-            <View key={def.key} style={styles.mini}>
-              <Text style={[styles.miniLabel, { color: PALETTE.redDim, fontFamily: monoFontFamily }]} numberOfLines={1}>{t(def.labelKey)}</Text>
-              <Text style={[styles.miniVal, { color: PALETTE.red, fontFamily: monoFontFamily }]} numberOfLines={1}>
-                {value != null ? Math.round(value * 10) / 10 : '-'}{def.unit}
-              </Text>
-            </View>
+            <MiniStat key={def.key} label={t(def.labelKey)} value={value} unit={def.unit} animate={animate} />
           ))}
         </View>
       )}

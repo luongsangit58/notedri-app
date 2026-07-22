@@ -3,14 +3,33 @@ import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 import { useT } from '../../../../i18n';
 import { CockpitLayoutProps } from '../types';
 import { FEATURED_SECONDARY_KEYS } from '../../../../constants/obdMetrics';
+import { useCountingNumber } from '../../../../hooks/useCountingNumber';
 
 // Premium "Tối giản EV" - bản sắc CỐ ĐỊNH (nền trắng/xám khói, gần như chỉ 1
 // con số) gợi cụm đồng hồ xe điện đời mới, không đổi theo theme sáng/tối app.
 const PALETTE = { bg: '#F4F4F2', line: '#111111', text: '#111111', textDim: '#6B7280' };
 
+function MiniStat({ label, value, unit, animate }: {
+  label: string;
+  value: number | null;
+  unit: string;
+  animate?: boolean;
+}) {
+  const display = useCountingNumber(value, 1, animate);
+  return (
+    <View style={styles.mini}>
+      <Text style={[styles.secondaryText, { color: PALETTE.textDim }]} numberOfLines={1}>{label}</Text>
+      <Text style={[styles.miniVal, { color: PALETTE.text }]} numberOfLines={1}>
+        {display ?? '-'}{unit}
+      </Text>
+    </View>
+  );
+}
+
 export default function MinimalLayout({ metrics, isPortrait, animate = true }: CockpitLayoutProps) {
   const t = useT();
   const speed = metrics.find((m) => m.def.key === 'speedKmh');
+  const speedDisplay = useCountingNumber(speed?.value ?? null, 0, animate);
   const frac = speed ? Math.max(0, Math.min(1, (speed.value ?? 0) / speed.def.max)) : 0;
   const secondary = metrics.filter((m) => m.def.key !== 'speedKmh');
   const featured = FEATURED_SECONDARY_KEYS
@@ -28,7 +47,7 @@ export default function MinimalLayout({ metrics, isPortrait, animate = true }: C
   return (
     <View style={[styles.root, { backgroundColor: PALETTE.bg }, isPortrait && { paddingVertical: 28 }]}>
       <Text style={[styles.speedVal, { color: PALETTE.text }]} numberOfLines={1} adjustsFontSizeToFit>
-        {speed?.value != null ? Math.round(speed.value) : '-'}
+        {speedDisplay ?? '-'}
       </Text>
       <Text style={[styles.speedUnit, { color: PALETTE.textDim }]}>km/h</Text>
       <View style={[styles.track, { backgroundColor: PALETTE.text + '22' }]}>
@@ -39,9 +58,7 @@ export default function MinimalLayout({ metrics, isPortrait, animate = true }: C
           {featured.map(({ def, value }, i) => (
             <React.Fragment key={def.key}>
               {i > 0 && <View style={[styles.dot, { backgroundColor: PALETTE.textDim }]} />}
-              <Text style={[styles.secondaryText, { color: PALETTE.textDim }]}>
-                {t(def.labelKey)} {value != null ? Math.round(value * 10) / 10 : '-'}{def.unit}
-              </Text>
+              <MiniStat label={t(def.labelKey)} value={value} unit={def.unit} animate={animate} />
             </React.Fragment>
           ))}
         </View>
@@ -59,4 +76,6 @@ const styles = StyleSheet.create({
   secondaryRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 20, flexWrap: 'wrap', justifyContent: 'center' },
   secondaryText: { fontSize: 11, letterSpacing: 0.2 },
   dot: { width: 3, height: 3, borderRadius: 1.5 },
+  mini: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  miniVal: { fontSize: 11, fontWeight: '700', letterSpacing: 0.2 },
 });
