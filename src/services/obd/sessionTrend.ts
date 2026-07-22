@@ -78,3 +78,52 @@ export function groupSessionsByDay(
   }
   return points;
 }
+
+export type WeekAggregate = {
+  /** Điểm lái xe TB trong tuần - null nếu không có phiên nào tính được điểm */
+  avgDrivingScore: number | null;
+  /** Tổng mã lỗi DTC phát hiện trong tuần */
+  totalDtc: number;
+  /** Tổng số phút nổ máy trong tuần */
+  totalEngineMinutes: number;
+  /** Số ngày trong tuần có ít nhất 1 phiên kết nối OBD2 */
+  sessionDays: number;
+};
+
+export type WeekComparison = {
+  thisWeek: WeekAggregate;
+  prevWeek: WeekAggregate;
+  /** thisWeek - prevWeek; null nếu 1 trong 2 tuần chưa có phiên nào tính được điểm lái xe */
+  drivingScoreDelta: number | null;
+};
+
+function weekAggregate(points: DailyTrendPoint[]): WeekAggregate {
+  // dtcCount chỉ null khi KHÔNG có phiên nào ngày đó (groupSessionsByDay), khác
+  // biệt với drivingScore/voltageAvg có thể null dù CÓ phiên (thiếu field trong
+  // summary) - dùng dtcCount làm tín hiệu "ngày này có phiên" đáng tin cậy nhất.
+  const daysWithSession = points.filter((p) => p.dtcCount != null).length;
+  const scores = points.map((p) => p.drivingScore).filter((v): v is number => v != null);
+  return {
+    avgDrivingScore: scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : null,
+    totalDtc: points.reduce((a, p) => a + (p.dtcCount ?? 0), 0),
+    totalEngineMinutes: points.reduce((a, p) => a + (p.engineMinutes ?? 0), 0),
+    sessionDays: daysWithSession,
+  };
+}
+
+/**
+ * So sánh 7 ngày gần nhất với 7 ngày liền trước, dựa trên `DailyTrendPoint[]` đã
+ * gộp sẵn (không gọi API riêng - dùng lại đúng `historySessions()` mà ObdReportScreen
+ * đã fetch, xem noriSummary.ts). Cần ít nhất 14 điểm (7+7); ít hơn thì chưa đủ dữ
+ * liệu để so sánh có ý nghĩa -> trả null thay vì so sánh nửa vời.
+ */
+export function compareWeeks(points: DailyTrendPoint[]): WeekComparison | null {
+  if (points.length < 14) return null;
+  const last14 = points.slice(-14);
+  const prevWeek = weekAggregate(last14.slice(0, 7));
+  const thisWeek = weekAggregate(last14.slice(7, 14));
+  const drivingScoreDelta = thisWeek.avgDrivingScore != null && prevWeek.avgDrivingScore != null
+    ? thisWeek.avgDrivingScore - prevWeek.avgDrivingScore
+    : null;
+  return { thisWeek, prevWeek, drivingScoreDelta };
+}

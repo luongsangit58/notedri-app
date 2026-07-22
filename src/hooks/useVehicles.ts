@@ -1,8 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { vehiclesApi, VehiclePhoto } from '../api/vehicles';
 
-export const useVehicles = () =>
-  useQuery({ queryKey: ['vehicles'], queryFn: () => vehiclesApi.list().then(r => r.data) });
+// options.enabled (mặc định true, KHÔNG đổi hành vi mọi nơi gọi useVehicles() cũ):
+// cho phép gate query theo token khi hook được dùng ở nơi mount TRƯỚC đăng nhập
+// (vd icon nổi Nori ở App.tsx root) - tránh bắn request /vehicles chưa có auth.
+export const useVehicles = (options?: { enabled?: boolean }) =>
+  useQuery({
+    queryKey: ['vehicles'],
+    queryFn: () => vehiclesApi.list().then(r => r.data),
+    enabled: options?.enabled ?? true,
+  });
 
 export const useVehicle = (id: number) =>
   useQuery({ queryKey: ['vehicles', id], queryFn: () => vehiclesApi.get(id).then(r => r.data), enabled: !!id });

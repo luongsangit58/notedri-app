@@ -1461,6 +1461,16 @@ const en = {
   "nori.unknown": "Not enough data for Nori to assess today.",
   "nori.warn_detail": "Nori spotted: {{issue}} - see details.",
   "nori.obd_live_note": "OBD2 connected - live monitoring",
+  "nori.popover_title": "Nori",
+  "nori.week_score": "Avg driving score this week: {{score}}",
+  "nori.week_delta_up": "up {{delta}} from last week",
+  "nori.week_delta_down": "down {{delta}} from last week",
+  "nori.week_delta_stable": "unchanged from last week",
+  "nori.week_no_data": "Not enough data to compare this week yet",
+  "nori.session_stats": "Last {{n}} OBD2 sessions - avg driving score {{score}}",
+  "nori.session_no_data": "No OBD2 sessions yet",
+  "nori.cta_health": "View health details",
+  "nori.cta_obd_report": "View OBD2 report",
 
 } as const;
 

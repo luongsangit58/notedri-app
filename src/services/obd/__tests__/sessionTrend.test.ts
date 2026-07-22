@@ -1,5 +1,5 @@
 import dayjs from 'dayjs';
-import { groupSessionsByDay } from '../sessionTrend';
+import { groupSessionsByDay, compareWeeks, DailyTrendPoint } from '../sessionTrend';
 import { ObdSessionRecord } from '../../../api/obd';
 
 const TODAY = dayjs('2026-07-15T12:00:00');
@@ -113,5 +113,70 @@ describe('groupSessionsByDay - gộp phiên theo ngày lịch cho biểu đồ E
       TODAY,
     );
     expect(points[0].voltageAvg).toBe(14.4);
+  });
+});
+
+// Điểm giả cho compareWeeks - không cần đi qua groupSessionsByDay/session(), test
+// thẳng trên DailyTrendPoint[] vì đó là ranh giới input thật của hàm.
+function point(overrides: Partial<DailyTrendPoint> = {}): DailyTrendPoint {
+  return { date: '2026-01-01', voltageAvg: null, coolantMax: null, drivingScore: null, dtcCount: null, engineMinutes: null, ...overrides };
+}
+function noSessionDay(): DailyTrendPoint {
+  return point(); // dtcCount null = không có phiên nào ngày đó
+}
+function sessionDay(overrides: Partial<DailyTrendPoint> = {}): DailyTrendPoint {
+  return point({ dtcCount: 0, engineMinutes: 20, drivingScore: 80, voltageAvg: 14.2, coolantMax: 85, ...overrides });
+}
+
+describe('compareWeeks - so sánh 7 ngày gần nhất với 7 ngày liền trước', () => {
+  it('trả null nếu chưa đủ 14 điểm (chưa đủ dữ liệu để so sánh có ý nghĩa)', () => {
+    const points = Array.from({ length: 13 }, () => sessionDay());
+    expect(compareWeeks(points)).toBeNull();
+  });
+
+  it('chỉ dùng ĐÚNG 14 điểm cuối (7 tuần trước + 7 tuần này), bỏ qua phần cũ hơn', () => {
+    const older = Array.from({ length: 10 }, () => sessionDay({ drivingScore: 0 })); // sẽ bị cắt bỏ
+    const prevWeek = Array.from({ length: 7 }, () => sessionDay({ drivingScore: 60 }));
+    const thisWeek = Array.from({ length: 7 }, () => sessionDay({ drivingScore: 90 }));
+    const result = compareWeeks([...older, ...prevWeek, ...thisWeek]);
+    expect(result?.prevWeek.avgDrivingScore).toBe(60);
+    expect(result?.thisWeek.avgDrivingScore).toBe(90);
+  });
+
+  it('tính đúng điểm lái xe TB, tổng DTC, tổng phút máy, số ngày có phiên mỗi tuần', () => {
+    const prevWeek = [
+      sessionDay({ drivingScore: 70, dtcCount: 1, engineMinutes: 30 }),
+      sessionDay({ drivingScore: 90, dtcCount: 0, engineMinutes: 15 }),
+      ...Array.from({ length: 5 }, () => noSessionDay()),
+    ];
+    const thisWeek = [
+      sessionDay({ drivingScore: 95, dtcCount: 0, engineMinutes: 40 }),
+      ...Array.from({ length: 6 }, () => noSessionDay()),
+    ];
+    const result = compareWeeks([...prevWeek, ...thisWeek])!;
+    expect(result.prevWeek).toEqual({ avgDrivingScore: 80, totalDtc: 1, totalEngineMinutes: 45, sessionDays: 2 });
+    expect(result.thisWeek).toEqual({ avgDrivingScore: 95, totalDtc: 0, totalEngineMinutes: 40, sessionDays: 1 });
+  });
+
+  it('drivingScoreDelta = tuần này - tuần trước', () => {
+    const prevWeek = [sessionDay({ drivingScore: 70 }), ...Array.from({ length: 6 }, () => noSessionDay())];
+    const thisWeek = [sessionDay({ drivingScore: 85 }), ...Array.from({ length: 6 }, () => noSessionDay())];
+    const result = compareWeeks([...prevWeek, ...thisWeek]);
+    expect(result?.drivingScoreDelta).toBe(15);
+  });
+
+  it('drivingScoreDelta null nếu 1 trong 2 tuần không có phiên nào tính được điểm', () => {
+    const prevWeek = Array.from({ length: 7 }, () => noSessionDay());
+    const thisWeek = [sessionDay({ drivingScore: 85 }), ...Array.from({ length: 6 }, () => noSessionDay())];
+    const result = compareWeeks([...prevWeek, ...thisWeek]);
+    expect(result?.drivingScoreDelta).toBeNull();
+    expect(result?.prevWeek.avgDrivingScore).toBeNull();
+  });
+
+  it('tuần hoàn toàn không có phiên nào -> avgDrivingScore null, tổng = 0, sessionDays = 0', () => {
+    const points = Array.from({ length: 14 }, () => noSessionDay());
+    const result = compareWeeks(points)!;
+    expect(result.prevWeek).toEqual({ avgDrivingScore: null, totalDtc: 0, totalEngineMinutes: 0, sessionDays: 0 });
+    expect(result.thisWeek).toEqual({ avgDrivingScore: null, totalDtc: 0, totalEngineMinutes: 0, sessionDays: 0 });
   });
 });

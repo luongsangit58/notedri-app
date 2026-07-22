@@ -1461,6 +1461,16 @@ const vi = {
   "nori.unknown": "Chưa đủ dữ liệu để Nori đánh giá hôm nay.",
   "nori.warn_detail": "Nori thấy: {{issue}} - xem chi tiết nhé.",
   "nori.obd_live_note": "Đang kết nối OBD2 - theo dõi trực tiếp",
+  "nori.popover_title": "Nori",
+  "nori.week_score": "Điểm lái xe TB tuần này: {{score}}",
+  "nori.week_delta_up": "tăng {{delta}} so tuần trước",
+  "nori.week_delta_down": "giảm {{delta}} so tuần trước",
+  "nori.week_delta_stable": "không đổi so tuần trước",
+  "nori.week_no_data": "Chưa đủ dữ liệu để so sánh tuần này",
+  "nori.session_stats": "{{n}} phiên OBD2 gần nhất - điểm lái xe TB {{score}}",
+  "nori.session_no_data": "Chưa có phiên kết nối OBD2 nào",
+  "nori.cta_health": "Xem chi tiết sức khỏe",
+  "nori.cta_obd_report": "Xem báo cáo OBD2",
 
 } as const;
 
