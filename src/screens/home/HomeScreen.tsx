@@ -126,9 +126,15 @@ export default function HomeScreen() {
   const colors = useColors();
   const t = useT();
 
+  // Rà soát 22/7 (user phản hồi: "mới vào app đã hiện xin quyền GPS" gây khó
+  // chịu) - widget thời tiết/AQI chỉ là tiện ích PHỤ, không đáng để chủ động
+  // xin quyền vị trí ngay lúc mở app. Dùng getForegroundPermissionsAsync()
+  // (CHỈ đọc trạng thái, không tự hiện hộp thoại) - nếu quyền đã có sẵn (từ
+  // luồng khác: GPS trip, đổ xăng...) thì hưởng lợi luôn; chưa có thì bỏ qua
+  // widget trong im lặng, không ép user phải quyết định ngay khi vừa mở app.
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   useEffect(() => {
-    Location.requestForegroundPermissionsAsync().then(({ status }) => {
+    Location.getForegroundPermissionsAsync().then(({ status }) => {
       if (status === 'granted') {
         Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }).then(loc => {
           setCoords({ lat: loc.coords.latitude, lng: loc.coords.longitude });
