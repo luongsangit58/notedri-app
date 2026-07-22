@@ -424,7 +424,7 @@ export default function OBDSetupScreen() {
           </TouchableOpacity>
         )}
 
-        <ClassicSppSpike />
+        <ClassicSppSpike stopBleScan={stopScan} resumeBleScan={() => startScan(showAllDevices)} />
       </ScrollView>
     </SafeAreaView>
   );

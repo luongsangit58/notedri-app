@@ -12,7 +12,26 @@ import { bleService } from '../../services/obd/BleService';
  * phải UI sản phẩm cuối cùng, không cần đẹp/i18n. Bấm chọn thiết bị từ danh
  * sách quét được - KHÔNG bắt gõ tay địa chỉ MAC (rà soát 22/7).
  */
-export default function ClassicSppSpike() {
+type Props = {
+  // Rà soát 22/7 (log thật: 2 lần quét Classic liên tiếp đều "found 0", dù
+  // "Android-Vlink" đã ghép nối sẵn từ trước và Cài đặt Bluetooth hệ thống
+  // vẫn thấy được) - màn hình cha (OBDSetupScreen) tự bật quét BLE liên tục
+  // (kể cả vòng retry riêng, xem SCAN_START_RETRY_STEPS trong BleService.ts)
+  // ngay khi mount, CHẠY SONG SONG với lần bấm "Quét thiết bị Classic" bất kỳ
+  // lúc nào. Đối chiếu log thấy đúng lúc discoverDevices() gọi
+  // adapter.startDiscovery(), 1 lượt native BLE scan start (thuộc vòng retry)
+  // cũng đang chạy - trên phần cứng/ROM này (đã biết chip BLE lỗi, xem
+  // BT_UNSUPPORTED) 2 yêu cầu radio cùng lúc khiến classic discovery lặng lẽ
+  // trả về 0 kết quả dù không ném lỗi. Phải tạm dừng hẳn vòng quét+retry BLE
+  // (không chỉ dừng 1 lượt scan hiện tại) trước khi quét Classic, rồi bật lại
+  // sau khi xong - dùng đúng stopScan()/startScan() của useObd() (cleanup
+  // vòng retry) thay vì gọi thẳng bleService.stopScan() (không huỷ retryTimer
+  // đang chờ, vẫn có thể tự khởi động lại scan giữa chừng).
+  stopBleScan: () => void;
+  resumeBleScan: () => void;
+};
+
+export default function ClassicSppSpike({ stopBleScan, resumeBleScan }: Props) {
   const [pin, setPin] = useState('1234');
   const [scanning, setScanning] = useState(false);
   const [devices, setDevices] = useState<ClassicBtDevice[]>([]);
@@ -26,6 +45,7 @@ export default function ClassicSppSpike() {
   async function handleScan() {
     setScanning(true);
     setDevices([]);
+    stopBleScan();
     bleService.logDiagnostic('#classic_spike', 'discoverDevices: start');
     try {
       const found = await NotedriBtPairing.discoverDevices();
@@ -43,11 +63,15 @@ export default function ClassicSppSpike() {
       Alert.alert('Quét thất bại', msg);
     } finally {
       setScanning(false);
+      resumeBleScan();
     }
   }
 
   async function handleTest(device: ClassicBtDevice) {
     setTestingAddress(device.address);
+    // Cùng lý do dừng BLE ở handleScan() - ghép nối/kết nối RFCOMM cũng dùng
+    // chung radio, không né sẽ gặp cùng kiểu chập chờn do 2 yêu cầu chồng lấn.
+    stopBleScan();
     bleService.logDiagnostic('#classic_spike', `pairAndTestAtz: start ${device.address} pin=${pin.trim()}`);
     try {
       const response = await NotedriBtPairing.pairAndTestAtz(device.address, pin.trim());
@@ -58,6 +82,7 @@ export default function ClassicSppSpike() {
       bleService.logDiagnostic('#classic_spike', `pairAndTestAtz: error - ${msg}`);
       Alert.alert('Thất bại', msg);
     } finally {
+      resumeBleScan();
       setTestingAddress(null);
     }
   }
