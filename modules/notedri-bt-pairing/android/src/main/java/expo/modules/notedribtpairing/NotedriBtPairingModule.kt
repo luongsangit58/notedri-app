@@ -45,6 +45,12 @@ private const val DISCOVERY_TIMEOUT_MS = 12_000L
 // cho BLE (RECONNECT_DELAYS_MS).
 private val CONNECT_RETRY_DELAYS_MS = longArrayOf(1500, 2500)
 
+// Cùng loại lỗi đã sửa ở discoverDevices() (chờ vô hạn 1 broadcast có thể
+// không bao giờ tới trên ROM này) - ensureBonded() chờ ACTION_BOND_STATE_
+// CHANGED cũng phải có giới hạn, không thì 1 lần ghép nối kẹt là treo cả
+// pairAndTestAtz() mãi mãi, không bao giờ tới được vòng retry connect.
+private const val BOND_TIMEOUT_MS = 15_000L
+
 class BtPairingException(message: String) : CodedException(message)
 
 /**
@@ -222,6 +228,17 @@ class NotedriBtPairingModule : Module() {
   private suspend fun ensureBonded(context: Context, device: BluetoothDevice, pin: String) {
     if (device.bondState == BluetoothDevice.BOND_BONDED) return
 
+    val completed = withTimeoutOrNull(BOND_TIMEOUT_MS) {
+      awaitBondStateChange(context, device, pin)
+    }
+    // Quá giờ nhưng vẫn có thể đã BONDED đúng lúc timeout kích hoạt (race) -
+    // kiểm tra lại state thật thay vì báo lỗi oan.
+    if (completed == null && device.bondState != BluetoothDevice.BOND_BONDED) {
+      throw BtPairingException("Ghép nối quá lâu không phản hồi (quá ${BOND_TIMEOUT_MS / 1000}s)")
+    }
+  }
+
+  private suspend fun awaitBondStateChange(context: Context, device: BluetoothDevice, pin: String) {
     suspendCancellableCoroutine<Unit> { cont ->
       val receiver = object : BroadcastReceiver() {
         override fun onReceive(ctx: Context, intent: Intent) {
@@ -247,10 +264,10 @@ class NotedriBtPairingModule : Module() {
             BluetoothDevice.ACTION_BOND_STATE_CHANGED -> {
               val bondState = intent.getIntExtra(BluetoothDevice.EXTRA_BOND_STATE, -1)
               if (bondState == BluetoothDevice.BOND_BONDED) {
-                context.unregisterReceiver(this)
+                try { context.unregisterReceiver(this) } catch (_: Exception) {}
                 if (cont.isActive) cont.resume(Unit)
               } else if (bondState == BluetoothDevice.BOND_NONE) {
-                context.unregisterReceiver(this)
+                try { context.unregisterReceiver(this) } catch (_: Exception) {}
                 if (cont.isActive) {
                   cont.resumeWithException(BtPairingException("Ghép nối bị từ chối hoặc thất bại"))
                 }
@@ -267,17 +284,17 @@ class NotedriBtPairingModule : Module() {
       // Broadcast hệ thống (protected, chỉ OS gửi được) - NOT_EXPORTED an
       // toàn hơn, không app thứ 3 nào giả mạo được intent này gửi tới ta.
       ContextCompat.registerReceiver(context, receiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
-      cont.invokeOnCancellation { context.unregisterReceiver(receiver) }
+      cont.invokeOnCancellation { try { context.unregisterReceiver(receiver) } catch (_: Exception) {} }
 
       val started = try {
         device.javaClass.getMethod("createBond").invoke(device) as Boolean
       } catch (e: Exception) {
-        context.unregisterReceiver(receiver)
+        try { context.unregisterReceiver(receiver) } catch (_: Exception) {}
         cont.resumeWithException(BtPairingException("Không gọi được createBond(): ${e.message}"))
         return@suspendCancellableCoroutine
       }
       if (!started) {
-        context.unregisterReceiver(receiver)
+        try { context.unregisterReceiver(receiver) } catch (_: Exception) {}
         cont.resumeWithException(BtPairingException("createBond() trả về false"))
       }
     }
