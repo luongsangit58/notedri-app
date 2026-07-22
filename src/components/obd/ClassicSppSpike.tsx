@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Alert, ActivityIndicator, Platform } from 'react-native';
-import NotedriBtPairing from '../../../modules/notedri-bt-pairing/src';
+import NotedriBtPairing, { ClassicBtDevice } from '../../../modules/notedri-bt-pairing/src/NotedriBtPairingModule';
 
 /**
  * Spike TẠM THỜI (22/7, xem [[feedback-obd-android-headunit-fixes]] memory) -
@@ -8,28 +8,42 @@ import NotedriBtPairing from '../../../modules/notedri-bt-pairing/src';
  * ghép nối + trả lời được qua Bluetooth Classic (SPP) hay không, trước khi
  * quyết định đầu tư làm trọn vẹn 1 mode kết nối Classic song song với BLE.
  * XOÁ khối này (và import ở OBDSetupScreen.tsx) sau khi có kết luận - không
- * phải UI sản phẩm cuối cùng, không cần đẹp/i18n.
+ * phải UI sản phẩm cuối cùng, không cần đẹp/i18n. Bấm chọn thiết bị từ danh
+ * sách quét được - KHÔNG bắt gõ tay địa chỉ MAC (rà soát 22/7).
  */
 export default function ClassicSppSpike() {
-  const [address, setAddress] = useState('');
   const [pin, setPin] = useState('1234');
-  const [busy, setBusy] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [devices, setDevices] = useState<ClassicBtDevice[]>([]);
+  const [testingAddress, setTestingAddress] = useState<string | null>(null);
 
   if (Platform.OS !== 'android') return null;
 
-  async function handleTest() {
-    if (!address.trim()) {
-      Alert.alert('Spike Classic BT', 'Nhập địa chỉ MAC của Vgate trước (xem trong Cài đặt Bluetooth hệ thống).');
-      return;
-    }
-    setBusy(true);
+  async function handleScan() {
+    setScanning(true);
+    setDevices([]);
     try {
-      const response = await NotedriBtPairing.pairAndTestAtz(address.trim().toUpperCase(), pin.trim());
+      const found = await NotedriBtPairing.discoverDevices();
+      setDevices(found);
+      if (found.length === 0) {
+        Alert.alert('Spike Classic BT', 'Không tìm thấy thiết bị nào.');
+      }
+    } catch (e: any) {
+      Alert.alert('Quét thất bại', e?.message ?? String(e));
+    } finally {
+      setScanning(false);
+    }
+  }
+
+  async function handleTest(device: ClassicBtDevice) {
+    setTestingAddress(device.address);
+    try {
+      const response = await NotedriBtPairing.pairAndTestAtz(device.address, pin.trim());
       Alert.alert('Thành công', `Phản hồi ATZ:\n${response}`);
     } catch (e: any) {
       Alert.alert('Thất bại', e?.message ?? String(e));
     } finally {
-      setBusy(false);
+      setTestingAddress(null);
     }
   }
 
@@ -39,13 +53,6 @@ export default function ClassicSppSpike() {
         SPIKE - Test kết nối Classic Bluetooth (tạm thời, sẽ xoá)
       </Text>
       <TextInput
-        placeholder="Địa chỉ MAC Vgate (vd D2:E0:2F:8D:48:3F)"
-        value={address}
-        onChangeText={setAddress}
-        autoCapitalize="characters"
-        style={{ borderWidth: 1, borderColor: '#ccc', borderRadius: 6, padding: 8, fontSize: 13 }}
-      />
-      <TextInput
         placeholder="PIN"
         value={pin}
         onChangeText={setPin}
@@ -53,11 +60,28 @@ export default function ClassicSppSpike() {
         style={{ borderWidth: 1, borderColor: '#ccc', borderRadius: 6, padding: 8, fontSize: 13 }}
       />
       <TouchableOpacity
-        onPress={handleTest}
-        disabled={busy}
-        style={{ backgroundColor: '#F59E0B', borderRadius: 6, padding: 10, alignItems: 'center', opacity: busy ? 0.6 : 1 }}>
-        {busy ? <ActivityIndicator color="#fff" size="small" /> : <Text style={{ color: '#fff', fontWeight: '600' }}>Ghép nối + gửi ATZ</Text>}
+        onPress={handleScan}
+        disabled={scanning}
+        style={{ backgroundColor: '#F59E0B', borderRadius: 6, padding: 10, alignItems: 'center', opacity: scanning ? 0.6 : 1 }}>
+        {scanning ? <ActivityIndicator color="#fff" size="small" /> : <Text style={{ color: '#fff', fontWeight: '600' }}>Quét thiết bị Classic (~10s)</Text>}
       </TouchableOpacity>
+      {devices.map((d) => (
+        <TouchableOpacity
+          key={d.address}
+          onPress={() => handleTest(d)}
+          disabled={testingAddress !== null}
+          style={{
+            flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+            padding: 10, borderRadius: 6, borderWidth: 1, borderColor: '#ccc',
+            opacity: testingAddress !== null && testingAddress !== d.address ? 0.5 : 1,
+          }}>
+          <View>
+            <Text style={{ fontSize: 13, fontWeight: '600' }}>{d.name}{d.bonded ? ' (đã ghép)' : ''}</Text>
+            <Text style={{ fontSize: 11, color: '#888' }}>{d.address}</Text>
+          </View>
+          {testingAddress === d.address ? <ActivityIndicator size="small" /> : <Text style={{ color: '#F59E0B' }}>Test ATZ</Text>}
+        </TouchableOpacity>
+      ))}
     </View>
   );
 }

@@ -1,5 +1,6 @@
 package expo.modules.notedribtpairing
 
+import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothManager
 import android.content.BroadcastReceiver
@@ -50,6 +51,71 @@ class NotedriBtPairingModule : Module() {
     AsyncFunction("pairAndTestAtz") { address: String, pin: String ->
       runBlocking { pairAndTestAtz(address, pin) }
     }
+
+    // Rà soát 22/7 (user không chấp nhận phải tự gõ tay địa chỉ MAC): liệt kê
+    // thiết bị Classic Bluetooth để bấm chọn, giống trải nghiệm màn quét BLE.
+    // Gồm cả thiết bị ĐÃ ghép nối (hiện ngay) lẫn quét mới quanh đó (~10s) -
+    // Vgate có thể chưa từng ghép nối thành công lần nào nên không đủ nếu chỉ
+    // lấy danh sách đã ghép.
+    AsyncFunction("discoverDevices") {
+      runBlocking { discoverDevices() }
+    }
+  }
+
+  // Trả về địa chỉ ĐÃ ghép nối trước, rồi bổ sung thiết bị mới quét được -
+  // dùng LinkedHashMap để giữ thứ tự và tự khử trùng theo địa chỉ MAC (1 thiết
+  // bị có thể xuất hiện lại nhiều lần trong lúc quét).
+  private suspend fun discoverDevices(): List<Map<String, Any>> {
+    val context = appContext.reactContext
+      ?: throw BtPairingException("React context không sẵn sàng")
+    val adapter = (context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager)?.adapter
+      ?: throw BtPairingException("Máy không có Bluetooth Adapter")
+
+    val found = LinkedHashMap<String, Map<String, Any>>()
+    adapter.bondedDevices?.forEach { d ->
+      found[d.address] = mapOf("address" to d.address, "name" to (d.name ?: d.address), "bonded" to true)
+    }
+
+    suspendCancellableCoroutine<Unit> { cont ->
+      val receiver = object : BroadcastReceiver() {
+        override fun onReceive(ctx: Context, intent: Intent) {
+          when (intent.action) {
+            BluetoothDevice.ACTION_FOUND -> {
+              @Suppress("DEPRECATION")
+              val device = intent.getParcelableExtra<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE) ?: return
+              // Không ghi đè entry "bonded=true" đã có sẵn từ getBondedDevices()
+              // bằng entry "bonded=false" của cùng địa chỉ quét được lại.
+              if (!found.containsKey(device.address)) {
+                found[device.address] = mapOf(
+                  "address" to device.address,
+                  "name" to (device.name ?: device.address),
+                  "bonded" to false
+                )
+              }
+            }
+            BluetoothAdapter.ACTION_DISCOVERY_FINISHED -> {
+              context.unregisterReceiver(this)
+              if (cont.isActive) cont.resume(Unit)
+            }
+          }
+        }
+      }
+      val filter = IntentFilter().apply {
+        addAction(BluetoothDevice.ACTION_FOUND)
+        addAction(BluetoothAdapter.ACTION_DISCOVERY_FINISHED)
+      }
+      ContextCompat.registerReceiver(context, receiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
+      cont.invokeOnCancellation { context.unregisterReceiver(receiver) }
+
+      adapter.cancelDiscovery()
+      val started = adapter.startDiscovery()
+      if (!started) {
+        context.unregisterReceiver(receiver)
+        cont.resumeWithException(BtPairingException("Không bắt đầu quét được (startDiscovery trả về false)"))
+      }
+    }
+
+    return found.values.toList()
   }
 
   private suspend fun pairAndTestAtz(address: String, pin: String): String {
