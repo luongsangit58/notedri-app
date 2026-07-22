@@ -43,6 +43,10 @@ jest.mock('../ObdReader', () => ({
     rpm: null, speedKmh: null, coolantTempC: null,
     engineLoadPct: null, fuelTrimShortB1Pct: null, controlModuleVoltage: null,
   }),
+  // Tầng fast (kim đồng hồ, 22/7) - giá trị trung lập, không ảnh hưởng test.
+  readRpm: async () => null,
+  readSpeed: async () => null,
+  readThrottle: async () => null,
   reinitElm327AfterReconnect: async () => {},
 }));
 
