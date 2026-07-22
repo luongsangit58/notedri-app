@@ -152,18 +152,43 @@ class NotedriBtPairingModule : Module() {
     val device = adapter.getRemoteDevice(address)
 
     ensureBonded(context, device, pin)
+    adapter.cancelDiscovery()
 
+    // Rà soát 22/7 (log thật: ghép nối OK, connect() OK, nhưng đọc phản hồi bị
+    // "read failed, socket might closed... read ret: -1" - remote đóng kết nối
+    // ngay sau khi bắt tay xong). Module Serial Bluetooth giá rẻ (HC-05/06,
+    // nhiều clone ELM327) thường KHÔNG cài đặt đúng chuẩn Secure Simple
+    // Pairing - socket "secure" (mặc định của createRfcommSocketToServiceRecord)
+    // có thể bắt tay mã hoá xong rồi bị chính firmware phía adapter chủ động
+    // ngắt. "Insecure" bỏ qua bước mã hoá/xác thực đó - thử trước, nếu vẫn lỗi
+    // mới rơi về "secure" (đối xứng với cách xử lý fallback MTU/legacyScan bên
+    // BLE - thử phương án rẻ nhất trước, không cần biết chắc cái nào đúng).
     return withContext(Dispatchers.IO) {
-      val socket = device.createRfcommSocketToServiceRecord(SPP_UUID)
-      adapter.cancelDiscovery()
       try {
-        socket.connect()
-        socket.outputStream.write("ATZ\r".toByteArray())
-        socket.outputStream.flush()
-        readUntilPrompt(socket.inputStream)
-      } finally {
-        try { socket.close() } catch (_: Exception) {}
+        connectAndSendAtz(device, insecure = true)
+      } catch (_: Exception) {
+        connectAndSendAtz(device, insecure = false)
       }
+    }
+  }
+
+  private fun connectAndSendAtz(device: BluetoothDevice, insecure: Boolean): String {
+    val socket = if (insecure) {
+      device.createInsecureRfcommSocketToServiceRecord(SPP_UUID)
+    } else {
+      device.createRfcommSocketToServiceRecord(SPP_UUID)
+    }
+    try {
+      socket.connect()
+      // Vài module Serial giá rẻ cần 1 khoảng lặng ngắn sau connect() trước
+      // khi nhận byte đầu tiên - ghi ngay có thể rơi vào lúc firmware chưa kịp
+      // chuyển sang chế độ nhận lệnh (thực hành phổ biến với HC-05/06 clone).
+      Thread.sleep(150)
+      socket.outputStream.write("ATZ\r".toByteArray())
+      socket.outputStream.flush()
+      return readUntilPrompt(socket.inputStream)
+    } finally {
+      try { socket.close() } catch (_: Exception) {}
     }
   }
 
