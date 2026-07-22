@@ -9,8 +9,8 @@ import { useMarkVehicleSold } from '../../hooks/useVehicleTransfer';
 import { getPairingForVehicle } from '../../services/obd/pairedDevices';
 import { getCachedCapability } from '../../services/obd/capabilityService';
 import { useObdSessionStore } from '../../store/obdSessionStore';
-import { getSelectedGaugeThemeId, setSelectedGaugeThemeId, pickGaugeTheme } from '../../utils/gaugeThemes';
-import GaugeThemePicker from '../../components/obd/GaugeThemePicker';
+import { getSelectedDashboardStyleId, setSelectedDashboardStyleId, pickDashboardStyle } from '../../constants/dashboardStyles';
+import DashboardStylePicker from '../../components/obd/DashboardStylePicker';
 import LoadingView from '../../components/LoadingView';
 import ErrorView from '../../components/ErrorView';
 import AppBgPattern from '../../components/AppBgPattern';
@@ -333,22 +333,22 @@ export default function VehicleDetailScreen() {
     }).catch(() => {});
   }, [vehicleId]);
 
-  // Chọn giao diện đồng hồ OBD (GaugeCluster) NGAY TỪ ĐÂY - trước đây chỉ vào
+  // Chọn style Dashboard OBD (GaugeCluster) NGAY TỪ ĐÂY - trước đây chỉ vào
   // được qua icon 🎨 trong màn Đồng hồ, phải kết nối OBD2 trước mới thấy. Lưu
-  // theo vehicleId (xem gaugeThemes.ts) nên chọn trước ở đây, lúc kết nối thật
-  // GaugeCluster đọc đúng lựa chọn này.
-  const [gaugeThemeId, setGaugeThemeId] = useState('default');
-  const [gaugeThemePickerVisible, setGaugeThemePickerVisible] = useState(false);
+  // theo vehicleId (xem dashboardStyles.ts) nên chọn trước ở đây, lúc kết nối
+  // thật GaugeCluster đọc đúng lựa chọn này.
+  const [dashboardStyleId, setDashboardStyleId] = useState('analog');
+  const [dashboardStylePickerVisible, setDashboardStylePickerVisible] = useState(false);
   useEffect(() => {
-    getSelectedGaugeThemeId(vehicleId).then(setGaugeThemeId);
+    getSelectedDashboardStyleId(vehicleId).then(setDashboardStyleId);
   }, [vehicleId]);
-  // Khớp đúng fallback ở GaugeCluster: theme khoá Premium mà user không còn
-  // Premium thì hiện về mặc định - tránh dòng phụ đề ở đây nói "Thể thao"
-  // trong khi màn Đồng hồ thật lại đang hiển thị "Mặc định".
-  const selectedGaugeTheme = pickGaugeTheme(gaugeThemeId);
-  const effectiveGaugeTheme = selectedGaugeTheme.isPremiumOnly && !isPremium
-    ? pickGaugeTheme('default')
-    : selectedGaugeTheme;
+  // Khớp đúng fallback ở GaugeCluster: style khoá Premium mà user không còn
+  // Premium thì hiện về mặc định - tránh dòng phụ đề ở đây nói "HUD Đua xe"
+  // trong khi màn Đồng hồ thật lại đang hiển thị "Đồng hồ Analog".
+  const selectedDashboardStyle = pickDashboardStyle(dashboardStyleId);
+  const effectiveDashboardStyle = selectedDashboardStyle.isPremiumOnly && !isPremium
+    ? pickDashboardStyle(null)
+    : selectedDashboardStyle;
 
   if (isLoading) return <LoadingView />;
   if (isError) return <ErrorView message={t('vehicles.cannot_load_detail')} onRetry={refetch} />;
@@ -562,10 +562,10 @@ export default function VehicleDetailScreen() {
           <FontAwesome5 name="chevron-right" size={13} color={colors.textSecondary} />
         </TouchableOpacity>
 
-        {/* Chọn giao diện đồng hồ (rà soát: trước đây chỉ vào được sau khi đã
+        {/* Chọn style Dashboard OBD (rà soát: trước đây chỉ vào được sau khi đã
             kết nối OBD2 - user muốn cấu hình trước, không cần chờ cắm adapter). */}
         <TouchableOpacity
-          onPress={() => setGaugeThemePickerVisible(true)}
+          onPress={() => setDashboardStylePickerVisible(true)}
           style={{
             flexDirection: 'row', alignItems: 'center', gap: 12,
             backgroundColor: colors.surface, borderRadius: 12, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: colors.border,
@@ -574,25 +574,25 @@ export default function VehicleDetailScreen() {
             width: 40, height: 40, borderRadius: 20,
             backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center',
           }}>
-            <FontAwesome5 name="palette" size={16} color={effectiveGaugeTheme.accent} solid />
+            <FontAwesome5 name="palette" size={16} color={effectiveDashboardStyle.previewColor} solid />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14 }}>{t('obd.gauge_theme_entry_title')}</Text>
             <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 1 }}>
-              {effectiveGaugeTheme.name}
+              {t(effectiveDashboardStyle.nameKey)}
             </Text>
           </View>
           <FontAwesome5 name="chevron-right" size={13} color={colors.textSecondary} />
         </TouchableOpacity>
 
-        <GaugeThemePicker
-          visible={gaugeThemePickerVisible}
-          selectedId={gaugeThemeId}
+        <DashboardStylePicker
+          visible={dashboardStylePickerVisible}
+          selectedId={dashboardStyleId}
           vehicleName={v?.ten ?? v?.name ?? ''}
-          onClose={() => setGaugeThemePickerVisible(false)}
+          onClose={() => setDashboardStylePickerVisible(false)}
           onSelect={(id) => {
-            setGaugeThemeId(id);
-            setSelectedGaugeThemeId(vehicleId, id);
+            setDashboardStyleId(id);
+            setSelectedDashboardStyleId(vehicleId, id);
           }}
         />
 

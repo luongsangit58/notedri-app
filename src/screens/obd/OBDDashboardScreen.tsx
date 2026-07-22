@@ -19,7 +19,6 @@ import { StatusBar } from 'expo-status-bar';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { useObdConnection } from '../../hooks/useObd';
 import { bleService, LinkQuality } from '../../services/obd/BleService';
-import { findingCostLabel } from '../../services/obd/findingCost';
 import { requestKeepAlivePermissions, startObdKeepAlive } from '../../services/obd/obdKeepAliveService';
 import { openBatterySettings } from '../../services/gps/GpsTripTracker';
 import AppBgPattern from '../../components/AppBgPattern';
@@ -28,6 +27,7 @@ import { useT } from '../../i18n';
 import { contentWide } from '../../utils/layout';
 import StatBox from '../../components/obd/StatBox';
 import GaugeCluster from '../../components/obd/GaugeCluster';
+import SafetyAlerts, { hasSafetyAlerts } from '../../components/obd/SafetyAlerts';
 
 // Rà soát 16/7 (góp ý user: giảm thao tác lúc lên xe - "1 chạm là kết nối"):
 // NFC tap-to-connect đã có sẵn (NfcSetupScreen) nhưng chỉ nằm ở 1 link nhỏ, ít
@@ -212,81 +212,10 @@ export default function OBDDashboardScreen() {
   // Diagnostic Engine (kể cả severity critical/can_drive:'stop'), VIN lệch và
   // dấu "mất sóng" trước đây CHỈ nằm trong ScrollView của lưới số liệu - tài xế
   // đang ở chế độ Đồng hồ (đúng lúc lái xe) sẽ không thấy cảnh báo nguy hiểm.
-  // Giữ nguyên khối JSX gốc trong nhánh lưới bên dưới (không đổi hành vi/thứ tự
-  // đã có), chỉ thêm 1 bản hiện SONG SONG ở nhánh Đồng hồ.
-  const safetyAlerts = (
-    <>
-      {vinMismatch && (
-        <View style={[styles.warningBanner, { backgroundColor: '#B45309' }]}>
-          <FontAwesome5 name="car-crash" size={13} color="#FEF3C7" solid />
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.warningText, { fontWeight: '700' }]}>
-              {t('obd.vin_mismatch_title', { name: vehicleName || 'xe này' })}
-            </Text>
-            <Text style={[styles.warningText, { fontSize: 11, opacity: 0.9, marginTop: 2 }]}>
-              {t('obd.vin_mismatch_desc')}
-            </Text>
-          </View>
-        </View>
-      )}
-
-      {warning?.type === 'no_data' && (
-        <View style={styles.warningBanner}>
-          <FontAwesome5 name="exclamation-triangle" size={13} color="#FEF3C7" solid />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.warningText}>{t('obd.no_data_warning')}</Text>
-            {warning.rawResponse ? (
-              <Text style={[styles.warningText, { fontSize: 10, opacity: 0.65, marginTop: 4 }]}>
-                Raw: {warning.rawResponse.replace(/[\r\n]+/g, ' ').trim().slice(0, 60)}
-              </Text>
-            ) : null}
-          </View>
-        </View>
-      )}
-
-      {findings.map((f) => {
-        const cost = findingCostLabel(f.related_dtc);
-        return (
-        <View
-          key={f.ruleId}
-          style={[
-            styles.warningBanner,
-            { backgroundColor: f.severity === 'critical' ? '#B91C1C' : '#B45309' },
-          ]}>
-          <FontAwesome5
-            name={f.can_drive === 'stop' ? 'hand-paper' : 'exclamation-triangle'}
-            size={13}
-            color="#FEF3C7"
-            solid
-          />
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.warningText, { fontWeight: '700' }]}>
-              {f.title_vi}{f.beta ? ` (${t('obd.finding_beta')})` : ''}
-            </Text>
-            <Text style={[styles.warningText, { fontSize: 11, opacity: 0.9, marginTop: 2 }]}>
-              {f.action_vi}
-            </Text>
-            {cost && (
-              <Text style={[styles.warningText, { fontSize: 11, opacity: 0.85, marginTop: 3, fontStyle: 'italic' }]}>
-                {t('obd.finding_cost', { range: cost })}
-              </Text>
-            )}
-          </View>
-        </View>
-        );
-      })}
-
-      {!isConnected && snap && (
-        <View style={[styles.warningBanner, { backgroundColor: '#78716C22' }]}>
-          <FontAwesome5 name="pause-circle" size={13} color="#A8A29E" solid />
-          <Text style={[styles.warningText, { color: '#A8A29E', fontSize: 12 }]}>
-            {t('obd.data_paused')}
-          </Text>
-        </View>
-      )}
-    </>
-  );
-  const hasSafetyAlerts = !!vinMismatch || warning?.type === 'no_data' || findings.length > 0 || (!isConnected && !!snap);
+  // Trích thành 1 component dùng chung (SafetyAlerts.tsx) - trước đây khối
+  // JSX này bị copy-paste y hệt ở đây và ở nhánh lưới bên dưới.
+  const safetyAlertsProps = { vinMismatch, vehicleName, warning, findings, isConnected, hasSnapshot: !!snap };
+  const showSafetyAlerts = hasSafetyAlerts(safetyAlertsProps);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -325,9 +254,9 @@ export default function OBDDashboardScreen() {
           thoát/ngắt kết nối), chỉ ẩn thanh trạng thái Android/iOS. */}
       <StatusBar hidden={viewMode === 'gauge'} />
 
-      {viewMode === 'gauge' && hasSafetyAlerts && (
+      {viewMode === 'gauge' && showSafetyAlerts && (
         <ScrollView style={styles.gaugeAlerts} contentContainerStyle={styles.gaugeAlertsContent}>
-          {safetyAlerts}
+          <SafetyAlerts {...safetyAlertsProps} />
         </ScrollView>
       )}
 
@@ -421,40 +350,10 @@ export default function OBDDashboardScreen() {
           })()}
         </View>
 
-        {/* VIN không khớp: có thể đang cắm Vgate sang XE KHÁC vào bản ghi này
-            (toàn vẹn dữ liệu, Sang duyệt 14/7). Chỉ cảnh báo, không chặn. */}
-        {vinMismatch && (
-          <View style={[styles.warningBanner, { backgroundColor: '#B45309' }]}>
-            <FontAwesome5 name="car-crash" size={13} color="#FEF3C7" solid />
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.warningText, { fontWeight: '700' }]}>
-                {t('obd.vin_mismatch_title', { name: vehicleName || 'xe này' })}
-              </Text>
-              <Text style={[styles.warningText, { fontSize: 11, opacity: 0.9, marginTop: 2 }]}>
-                {t('obd.vin_mismatch_desc')}
-              </Text>
-            </View>
-          </View>
-        )}
-
-        {/* No-data warning: adapter connected but ECU not responding */}
-        {warning?.type === 'no_data' && (
-          <View style={styles.warningBanner}>
-            <FontAwesome5 name="exclamation-triangle" size={13} color="#FEF3C7" solid />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.warningText}>{t('obd.no_data_warning')}</Text>
-              {warning.rawResponse ? (
-                <Text style={[styles.warningText, { fontSize: 10, opacity: 0.65, marginTop: 4 }]}>
-                  Raw: {warning.rawResponse.replace(/[\r\n]+/g, ' ').trim().slice(0, 60)}
-                </Text>
-              ) : null}
-            </View>
-          </View>
-        )}
-
         {/* Trạng thái "mọi chỉ số bình thường" khi ĐANG kết nối + không có
             cảnh báo nào (rà soát 14/7: trước đây 0 finding hiển thị y như "chưa
-            tải xong" - user không phân biệt được xe khoẻ với app treo). */}
+            tải xong" - user không phân biệt được xe khoẻ với app treo). Chỉ
+            thuộc nhánh Lưới - nhánh Đồng hồ ưu tiên không gian cho đồng hồ. */}
         {isConnected && findings.length === 0 && warning?.type !== 'no_data' && snap && (
           <View style={[styles.warningBanner, { backgroundColor: '#16653422' }]}>
             <FontAwesome5 name="check-circle" size={14} color="#22C55E" solid />
@@ -464,51 +363,7 @@ export default function OBDDashboardScreen() {
           </View>
         )}
 
-        {/* Cảnh báo từ Diagnostic Engine (rule beta có nguồn dẫn) - hiện khi
-            evaluate() bắt được bất thường trên snapshot sống */}
-        {findings.map((f) => {
-          const cost = findingCostLabel(f.related_dtc);
-          return (
-          <View
-            key={f.ruleId}
-            style={[
-              styles.warningBanner,
-              { backgroundColor: f.severity === 'critical' ? '#B91C1C' : '#B45309' },
-            ]}>
-            <FontAwesome5
-              name={f.can_drive === 'stop' ? 'hand-paper' : 'exclamation-triangle'}
-              size={13}
-              color="#FEF3C7"
-              solid
-            />
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.warningText, { fontWeight: '700' }]}>
-                {f.title_vi}{f.beta ? ` (${t('obd.finding_beta')})` : ''}
-              </Text>
-              <Text style={[styles.warningText, { fontSize: 11, opacity: 0.9, marginTop: 2 }]}>
-                {f.action_vi}
-              </Text>
-              {cost && (
-                <Text style={[styles.warningText, { fontSize: 11, opacity: 0.85, marginTop: 3, fontStyle: 'italic' }]}>
-                  {t('obd.finding_cost', { range: cost })}
-                </Text>
-              )}
-            </View>
-          </View>
-          );
-        })}
-
-        {/* Dấu "số liệu đang tạm dừng cập nhật" khi mất sóng/đang nối lại
-            (rà soát 14/7: trước đây các ô vẫn hiện số CŨ y như đang live -
-            tài xế liếc màn hình tưởng là số thật lúc này). */}
-        {!isConnected && snap && (
-          <View style={[styles.warningBanner, { backgroundColor: '#78716C22' }]}>
-            <FontAwesome5 name="pause-circle" size={13} color="#A8A29E" solid />
-            <Text style={[styles.warningText, { color: '#A8A29E', fontSize: 12 }]}>
-              {t('obd.data_paused')}
-            </Text>
-          </View>
-        )}
+        <SafetyAlerts {...safetyAlertsProps} />
 
         <View style={[styles.infoCard, { backgroundColor: colors.card }]}>
           <Text style={[styles.infoTitle, { color: colors.text }]}>{t('obd.live_data_title')}</Text>
