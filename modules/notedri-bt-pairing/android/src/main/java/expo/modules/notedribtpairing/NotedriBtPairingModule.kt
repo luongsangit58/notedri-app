@@ -36,13 +36,13 @@ private val SPP_UUID: UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34
 // (tối thiểu là danh sách ĐÃ ghép nối, thu thập trước khi chờ) thay vì treo.
 private const val DISCOVERY_TIMEOUT_MS = 12_000L
 
-// Rà soát 22/7: ảnh chụp thực tế cho thấy chính Car Scanner (app đối chứng,
-// KHÔNG phải NoteDri) cũng hiện "Connection problems" lúc 14:46 rồi tự kết
-// nối thành công lúc 14:47 - chỉ cách nhau 1 phút, không đổi gì khác ngoài
-// việc bấm CONNECT lại. Kết nối Classic trên đúng phần cứng này vốn chập
-// chờn cho MỌI app, không phải lỗi riêng của NoteDri - cần tự thử lại vài
-// lần thay vì báo lỗi ngay sau 1 lần fail, giống cách BleService.ts đã làm
-// cho BLE (RECONNECT_DELAYS_MS).
+// Rà soát 22/7: đã có lúc hiểu nhầm 2 ảnh chụp Car Scanner (1 ảnh lỗi ngay
+// sau khi user CHỦ ĐỘNG ngắt kết nối, 1 ảnh kết nối lại bình thường sau đó)
+// là bằng chứng "kết nối Classic vốn chập chờn cho mọi app" - KHÔNG đúng, đó
+// chỉ là chu trình ngắt/nối lại bình thường. Không dùng ảnh đó làm lý do ở
+// đây nữa. Vẫn giữ retry vì bản thân đây là biện pháp an toàn rẻ tiền cho
+// thao tác Bluetooth (cùng tinh thần RECONNECT_DELAYS_MS bên BLE), không
+// phải vì đã có bằng chứng xác nhận kết nối chập chờn.
 private val CONNECT_RETRY_DELAYS_MS = longArrayOf(1500, 2500)
 
 // Cùng loại lỗi đã sửa ở discoverDevices() (chờ vô hạn 1 broadcast có thể
@@ -180,9 +180,9 @@ class NotedriBtPairingModule : Module() {
     // mới rơi về "secure" (đối xứng với cách xử lý fallback MTU/legacyScan bên
     // BLE - thử phương án rẻ nhất trước, không cần biết chắc cái nào đúng).
     //
-    // Bọc thêm vòng thử lại (xem comment CONNECT_RETRY_DELAYS_MS) - kết nối
-    // chập chờn không phải lỗi 1 lần là hết, retry mới phản ánh đúng thực tế
-    // Car Scanner cũng gặp.
+    // Bọc thêm vòng thử lại (xem comment CONNECT_RETRY_DELAYS_MS) - biện pháp
+    // an toàn rẻ tiền, không dựa trên bằng chứng cụ thể nào về việc kết nối
+    // hay bị chập chờn.
     var lastError: Exception = BtPairingException("Không kết nối được")
     for (attempt in 0..CONNECT_RETRY_DELAYS_MS.size) {
       if (attempt > 0) delay(CONNECT_RETRY_DELAYS_MS[attempt - 1])
