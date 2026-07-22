@@ -70,6 +70,13 @@ class NotedriBtPairingModule : Module() {
       ?: throw BtPairingException("React context không sẵn sàng")
     val adapter = (context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager)?.adapter
       ?: throw BtPairingException("Máy không có Bluetooth Adapter")
+    // startDiscovery() trả về false (không throw, không lộ nguyên nhân) khi
+    // Bluetooth đang TẮT - phải tự kiểm tra trước để báo đúng lý do, thay vì
+    // để lộ message kỹ thuật "startDiscovery trả về false" khó hiểu (rà soát
+    // 22/7, user chụp màn hình gặp đúng trường hợp này).
+    if (!adapter.isEnabled) {
+      throw BtPairingException("Bluetooth đang tắt - bật Bluetooth rồi thử lại")
+    }
 
     val found = LinkedHashMap<String, Map<String, Any>>()
     adapter.bondedDevices?.forEach { d ->
@@ -123,6 +130,9 @@ class NotedriBtPairingModule : Module() {
       ?: throw BtPairingException("React context không sẵn sàng")
     val adapter = (context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager)?.adapter
       ?: throw BtPairingException("Máy không có Bluetooth Adapter")
+    if (!adapter.isEnabled) {
+      throw BtPairingException("Bluetooth đang tắt - bật Bluetooth rồi thử lại")
+    }
     val device = adapter.getRemoteDevice(address)
 
     ensureBonded(context, device, pin)
