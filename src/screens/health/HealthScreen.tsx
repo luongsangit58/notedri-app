@@ -293,8 +293,9 @@ function HealthCard({ vehicle, health, loading, onAddReminder, onCta, history, h
             <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>{plate}</Text>
           ) : null}
         </View>
-        {/* Nori: avatar biểu cảm theo tình trạng xe, số điểm hiện thành badge nhỏ
-            đè góc dưới-phải (thay cho vòng tròn số đơn thuần trước đây). */}
+        {/* Nori: avatar ảnh thật (khớp linh vật bên web) + dot trạng thái góc
+            dưới-phải (do NoriAvatar tự vẽ). Số điểm hiện thành badge riêng ở góc
+            TRÊN-phải để không đè lên dot trạng thái của Nori. */}
         <View style={{ marginLeft: 12 }}>
           <NoriAvatar
             mood={noriMoodFromScore(
@@ -306,7 +307,7 @@ function HealthCard({ vehicle, health, loading, onAddReminder, onCta, history, h
           />
           {total != null && (
             <View style={{
-              position: 'absolute', bottom: -4, right: -6,
+              position: 'absolute', top: -4, right: -6,
               backgroundColor: colors.card, borderRadius: 10,
               borderWidth: 1.5, borderColor: scoreColor(total),
               paddingHorizontal: 6, paddingVertical: 1,
