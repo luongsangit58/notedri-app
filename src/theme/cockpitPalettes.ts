@@ -50,3 +50,14 @@ export function useCockpitPalette(): CockpitPalette {
   const mode = useThemeStore((s) => s.mode);
   return mode === 'light' ? cockpitLight : cockpitDark;
 }
+
+// Rà soát (góp ý user: 6 style Premium chỉ có 1 bảng màu cố định, cần bản
+// sáng+tối riêng) - helper DÙNG CHUNG cho mỗi layout Premium thay vì lặp lại
+// `useThemeStore` + ternary ở từng file. Style "Ban đêm" CỐ TÌNH không dùng
+// helper này (xem comment trong NightLayout.tsx) - bản sắc của nó LÀ luôn tối,
+// không có khái niệm "bản sáng", khác 5 style Premium còn lại vốn chỉ đang
+// thiếu bản kia (chưa từng có ý định cố định 1 hướng sáng/tối).
+export function usePremiumPalette<T>(dark: T, light: T): T {
+  const mode = useThemeStore((s) => s.mode);
+  return mode === 'light' ? light : dark;
+}

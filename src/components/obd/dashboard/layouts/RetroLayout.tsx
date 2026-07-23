@@ -4,27 +4,34 @@ import Svg, { Defs, RadialGradient, Stop, Rect } from 'react-native-svg';
 import ArcGauge from '../primitives/ArcGauge';
 import { serifFontFamily } from '../../../../theme/fonts';
 import { useT } from '../../../../i18n';
+import { usePremiumPalette } from '../../../../theme/cockpitPalettes';
 import { CockpitLayoutProps, CockpitMetricValue } from '../types';
 import { PRIMARY_METRIC_KEYS, FEATURED_SECONDARY_KEYS } from '../../../../constants/obdMetrics';
 import { useCountingNumber } from '../../../../hooks/useCountingNumber';
 
-// Premium "Cổ điển" - bản sắc CỐ ĐỊNH (mặt kem/crôm, kim đỏ mảnh) gợi bảng
-// đồng hồ xe cổ thập niên 60-70, không đổi theo theme sáng/tối app.
-const PALETTE = {
+// Premium "Cổ điển" - bản sắc RIÊNG (mặt kem/crôm, kim đỏ mảnh) gợi bảng đồng
+// hồ xe cổ thập niên 60-70. Góp ý user (23/7): thêm bản TỐI song song (mặt số
+// nâu sẫm/đen thay vì kem, vẫn kim đỏ + viền đồng thau - gợi bảng đồng hồ xe
+// cổ khi lái đêm, đèn dạ quang nâu ấm thay vì ánh sáng ban ngày).
+const LIGHT_PALETTE = {
   bg1: '#F3E7C9', bg2: '#E7D6A6', chrome: '#B08D4F', needle: '#B3231C',
   text: '#2A2016', textDim: '#6B5A3D', track: '#E3D3A9',
+};
+const DARK_PALETTE = {
+  bg1: '#2A2016', bg2: '#1A140D', chrome: '#8A6D3F', needle: '#E0453A',
+  text: '#EDE0C8', textDim: '#A6957A', track: '#3A2E1E',
 };
 
 // Component RIÊNG cho từng ô - xem lý do trong CardsLayout.tsx (không gọi
 // hook trực tiếp trong .map vì số ô có thể đổi giữa các lần render).
-function MiniStat({ item, animate }: { item: CockpitMetricValue; animate?: boolean }) {
+function MiniStat({ item, palette, animate }: { item: CockpitMetricValue; palette: typeof LIGHT_PALETTE; animate?: boolean }) {
   const t = useT();
   const { def, value } = item;
   const display = useCountingNumber(value, 1, animate);
   return (
-    <View style={[styles.mini, { borderColor: PALETTE.chrome, backgroundColor: PALETTE.bg1 + 'CC' }]}>
-      <Text style={[styles.miniLabel, { color: PALETTE.textDim, fontFamily: serifFontFamily }]} numberOfLines={1}>{t(def.labelKey)}</Text>
-      <Text style={[styles.miniVal, { color: PALETTE.text, fontFamily: serifFontFamily }]} numberOfLines={1}>
+    <View style={[styles.mini, { borderColor: palette.chrome, backgroundColor: palette.bg1 + 'CC' }]}>
+      <Text style={[styles.miniLabel, { color: palette.textDim, fontFamily: serifFontFamily }]} numberOfLines={1}>{t(def.labelKey)}</Text>
+      <Text style={[styles.miniVal, { color: palette.text, fontFamily: serifFontFamily }]} numberOfLines={1}>
         {display ?? '-'}{def.unit}
       </Text>
     </View>
@@ -33,6 +40,7 @@ function MiniStat({ item, animate }: { item: CockpitMetricValue; animate?: boole
 
 export default function RetroLayout({ metrics, size, isPortrait, animate }: CockpitLayoutProps) {
   const t = useT();
+  const PALETTE = usePremiumPalette(DARK_PALETTE, LIGHT_PALETTE);
   const speed = metrics.find((m) => m.def.key === 'speedKmh');
   const rpm = metrics.find((m) => m.def.key === 'rpm');
   const secondary = metrics.filter((m) => !PRIMARY_METRIC_KEYS.includes(m.def.key));
@@ -71,7 +79,7 @@ export default function RetroLayout({ metrics, size, isPortrait, animate }: Cock
 
       {featured.length > 0 && (
         <View style={styles.secondaryRow}>
-          {featured.map((item) => <MiniStat key={item.def.key} item={item} animate={animate} />)}
+          {featured.map((item) => <MiniStat key={item.def.key} item={item} palette={PALETTE} animate={animate} />)}
         </View>
       )}
     </View>

@@ -10,7 +10,7 @@ import {
   Platform,
   useWindowDimensions,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -61,6 +61,22 @@ export default function OBDDashboardScreen() {
   const colors = useColors();
   const { width, height } = useWindowDimensions();
   const isLandscape = width > height;
+  // Rà soát (góp ý user: chưa full màn hình trên đầu Android ô tô) - SafeAreaView
+  // mặc định cộng NGUYÊN inset hệ thống báo về, nhưng nhiều ROM đầu xe custom
+  // (không phải điện thoại thật) báo inset top/bottom sai lệch rất lớn (thanh
+  // trạng thái/điều hướng riêng của hãng bị tính nhầm vào "safe area"), khiến
+  // nội dung bị co lại giữa màn hình, để trống mảng lớn trên/dưới. Chặn trần
+  // ở mức đủ dùng cho notch/thanh cử chỉ THẬT trên điện thoại (không màn hình
+  // thật nào cần quá 32dp) - vẫn tôn trọng inset thật khi nhỏ, chỉ chặn giá
+  // trị bất thường.
+  const rawInsets = useSafeAreaInsets();
+  const MAX_SAFE_INSET = 32;
+  const safeInsets = {
+    paddingTop: Math.min(rawInsets.top, MAX_SAFE_INSET),
+    paddingBottom: Math.min(rawInsets.bottom, MAX_SAFE_INSET),
+    paddingLeft: Math.min(rawInsets.left, MAX_SAFE_INSET),
+    paddingRight: Math.min(rawInsets.right, MAX_SAFE_INSET),
+  };
   const {
     connectionState,
     smoothedSnapshot,
@@ -218,7 +234,7 @@ export default function OBDDashboardScreen() {
   const showSafetyAlerts = hasSafetyAlerts(safetyAlertsProps);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: colors.background }, safeInsets]}>
       <AppBgPattern />
       <View style={styles.header}>
         {/* Đi thẳng về Trang chủ (phản hồi 20/7): trước đây goBack() lần theo
@@ -452,7 +468,7 @@ export default function OBDDashboardScreen() {
         </TouchableOpacity>
       </ScrollView>
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 

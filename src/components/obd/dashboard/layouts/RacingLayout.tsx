@@ -3,17 +3,25 @@ import { View, Text, StyleSheet } from 'react-native';
 import Svg, { Defs, Pattern, Rect } from 'react-native-svg';
 import { monoFontFamily } from '../../../../theme/fonts';
 import { useT } from '../../../../i18n';
+import { usePremiumPalette } from '../../../../theme/cockpitPalettes';
 import { CockpitLayoutProps, CockpitMetricValue } from '../types';
 import { PRIMARY_METRIC_KEYS, FEATURED_SECONDARY_KEYS } from '../../../../constants/obdMetrics';
 import { useCountingNumber } from '../../../../hooks/useCountingNumber';
 
-// Premium "HUD Đua xe" - bản sắc CỐ ĐỊNH (nền carbon tối, số vòng tua khổng
-// lồ, dải shift-light) không đổi theo theme sáng/tối app - đây chính là lý do
-// nó là 1 skin đáng mua riêng, không phải recolor của style Miễn phí.
-const PALETTE = {
+// Premium "HUD Đua xe" - bản sắc RIÊNG (carbon fiber + số vòng tua khổng lồ +
+// dải shift-light) không đổi theo NỘI DUNG (vẫn luôn "HUD đua xe"), nhưng góp
+// ý user (23/7): cần có bản sáng+tối cho mỗi Premium thay vì cố định 1 hướng -
+// bản sáng đổi carbon fiber sang tông xám nhạt kiểu pit-lane ban ngày, giữ
+// nguyên màu đỏ/cam nhận diện RPM/tốc độ (đủ tương phản trên cả 2 nền).
+const DARK_PALETTE = {
   bg: '#0B0D10', stripeA: '#14171C', stripeB: '#191D23', border: '#2A2F36',
   text: '#EDF1F7', textDim: '#8B93A3', rpmColor: '#FB4B4B', speedColor: '#FF8A3D',
   shiftOn: '#2ECC71', shiftHot: '#FB4B4B', shiftOff: '#232830',
+};
+const LIGHT_PALETTE = {
+  bg: '#E8E9EB', stripeA: '#DCDEE1', stripeB: '#F0F1F3', border: '#C4C7CC',
+  text: '#14171C', textDim: '#5B6270', rpmColor: '#D32F2F', speedColor: '#C4571F',
+  shiftOn: '#1B8A5A', shiftHot: '#D32F2F', shiftOff: '#C4C7CC',
 };
 
 const SHIFT_SEGMENTS = 8;
@@ -21,14 +29,14 @@ const SHIFT_HOT_FROM = 6;
 
 // Component RIÊNG cho từng ô - xem lý do trong CardsLayout.tsx (không gọi
 // hook trực tiếp trong .map vì số ô có thể đổi giữa các lần render).
-function MiniStat({ item, animate }: { item: CockpitMetricValue; animate?: boolean }) {
+function MiniStat({ item, palette, animate }: { item: CockpitMetricValue; palette: typeof DARK_PALETTE; animate?: boolean }) {
   const t = useT();
   const { def, value } = item;
   const display = useCountingNumber(value, 1, animate);
   return (
-    <View style={[styles.mini, { borderColor: PALETTE.border }]}>
-      <Text style={[styles.miniLabel, { color: PALETTE.textDim }]} numberOfLines={1}>{t(def.labelKey)}</Text>
-      <Text style={[styles.miniVal, { color: PALETTE.text, fontFamily: monoFontFamily }]} numberOfLines={1}>
+    <View style={[styles.mini, { borderColor: palette.border, backgroundColor: palette.stripeA + 'AA' }]}>
+      <Text style={[styles.miniLabel, { color: palette.textDim }]} numberOfLines={1}>{t(def.labelKey)}</Text>
+      <Text style={[styles.miniVal, { color: palette.text, fontFamily: monoFontFamily }]} numberOfLines={1}>
         {display ?? '-'}{def.unit}
       </Text>
     </View>
@@ -37,6 +45,7 @@ function MiniStat({ item, animate }: { item: CockpitMetricValue; animate?: boole
 
 export default function RacingLayout({ metrics, isPortrait, animate }: CockpitLayoutProps) {
   const t = useT();
+  const PALETTE = usePremiumPalette(DARK_PALETTE, LIGHT_PALETTE);
   const speed = metrics.find((m) => m.def.key === 'speedKmh');
   const rpm = metrics.find((m) => m.def.key === 'rpm');
   const speedDisplay = useCountingNumber(speed?.value ?? null, 0, animate);
@@ -97,7 +106,7 @@ export default function RacingLayout({ metrics, isPortrait, animate }: CockpitLa
 
       {featured.length > 0 && (
         <View style={styles.secondaryRow}>
-          {featured.map((item) => <MiniStat key={item.def.key} item={item} animate={animate} />)}
+          {featured.map((item) => <MiniStat key={item.def.key} item={item} palette={PALETTE} animate={animate} />)}
         </View>
       )}
     </View>
@@ -115,7 +124,7 @@ const styles = StyleSheet.create({
   shiftRow: { flexDirection: 'row', gap: 4, marginTop: 8 },
   shiftSeg: { width: 20, height: 10, borderRadius: 3 },
   secondaryRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap', justifyContent: 'center' },
-  mini: { borderWidth: 1, borderRadius: 10, paddingVertical: 6, paddingHorizontal: 10, alignItems: 'center', backgroundColor: '#00000055' },
+  mini: { borderWidth: 1, borderRadius: 10, paddingVertical: 6, paddingHorizontal: 10, alignItems: 'center' },
   miniLabel: { fontSize: 9, textTransform: 'uppercase', letterSpacing: 0.4 },
   miniVal: { fontSize: 14, fontWeight: '700', marginTop: 2 },
 });

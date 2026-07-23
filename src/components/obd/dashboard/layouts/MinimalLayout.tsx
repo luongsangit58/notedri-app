@@ -1,25 +1,30 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
 import { useT } from '../../../../i18n';
+import { usePremiumPalette } from '../../../../theme/cockpitPalettes';
 import { CockpitLayoutProps } from '../types';
 import { FEATURED_SECONDARY_KEYS } from '../../../../constants/obdMetrics';
 import { useCountingNumber } from '../../../../hooks/useCountingNumber';
 
-// Premium "Tối giản EV" - bản sắc CỐ ĐỊNH (nền trắng/xám khói, gần như chỉ 1
-// con số) gợi cụm đồng hồ xe điện đời mới, không đổi theo theme sáng/tối app.
-const PALETTE = { bg: '#F4F4F2', line: '#111111', text: '#111111', textDim: '#6B7280' };
+// Premium "Tối giản EV" - bản sắc RIÊNG (gần như chỉ 1 con số, không viền/nền
+// rối mắt) gợi cụm đồng hồ xe điện đời mới. Góp ý user (23/7): thêm bản TỐI
+// song song bản sáng gốc - xám khói -> đen tuyền, giữ đúng tinh thần "tối
+// giản" (không đổi bố cục, chỉ đảo màu).
+const LIGHT_PALETTE = { bg: '#F4F4F2', line: '#111111', text: '#111111', textDim: '#6B7280' };
+const DARK_PALETTE = { bg: '#111112', line: '#F4F4F2', text: '#F4F4F2', textDim: '#9AA0AC' };
 
-function MiniStat({ label, value, unit, animate }: {
+function MiniStat({ label, value, unit, palette, animate }: {
   label: string;
   value: number | null;
   unit: string;
+  palette: typeof LIGHT_PALETTE;
   animate?: boolean;
 }) {
   const display = useCountingNumber(value, 1, animate);
   return (
     <View style={styles.mini}>
-      <Text style={[styles.secondaryText, { color: PALETTE.textDim }]} numberOfLines={1}>{label}</Text>
-      <Text style={[styles.miniVal, { color: PALETTE.text }]} numberOfLines={1}>
+      <Text style={[styles.secondaryText, { color: palette.textDim }]} numberOfLines={1}>{label}</Text>
+      <Text style={[styles.miniVal, { color: palette.text }]} numberOfLines={1}>
         {display ?? '-'}{unit}
       </Text>
     </View>
@@ -28,6 +33,7 @@ function MiniStat({ label, value, unit, animate }: {
 
 export default function MinimalLayout({ metrics, isPortrait, animate = true }: CockpitLayoutProps) {
   const t = useT();
+  const PALETTE = usePremiumPalette(DARK_PALETTE, LIGHT_PALETTE);
   const speed = metrics.find((m) => m.def.key === 'speedKmh');
   const speedDisplay = useCountingNumber(speed?.value ?? null, 0, animate);
   const frac = speed ? Math.max(0, Math.min(1, (speed.value ?? 0) / speed.def.max)) : 0;
@@ -58,7 +64,7 @@ export default function MinimalLayout({ metrics, isPortrait, animate = true }: C
           {featured.map(({ def, value }, i) => (
             <React.Fragment key={def.key}>
               {i > 0 && <View style={[styles.dot, { backgroundColor: PALETTE.textDim }]} />}
-              <MiniStat label={t(def.labelKey)} value={value} unit={def.unit} animate={animate} />
+              <MiniStat label={t(def.labelKey)} value={value} unit={def.unit} palette={PALETTE} animate={animate} />
             </React.Fragment>
           ))}
         </View>

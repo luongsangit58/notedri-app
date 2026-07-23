@@ -3,6 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import RingProgress from '../primitives/RingProgress';
 import { useT } from '../../../../i18n';
+import { usePremiumPalette } from '../../../../theme/cockpitPalettes';
 import { CockpitLayoutProps, CockpitMetricValue } from '../types';
 import { useCountingNumber } from '../../../../hooks/useCountingNumber';
 
@@ -10,27 +11,30 @@ import { useCountingNumber } from '../../../../hooks/useCountingNumber';
 // taxi/đội xe, bán theo hợp đồng B2B riêng (không theo user lẻ). Badge logo
 // CHỈ là placeholder - luồng upload logo/màu thương hiệu thật là 1 tính năng
 // backend/hợp đồng riêng, ngoài phạm vi UI lần này (đúng comment gốc trong
-// gaugeThemes.ts về premium-gate là bước tối thiểu).
-const PALETTE = { bg1: '#1A1A1A', bg2: '#2B2B2B', surface: '#232323', border: '#3A3A3A', text: '#F5F5F5', textDim: '#9CA3AF', accent: '#9CA3AF' };
+// gaugeThemes.ts về premium-gate là bước tối thiểu). Góp ý user (23/7): thêm
+// bản sáng song song - nhiều gara/đội xe muốn giao diện sáng cho không gian
+// văn phòng ban ngày thay vì luôn tối.
+const DARK_PALETTE = { bg1: '#1A1A1A', bg2: '#2B2B2B', surface: '#232323', border: '#3A3A3A', text: '#F5F5F5', textDim: '#9CA3AF', accent: '#9CA3AF' };
+const LIGHT_PALETTE = { bg1: '#F2F2F2', bg2: '#FFFFFF', surface: '#F7F7F7', border: '#DDDDDD', text: '#1A1A1A', textDim: '#6B7280', accent: '#4B5563' };
 
 // Component RIÊNG cho từng thẻ - xem lý do trong CardsLayout.tsx (không gọi
 // hook trực tiếp trong .map vì số lượng `metrics` có thể đổi giữa các lần render).
-function MetricCard({ item, ringSize, cols, animate }: { item: CockpitMetricValue; ringSize: number; cols: number; animate?: boolean }) {
+function MetricCard({ item, ringSize, cols, palette, animate }: { item: CockpitMetricValue; ringSize: number; cols: number; palette: typeof DARK_PALETTE; animate?: boolean }) {
   const t = useT();
   const { def, value } = item;
   const display = useCountingNumber(value, 1, animate);
   return (
     <View style={{ width: `${100 / cols}%`, padding: 6 }}>
-      <View style={[styles.card, { backgroundColor: PALETTE.surface, borderColor: PALETTE.border }]}>
-        <RingProgress value={value} max={def.max} size={ringSize} trackColor={PALETTE.border} fillColor={PALETTE.accent} animate={animate}>
-          <FontAwesome5 name={def.icon} size={ringSize * 0.32} color={PALETTE.accent} solid />
+      <View style={[styles.card, { backgroundColor: palette.surface, borderColor: palette.border }]}>
+        <RingProgress value={value} max={def.max} size={ringSize} trackColor={palette.border} fillColor={palette.accent} animate={animate}>
+          <FontAwesome5 name={def.icon} size={ringSize * 0.32} color={palette.accent} solid />
         </RingProgress>
         <View style={{ flex: 1, minWidth: 0 }}>
-          <Text style={[styles.val, { color: PALETTE.text }]} numberOfLines={1}>
+          <Text style={[styles.val, { color: palette.text }]} numberOfLines={1}>
             {display ?? '-'}
-            <Text style={{ fontSize: 10, fontWeight: '600', color: PALETTE.textDim }}> {def.unit}</Text>
+            <Text style={{ fontSize: 10, fontWeight: '600', color: palette.textDim }}> {def.unit}</Text>
           </Text>
-          <Text style={[styles.label, { color: PALETTE.textDim }]} numberOfLines={1}>{t(def.labelKey)}</Text>
+          <Text style={[styles.label, { color: palette.textDim }]} numberOfLines={1}>{t(def.labelKey)}</Text>
         </View>
       </View>
     </View>
@@ -38,6 +42,7 @@ function MetricCard({ item, ringSize, cols, animate }: { item: CockpitMetricValu
 }
 
 export default function FleetLayout({ metrics, ringSize, isPortrait, animate }: CockpitLayoutProps) {
+  const PALETTE = usePremiumPalette(DARK_PALETTE, LIGHT_PALETTE);
   const cols = isPortrait ? 2 : 4;
 
   return (
@@ -48,7 +53,7 @@ export default function FleetLayout({ metrics, ringSize, isPortrait, animate }: 
 
       <View style={styles.grid}>
         {metrics.map((item) => (
-          <MetricCard key={item.def.key} item={item} ringSize={ringSize} cols={cols} animate={animate} />
+          <MetricCard key={item.def.key} item={item} ringSize={ringSize} cols={cols} palette={PALETTE} animate={animate} />
         ))}
       </View>
     </View>
