@@ -15,13 +15,18 @@ Notifications.setNotificationHandler({
 });
 
 // Lắng nghe push "force_logout" → tự đăng xuất ngay
-Notifications.addNotificationReceivedListener((notification) => {
-  if (notification.request.content.data?.type === 'force_logout') {
-    import('../store/authStore').then(({ useAuthStore }) => {
-      useAuthStore.getState().logout();
-    });
-  }
-});
+// Chỉ đăng ký 1 lần để tránh nhiều listener chồng nhau khi module bị re-import.
+let forceLogoutListenerRegistered = false;
+if (!forceLogoutListenerRegistered) {
+  forceLogoutListenerRegistered = true;
+  Notifications.addNotificationReceivedListener((notification) => {
+    if (notification.request.content.data?.type === 'force_logout') {
+      import('../store/authStore').then(({ useAuthStore }) => {
+        useAuthStore.getState().logout();
+      }).catch(() => {});
+    }
+  });
+}
 
 export async function registerPushToken(): Promise<void> {
   try {

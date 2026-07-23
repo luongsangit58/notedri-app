@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { InteractionManager } from 'react-native';
 import { authApi } from '../api/auth';
 import { queryClient } from '../api/queryClient';
 import { storage } from '../utils/storage';
@@ -112,7 +113,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Vừa đăng nhập -> user LUÔN là dữ liệu tươi từ server, không phải cache.
       set({ token, user, isLoading: false, userSynced: true });
       adoptAccountLocale(user); // đồng bộ ngôn ngữ theo tài khoản
-      registerPushToken();
+      // Đợi UI/màn hình chuyển hết animation rồi mới xin quyền thông báo: xin quyền
+      // ngay giữa lúc set() vừa render lại + điều hướng đang chạy dễ đụng native
+      // bridge lúc app đang bận -> app bị kill trên một số máy (đầu Android ô tô).
+      InteractionManager.runAfterInteractions(() => {
+        registerPushToken().catch(() => {});
+      });
       sendDeviceHeartbeat();
     } catch (error: any) {
       const message = error.response?.data?.message ?? useI18nStore.getState().t('auth.login_failed');
@@ -171,7 +177,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     queryClient.clear(); // xoá cache user cũ để không lẫn dữ liệu khi đổi tài khoản
     // Vừa đăng nhập (Google) -> user LUÔN là dữ liệu tươi từ server, không phải cache.
     set({ token, user, isLoading: false, userSynced: true });
-    registerPushToken();
+    InteractionManager.runAfterInteractions(() => {
+      registerPushToken().catch(() => {});
+    });
   },
   clearError: () => set({ error: null }),
 }));
