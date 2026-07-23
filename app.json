@@ -139,7 +139,8 @@
       ],
       "./withOptionalHardwareFeatures.js",
       "./withNfcIntentFilter.js",
-      "./withPictureInPicture.js"
+      "./withPictureInPicture.js",
+      "./withAndroidReleaseSigning.js"
     ]
   }
 }
