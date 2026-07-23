@@ -29,18 +29,6 @@ import StatBox from '../../components/obd/StatBox';
 import GaugeCluster from '../../components/obd/GaugeCluster';
 import SafetyAlerts, { hasSafetyAlerts } from '../../components/obd/SafetyAlerts';
 
-// Rà soát 16/7 (góp ý user: giảm thao tác lúc lên xe - "1 chạm là kết nối"):
-// NFC tap-to-connect đã có sẵn (NfcSetupScreen) nhưng chỉ nằm ở 1 link nhỏ, ít
-// ai tự tìm ra. Nhắc NGAY sau lần kết nối Bluetooth thành công đầu tiên/xe -
-// đúng lúc user vừa trải nghiệm sự bất tiện của việc bấm quét+chọn thiết bị,
-// nên dễ thấy giá trị của "lần sau chỉ cần chạm thẻ". Chỉ nhắc 1 LẦN/xe (không
-// biết chắc user đã ghép thẻ thật hay chưa - viết thẻ NFC là hành động vật lý
-// ở đầu đọc riêng, không có cách nào server/app tự xác nhận - nhắc lặp lại mỗi
-// lần kết nối sẽ gây phiền hơn là hữu ích).
-function nfcNudgeKey(vehicleId: number): string {
-  return `obd_nfc_nudge_shown_${vehicleId}`;
-}
-
 // Rà soát 20/7 (khoảng lặng ~13 phút thấy trong fixture khi khoá màn hình lúc
 // lái): user chỉ dùng OBD2 không đi qua luồng bật GPS trip nên không bao giờ
 // cấp quyền vị trí nền - obdKeepAliveService luôn no-op âm thầm. Nhắc 1
@@ -198,32 +186,8 @@ export default function OBDDashboardScreen() {
     return () => { cancelled = true; };
   }, [isConnected, vehicleId]);
 
-  // Nhắc ghép thẻ NFC (rà soát 16/7) - xem comment nfcNudgeKey() ở đầu file.
-  useEffect(() => {
-    if (!isConnected || !vehicleId || !keepAliveNudgeSettled) return;
-    let cancelled = false;
-    (async () => {
-      const key = nfcNudgeKey(vehicleId);
-      const shown = await AsyncStorage.getItem(key);
-      if (shown || cancelled) return;
-      await AsyncStorage.setItem(key, '1');
-      Alert.alert(
-        t('nfc.connect_nudge_title'),
-        t('nfc.connect_nudge_body'),
-        [
-          { text: t('gps_trips.later'), style: 'cancel' },
-          {
-            text: t('nfc.connect_nudge_cta'),
-            onPress: () => {
-              const bleDeviceId = bleService.getDeviceId();
-              if (bleDeviceId) navigation.navigate('NfcSetup', { vehicleId, vehicleName, bleDeviceId });
-            },
-          },
-        ],
-      );
-    })();
-    return () => { cancelled = true; };
-  }, [isConnected, vehicleId, keepAliveNudgeSettled]);
+  // Đã bỏ nhắc ghép thẻ NFC tự động sau khi kết nối OBD (từng hiện Alert ở đây) -
+  // tránh chồng dialog nhắc với các popup xin quyền khác ngay sau login/kết nối.
 
   // Rà soát (đảm bảo không mất cảnh báo an toàn ở chế độ Đồng hồ): findings
   // Diagnostic Engine (kể cả severity critical/can_drive:'stop'), VIN lệch và

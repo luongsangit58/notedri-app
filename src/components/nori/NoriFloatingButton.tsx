@@ -1,11 +1,14 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { TouchableOpacity } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuthStore } from '../../store/authStore';
 import { useVehicles } from '../../hooks/useVehicles';
 import { useSelectedVehicleStore } from '../../store/selectedVehicleStore';
 import { useNoriSummary } from '../../services/nori/noriSummary';
 import NoriAvatar from './NoriAvatar';
 import NoriPopover from './NoriPopover';
+
+const NORI_HIDDEN_KEY = '@notedri/nori_hidden_v1';
 
 // Icon Nori nổi toàn cục (rà soát 22/7, góp ý user: bên web Nori là icon nổi cố
 // định ở góc màn hình, bấm ra bong bóng - bên app trước đó KHÔNG có, Nori chỉ
@@ -29,13 +32,36 @@ export default function NoriFloatingButton() {
   const vehicleName = vehicle?.ten ?? vehicle?.name ?? vehicle?.ten_xe ?? '';
 
   const [open, setOpen] = useState(false);
+  const [hidden, setHidden] = useState(false);
+  // Nạp cờ "đã ẩn Nori" 1 lần lúc mount - LUÔN gọi hook này bất kể token/vehicleId
+  // để không đổi số lượng hook giữa các lần render (tránh crash Rules of Hooks).
+  useEffect(() => {
+    let mounted = true;
+    AsyncStorage.getItem(NORI_HIDDEN_KEY)
+      .then((v) => { if (mounted && v === '1') setHidden(true); })
+      .catch(() => {});
+    return () => { mounted = false; };
+  }, []);
   // Chỉ tính mood khi CÓ vehicleId để tránh gọi API thừa lúc chưa đăng nhập/chưa có xe.
   const { mood } = useNoriSummary(token && vehicleId ? vehicleId : undefined);
 
-  if (!token || !vehicleId) return null;
+  if (!token || !vehicleId || hidden) return null;
   // Ẩn nút khi bong bóng đang mở - giống web chỉ ẩn icon ở đúng trang /nori,
   // không hiện icon nổi đè lên bong bóng của chính nó.
-  if (open) return <NoriPopover visible={open} onClose={() => setOpen(false)} vehicleId={vehicleId} vehicleName={vehicleName} />;
+  if (open) {
+    return (
+      <NoriPopover
+        visible={open}
+        onClose={() => setOpen(false)}
+        vehicleId={vehicleId}
+        vehicleName={vehicleName}
+        onHide={() => {
+          setHidden(true);
+          AsyncStorage.setItem(NORI_HIDDEN_KEY, '1').catch(() => {});
+        }}
+      />
+    );
+  }
 
   return (
     <TouchableOpacity

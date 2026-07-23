@@ -28,11 +28,17 @@ const STEPS: { icon: string }[] = [
   { icon: 'bluetooth-b' },
 ];
 
-function StepSlide({ index, width }: { index: number; width: number }) {
+function StepSlide({ index, width, mode }: { index: number; width: number; mode: 'ble' | 'classic' }) {
   const colors = useColors();
   const t = useT();
   const image = STEP_IMAGES[index];
   const step = STEPS[index];
+  // Chỉ bước cuối (bật Bluetooth & kết nối) khác nhau giữa BLE/Classic - 3 bước
+  // đầu (cắm adapter, đèn báo, bật khoá điện) giống hệt nhau bất kể cách ghép nối.
+  // Chưa có ảnh minh hoạ riêng cho Classic nên dùng chung ảnh BLE, chỉ đổi text.
+  const isClassicLastStep = mode === 'classic' && index === STEPS.length - 1;
+  const titleKey = isClassicLastStep ? 'obd.classic_guide_s4_title' : `obd.guide_s${index + 1}_title`;
+  const descKey = isClassicLastStep ? 'obd.classic_guide_s4_desc' : `obd.guide_s${index + 1}_desc`;
 
   return (
     <View style={{ width }}>
@@ -59,11 +65,11 @@ function StepSlide({ index, width }: { index: number; width: number }) {
             <View style={styles.stepHeader}>
               <FontAwesome5 name={step.icon} size={13} color={colors.primary} />
               <Text style={[styles.stepTitle, { color: colors.text }]}>
-                {t(`obd.guide_s${index + 1}_title` as any)}
+                {t(titleKey as any)}
               </Text>
             </View>
             <Text style={[styles.stepDesc, { color: colors.textSecondary }]}>
-              {t(`obd.guide_s${index + 1}_desc` as any)}
+              {t(descKey as any)}
             </Text>
           </View>
         </View>
@@ -72,7 +78,7 @@ function StepSlide({ index, width }: { index: number; width: number }) {
   );
 }
 
-function StepCarousel() {
+function StepCarousel({ mode }: { mode: 'ble' | 'classic' }) {
   const colors = useColors();
   // ĐO bề rộng THẬT bằng onLayout thay vì đoán qua useWindowDimensions() - padding
   // (sửa 15/7: đoán sai làm carousel lệch trái + vuốt "next" nhảy thẳng ảnh cuối -
@@ -123,7 +129,7 @@ function StepCarousel() {
           decelerationRate="fast"
           disableIntervalMomentum>
           {STEPS.map((_, i) => (
-            <StepSlide key={i} index={i} width={carouselWidth} />
+            <StepSlide key={i} index={i} width={carouselWidth} mode={mode} />
           ))}
         </ScrollView>
       )}
@@ -171,7 +177,7 @@ function StepCarousel() {
   );
 }
 
-export default function ObdConnectionGuide() {
+export default function ObdConnectionGuide({ mode = 'ble' }: { mode?: 'ble' | 'classic' }) {
   const colors = useColors();
   const t = useT();
   const [showTrouble, setShowTrouble] = useState(false);
@@ -200,7 +206,7 @@ export default function ObdConnectionGuide() {
       </View>
 
       {/* Carousel vuốt ngang: mỗi bước 1 slide (ảnh + text ngắn ngay dưới) */}
-      <StepCarousel />
+      <StepCarousel mode={mode} />
 
       {/* Thiết bị khuyên dùng */}
       <View style={[styles.recoCard, { backgroundColor: colors.primary + '12', borderColor: colors.primary + '33' }]}>

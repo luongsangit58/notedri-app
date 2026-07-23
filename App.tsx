@@ -1,6 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { AppState, AppStateStatus, Appearance, Alert } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AppState, AppStateStatus, Appearance } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './src/api/queryClient';
@@ -25,10 +24,6 @@ import { useAuthStore } from './src/store/authStore';
 import { initializeAdMob } from './src/services/ads/admob';
 import { recoverPendingGoogleAuthIfAny } from './src/services/googleAuthRecovery';
 
-// Chỉ nhắc bật ghi hành trình tự động 1 LẦN DUY NHẤT/máy (rà soát 16/7) - tránh
-// làm phiền mỗi lần mở app nếu user đã lỡ bỏ qua hoặc cố tình chưa cấp quyền.
-const GPS_AUTOSTART_NUDGE_KEY = 'gps_autostart_nudge_shown';
-
 async function tryAutoArmGpsTracking(): Promise<void> {
   try {
     const res = await vehiclesApi.list();
@@ -37,27 +32,9 @@ async function tryAutoArmGpsTracking(): Promise<void> {
     const defaultVehicle = vehicles.find((v) => v.is_default) ?? vehicles[0];
     if (!defaultVehicle?.id) return;
 
-    const result = await autoArmIfReady(defaultVehicle.id);
-    if (result.armed || result.reason !== 'missing_permission') return;
-
-    const alreadyNudged = await AsyncStorage.getItem(GPS_AUTOSTART_NUDGE_KEY);
-    if (alreadyNudged) return;
-    await AsyncStorage.setItem(GPS_AUTOSTART_NUDGE_KEY, '1');
-
-    const t = useI18nStore.getState().t;
-    Alert.alert(
-      t('gps_trips.autostart_nudge_title'),
-      t('gps_trips.autostart_nudge_body'),
-      [
-        { text: t('gps_trips.later'), style: 'cancel' },
-        {
-          text: t('gps_trips.autostart_nudge_cta'),
-          onPress: () => {
-            if (navigationRef.isReady()) navigationRef.navigate('GpsTrips' as never);
-          },
-        },
-      ],
-    );
+    await autoArmIfReady(defaultVehicle.id);
+    // Không hiện Alert nhắc bật tự động ghi hành trình khi thiếu quyền: dễ chồng lấn
+    // với các dialog xin quyền khác (thông báo, vị trí...) xuất hiện ngay sau login.
   } catch {
     // Best-effort - không được để lỗi ở đây làm gãy luồng khởi động app chính.
   }

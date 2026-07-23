@@ -574,7 +574,7 @@ export default function OBDSetupScreen() {
         )}
 
         {/* Hướng dẫn kết nối (component chỉn chu thay card 3 dòng cũ) */}
-        <ObdConnectionGuide />
+        <ObdConnectionGuide mode={connectMode} />
 
         {/* Quick actions: chuyển xuống cuối trang (phản hồi 15/7) - lịch sử/log gỡ
             lỗi không phải việc chính khi đang kết nối, để chiếm chỗ đầu trang làm
