@@ -43,11 +43,15 @@ describe('groupSessionsByDay - gộp phiên theo ngày lịch cho biểu đồ E
     expect(empty.drivingScore).toBeNull();
     expect(empty.dtcCount).toBeNull();
     expect(empty.engineMinutes).toBeNull();
+    expect(empty.fuelUsedLiters).toBeNull();
   });
 
   it('ngày có 1 phiên: lấy thẳng số liệu phiên đó', () => {
     const points = groupSessionsByDay(
-      [session('2026-07-15T08:00:00', { voltage_avg: 14.2, coolant_max: 88, driving_score: 95, dtc_count: 1, engine_run_seconds: 1800 })],
+      [session('2026-07-15T08:00:00', {
+        voltage_avg: 14.2, coolant_max: 88, driving_score: 95, dtc_count: 1,
+        engine_run_seconds: 1800, fuel_used_liters_est: 0.8,
+      })],
       1,
       TODAY,
     );
@@ -58,6 +62,7 @@ describe('groupSessionsByDay - gộp phiên theo ngày lịch cho biểu đồ E
       drivingScore: 95,
       dtcCount: 1,
       engineMinutes: 30,
+      fuelUsedLiters: 0.8,
     });
   });
 
@@ -119,7 +124,10 @@ describe('groupSessionsByDay - gộp phiên theo ngày lịch cho biểu đồ E
 // Điểm giả cho compareWeeks - không cần đi qua groupSessionsByDay/session(), test
 // thẳng trên DailyTrendPoint[] vì đó là ranh giới input thật của hàm.
 function point(overrides: Partial<DailyTrendPoint> = {}): DailyTrendPoint {
-  return { date: '2026-01-01', voltageAvg: null, coolantMax: null, drivingScore: null, dtcCount: null, engineMinutes: null, ...overrides };
+  return {
+    date: '2026-01-01', voltageAvg: null, coolantMax: null, drivingScore: null,
+    dtcCount: null, engineMinutes: null, fuelUsedLiters: null, ...overrides,
+  };
 }
 function noSessionDay(): DailyTrendPoint {
   return point(); // dtcCount null = không có phiên nào ngày đó

@@ -60,6 +60,7 @@
     "web": "expo start --web",
     "sync:dtc": "node scripts/sync-dtc-dictionary.mjs",
     "sync:rules": "node scripts/sync-diagnostic-rules.mjs",
+    "check:obd-log": "node scripts/check-obd-log.mjs",
     "build:apk": "scripts/build-local.sh preview",
     "build:aab": "scripts/build-local.sh production",
     "test": "jest",

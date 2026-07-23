@@ -39,6 +39,10 @@ export type ObdSessionSummary = {
   // Optional: khoảng trống nền (fixture #5, obdLiveMonitor) - phiên cũ không có.
   background_gap_count?: number;
   background_gap_seconds_total?: number;
+  // Optional: PID 5E (rà soát 23/7) - phiên cũ (trước khi thêm tầng slow đọc
+  // fuel rate) không có 2 key này.
+  fuel_rate_avg?: number | null;
+  fuel_used_liters_est?: number | null;
 };
 
 export type ObdSessionRecord = {

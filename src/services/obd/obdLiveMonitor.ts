@@ -14,6 +14,7 @@ import {
   readFuelLevel,
   readOilTemp,
   readAmbientAirTemp,
+  readFuelRate,
   ObdSnapshot,
   DtcCode,
   FreezeFrameSnapshot,
@@ -94,6 +95,17 @@ let aggIdleRpm = newAgg(); // rpm khi xe đứng yên
 // null dù voltage/coolant vẫn có đủ dữ liệu để đánh giá) - phát hiện 14/7.
 let aggRpmAll = newAgg();
 let aggIdleThrottle = newAgg(); // throttle khi xe đứng yên - cho rule high-idle-warm ở Daily Report
+
+// Fuel rate (PID 5E, rà soát 23/7) - đã có decoder từ trước nhưng chỉ đọc ở màn
+// kỹ thuật, chưa từng vào tổng hợp phiên. Đọc ở tầng slow (45s) chung với
+// fuelLevel/oilTemp/ambientTemp - không đáng thêm round-trip riêng cho 1 số
+// liệu đổi chậm. Lít tiêu thụ ước tính = tích phân rate(L/h) theo THỜI GIAN
+// THỰC giữa 2 lần đọc (Date.now(), không phải nhịp cố định của tầng slow) -
+// cùng nguyên tắc "gap nền" ở poll() medium: app có thể bị OS đóng băng giữa 2
+// lần đọc slow tier, dùng nhịp danh nghĩa 45s sẽ tính sai lượng nhiên liệu.
+let aggFuelRate = newAgg();
+let fuelUsedLiters = 0;
+let lastFuelRateAt: number | null = null;
 let maxSpeed: number | null = null;
 let sessionDtcCount = 0;
 let sessionFindingIds = new Set<string>();
@@ -158,6 +170,7 @@ function feed(agg: Agg, v: number | null): void {
 function resetSessionStats(): void {
   aggCoolant = newAgg(); aggVoltage = newAgg(); aggLoad = newAgg(); aggIdleRpm = newAgg();
   aggRpmAll = newAgg(); aggIdleThrottle = newAgg();
+  aggFuelRate = newAgg(); fuelUsedLiters = 0; lastFuelRateAt = null;
   maxSpeed = null; sessionDtcCount = 0; sessionFindingIds = new Set();
   lastSpeedSample = null; harshBrakeCount = 0; harshAccelCount = 0;
   smoothedRpm = null; smoothedSpeedKmh = null; smoothedEngineLoadPct = null;
@@ -188,6 +201,11 @@ export function buildSessionSummary(): Record<string, unknown> | null {
     rpm_avg: avg(aggRpmAll),
     throttle_idle_avg: avg(aggIdleThrottle),
     load_avg: avg(aggLoad),
+    // PID 5E (rà soát 23/7) - trước chỉ đọc ở màn kỹ thuật. fuel_used_liters_est
+    // là ước tính TÍCH PHÂN theo tầng slow (45s), không đo trực tiếp -
+    // sai số cộng dồn nếu link rớt liên tục giữa các lần đọc slow tier.
+    fuel_rate_avg: avg(aggFuelRate, 1),
+    fuel_used_liters_est: aggFuelRate.n ? Number(fuelUsedLiters.toFixed(2)) : null,
     speed_max: maxSpeed,
     dtc_count: sessionDtcCount,
     findings: [...sessionFindingIds],
@@ -248,7 +266,13 @@ const vehicleUnresponsiveListeners = new Set<() => void>();
 // thêm dữ liệu tần suất khác cho UI cần đọc nhanh hơn (kim đồng hồ RPM/tốc độ)
 // hoặc chậm hơn (nhiên liệu/nhiệt độ dầu/nhiệt độ môi trường).
 export type FastSnapshot = { rpm: number | null; speedKmh: number | null; throttlePct: number | null; timestamp: number };
-export type SlowSnapshot = { fuelLevelPct: number | null; oilTempC: number | null; ambientAirTempC: number | null; timestamp: number };
+export type SlowSnapshot = {
+  fuelLevelPct: number | null;
+  oilTempC: number | null;
+  ambientAirTempC: number | null;
+  fuelRateLPerHour: number | null;
+  timestamp: number;
+};
 const fastSnapshotListeners = new Set<(s: FastSnapshot) => void>();
 const slowSnapshotListeners = new Set<(s: SlowSnapshot) => void>();
 
@@ -260,10 +284,20 @@ async function pollFastTier(): Promise<void> {
 
 async function pollSlowTier(): Promise<void> {
   if (!bleService.isConnected()) return;
-  const [fuelLevelPct, oilTempC, ambientAirTempC] = await Promise.all([
-    readFuelLevel(), readOilTemp(), readAmbientAirTemp(),
+  const [fuelLevelPct, oilTempC, ambientAirTempC, fuelRateLPerHour] = await Promise.all([
+    readFuelLevel(), readOilTemp(), readAmbientAirTemp(), readFuelRate(),
   ]);
-  slowSnapshotListeners.forEach((fn) => fn({ fuelLevelPct, oilTempC, ambientAirTempC, timestamp: Date.now() }));
+  const now = Date.now();
+  slowSnapshotListeners.forEach((fn) => fn({ fuelLevelPct, oilTempC, ambientAirTempC, fuelRateLPerHour, timestamp: now }));
+
+  feed(aggFuelRate, fuelRateLPerHour);
+  // Chỉ tích luỹ lít khi có 2 mốc LIÊN TIẾP đều đọc được rate - 1 lần null xen
+  // giữa (mất sóng thoáng qua) bỏ qua đúng khoảng đó thay vì đoán mò giá trị.
+  if (fuelRateLPerHour !== null && lastFuelRateAt !== null) {
+    const elapsedHours = (now - lastFuelRateAt) / 3_600_000;
+    fuelUsedLiters += fuelRateLPerHour * elapsedHours;
+  }
+  lastFuelRateAt = fuelRateLPerHour !== null ? now : null;
 }
 
 async function poll(): Promise<void> {

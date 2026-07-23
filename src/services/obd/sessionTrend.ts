@@ -27,6 +27,10 @@ export type DailyTrendPoint = {
    * ở nơi khác (ObdReportScreen tab "Phiên gần nhất") - phút chỉ dùng cho trục
    * thời gian ngắn (theo ngày) của riêng biểu đồ này. */
   engineMinutes: number | null;
+  /** Tổng nhiên liệu tiêu thụ ước tính trong ngày (lít) - null nếu không phiên
+   * nào trong ngày đọc được PID 5E (xe không hỗ trợ, hoặc toàn phiên cũ trước
+   * 23/7 chưa có field này). */
+  fuelUsedLiters: number | null;
 };
 
 export type TrendMetric = Exclude<keyof DailyTrendPoint, 'date'>;
@@ -56,16 +60,20 @@ export function groupSessionsByDay(
     const date = today.subtract(i, 'day').format('YYYY-MM-DD');
     const bucket = byDate.get(date);
     if (!bucket) {
-      points.push({ date, voltageAvg: null, coolantMax: null, drivingScore: null, dtcCount: null, engineMinutes: null });
+      points.push({
+        date, voltageAvg: null, coolantMax: null, drivingScore: null, dtcCount: null,
+        engineMinutes: null, fuelUsedLiters: null,
+      });
       continue;
     }
 
     const voltages = bucket.map((s) => s.summary.voltage_avg).filter((v): v is number => v != null);
     const coolants = bucket.map((s) => s.summary.coolant_max).filter((v): v is number => v != null);
     const scores = bucket.map((s) => s.summary.driving_score).filter((v): v is number => v != null);
-    // dtc_count là field bắt buộc trong summary; engine_run_seconds optional (phiên cũ)
+    // dtc_count là field bắt buộc trong summary; engine_run_seconds/fuel_used_liters_est optional (phiên cũ)
     const dtcTotal = bucket.reduce((a, s) => a + (s.summary.dtc_count ?? 0), 0);
     const runSeconds = bucket.reduce((a, s) => a + (s.summary.engine_run_seconds ?? 0), 0);
+    const fuelLiters = bucket.map((s) => s.summary.fuel_used_liters_est).filter((v): v is number => v != null);
 
     points.push({
       date,
@@ -74,6 +82,7 @@ export function groupSessionsByDay(
       drivingScore: scores.length ? Math.round(avg(scores)!) : null,
       dtcCount: dtcTotal,
       engineMinutes: runSeconds > 0 ? Math.round(runSeconds / 60) : null,
+      fuelUsedLiters: fuelLiters.length ? Number(fuelLiters.reduce((a, b) => a + b, 0).toFixed(2)) : null,
     });
   }
   return points;
