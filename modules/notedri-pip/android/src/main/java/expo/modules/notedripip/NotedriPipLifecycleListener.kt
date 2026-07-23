@@ -9,16 +9,18 @@ import expo.modules.core.interfaces.ReactActivityLifecycleListener
  * đụng MainActivity.kt sinh ra (app này dùng CNG, android/ bị gitignore, sinh
  * lại mỗi lần `expo prebuild`, sửa tay sẽ mất khi build lại).
  *
- * 2 việc:
- * 1. onUserLeaveHint(): fallback cho Android 8-11 (API 26-30) - dải API này
- *    CHƯA có PictureInPictureParams.setAutoEnterEnabled() (chỉ từ API 31), nên
- *    phải tự gọi enterPictureInPictureMode() ngay khi user bấm Home/chuyển app.
- *    Từ API 31 trở lên, hệ thống tự vào PiP qua cờ auto-enter - gọi lại ở đây
- *    vẫn an toàn (no-op) nhưng để tránh trùng, chỉ gọi trong khoảng 26..30.
- * 2. onPictureInPictureModeChanged(): báo JS biết ĐANG/KHÔNG còn ở chế độ PiP
- *    để OBDDashboardScreen.tsx đổi qua PipCompactView.tsx (nội dung khung PiP
- *    chính là UI Activity thu nhỏ - header/nút hiện tại không đọc/bấm được ở
- *    kích thước đó nên phải chủ động đổi layout, không phải Android tự vẽ hộ).
+ * onUserLeaveHint(): fallback cho Android 8-11 (API 26-30) - dải API này CHƯA
+ * có PictureInPictureParams.setAutoEnterEnabled() (chỉ từ API 31), nên phải tự
+ * gọi enterPictureInPictureMode() ngay khi user bấm Home/chuyển app. Từ API 31
+ * trở lên, hệ thống tự vào PiP qua cờ auto-enter - chỉ gọi trong khoảng 26..30
+ * để tránh trùng.
+ *
+ * Rà soát (build thật 23/7): ReactActivityLifecycleListener của bản
+ * expo-modules-core đang dùng KHÔNG có hook onPictureInPictureModeChanged
+ * ("overrides nothing" lúc biên dịch) - phần báo JS đổi trạng thái PiP chuyển
+ * sang chèn thẳng override vào MainActivity.kt sinh ra qua withPictureInPicture.js
+ * (kỹ thuật withMainActivity + mergeContents, vẫn an toàn với CNG vì tự chèn
+ * lại mỗi lần prebuild, không phải sửa tay 1 lần).
  */
 class NotedriPipLifecycleListener : ReactActivityLifecycleListener {
   override fun onUserLeaveHint(activity: Activity) {
@@ -27,9 +29,5 @@ class NotedriPipLifecycleListener : ReactActivityLifecycleListener {
         activity.enterPictureInPictureMode(NotedriPipModule.buildParams())
       } catch (_: Exception) {}
     }
-  }
-
-  override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean) {
-    NotedriPipModule.notifyPipModeChanged(isInPictureInPictureMode)
   }
 }

@@ -31,11 +31,16 @@ class NotedriPipModule : Module() {
     // tại 1 thời điểm trong app này nên dùng biến tĩnh đơn giản là đủ an toàn.
     private var activeModule: NotedriPipModule? = null
 
-    internal fun notifyPipModeChanged(isInPip: Boolean) {
+    // PUBLIC (không phải internal) - MainActivity.kt gọi hàm này từ module
+    // Gradle KHÁC (:app, không phải :notedri-pip) để báo đổi trạng thái PiP
+    // (xem withPictureInPicture.js - ReactActivityLifecycleListener của bản
+    // expo-modules-core đang dùng KHÔNG có hook onPictureInPictureModeChanged,
+    // phải tự chèn override thẳng vào MainActivity sinh ra thay vì qua listener).
+    fun notifyPipModeChanged(isInPip: Boolean) {
       activeModule?.sendEvent("onPipModeChanged", mapOf("isInPip" to isInPip))
     }
 
-    internal fun buildParams(): PictureInPictureParams {
+    fun buildParams(): PictureInPictureParams {
       val builder = PictureInPictureParams.Builder().setAspectRatio(PIP_ASPECT_RATIO)
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         builder.setAutoEnterEnabled(true)
@@ -65,25 +70,44 @@ class NotedriPipModule : Module() {
     // chỉ "đăng ký" tỉ lệ khung + bật cờ auto-enter, hệ thống tự quyết định LÚC
     // NÀO chuyển (đúng lúc user bấm Home, API 31+). Gọi từ JS ngay khi vào màn
     // Đồng hồ + đã kết nối OBD (xem OBDDashboardScreen.tsx).
+    // Rà soát: KHÔNG dùng return@AsyncFunction sớm ở đây - DSL Module Kotlin
+    // của Expo suy luận kiểu trả về từ toàn bộ thân lambda, return@Label
+    // "trần" (không giá trị) từng gây lỗi biên dịch "expected Any?, actual
+    // Unit" (build thật 23/7). Dùng if/let lồng nhau để cả hàm luôn có ĐÚNG 1
+    // đường thoát ngầm định kiểu Unit, không early-return.
+    // Rà soát: AsyncFunction() của DSL này chạy trên HÀNG ĐỢI NỀN, không phải
+    // UI thread. enterPictureInPictureMode()/setPictureInPictureParams() là
+    // API thao tác Activity/Window - Android yêu cầu gọi từ UI thread, gọi sai
+    // luồng có thể crash lúc thật thi hành dù build vẫn qua (không phải lỗi
+    // biên dịch). Bọc runOnUiThread() để chắc chắn đúng luồng bất kể
+    // AsyncFunction đang chạy trên hàng đợi nào.
     AsyncFunction("setPipParams") {
-      if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return@AsyncFunction
-      val activity = appContext.currentActivity ?: return@AsyncFunction
-      try {
-        activity.setPictureInPictureParams(buildParams())
-      } catch (_: Exception) {}
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        appContext.currentActivity?.let { activity ->
+          activity.runOnUiThread {
+            try {
+              activity.setPictureInPictureParams(buildParams())
+            } catch (_: Exception) {}
+          }
+        }
+      }
     }
 
     // Thu nhỏ NGAY BÂY GIỜ - dành cho nút bấm tường minh (nếu có) và fallback
     // API 26-30 gọi từ NotedriPipLifecycleListener.onUserLeaveHint(). An toàn
     // khi gọi trên máy không hỗ trợ hoặc gọi lại nhiều lần - tự bỏ qua, không throw.
     AsyncFunction("enterPipMode") {
-      if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return@AsyncFunction
-      val activity = appContext.currentActivity ?: return@AsyncFunction
-      try {
-        activity.enterPictureInPictureMode(buildParams())
-      } catch (_: Exception) {
-        // Activity không ở trạng thái cho phép vào PiP (vd đang ở nền sẵn) -
-        // bỏ qua lặng lẽ, không có gì để JS xử lý thêm.
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        appContext.currentActivity?.let { activity ->
+          activity.runOnUiThread {
+            try {
+              activity.enterPictureInPictureMode(buildParams())
+            } catch (_: Exception) {
+              // Activity không ở trạng thái cho phép vào PiP (vd đang ở nền sẵn) -
+              // bỏ qua lặng lẽ, không có gì để JS xử lý thêm.
+            }
+          }
+        }
       }
     }
   }
