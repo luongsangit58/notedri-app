@@ -101,6 +101,23 @@ function StepCarousel({ mode }: { mode: 'ble' | 'classic' }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
 
+  // Rà soát 23/7 (góp ý user: khoảng trống thừa dưới ảnh/text bước 1) - 4 bước
+  // có độ dài text KHÁC NHAU (bước 1 ngắn, các bước Classic dài hơn nhiều),
+  // nhưng cả 4 slide render CÙNG LÚC làm con của 1 ScrollView ngang - Yoga tự
+  // co ScrollView theo slide CAO NHẤT trong 4 slide, để lộ khoảng trắng thừa
+  // dưới slide đang xem nếu nó ngắn hơn. Đo riêng chiều cao TỪNG slide qua
+  // onLayout, rồi khoá chiều cao ScrollView đúng bằng slide ĐANG XEM.
+  const [slideHeights, setSlideHeights] = useState<number[]>([]);
+  function handleSlideLayout(index: number, e: LayoutChangeEvent) {
+    const h = e.nativeEvent.layout.height;
+    setSlideHeights((prev) => {
+      if (prev[index] === h) return prev;
+      const next = [...prev];
+      next[index] = h;
+      return next;
+    });
+  }
+
   function handleLayout(e: LayoutChangeEvent) {
     const w = e.nativeEvent.layout.width;
     if (w > 0 && w !== carouselWidth) setCarouselWidth(w);
@@ -129,6 +146,10 @@ function StepCarousel({ mode }: { mode: 'ble' | 'classic' }) {
           showsHorizontalScrollIndicator={false}
           onScroll={handleScroll}
           scrollEventThrottle={32}
+          // Khoá chiều cao đúng bằng slide ĐANG XEM (xem comment slideHeights ở
+          // trên) - chưa đo được (lần render đầu) thì để tự co bình thường,
+          // tránh nhấp nháy/co giật khi chưa có số đo.
+          style={slideHeights[activeIndex] ? { height: slideHeights[activeIndex] } : undefined}
           // Rà soát 16/7 (user báo vuốt 1 cái nhảy thẳng bước 3-4): pagingEnabled
           // VÀ snapToInterval cùng lúc là 2 cơ chế snap CHỒNG nhau, Android xử lý
           // không nhất quán với vuốt nhanh/mạnh tay - chỉ giữ snapToInterval (đã
@@ -139,7 +160,9 @@ function StepCarousel({ mode }: { mode: 'ble' | 'classic' }) {
           decelerationRate="fast"
           disableIntervalMomentum>
           {Array.from({ length: STEP_COUNT }, (_, i) => (
-            <StepSlide key={i} index={i} width={carouselWidth} mode={mode} />
+            <View key={i} onLayout={(e) => handleSlideLayout(i, e)}>
+              <StepSlide index={i} width={carouselWidth} mode={mode} />
+            </View>
           ))}
         </ScrollView>
       )}
@@ -266,7 +289,11 @@ const styles = StyleSheet.create({
     borderRadius: 8, borderWidth: 1, paddingHorizontal: 8, paddingVertical: 6,
   },
   needChipText: { flexShrink: 1, fontSize: 11, fontWeight: '500' },
-  slideInner: { paddingHorizontal: 12 },
+  // Rà soát 23/7 (góp ý user: ảnh + text bước hướng dẫn bị thụt vào so với
+  // tiêu đề/chip phía trên) - trước đây có thêm 12px đệm ngang RIÊNG cho
+  // carousel, lệch khỏi lề 16px chung của cả trang (tiêu đề, chip "Cần chuẩn
+  // bị"...). Bỏ đệm riêng này để mọi thứ thẳng hàng đúng 1 lề.
+  slideInner: {},
   // Cùng lý do không khai width:'100%' như bản cũ (xem comment lịch sử ở git log) -
   // View cha (slide, đã có width cố định = slideWidth) tự stretch đúng bề rộng.
   hero: { aspectRatio: 16 / 10, borderRadius: 12, marginBottom: 10, overflow: 'hidden' },

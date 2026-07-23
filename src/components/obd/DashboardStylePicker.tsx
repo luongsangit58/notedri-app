@@ -19,6 +19,16 @@ const DEMO_VALUES: Record<string, number> = {
 };
 const DEMO_METRICS = OBD_METRICS.map((def) => ({ def, value: DEMO_VALUES[def.key] ?? null }));
 
+// Rà soát 23/7 (góp ý user: ảnh xem trước "xấu, sai" - card cao bất thường,
+// thừa khoảng trống lớn dưới nội dung) - 8 Layout dùng flex:1 để tự lấp ĐẦY
+// khung hình thật trên Dashboard (đúng ý, xem GaugeCluster.tsx), nhưng trong
+// modal xem trước KHÔNG có khung cha giới hạn chiều cao rõ ràng - flex:1 rơi
+// vào 1 khoảng mập mờ của Yoga (không phải luôn co gọn theo nội dung như kỳ
+// vọng), khiến card cao vọt lên để trống mảng lớn. Khoá 1 chiều cao CỐ ĐỊNH
+// đủ rộng rãi cho mọi style ở đây - cho flex:1 có 1 khung THẬT để lấp đầy,
+// giống hệt tình huống Dashboard thật.
+const PREVIEW_CARD_HEIGHT = 280;
+
 export default function DashboardStylePicker({
   visible, selectedId, vehicleName, onSelect, onClose,
 }: {
@@ -71,13 +81,20 @@ export default function DashboardStylePicker({
                 </TouchableOpacity>
 
                 <View style={{ alignItems: 'center', paddingVertical: 4 }}>
-                  <PreviewLayout
-                    metrics={DEMO_METRICS}
-                    size={layout.gaugeSize}
-                    ringSize={layout.ringSize}
-                    isPortrait={layout.isPortrait}
-                    animate={false}
-                  />
+                  {/* Chiều cao CỐ ĐỊNH (xem PREVIEW_CARD_HEIGHT) để flex:1 của
+                      Layout có khung thật để lấp đầy - không mập mờ như trước.
+                      isPortrait luôn false ở đây (khác Dashboard thật) - xem
+                      trước cố định 1 bố cục gọn/nhất quán, không phụ thuộc
+                      đang cầm máy dọc hay ngang lúc mở modal. */}
+                  <View style={{ width: '100%', height: PREVIEW_CARD_HEIGHT }}>
+                    <PreviewLayout
+                      metrics={DEMO_METRICS}
+                      size={layout.gaugeSize}
+                      ringSize={layout.ringSize}
+                      isPortrait={false}
+                      animate={false}
+                    />
+                  </View>
 
                   <Text style={{ color: colors.text, fontWeight: '800', fontSize: 16, marginTop: 14 }}>{t(previewStyle.nameKey)}</Text>
                   <Text style={{ color: colors.textSecondary, fontSize: 12.5, marginTop: 4, textAlign: 'center', lineHeight: 18 }}>

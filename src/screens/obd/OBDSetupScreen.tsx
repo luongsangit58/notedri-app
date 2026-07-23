@@ -25,6 +25,7 @@ import { useAuthStore } from '../../store/authStore';
 import { useT } from '../../i18n';
 import ObdConnectionGuide from '../../components/ObdConnectionGuide';
 import { contentWide } from '../../utils/layout';
+import { cleanNativeErrorMessage } from '../../utils/nativeError';
 import NotedriBtPairing, { ClassicBtDevice } from '../../../modules/notedri-bt-pairing/src/NotedriBtPairingModule';
 
 export default function OBDSetupScreen() {
@@ -101,7 +102,7 @@ export default function OBDSetupScreen() {
       const found = await NotedriBtPairing.discoverDevices();
       setClassicDevices(found);
     } catch (e: any) {
-      setClassicError(e?.message ?? String(e));
+      setClassicError(cleanNativeErrorMessage(e?.message ?? String(e)));
     } finally {
       setLoadingClassicDevices(false);
     }

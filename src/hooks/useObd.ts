@@ -12,6 +12,7 @@ import { savePairing } from '../services/obd/pairedDevices';
 import { useAuthStore } from '../store/authStore';
 import { useObdSessionStore } from '../store/obdSessionStore';
 import { useI18nStore } from '../i18n';
+import { cleanNativeErrorMessage } from '../utils/nativeError';
 
 export type ObdWarning = { type: 'no_data'; rawResponse?: string } | null;
 
@@ -294,7 +295,10 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
       obdSessionStateMachine.setDisconnected();
     }
     setConnectionState('error');
-    setErrorMessage(e.message);
+    // cleanNativeErrorMessage: an toàn với CẢ lỗi BLE (message đã ngắn gọn sẵn,
+    // hàm trả nguyên văn) LẪN lỗi Classic Bluetooth (NotedriBtPairing, Expo
+    // Modules API bọc thêm "Call to function... has been rejected" dài dòng).
+    setErrorMessage(cleanNativeErrorMessage(e.message));
   }, []);
 
   // Trả về true/false để caller CHỈ điều hướng khi kết nối thật sự thành công -
