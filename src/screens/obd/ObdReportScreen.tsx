@@ -18,13 +18,14 @@ import { contentWide } from '../../utils/layout';
 
 const TREND_DAYS = 30;
 
-// 5 chỉ số xu hướng (E2) - lấy thẳng từ summary phiên đã lưu, không tính lại
+// 6 chỉ số xu hướng (E2) - lấy thẳng từ summary phiên đã lưu, không tính lại
 const TREND_METRICS: Array<{ metric: TrendMetric; labelKey: string; unit: string }> = [
   { metric: 'voltageAvg', labelKey: 'obd.trend_voltage', unit: 'V' },
   { metric: 'coolantMax', labelKey: 'obd.trend_coolant', unit: '°C' },
   { metric: 'drivingScore', labelKey: 'obd.trend_driving_score', unit: '' },
   { metric: 'dtcCount', labelKey: 'obd.trend_dtc', unit: '' },
   { metric: 'engineMinutes', labelKey: 'obd.trend_engine_hours', unit: ' min' },
+  { metric: 'fuelUsedLiters', labelKey: 'obd.trend_fuel_used', unit: ' L' },
 ];
 
 // Khu điểm lái xe riêng (rà soát 16/7, góp ý user: "chưa thấy phần điểm lái xe
@@ -271,6 +272,13 @@ export default function ObdReportScreen() {
               <Vital label={t('obd.report_top_speed')} value={`${latest.summary.speed_max ?? '-'}`} unit=" km/h" icon="tachometer-alt" />
               <Vital label={t('obd.report_dtc')} value={`${latest.summary.dtc_count}`} icon="exclamation-circle" />
             </View>
+            {/* PID 5E (rà soát 23/7) - chỉ hiện khi xe hỗ trợ (fuel_used_liters_est
+                null với phiên cũ hoặc xe không có PID này, VD 1 số xe Honda fixture #2) */}
+            {latest.summary.fuel_used_liters_est != null && (
+              <View style={styles.vitalsRow}>
+                <Vital label={t('obd.report_fuel_used')} value={`${latest.summary.fuel_used_liters_est}`} unit=" L" icon="gas-pump" />
+              </View>
+            )}
           </View>
 
           {(latest.summary.background_gap_seconds_total ?? 0) > 0 &&
