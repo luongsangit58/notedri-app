@@ -66,11 +66,12 @@ export default function OBDDashboardScreen() {
   // (không phải điện thoại thật) báo inset top/bottom sai lệch rất lớn (thanh
   // trạng thái/điều hướng riêng của hãng bị tính nhầm vào "safe area"), khiến
   // nội dung bị co lại giữa màn hình, để trống mảng lớn trên/dưới. Chặn trần
-  // ở mức đủ dùng cho notch/thanh cử chỉ THẬT trên điện thoại (không màn hình
-  // thật nào cần quá 32dp) - vẫn tôn trọng inset thật khi nhỏ, chỉ chặn giá
-  // trị bất thường.
+  // ở mức đủ cho MỌI thiết bị thật hợp lệ (tự soát lại 24/7: 32dp ban đầu quá
+  // thấp - thanh điều hướng 3 nút Android thật ~48dp, notch/Dynamic Island
+  // iPhone ~59dp - sẽ bị cắt oan, che mất nút cuối màn hình). 64dp đủ rộng cho
+  // mọi trường hợp thật, chỉ chặn giá trị bất thường (vd ROM lỗi báo hàng trăm dp).
   const rawInsets = useSafeAreaInsets();
-  const MAX_SAFE_INSET = 32;
+  const MAX_SAFE_INSET = 64;
   const safeInsets = {
     paddingTop: Math.min(rawInsets.top, MAX_SAFE_INSET),
     paddingBottom: Math.min(rawInsets.bottom, MAX_SAFE_INSET),
