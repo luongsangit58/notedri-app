@@ -53,7 +53,7 @@ export default function FamilyLayout({ metrics, isPortrait, animate }: CockpitLa
 }
 
 const styles = StyleSheet.create({
-  root: { flexDirection: 'row', flexWrap: 'wrap', borderRadius: 18, padding: 6, width: '100%' },
+  root: { flex: 1, flexDirection: 'row', flexWrap: 'wrap', alignContent: 'center', borderRadius: 18, padding: 6, width: '100%' },
   card: { borderRadius: 16, paddingVertical: 16, alignItems: 'center', gap: 3, shadowColor: '#1E40AF', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.12, shadowRadius: 8, elevation: 3 },
   val: { fontSize: 24, fontWeight: '800' },
   unit: { fontSize: 11, fontWeight: '600', marginTop: -4 },

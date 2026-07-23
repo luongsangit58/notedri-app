@@ -61,7 +61,7 @@ export default function FleetLayout({ metrics, ringSize, isPortrait, animate }: 
 }
 
 const styles = StyleSheet.create({
-  root: { borderRadius: 18, padding: 14, gap: 12, width: '100%' },
+  root: { flex: 1, justifyContent: 'center', borderRadius: 18, padding: 14, gap: 12, width: '100%' },
   badge: { alignSelf: 'flex-start', width: 48, height: 48, borderRadius: 10, borderWidth: 2, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' },
   badgeText: { fontSize: 8, fontWeight: '700', letterSpacing: 0.4, textAlign: 'center' },
   grid: { flexDirection: 'row', flexWrap: 'wrap' },

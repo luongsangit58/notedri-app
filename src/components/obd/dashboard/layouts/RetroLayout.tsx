@@ -87,7 +87,7 @@ export default function RetroLayout({ metrics, size, isPortrait, animate }: Cock
 }
 
 const styles = StyleSheet.create({
-  root: { borderRadius: 18, borderWidth: 3, overflow: 'hidden', width: '100%', minHeight: 220, paddingVertical: 20, paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center', gap: 14 },
+  root: { flex: 1, borderRadius: 18, borderWidth: 3, overflow: 'hidden', width: '100%', minHeight: 220, paddingVertical: 20, paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center', gap: 14 },
   gaugesRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 18, flexWrap: 'wrap' },
   gaugesCol: { flexDirection: 'column' },
   secondaryRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap', justifyContent: 'center' },

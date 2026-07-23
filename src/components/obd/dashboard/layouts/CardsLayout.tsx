@@ -56,7 +56,7 @@ export default function CardsLayout({ metrics, ringSize, isPortrait, animate }: 
 }
 
 const styles = StyleSheet.create({
-  grid: { flexDirection: 'row', flexWrap: 'wrap', borderRadius: 18, borderWidth: 1, padding: 10 },
+  grid: { flex: 1, flexDirection: 'row', flexWrap: 'wrap', alignContent: 'center', borderRadius: 18, borderWidth: 1, padding: 10 },
   card: { flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: 12, borderWidth: 1, padding: 12 },
   val: { fontSize: 16, fontWeight: '700' },
   label: { fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.4, marginTop: 1 },

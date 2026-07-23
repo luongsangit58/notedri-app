@@ -9,7 +9,7 @@ import { useMarkVehicleSold } from '../../hooks/useVehicleTransfer';
 import { getPairingForVehicle } from '../../services/obd/pairedDevices';
 import { getCachedCapability } from '../../services/obd/capabilityService';
 import { useObdSessionStore } from '../../store/obdSessionStore';
-import { getSelectedDashboardStyleId, setSelectedDashboardStyleId, pickDashboardStyle } from '../../constants/dashboardStyles';
+import { getSelectedDashboardStyleId, setSelectedDashboardStyleId, pickDashboardStyle, isStyleUsable } from '../../constants/dashboardStyles';
 import DashboardStylePicker from '../../components/obd/DashboardStylePicker';
 import LoadingView from '../../components/LoadingView';
 import ErrorView from '../../components/ErrorView';
@@ -346,9 +346,9 @@ export default function VehicleDetailScreen() {
   // Premium thì hiện về mặc định - tránh dòng phụ đề ở đây nói "HUD Đua xe"
   // trong khi màn Đồng hồ thật lại đang hiển thị "Đồng hồ Analog".
   const selectedDashboardStyle = pickDashboardStyle(dashboardStyleId);
-  const effectiveDashboardStyle = selectedDashboardStyle.isPremiumOnly && !isPremium
-    ? pickDashboardStyle(null)
-    : selectedDashboardStyle;
+  const effectiveDashboardStyle = isStyleUsable(selectedDashboardStyle, isPremium)
+    ? selectedDashboardStyle
+    : pickDashboardStyle(null);
 
   if (isLoading) return <LoadingView />;
   if (isError) return <ErrorView message={t('vehicles.cannot_load_detail')} onRetry={refetch} />;

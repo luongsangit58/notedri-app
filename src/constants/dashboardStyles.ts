@@ -28,6 +28,14 @@ export interface DashboardStyleDef {
   // duy nhất của style (Premium có nhiều màu hơn 1), chỉ để nhận diện nhanh.
   previewColor: string;
   Layout: React.ComponentType<CockpitLayoutProps>;
+  // Rà soát (góp ý user): "Thương hiệu riêng" bán theo hợp đồng B2B riêng cho
+  // gara/đội xe (xem comment trong FleetLayout.tsx), KHÔNG phải mua lẻ qua
+  // luồng "Nâng cấp Premium" như 5 style Premium còn lại - hiện diện chung
+  // danh sách với nút "Nâng cấp Premium" sẽ khiến user cá nhân mở khoá được
+  // rồi chỉ thấy 1 khung có sẵn placeholder "LOGO GARA" trống, trông như lỗi.
+  // true = ẩn khỏi picker chọn style trong app (chỉ bật được qua kênh B2B
+  // riêng sau này, hiện CHƯA có luồng đó).
+  hiddenFromPicker?: boolean;
 }
 
 export const DASHBOARD_STYLES: DashboardStyleDef[] = [
@@ -38,11 +46,21 @@ export const DASHBOARD_STYLES: DashboardStyleDef[] = [
   { id: 'retro', nameKey: 'obd.dashboard_style_retro_name', descKey: 'obd.dashboard_style_retro_desc', isPremiumOnly: true, previewColor: '#B08D4F', Layout: RetroLayout },
   { id: 'night', nameKey: 'obd.dashboard_style_night_name', descKey: 'obd.dashboard_style_night_desc', isPremiumOnly: true, previewColor: '#FF3B30', Layout: NightLayout },
   { id: 'family', nameKey: 'obd.dashboard_style_family_name', descKey: 'obd.dashboard_style_family_desc', isPremiumOnly: true, previewColor: '#1D4ED8', Layout: FamilyLayout },
-  { id: 'fleet', nameKey: 'obd.dashboard_style_fleet_name', descKey: 'obd.dashboard_style_fleet_desc', isPremiumOnly: true, previewColor: '#9CA3AF', Layout: FleetLayout },
+  { id: 'fleet', nameKey: 'obd.dashboard_style_fleet_name', descKey: 'obd.dashboard_style_fleet_desc', isPremiumOnly: true, previewColor: '#9CA3AF', Layout: FleetLayout, hiddenFromPicker: true },
 ];
 
 export function pickDashboardStyle(id?: string | null): DashboardStyleDef {
   return DASHBOARD_STYLES.find((s) => s.id === id) ?? DASHBOARD_STYLES[0];
+}
+
+// Style ẨN (Fleet) không có luồng B2B thật để tự chọn/thanh toán - coi như
+// "chưa mở khoá" bất kể is_premium, y hệt cách xử lý style Premium chưa mua.
+// Không lọc thẳng trong `pickDashboardStyle` (vẫn cần trả đúng Layout nếu 1
+// ngày có luồng B2B ghi thẳng styleId vào storage) - chỉ chặn ở nơi QUYẾT
+// ĐỊNH style hiệu lực (GaugeCluster, VehicleDetailScreen).
+export function isStyleUsable(style: DashboardStyleDef, isPremium: boolean): boolean {
+  if (style.hiddenFromPicker) return false;
+  return !style.isPremiumOnly || isPremium;
 }
 
 // Lưu theo TỪNG XE (vehicleId) - giữ đúng cơ chế đã có ở gaugeThemes.ts (1

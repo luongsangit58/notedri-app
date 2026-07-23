@@ -28,6 +28,8 @@ import { contentWide } from '../../utils/layout';
 import StatBox from '../../components/obd/StatBox';
 import GaugeCluster from '../../components/obd/GaugeCluster';
 import SafetyAlerts, { hasSafetyAlerts } from '../../components/obd/SafetyAlerts';
+import PipCompactView from '../../components/obd/PipCompactView';
+import NotedriPip from '../../../modules/notedri-pip/src/NotedriPipModule';
 
 // Rà soát 20/7 (khoảng lặng ~13 phút thấy trong fixture khi khoá màn hình lúc
 // lái): user chỉ dùng OBD2 không đi qua luồng bật GPS trip nên không bao giờ
@@ -135,6 +137,27 @@ export default function OBDDashboardScreen() {
     return () => { deactivateKeepAwake(tag).catch(() => {}); };
   }, [viewMode]);
 
+  // PiP (Picture-in-Picture, Android) - "đăng ký" tỉ lệ khung + bật cờ tự vào
+  // PiP NGAY LÚC vào màn Đồng hồ + đã kết nối (KHÔNG phải gọi enterPipMode()
+  // ở đây - hàm đó thu nhỏ app NGAY LẬP TỨC, sai ý "chỉ thu nhỏ khi user RỜI
+  // app"). setPipParams() chỉ đăng ký, hệ thống tự quyết định lúc nào chuyển
+  // (đúng lúc bấm Home, Android 12+) - xem NotedriPipModule.kt.
+  useEffect(() => {
+    if (Platform.OS !== 'android' || viewMode !== 'gauge' || !isConnected) return;
+    NotedriPip.setPipParams().catch(() => {});
+  }, [viewMode, isConnected]);
+
+  // Đổi qua PipCompactView khi Android vừa thu nhỏ Activity vào khung PiP -
+  // nội dung khung PiP CHÍNH LÀ UI Activity lúc đó (không phải 1 view riêng),
+  // header/nút hiện tại không đọc/bấm được ở kích thước đó nên phải chủ động
+  // đổi hẳn layout (xem PipCompactView.tsx).
+  const [isInPip, setIsInPip] = useState(false);
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    const sub = NotedriPip.addListener('onPipModeChanged', (e) => setIsInPip(e.isInPip));
+    return () => sub.remove();
+  }, []);
+
   // Badge chất lượng kết nối (ý #16): chỉ hiện khi có vấn đề, sóng tốt thì im lặng
   const [linkQuality, setLinkQuality] = useState<LinkQuality>('unknown');
   useEffect(() => {
@@ -197,6 +220,13 @@ export default function OBDDashboardScreen() {
   // JSX này bị copy-paste y hệt ở đây và ở nhánh lưới bên dưới.
   const safetyAlertsProps = { vinMismatch, vehicleName, warning, findings, isConnected, hasSnapshot: !!snap };
   const showSafetyAlerts = hasSafetyAlerts(safetyAlertsProps);
+
+  // Khung PiP thu nhỏ - bỏ qua TOÀN BỘ header/SafeAreaView/nội dung bình
+  // thường, chỉ vẽ 2 số Tốc độ/Vòng tua full màn (đúng kích thước khung PiP
+  // nhỏ, không phải màn hình đầy đủ bị co lại).
+  if (isInPip) {
+    return <PipCompactView speedKmh={fastSnapshot?.speedKmh ?? snap?.speedKmh ?? null} rpm={fastSnapshot?.rpm ?? snap?.rpm ?? null} />;
+  }
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }, safeInsets]}>

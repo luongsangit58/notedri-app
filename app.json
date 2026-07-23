@@ -138,7 +138,8 @@
         }
       ],
       "./withOptionalHardwareFeatures.js",
-      "./withNfcIntentFilter.js"
+      "./withNfcIntentFilter.js",
+      "./withPictureInPicture.js"
     ]
   }
 }

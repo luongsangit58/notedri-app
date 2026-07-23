@@ -16,16 +16,22 @@ import { useCountingNumber } from '../../../../hooks/useCountingNumber';
 const DARK_PALETTE = {
   bg: '#0B0D10', stripeA: '#14171C', stripeB: '#191D23', border: '#2A2F36',
   text: '#EDF1F7', textDim: '#8B93A3', rpmColor: '#FB4B4B', speedColor: '#FF8A3D',
-  shiftOn: '#2ECC71', shiftHot: '#FB4B4B', shiftOff: '#232830',
+  shiftOn: '#FF8A3D', shiftOff: '#232830',
 };
 const LIGHT_PALETTE = {
   bg: '#E8E9EB', stripeA: '#DCDEE1', stripeB: '#F0F1F3', border: '#C4C7CC',
   text: '#14171C', textDim: '#5B6270', rpmColor: '#D32F2F', speedColor: '#C4571F',
-  shiftOn: '#1B8A5A', shiftHot: '#D32F2F', shiftOff: '#C4C7CC',
+  shiftOn: '#C4571F', shiftOff: '#C4C7CC',
 };
 
+// Rà soát (góp ý user: dải đèn từng đổi xanh->đỏ ở ô thứ 6/8 như báo "sắp đỏ
+// vòng tua" - nhưng KHÔNG có dữ liệu redline thật của xe (ObdSnapshot/
+// VehicleCapability không có field này), 8000 chỉ là trần hiển thị chung cho
+// mọi xe. Đổi màu ở 1 ngưỡng bịa đặt dễ khiến tài xế hiểu lầm "sắp đỏ vòng
+// tua" sai thời điểm. Giữ lại cơ chế đèn sáng dần (vẫn đẹp/đúng chất đua xe)
+// nhưng CHỈ 1 màu duy nhất - thuần tuý thanh tiến độ % vòng tua, không ngụ ý
+// vùng nguy hiểm nào cả.
 const SHIFT_SEGMENTS = 8;
-const SHIFT_HOT_FROM = 6;
 
 // Component RIÊNG cho từng ô - xem lý do trong CardsLayout.tsx (không gọi
 // hook trực tiếp trong .map vì số ô có thể đổi giữa các lần render).
@@ -89,8 +95,7 @@ export default function RacingLayout({ metrics, isPortrait, animate }: CockpitLa
         <View style={styles.shiftRow}>
           {Array.from({ length: SHIFT_SEGMENTS }, (_, i) => {
             const lit = i < litSegments;
-            const hot = i >= SHIFT_HOT_FROM;
-            const color = lit ? (hot ? PALETTE.shiftHot : PALETTE.shiftOn) : PALETTE.shiftOff;
+            const color = lit ? PALETTE.shiftOn : PALETTE.shiftOff;
             return (
               <View
                 key={i}
@@ -114,8 +119,10 @@ export default function RacingLayout({ metrics, isPortrait, animate }: CockpitLa
 }
 
 const styles = StyleSheet.create({
-  root: { borderRadius: 18, overflow: 'hidden', width: '100%', minHeight: 220, paddingVertical: 24, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center', gap: 14 },
-  speedBadge: { position: 'absolute', top: 14, right: 16, alignItems: 'flex-end' },
+  root: { flex: 1, borderRadius: 18, overflow: 'hidden', width: '100%', minHeight: 220, paddingVertical: 24, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center', gap: 14 },
+  // Góc trên-trái (không phải trên-phải) - nút đổi style của GaugeCluster luôn
+  // nằm cố định trên-phải, đặt speedBadge cùng góc sẽ bị nút đó đè lên.
+  speedBadge: { position: 'absolute', top: 14, left: 16, alignItems: 'flex-start' },
   speedVal: { fontSize: 22, fontWeight: '800' },
   speedUnit: { fontSize: 10, letterSpacing: 0.5, textTransform: 'uppercase', marginTop: -2 },
   center: { alignItems: 'center', gap: 6 },

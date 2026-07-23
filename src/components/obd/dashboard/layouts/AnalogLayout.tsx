@@ -69,7 +69,7 @@ export default function AnalogLayout({ metrics, size, isPortrait, animate }: Coc
 }
 
 const styles = StyleSheet.create({
-  root: { borderRadius: 18, borderWidth: 1, padding: 16, gap: 14, width: '100%', alignItems: 'center' },
+  root: { flex: 1, borderRadius: 18, borderWidth: 1, padding: 16, gap: 14, width: '100%', alignItems: 'center', justifyContent: 'center' },
   gaugesRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 20 },
   gaugesCol: { flexDirection: 'column' },
   sideStack: { flexDirection: 'row', gap: 10, width: '100%' },

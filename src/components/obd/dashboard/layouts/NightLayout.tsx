@@ -60,7 +60,7 @@ export default function NightLayout({ metrics, isPortrait, animate = true }: Coc
 }
 
 const styles = StyleSheet.create({
-  root: { borderRadius: 18, width: '100%', minHeight: 220, alignItems: 'center', justifyContent: 'center', paddingVertical: 20, gap: 2 },
+  root: { flex: 1, borderRadius: 18, width: '100%', minHeight: 220, alignItems: 'center', justifyContent: 'center', paddingVertical: 20, gap: 2 },
   speedVal: { fontSize: 60, fontWeight: '800', letterSpacing: -1, textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 14 },
   speedUnit: { fontSize: 11, letterSpacing: 2, marginTop: -4 },
   secondaryRow: { flexDirection: 'row', gap: 10, flexWrap: 'wrap', justifyContent: 'center', marginTop: 22 },

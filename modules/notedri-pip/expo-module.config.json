@@ -1,0 +1,7 @@
+{
+  "platforms": ["android"],
+  "android": {
+    "modules": ["expo.modules.notedripip.NotedriPipModule"],
+    "reactActivityLifecycleListeners": ["expo.modules.notedripip.NotedriPipLifecycleListener"]
+  }
+}

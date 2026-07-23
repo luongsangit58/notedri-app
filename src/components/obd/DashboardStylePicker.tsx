@@ -75,7 +75,7 @@ export default function DashboardStylePicker({
                     metrics={DEMO_METRICS}
                     size={layout.gaugeSize}
                     ringSize={layout.ringSize}
-                    isPortrait={false}
+                    isPortrait={layout.isPortrait}
                     animate={false}
                   />
 
@@ -122,7 +122,7 @@ export default function DashboardStylePicker({
                 ) : (
                   <View style={{ marginBottom: 8 }} />
                 )}
-                {DASHBOARD_STYLES.map((style) => {
+                {DASHBOARD_STYLES.filter((style) => !style.hiddenFromPicker).map((style) => {
                   const rowLocked = style.isPremiumOnly && !isPremium;
                   const active = style.id === selectedId;
                   return (

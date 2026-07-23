@@ -5,8 +5,8 @@ import { useColors } from '../../utils/theme';
 import { ObdSnapshot } from '../../services/obd/ObdReader';
 import { FastSnapshot } from '../../services/obd/obdLiveMonitor';
 import { VehicleCapability } from '../../services/obd/capabilityService';
-import { OBD_METRICS, filterSupportedMetrics, readMetricValue } from '../../constants/obdMetrics';
-import { pickDashboardStyle, getSelectedDashboardStyleId, setSelectedDashboardStyleId, DASHBOARD_STYLES } from '../../constants/dashboardStyles';
+import { OBD_METRICS, filterSupportedMetrics, readMetricValue, quantizeValue } from '../../constants/obdMetrics';
+import { pickDashboardStyle, getSelectedDashboardStyleId, setSelectedDashboardStyleId, isStyleUsable, DASHBOARD_STYLES } from '../../constants/dashboardStyles';
 import { useCockpitLayout } from '../../hooks/useCockpitLayout';
 import { useAuthStore } from '../../store/authStore';
 import DashboardStylePicker from './DashboardStylePicker';
@@ -38,7 +38,7 @@ export default function GaugeCluster({
   // rơi về style mặc định thay vì tiếp tục dùng style trả phí miễn phí.
   const isPremium = useAuthStore((s) => s.user?.is_premium ?? false);
   const selectedStyle = pickDashboardStyle(styleId);
-  const style = selectedStyle.isPremiumOnly && !isPremium ? DASHBOARD_STYLES[0] : selectedStyle;
+  const style = isStyleUsable(selectedStyle, isPremium) ? selectedStyle : DASHBOARD_STYLES[0];
   const [pickerVisible, setPickerVisible] = useState(false);
 
   // Ưu tiên fastSnapshot (500ms, raw) cho tốc độ/vòng tua - rơi về snapshot
@@ -46,7 +46,10 @@ export default function GaugeCluster({
   const supported = filterSupportedMetrics(OBD_METRICS, capability?.supportedPids ?? null);
   const metrics = supported.map((def) => {
     const fromFast = def.key === 'speedKmh' ? fastSnapshot?.speedKmh : def.key === 'rpm' ? fastSnapshot?.rpm : undefined;
-    const value = fromFast ?? readMetricValue(snapshot, def.key);
+    const rawValue = fromFast ?? readMetricValue(snapshot, def.key);
+    // Làm tròn về bậc `quantizeStep` (vd RPM -> bội số 50) NGAY TẠI NGUỒN -
+    // 1 chỗ duy nhất, áp dụng cho mọi style thay vì sửa riêng từng Layout.
+    const value = quantizeValue(rawValue, def.quantizeStep);
     return { def, value };
   });
 
@@ -54,17 +57,31 @@ export default function GaugeCluster({
 
   return (
     <View style={{ flex: 1 }}>
-      <TouchableOpacity
-        onPress={() => setPickerVisible(true)}
-        style={[styles.styleBtn, { backgroundColor: colors.card }]}
-      >
-        <FontAwesome5 name="palette" size={16} color={style.previewColor} solid />
-      </TouchableOpacity>
+      {/* Rà soát (góp ý user: nút đổi style nổi đè lên góc trên-phải, có style
+          (Racing) đặt số liệu ngay góc đó nên bị nút che mất) - đưa nút ra 1
+          HÀNG TOOLBAR riêng phía trên thay vì đè (absolute) lên khung đồng hồ.
+          Không còn overlap với BẤT KỲ style nào (kể cả Lưới thẻ số lấp đủ 4
+          góc), đổi lại tốn 1 dải cao cố định nhỏ phía trên. */}
+      <View style={styles.toolbar}>
+        <TouchableOpacity
+          onPress={() => setPickerVisible(true)}
+          style={[styles.styleBtn, { backgroundColor: colors.card }]}
+        >
+          <FontAwesome5 name="palette" size={16} color={style.previewColor} solid />
+        </TouchableOpacity>
+      </View>
 
       {/* ScrollView thay vì View cố định flex:1 - gaugeSize co theo màn hình
           rồi nhưng vẫn cần cuộn dự phòng cho màn landscape rất thấp/nhiều PID
-          phụ cùng lúc, tránh cắt mất nội dung mà không có cách nào xem tiếp. */}
+          phụ cùng lúc, tránh cắt mất nội dung mà không có cách nào xem tiếp.
+          Rà soát (góp ý user: đầu Android ô tô nằm ngang không full màn hình) -
+          trước đây contentContainerStyle CĂN GIỮA 1 "thẻ" nhỏ hơn màn hình,
+          để lộ nền app trống phía trên/dưới trên màn ngang rộng-thấp. Bỏ
+          alignItems/justifyContent center ở đây, để chính Layout (flex:1)
+          tự kéo giãn lấp ĐẦY vùng cuộn rồi mới tự căn giữa nội dung BÊN
+          TRONG nó - card giờ luôn phủ kín khung hình, không còn khoảng trống. */}
       <ScrollView
+        style={{ flex: 1 }}
         contentContainerStyle={[styles.root, !isConnected && snapshot ? { opacity: 0.5 } : null]}
       >
         <Layout
@@ -91,9 +108,9 @@ export default function GaugeCluster({
 }
 
 const styles = StyleSheet.create({
-  root: { flexGrow: 1, alignItems: 'center', justifyContent: 'center', padding: 16 },
+  root: { flexGrow: 1, padding: 8 },
+  toolbar: { flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: 8, paddingTop: 4 },
   styleBtn: {
-    position: 'absolute', top: 8, right: 8, zIndex: 1,
     width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center',
   },
 });

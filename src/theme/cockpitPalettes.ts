@@ -1,9 +1,9 @@
 import { useThemeStore } from '../utils/theme';
 
 // Bảng màu "mặt kính đồng hồ" cho 2 style MIỄN PHÍ (Analog, Lưới thẻ số) -
-// theo đúng biến --d* trong bản thiết kế artifact, nhưng có thêm bản SÁNG vì
-// 2 style này đi theo theme sáng/tối của app (khác 6 style Premium, mỗi cái
-// có 1 bảng màu cố định làm bản sắc riêng - xem các layout Premium).
+// theo đúng biến --d* trong bản thiết kế artifact, có bản sáng vì 2 style này
+// đi theo theme sáng/tối của app. 5/6 style Premium cũng có bản sáng+tối
+// riêng (xem `usePremiumPalette` bên dưới) - chỉ "Ban đêm" cố định 1 hướng.
 export interface CockpitPalette {
   bg: string;
   surface: string;

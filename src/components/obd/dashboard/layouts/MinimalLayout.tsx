@@ -6,12 +6,14 @@ import { CockpitLayoutProps } from '../types';
 import { FEATURED_SECONDARY_KEYS } from '../../../../constants/obdMetrics';
 import { useCountingNumber } from '../../../../hooks/useCountingNumber';
 
-// Premium "Tối giản EV" - bản sắc RIÊNG (gần như chỉ 1 con số, không viền/nền
-// rối mắt) gợi cụm đồng hồ xe điện đời mới. Góp ý user (23/7): thêm bản TỐI
-// song song bản sáng gốc - xám khói -> đen tuyền, giữ đúng tinh thần "tối
-// giản" (không đổi bố cục, chỉ đảo màu).
-const LIGHT_PALETTE = { bg: '#F4F4F2', line: '#111111', text: '#111111', textDim: '#6B7280' };
-const DARK_PALETTE = { bg: '#111112', line: '#F4F4F2', text: '#F4F4F2', textDim: '#9AA0AC' };
+// Premium "Tối giản EV" - bản sắc RIÊNG gợi cụm đồng hồ xe điện đời mới
+// (Tesla/Polestar: thanh tốc độ NGANG thay vì kim/số tròn). Góp ý user (23/7):
+// thêm bản TỐI song song bản sáng gốc. Rà soát tiếp (góp ý user: trùng khung
+// với style "Ban đêm" - cả 2 đều "1 số to giữa màn + hàng phụ nhỏ") - đổi hẳn
+// bố cục sang thanh ngang lớn làm chủ đạo (không phải số tròn cô lập) để 2
+// style không còn là bản recolor của nhau, dù cùng tinh thần "tối giản".
+const LIGHT_PALETTE = { bg: '#F4F4F2', text: '#111111', textDim: '#6B7280', track: '#11111116' };
+const DARK_PALETTE = { bg: '#111112', text: '#F4F4F2', textDim: '#9AA0AC', track: '#F4F4F216' };
 
 function MiniStat({ label, value, unit, palette, animate }: {
   label: string;
@@ -48,17 +50,26 @@ export default function MinimalLayout({ metrics, isPortrait, animate = true }: C
     Animated.timing(progress, { toValue: frac, duration: 350, easing: Easing.out(Easing.quad), useNativeDriver: false }).start();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [frac, animate]);
-  const lineWidth = progress.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] });
+  const fillWidth = progress.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] });
+  const markerLeft = progress.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] });
 
   return (
     <View style={[styles.root, { backgroundColor: PALETTE.bg }, isPortrait && { paddingVertical: 28 }]}>
       <Text style={[styles.speedVal, { color: PALETTE.text }]} numberOfLines={1} adjustsFontSizeToFit>
         {speedDisplay ?? '-'}
+        <Text style={[styles.speedUnit, { color: PALETTE.textDim }]}> km/h</Text>
       </Text>
-      <Text style={[styles.speedUnit, { color: PALETTE.textDim }]}>km/h</Text>
-      <View style={[styles.track, { backgroundColor: PALETTE.text + '22' }]}>
-        <Animated.View style={[styles.fill, { backgroundColor: PALETTE.text, width: lineWidth }]} />
+
+      {/* Thanh tốc độ NGANG làm chủ đạo (thay vì số tròn cô lập như "Ban đêm") -
+          đúng gu cụm đồng hồ EV hiện đại (Tesla/Polestar). Marker nằm NGOÀI
+          track (không bị overflow:hidden của track cắt mất ở 2 đầu thang). */}
+      <View style={styles.trackWrap}>
+        <View style={[styles.track, { backgroundColor: PALETTE.track }]}>
+          <Animated.View style={[styles.fill, { backgroundColor: PALETTE.text, width: fillWidth }]} />
+        </View>
+        <Animated.View pointerEvents="none" style={[styles.marker, { backgroundColor: PALETTE.bg, borderColor: PALETTE.text, left: markerLeft }]} />
       </View>
+
       {featured.length > 0 && (
         <View style={styles.secondaryRow}>
           {featured.map(({ def, value }, i) => (
@@ -74,12 +85,14 @@ export default function MinimalLayout({ metrics, isPortrait, animate = true }: C
 }
 
 const styles = StyleSheet.create({
-  root: { borderRadius: 18, width: '100%', minHeight: 220, alignItems: 'center', justifyContent: 'center', paddingVertical: 20, gap: 4 },
-  speedVal: { fontSize: 64, fontWeight: '200', letterSpacing: -1 },
-  speedUnit: { fontSize: 12, letterSpacing: 1, textTransform: 'uppercase', marginTop: -6 },
-  track: { width: '55%', height: 2, borderRadius: 1, marginTop: 18, overflow: 'hidden' },
-  fill: { height: 2, borderRadius: 1 },
-  secondaryRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 20, flexWrap: 'wrap', justifyContent: 'center' },
+  root: { flex: 1, borderRadius: 18, width: '100%', minHeight: 220, alignItems: 'center', justifyContent: 'center', paddingVertical: 20 },
+  speedVal: { fontSize: 48, fontWeight: '200', letterSpacing: -1 },
+  speedUnit: { fontSize: 15, fontWeight: '600', letterSpacing: 0.5 },
+  trackWrap: { width: '78%', height: 18, justifyContent: 'center', marginTop: 24 },
+  track: { width: '100%', height: 10, borderRadius: 5, overflow: 'hidden' },
+  fill: { height: 10, borderRadius: 5 },
+  marker: { position: 'absolute', width: 16, height: 16, borderRadius: 8, borderWidth: 3, marginLeft: -8 },
+  secondaryRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 22, flexWrap: 'wrap', justifyContent: 'center' },
   secondaryText: { fontSize: 11, letterSpacing: 0.2 },
   dot: { width: 3, height: 3, borderRadius: 1.5 },
   mini: { flexDirection: 'row', alignItems: 'center', gap: 4 },
