@@ -13,32 +13,42 @@ import { useT } from '../i18n';
  * 4 ảnh step-1..4.png được CẮT SẴN từ ảnh gộp cũ (guide-steps.png, ChatGPT sinh,
  * xem _bmad-output/CHATGPT-PROMPT-OBD-GUIDE-IMAGES-*.md) theo đúng 4 góc phần
  * tư 793x496 mỗi ảnh - không sinh ảnh mới, giữ nguyên nội dung minh hoạ đã duyệt.
+ *
+ * Sửa 23/7: bổ sung bộ ảnh classic-step-1..4.png riêng cho luồng Bluetooth
+ * Classic (khác hẳn BLE: phải ghép nối qua Cài đặt Bluetooth hệ thống với mã
+ * PIN, không ghép trực tiếp trong app) - trước đó Classic dùng chung ảnh BLE.
  */
-const STEP_IMAGES: (ImageSourcePropType | null)[] = [
+const BLE_STEP_IMAGES: ImageSourcePropType[] = [
   require('../../assets/obd-guide/step-1.png'),
   require('../../assets/obd-guide/step-2.png'),
   require('../../assets/obd-guide/step-3.png'),
   require('../../assets/obd-guide/step-4.png'),
 ];
 
-const STEPS: { icon: string }[] = [
-  { icon: 'plug' },
-  { icon: 'lightbulb' },
-  { icon: 'key' },
-  { icon: 'bluetooth-b' },
+const CLASSIC_STEP_IMAGES: ImageSourcePropType[] = [
+  require('../../assets/obd-guide/classic-step-1.png'),
+  require('../../assets/obd-guide/classic-step-2.png'),
+  require('../../assets/obd-guide/classic-step-3.png'),
+  require('../../assets/obd-guide/classic-step-4.png'),
 ];
+
+const BLE_STEP_ICONS = ['plug', 'lightbulb', 'key', 'bluetooth-b'];
+const CLASSIC_STEP_ICONS = ['plug', 'bluetooth-b', 'key', 'link'];
+const STEP_COUNT = BLE_STEP_IMAGES.length;
 
 function StepSlide({ index, width, mode }: { index: number; width: number; mode: 'ble' | 'classic' }) {
   const colors = useColors();
   const t = useT();
-  const image = STEP_IMAGES[index];
-  const step = STEPS[index];
-  // Chỉ bước cuối (bật Bluetooth & kết nối) khác nhau giữa BLE/Classic - 3 bước
-  // đầu (cắm adapter, đèn báo, bật khoá điện) giống hệt nhau bất kể cách ghép nối.
-  // Chưa có ảnh minh hoạ riêng cho Classic nên dùng chung ảnh BLE, chỉ đổi text.
-  const isClassicLastStep = mode === 'classic' && index === STEPS.length - 1;
-  const titleKey = isClassicLastStep ? 'obd.classic_guide_s4_title' : `obd.guide_s${index + 1}_title`;
-  const descKey = isClassicLastStep ? 'obd.classic_guide_s4_desc' : `obd.guide_s${index + 1}_desc`;
+  const isClassic = mode === 'classic';
+  const image = isClassic ? CLASSIC_STEP_IMAGES[index] : BLE_STEP_IMAGES[index];
+  const icon = isClassic ? CLASSIC_STEP_ICONS[index] : BLE_STEP_ICONS[index];
+  // Bước 1 (cắm adapter vào cổng OBD2) giống hệt nhau ở cả 2 kiểu ghép nối nên
+  // dùng chung text guide_s1_*; từ bước 2 Classic rẽ sang luồng Cài đặt
+  // Bluetooth hệ thống (chọn thiết bị -> nhập mã PIN -> quay lại app) nên có
+  // text riêng classic_guide_s{2,3,4}_*.
+  const useClassicText = isClassic && index > 0;
+  const titleKey = useClassicText ? `obd.classic_guide_s${index + 1}_title` : `obd.guide_s${index + 1}_title`;
+  const descKey = useClassicText ? `obd.classic_guide_s${index + 1}_desc` : `obd.guide_s${index + 1}_desc`;
 
   return (
     <View style={{ width }}>
@@ -63,7 +73,7 @@ function StepSlide({ index, width, mode }: { index: number; width: number; mode:
         <View style={styles.slideTextRow}>
           <View style={{ flex: 1 }}>
             <View style={styles.stepHeader}>
-              <FontAwesome5 name={step.icon} size={13} color={colors.primary} />
+              <FontAwesome5 name={icon} size={13} color={colors.primary} />
               <Text style={[styles.stepTitle, { color: colors.text }]}>
                 {t(titleKey as any)}
               </Text>
@@ -103,7 +113,7 @@ function StepCarousel({ mode }: { mode: 'ble' | 'classic' }) {
   }
 
   function goTo(i: number) {
-    const clamped = Math.max(0, Math.min(STEPS.length - 1, i));
+    const clamped = Math.max(0, Math.min(STEP_COUNT - 1, i));
     scrollRef.current?.scrollTo({ x: clamped * carouselWidth, animated: true });
     setActiveIndex(clamped);
   }
@@ -128,7 +138,7 @@ function StepCarousel({ mode }: { mode: 'ble' | 'classic' }) {
           snapToAlignment="start"
           decelerationRate="fast"
           disableIntervalMomentum>
-          {STEPS.map((_, i) => (
+          {Array.from({ length: STEP_COUNT }, (_, i) => (
             <StepSlide key={i} index={i} width={carouselWidth} mode={mode} />
           ))}
         </ScrollView>
@@ -146,7 +156,7 @@ function StepCarousel({ mode }: { mode: 'ble' | 'classic' }) {
         </TouchableOpacity>
 
         <View style={styles.dotsRow}>
-          {STEPS.map((_, i) => (
+          {Array.from({ length: STEP_COUNT }, (_, i) => (
             <TouchableOpacity
               key={i}
               hitSlop={{ top: 10, bottom: 10, left: 6, right: 6 }}
@@ -163,13 +173,13 @@ function StepCarousel({ mode }: { mode: 'ble' | 'classic' }) {
 
         <TouchableOpacity
           onPress={() => goTo(activeIndex + 1)}
-          disabled={activeIndex === STEPS.length - 1}
+          disabled={activeIndex === STEP_COUNT - 1}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          style={[styles.navBtn, activeIndex === STEPS.length - 1 && styles.navBtnDisabled]}>
+          style={[styles.navBtn, activeIndex === STEP_COUNT - 1 && styles.navBtnDisabled]}>
           <FontAwesome5
             name="chevron-right"
             size={11}
-            color={activeIndex === STEPS.length - 1 ? colors.border : colors.primary}
+            color={activeIndex === STEP_COUNT - 1 ? colors.border : colors.primary}
           />
         </TouchableOpacity>
       </View>
