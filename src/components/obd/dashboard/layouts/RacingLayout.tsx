@@ -57,7 +57,7 @@ function MiniStat({ item, palette, textSize, valSize, animate }: {
 // ArcGauge (đúng primitive Analog/Retro đã dùng), giữ nguyên dải shift-light
 // bên dưới (không phải số, vẫn đúng chất HUD đua xe) + badge tốc độ góc trên
 // (số phụ nhỏ, cùng vai trò với sideStack số phụ của Analog/Retro).
-export default function RacingLayout({ metrics, size, isPortrait, animate }: CockpitLayoutProps) {
+export default function RacingLayout({ metrics, size, heroSize, isPortrait, animate }: CockpitLayoutProps) {
   const t = useT();
   const PALETTE = usePremiumPalette(DARK_PALETTE, LIGHT_PALETTE);
   const speedValSize = Math.max(22, Math.min(48, size * 0.16));
@@ -108,7 +108,7 @@ export default function RacingLayout({ metrics, size, isPortrait, animate }: Coc
 
       <View style={styles.center}>
         <ArcGauge
-          value={rpm?.value ?? null} min={0} max={rpm?.def.max ?? 8000} size={size}
+          value={rpm?.value ?? null} min={0} max={rpm?.def.max ?? 8000} size={heroSize}
           unit={t('obd.stat_rpm')} valueFontFamily={monoFontFamily} quantizeStep={rpm?.def.quantizeStep}
           trackColor={PALETTE.stripeA} fillColor={PALETTE.rpmColor} needleColor={PALETTE.rpmColor} tickColor={PALETTE.textDim}
           valueColor={PALETTE.rpmColor} labelColor={PALETTE.textDim} animate={animate}

@@ -5,8 +5,14 @@ export interface CockpitLayout {
   height: number;
   isPortrait: boolean;
   isLandscape: boolean;
-  // Đồng hồ kim chính (Analog/Racing/Cổ điển/Ban đêm/Tối giản EV)
+  // Đồng hồ kim chính khi layout hiện NHIỀU đồng hồ cạnh nhau (Analog 2 kim,
+  // Retro 2 kim) - kích thước phải chia sẻ chiều ngang nên nhỏ hơn.
   gaugeSize: number;
+  // Rà soát 24/7 (góp ý user: 1-2 đồng hồ cần TO, gần full màn hình để tạo
+  // điểm nhấn/dễ nhìn, nhưng không thô quá) - style chỉ có ĐÚNG 1 đồng hồ làm
+  // chủ đạo (Racing/Minimal/Night) không cần chia chỗ với đồng hồ thứ 2 như
+  // Analog/Retro, được phép to hơn hẳn `gaugeSize` mà vẫn vừa màn hình.
+  heroGaugeSize: number;
   // Thẻ vòng tròn (Lưới thẻ số/Fleet)
   ringSize: number;
 }
@@ -29,9 +35,15 @@ export function useCockpitLayout(preview = false): CockpitLayout {
   const gaugeSize = preview
     ? Math.max(100, Math.min(150, shortSide * 0.3))
     : Math.max(130, Math.min(340, shortSide * 0.42));
+  // Hệ số/trần cao hơn hẳn gaugeSize (0.42/340) - đồng hồ ĐƠN không phải chia
+  // chỗ với đồng hồ thứ 2, dùng được nhiều không gian hơn để nổi bật, tự vẫn
+  // theo shortSide nên không bao giờ tràn khỏi cạnh ngắn hơn của màn hình.
+  const heroGaugeSize = preview
+    ? Math.max(120, Math.min(190, shortSide * 0.4))
+    : Math.max(180, Math.min(460, shortSide * 0.58));
   const ringSize = preview
     ? Math.max(34, Math.min(46, shortSide * 0.1))
     : Math.max(44, Math.min(110, shortSide * 0.14));
 
-  return { width, height, isPortrait, isLandscape: !isPortrait, gaugeSize, ringSize };
+  return { width, height, isPortrait, isLandscape: !isPortrait, gaugeSize, heroGaugeSize, ringSize };
 }

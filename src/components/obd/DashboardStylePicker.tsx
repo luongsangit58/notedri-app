@@ -96,6 +96,7 @@ export default function DashboardStylePicker({
             <PreviewLayout
               metrics={DEMO_METRICS}
               size={layout.gaugeSize}
+              heroSize={layout.heroGaugeSize}
               ringSize={layout.ringSize}
               isPortrait={layout.isPortrait}
               animate

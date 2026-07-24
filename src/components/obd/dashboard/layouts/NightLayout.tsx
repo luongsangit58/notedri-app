@@ -41,7 +41,7 @@ function MiniStat({ label, value, unit, textSize, valSize, animate }: {
 // hiện số như đồng hồ điện tử) - đổi số tốc độ khổng lồ sang ArcGauge (đúng
 // primitive đã dùng ở Analog/Retro), giữ nguyên bản sắc "buồng lái ban đêm"
 // qua màu hổ phách/nền đen tuyệt đối + glow + font mono, không đổi theo bố cục.
-export default function NightLayout({ metrics, size, isPortrait, animate = true }: CockpitLayoutProps) {
+export default function NightLayout({ metrics, size, heroSize, isPortrait, animate = true }: CockpitLayoutProps) {
   const t = useT();
   const speed = metrics.find((m) => m.def.key === 'speedKmh');
   const secondary = metrics.filter((m) => m.def.key !== 'speedKmh');
@@ -54,7 +54,7 @@ export default function NightLayout({ metrics, size, isPortrait, animate = true 
   return (
     <View style={[styles.root, { backgroundColor: PALETTE.bg }, isPortrait && { paddingVertical: 28 }]}>
       <ArcGauge
-        value={speed?.value ?? null} min={0} max={220} size={size}
+        value={speed?.value ?? null} min={0} max={220} size={heroSize}
         label={t('obd.stat_speed')} unit="km/h" valueFontFamily={monoFontFamily}
         trackColor={PALETTE.redDim + '55'} fillColor={PALETTE.red} needleColor={PALETTE.red} tickColor={PALETTE.redDim}
         valueColor={PALETTE.red} labelColor={PALETTE.redDim} animate={animate}

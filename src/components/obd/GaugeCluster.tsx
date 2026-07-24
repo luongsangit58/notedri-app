@@ -153,6 +153,7 @@ export default function GaugeCluster({
         <Layout
           metrics={metrics}
           size={layout.gaugeSize}
+          heroSize={layout.heroGaugeSize}
           ringSize={layout.ringSize}
           isPortrait={layout.isPortrait}
           animate

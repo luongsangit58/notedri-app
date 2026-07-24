@@ -37,7 +37,7 @@ function MiniStat({ label, value, unit, palette, textSize, valSize, animate }: {
   );
 }
 
-export default function MinimalLayout({ metrics, size, isPortrait, animate = true }: CockpitLayoutProps) {
+export default function MinimalLayout({ metrics, size, heroSize, isPortrait, animate = true }: CockpitLayoutProps) {
   const t = useT();
   const PALETTE = usePremiumPalette(DARK_PALETTE, LIGHT_PALETTE);
   const secondaryTextSize = Math.max(11, Math.min(18, size * 0.06));
@@ -51,11 +51,11 @@ export default function MinimalLayout({ metrics, size, isPortrait, animate = tru
   return (
     <View style={[styles.root, { backgroundColor: PALETTE.bg }, isPortrait && { paddingVertical: 28 }]}>
       <ArcGauge
-        value={speed?.value ?? null} min={0} max={220} size={size}
+        value={speed?.value ?? null} min={0} max={220} size={heroSize}
         label={t('obd.stat_speed')} unit="km/h"
         trackColor={PALETTE.track} fillColor={PALETTE.text} needleColor={PALETTE.text} tickColor={PALETTE.textDim}
         valueColor={PALETTE.text} labelColor={PALETTE.textDim} animate={animate}
-        strokeWidth={Math.max(5, size * 0.025)} glow={false} showTicks={false} showMinMax={false}
+        strokeWidth={Math.max(5, heroSize * 0.025)} glow={false} showTicks={false} showMinMax={false}
       />
 
       {featured.length > 0 && (

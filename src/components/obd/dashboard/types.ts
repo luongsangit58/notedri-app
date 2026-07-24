@@ -12,6 +12,11 @@ export interface CockpitMetricValue {
 export interface CockpitLayoutProps {
   metrics: CockpitMetricValue[];
   size: number;
+  // Rà soát 24/7 (góp ý user: 1-2 đồng hồ cần TO/nổi bật gần full màn, không
+  // thô quá) - kích thước riêng cho style chỉ có 1 đồng hồ làm chủ đạo
+  // (Racing/Minimal/Night dùng cái này thay cho `size`), lớn hơn hẳn vì không
+  // phải chia chỗ với đồng hồ thứ 2 như Analog/Retro (xem useCockpitLayout.ts).
+  heroSize: number;
   ringSize: number;
   isPortrait: boolean;
   // false cho ảnh xem trước tĩnh trong DashboardStylePicker.
