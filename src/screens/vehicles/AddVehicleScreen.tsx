@@ -30,10 +30,8 @@ import AppBgPattern from '../../components/AppBgPattern';
 import type { VehiclePhoto } from '../../api/vehicles';
 
 // ── Types ──────────────────────────────────────────────────────────────────
-// Chỉ 2 loại như web: ô tô + xe máy. Xe điện KHÔNG phải loại riêng (nhận biết qua
-// nhiên liệu "Điện"/spec is_ev). DB lưu vehicle_type = 'oto' | 'xemay'.
-type VehicleType = 'oto' | 'xe_may';
-const dbVehicleType = (t: VehicleType) => (t === 'xe_may' ? 'xemay' : 'oto');
+// Chỉ hỗ trợ ô tô. Xe điện KHÔNG phải loại riêng (nhận biết qua nhiên liệu
+// "Điện"/spec is_ev). DB lưu vehicle_type = 'oto' (xe máy đã ngừng hỗ trợ tạo mới).
 type Brand  = { id: number; name: string; color?: string };
 type VModel = { id: number; brand_id: number; name: string; type: string };
 type Spec   = { id: number; model_id: number; version?: string; year_from?: number; year_to?: number;
@@ -47,7 +45,6 @@ const POPULAR_BRANDS_OTO = [
   'Toyota', 'Honda', 'Hyundai', 'Kia', 'Mazda', 'Mitsubishi', 'Ford', 'VinFast',
   'Suzuki', 'Isuzu', 'Chevrolet', 'Nissan', 'Peugeot', 'Mercedes-Benz', 'BMW', 'Audi', 'Lexus', 'Subaru',
 ];
-const POPULAR_BRANDS_XEMAY = ['Honda', 'Yamaha', 'SYM', 'Piaggio', 'Suzuki', 'VinFast', 'Kymco'];
 
 function sortByPopularity(brands: Brand[], popularList: string[]): Brand[] {
   const rank = (name: string) => {
@@ -190,7 +187,6 @@ export default function AddVehicleScreen() {
   const [photo, setPhoto]           = useState<VehiclePhoto | null>(null);
 
   // ── Cascade selection state ───────────────────────────────────────────────
-  const [vehicleType, setVehicleType]   = useState<VehicleType>('oto');
   const [selectedBrand, setSelectedBrand] = useState<Brand | null>(null);
   const [selectedModel, setSelectedModel] = useState<VModel | null>(null);
   const [selectedSpec, setSelectedSpec]   = useState<Spec | null>(null);
@@ -204,17 +200,15 @@ export default function AddVehicleScreen() {
 
   // ── Derived cascade data ──────────────────────────────────────────────────
   const brandsForType = useMemo(() => {
-    const dbType = dbVehicleType(vehicleType);
-    const brandIds = new Set(allModels.filter(m => (m.type || 'oto') === dbType).map(m => m.brand_id));
+    const brandIds = new Set(allModels.filter(m => (m.type || 'oto') === 'oto').map(m => m.brand_id));
     const filtered = allBrands.filter(b => brandIds.has(b.id));
-    return sortByPopularity(filtered, dbType === 'xemay' ? POPULAR_BRANDS_XEMAY : POPULAR_BRANDS_OTO);
-  }, [allBrands, allModels, vehicleType]);
+    return sortByPopularity(filtered, POPULAR_BRANDS_OTO);
+  }, [allBrands, allModels]);
 
   const modelsForBrand = useMemo(() => {
     if (!selectedBrand) return [];
-    const dbType = dbVehicleType(vehicleType);
-    return allModels.filter(m => m.brand_id === selectedBrand.id && (m.type || 'oto') === dbType);
-  }, [allModels, selectedBrand, vehicleType]);
+    return allModels.filter(m => m.brand_id === selectedBrand.id && (m.type || 'oto') === 'oto');
+  }, [allModels, selectedBrand]);
 
   const specsForModel = useMemo(() => {
     if (!selectedModel) return [];
@@ -248,14 +242,6 @@ export default function AddVehicleScreen() {
       if (selectedModel) setModel(selectedModel.name);
     }
   }, [specsForModel]);
-
-  // Reset downstream when type changes
-  const onTypeChange = (ty: VehicleType) => {
-    setVehicleType(ty);
-    setSelectedBrand(null); setSelectedModel(null); setSelectedSpec(null);
-    setMake(''); setModel(''); setNam('');
-    setTankCapacity(''); setConsumptionOfficial(''); setVehicleSpecId(null);
-  };
 
   // ── Fallback text search (when no cascade data or manual override) ─────────
   const [specQuery, setSpecQuery]   = useState('');
@@ -309,7 +295,7 @@ export default function AddVehicleScreen() {
     }
     setApiError(null);
     const payload: Record<string, any> = { ten: ten.trim(), fuel_type, is_default };
-    payload.vehicle_type = dbVehicleType(vehicleType);
+    payload.vehicle_type = 'oto';
     if (bien_so.trim())           payload.bien_so     = bien_so.trim();
     if (make.trim())              payload.make        = make.trim();
     if (model.trim())             payload.model       = model.trim();
@@ -352,12 +338,6 @@ export default function AddVehicleScreen() {
       setApiError(err?.response?.data?.message ?? err?.response?.data?.error ?? t('vehicles.error_generic'));
     }
   };
-
-  // ── Render ────────────────────────────────────────────────────────────────
-  const TYPES: { key: VehicleType; label: string; icon: string }[] = [
-    { key: 'oto',     label: t('add_vehicle.type_car'),        icon: 'car-side' },
-    { key: 'xe_may',  label: t('add_vehicle.type_motorcycle'), icon: 'motorcycle' },
-  ];
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom']}>
@@ -412,30 +392,6 @@ export default function AddVehicleScreen() {
           placeholderTextColor={colors.textSecondary}
           value={bien_so} onChangeText={setBienSo} autoCapitalize="characters" returnKeyType="next"
         />
-
-        {/* ── Cascade: loại xe ── */}
-        <Text style={[labelStyle, { marginTop: 12 }]}>{t('add_vehicle.vehicle_type_label')}</Text>
-        <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
-          {TYPES.map(tp => {
-            const active = vehicleType === tp.key;
-            return (
-              <TouchableOpacity
-                key={tp.key}
-                onPress={() => onTypeChange(tp.key)}
-                style={{
-                  flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-                  gap: 6, paddingVertical: 10, borderRadius: 10,
-                  backgroundColor: active ? colors.primary : colors.surface,
-                  borderWidth: 1, borderColor: active ? colors.primary : colors.border,
-                }}>
-                <FontAwesome5 name={tp.icon} size={12} color={active ? colors.primaryText : colors.textSecondary} solid />
-                <Text style={{ fontSize: 12, fontWeight: active ? '700' : '400', color: active ? colors.primaryText : colors.textSecondary }}>
-                  {tp.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
 
         {/* ── Cascade: chọn hãng ── */}
         {hasCascade ? (

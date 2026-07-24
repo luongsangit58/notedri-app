@@ -42,7 +42,7 @@ export const LABEL_STYLE = {
 } as const;
 
 const BG_ICONS = [
-  'gas-pump', 'tint', 'bicycle', 'car', 'motorcycle',
+  'gas-pump', 'tint', 'car', 'car-side',
   'oil-can', 'wrench', 'gas-pump', 'tint', 'car',
 ] as const;
 const BG_ROTATIONS = [0, 15, -10, 20];

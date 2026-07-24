@@ -7,8 +7,8 @@ import { useThemeStore } from '../utils/theme';
 // Hoạ tiết nền thương hiệu (icon xe/xăng/bảo dưỡng) - giống trang đăng nhập.
 // Tự hợp sáng/tối: icon dùng màu chữ theme + độ mờ thấp nên luôn chìm sau nội dung.
 const BG_ICONS = [
-  'gas-pump', 'tint', 'motorcycle', 'car', 'oil-can',
-  'wrench', 'car-side', 'gas-pump', 'tint', 'motorcycle',
+  'gas-pump', 'tint', 'car', 'car-side', 'oil-can',
+  'wrench', 'car-side', 'gas-pump', 'tint', 'car',
 ] as const;
 const BG_ROTATIONS = [0, 15, -10, 20];
 
