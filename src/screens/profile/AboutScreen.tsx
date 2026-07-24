@@ -36,7 +36,7 @@ export default function AboutScreen() {
         {/* Logo / Brand */}
         <View style={{ alignItems: 'center', paddingVertical: 32 }}>
           <Image
-            source={require('../../../assets/icon.png')}
+            source={require('../../../assets/icon-3d.png')}
             style={{ width: 80, height: 80, borderRadius: 20, marginBottom: 14 }}
           />
           <Text style={{ color: colors.text, fontWeight: '800', fontSize: 26, letterSpacing: -0.5 }}>
