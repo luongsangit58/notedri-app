@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Linking } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Linking, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useColors } from '../../utils/theme';
@@ -35,13 +35,10 @@ export default function AboutScreen() {
 
         {/* Logo / Brand */}
         <View style={{ alignItems: 'center', paddingVertical: 32 }}>
-          <View style={{
-            width: 80, height: 80, borderRadius: 20,
-            backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center',
-            marginBottom: 14,
-          }}>
-            <FontAwesome5 name="car-side" size={36} color={colors.primaryText} solid />
-          </View>
+          <Image
+            source={require('../../../assets/icon.png')}
+            style={{ width: 80, height: 80, borderRadius: 20, marginBottom: 14 }}
+          />
           <Text style={{ color: colors.text, fontWeight: '800', fontSize: 26, letterSpacing: -0.5 }}>
             Note<Text style={{ color: colors.primary }}>Dri</Text>
           </Text>
