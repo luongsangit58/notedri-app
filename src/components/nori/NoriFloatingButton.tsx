@@ -1,11 +1,11 @@
 import React, { useRef, useState } from 'react';
-import { Animated, Dimensions, PanResponder } from 'react-native';
+import { Animated, Dimensions, PanResponder, StyleSheet, View } from 'react-native';
+import Svg, { Defs, RadialGradient, Stop, Circle } from 'react-native-svg';
 import { useAuthStore } from '../../store/authStore';
 import { useVehicles } from '../../hooks/useVehicles';
 import { useSelectedVehicleStore } from '../../store/selectedVehicleStore';
 import { useNoriSummary } from '../../services/nori/noriSummary';
 import { useColors } from '../../utils/theme';
-import { NORI_MOOD_COLOR } from '../../services/nori/nori';
 import NoriAvatar from './NoriAvatar';
 import NoriPopover from './NoriPopover';
 
@@ -128,18 +128,25 @@ export default function NoriFloatingButton() {
           style={{
             position: 'absolute',
             transform: pos.getTranslateTransform(),
-            padding: BACKDROP_PAD,
-            borderRadius: boxSize / 2,
-            backgroundColor: colors.card,
-            borderWidth: 2,
-            borderColor: NORI_MOOD_COLOR[mood],
-            shadowColor: '#000',
-            shadowOpacity: 0.3,
-            shadowRadius: 8,
-            shadowOffset: { width: 0, height: 3 },
-            elevation: 8,
+            width: boxSize,
+            height: boxSize,
           }}>
-          <NoriAvatar mood={mood} size={SIZE} />
+          {/* Rà soát 24/7 (góp ý user: bên web Nori chỉ có 1 quầng sáng mờ dần
+              phía sau, app trước đó bọc icon trong 1 vòng tròn viền cứng + chấm
+              màu - không giống nhau) - đổi sang quầng sáng mờ dần (radial
+              gradient, không viền) khớp đúng hiệu ứng web thay vì khoanh tròn. */}
+          <Svg width={boxSize} height={boxSize} style={StyleSheet.absoluteFillObject}>
+            <Defs>
+              <RadialGradient id="noriGlow" cx="50%" cy="50%" r="50%">
+                <Stop offset="0%" stopColor={colors.background} stopOpacity={0.9} />
+                <Stop offset="100%" stopColor={colors.background} stopOpacity={0} />
+              </RadialGradient>
+            </Defs>
+            <Circle cx={boxSize / 2} cy={boxSize / 2} r={boxSize / 2} fill="url(#noriGlow)" />
+          </Svg>
+          <View style={{ margin: BACKDROP_PAD }}>
+            <NoriAvatar mood={mood} size={SIZE} />
+          </View>
         </Animated.View>
       )}
       <NoriPopover visible={open} onClose={() => setOpen(false)} vehicleId={vehicleId} vehicleName={vehicleName} />
