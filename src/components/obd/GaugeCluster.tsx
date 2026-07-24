@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useColors } from '../../utils/theme';
 import { useCockpitThemeStore } from '../../store/cockpitThemeStore';
@@ -10,10 +10,13 @@ import { OBD_METRICS, filterSupportedMetrics, readMetricValue, quantizeValue } f
 import { pickDashboardStyle, getSelectedDashboardStyleId, setSelectedDashboardStyleId, isStyleUsable, DASHBOARD_STYLES } from '../../constants/dashboardStyles';
 import { useCockpitLayout } from '../../hooks/useCockpitLayout';
 import { useAuthStore } from '../../store/authStore';
+import NotedriPip from '../../../modules/notedri-pip/src/NotedriPipModule';
 import DashboardStylePicker from './DashboardStylePicker';
+import CockpitClock from './CockpitClock';
+import CockpitWeather from './CockpitWeather';
 
 export default function GaugeCluster({
-  vehicleId, vehicleName, snapshot, fastSnapshot, capability, isConnected,
+  vehicleId, vehicleName, snapshot, fastSnapshot, capability, isConnected, onBack, onDisconnect,
 }: {
   vehicleId: number;
   vehicleName?: string;
@@ -24,11 +27,29 @@ export default function GaugeCluster({
   fastSnapshot?: FastSnapshot | null;
   capability: VehicleCapability | null;
   isConnected: boolean;
+  // Rà soát (góp ý user: chưa full màn hình trên đầu Android ô tô, header
+  // riêng của OBDDashboardScreen vẫn đứng TRÊN toolbar này thành 2 hàng chrome
+  // chồng nhau) - back/ngắt kết nối chuyển thành props, gộp vào ĐÚNG 1 hàng
+  // toolbar sẵn có thay vì OBDDashboardScreen tự vẽ thêm 1 header riêng.
+  onBack: () => void;
+  onDisconnect: () => void;
 }) {
   const colors = useColors();
   const layout = useCockpitLayout();
   const cockpitMode = useCockpitThemeStore((s) => s.mode);
   const toggleCockpitMode = useCockpitThemeStore((s) => s.toggle);
+
+  // Nút PiP thủ công (rà soát 24/7: user báo PiP tự động vẫn chưa thấy hoạt
+  // động trên đầu Android ô tô cụ thể của họ) - không thể chẩn đoán từ xa liệu
+  // là lỗi code hay ROM/kiosk của đầu xe khoá multi-window ở tầng hệ điều
+  // hành. Thêm lối bấm thẳng để tự kiểm chứng ngay trên máy đó: bấm mà vẫn
+  // không thu nhỏ được thì kết luận được đây là giới hạn phần cứng/ROM, thu
+  // nhỏ được thì xác nhận lỗi nằm ở đường tự động (onUserLeaveHint/auto-enter).
+  const [pipSupported, setPipSupported] = useState(false);
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    NotedriPip.isPipSupported().then(setPipSupported).catch(() => {});
+  }, []);
 
   // Style chọn lưu ở AsyncStorage THEO TỪNG XE - đọc lại mỗi khi vehicleId đổi;
   // đổi style trong DashboardStylePicker cập nhật cả state lẫn storage của xe này.
@@ -66,18 +87,38 @@ export default function GaugeCluster({
           Không còn overlap với BẤT KỲ style nào (kể cả Lưới thẻ số lấp đủ 4
           góc), đổi lại tốn 1 dải cao cố định nhỏ phía trên. */}
       <View style={styles.toolbar}>
-        {/* Thương hiệu NoteDri (góp ý user: cần nổi bật hơn ở màn OBD2 Live để
-            khẳng định thương hiệu) - đặt cùng hàng toolbar, không chiếm thêm
-            khoảng trống dọc vốn đã eo hẹp trên đầu Android ô tô. */}
+        {/* Back + thương hiệu NoteDri bên trái - back trước đây nằm ở header
+            riêng của OBDDashboardScreen (nay đã ẩn ở chế độ Đồng hồ), gộp vào
+            đây để chỉ còn ĐÚNG 1 hàng chrome full màn hình. */}
         <View style={styles.brandRow}>
+          <TouchableOpacity onPress={onBack} style={styles.iconBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <FontAwesome5 name="arrow-left" size={16} color={colors.text} />
+          </TouchableOpacity>
           <FontAwesome5 name="tachometer-alt" size={15} color={style.previewColor} solid />
           <Text style={[styles.brandText, { color: colors.text }]}>NoteDri</Text>
         </View>
+
+        {/* Giờ + thời tiết (góp ý user: màn Đồng hồ ẩn StatusBar hệ thống nên
+            mất luôn đồng hồ giờ của máy) - đặt 1 LẦN ở toolbar dùng chung,
+            tự động có mặt ở cả 8 style vì toolbar nằm ngoài <Layout/>. */}
+        <View style={styles.toolbarCenter}>
+          <CockpitClock color={colors.text} />
+          <CockpitWeather color={colors.text} />
+        </View>
+
         {/* Rà soát 24/7 (góp ý user: theme OBD2 Live nên tối mặc định + tự bấm
             chuyển sáng, KHÔNG phụ thuộc theme sáng/tối chung của app) - toggle
             riêng, đổi useCockpitThemeStore (xem cockpitPalettes.ts), không đụng
             useThemeStore của phần còn lại app. */}
         <View style={styles.toolbarBtns}>
+          {pipSupported && (
+            <TouchableOpacity
+              onPress={() => NotedriPip.enterPipMode().catch(() => {})}
+              style={[styles.styleBtn, { backgroundColor: colors.card }]}
+            >
+              <FontAwesome5 name="compress" size={16} color={style.previewColor} solid />
+            </TouchableOpacity>
+          )}
           <TouchableOpacity
             onPress={toggleCockpitMode}
             style={[styles.styleBtn, { backgroundColor: colors.card }]}
@@ -89,6 +130,9 @@ export default function GaugeCluster({
             style={[styles.styleBtn, { backgroundColor: colors.card }]}
           >
             <FontAwesome5 name="palette" size={16} color={style.previewColor} solid />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={onDisconnect} style={[styles.styleBtn, { backgroundColor: colors.card }]}>
+            <FontAwesome5 name="times" size={16} color="#EF4444" solid />
           </TouchableOpacity>
         </View>
       </View>
@@ -132,8 +176,10 @@ export default function GaugeCluster({
 const styles = StyleSheet.create({
   root: { flexGrow: 1, padding: 8 },
   toolbar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingTop: 4, gap: 8 },
+  iconBtn: { padding: 2 },
   brandRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   brandText: { fontSize: 14, fontWeight: '800', letterSpacing: 0.3 },
+  toolbarCenter: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   toolbarBtns: { flexDirection: 'row', gap: 8 },
   styleBtn: {
     width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center',

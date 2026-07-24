@@ -3,13 +3,15 @@ import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, StyleSheet
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import { obdApi } from '../../api/obd';
 import { evaluateSession } from '../../services/obd/sessionReport';
 import { findingCostLabel } from '../../services/obd/findingCost';
 import { refreshRulesFromServer } from '../../services/obd/diagnosticRulesStore';
 import { groupSessionsByDay, TrendMetric } from '../../services/obd/sessionTrend';
+import { obdLiveMonitor } from '../../services/obd/obdLiveMonitor';
+import { flushPendingObdSessions } from '../../services/obd/ObdSessionSyncQueue';
 import ObdTrendChart from './ObdTrendChart';
 import AppBgPattern from '../../components/AppBgPattern';
 import { useColors } from '../../utils/theme';
@@ -104,6 +106,7 @@ export default function ObdReportScreen() {
 
   const t = useT();
   const colors = useColors();
+  const queryClient = useQueryClient();
   const [tab, setTab] = useState<'latest' | 'trend'>('latest');
 
   const { data, isLoading } = useQuery({
@@ -111,6 +114,22 @@ export default function ObdReportScreen() {
     queryFn: () => obdApi.recentSessions(vehicleId).then((r) => r.data),
     enabled: !!vehicleId,
   });
+
+  // Rà soát 24/7 (user báo cáo: tốc độ tối đa/nhiệt độ nước hiện phiên cũ hơn
+  // phiên lái thật vừa xong) - checkpoint mồ côi (app bị kill/rút cáp đột ngột
+  // giữa phiên, không qua disconnect listener bình thường) trước đây chỉ được
+  // đẩy lên server ở lần connect() KẾ TIẾP. Đẩy sớm ngay khi mở màn Báo cáo,
+  // rồi refetch - "phiên gần nhất" hiện đúng phiên vừa lái thay vì phiên cũ
+  // hơn đã đồng bộ trước đó. Không có tác dụng phụ khi không có gì để đẩy
+  // (recoverPendingCheckpoint no-op nếu không có checkpoint mồ côi/đang có
+  // phiên sống, flush no-op nếu hàng đợi rỗng).
+  useEffect(() => {
+    (async () => {
+      await obdLiveMonitor.recoverPendingCheckpoint().catch(() => {});
+      const { synced } = await flushPendingObdSessions().catch(() => ({ synced: 0 }));
+      if (synced > 0) queryClient.invalidateQueries({ queryKey: ['obd', 'sessions-recent', vehicleId] });
+    })();
+  }, [vehicleId]);
 
   // E2: tải riêng khi mở tab Xu hướng (30 ngày phiên - nặng hơn recent 10 phiên)
   const { data: historyData, isLoading: historyLoading } = useQuery({
@@ -261,7 +280,18 @@ export default function ObdReportScreen() {
 
           <View style={styles.vitalsGrid}>
             <View style={styles.vitalsRow}>
-              <Vital label={t('obd.report_coolant')} value={`${latest.summary.coolant_min ?? '-'}-${latest.summary.coolant_max ?? '-'}`} unit="°C" icon="thermometer-half" />
+              <Vital
+                label={t('obd.report_coolant')}
+                value={
+                  latest.summary.coolant_min != null && latest.summary.coolant_max != null
+                    ? latest.summary.coolant_min === latest.summary.coolant_max
+                      ? `${latest.summary.coolant_min}`
+                      : `${latest.summary.coolant_min}-${latest.summary.coolant_max}`
+                    : `${latest.summary.coolant_min ?? latest.summary.coolant_max ?? '-'}`
+                }
+                unit="°C"
+                icon="thermometer-half"
+              />
               <Vital label={t('obd.report_voltage')} value={`${latest.summary.voltage_avg ?? '-'}`} unit="V" icon="bolt" />
             </View>
             <View style={styles.vitalsRow}>

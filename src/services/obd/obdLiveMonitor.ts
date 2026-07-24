@@ -579,6 +579,22 @@ export const obdLiveMonitor = {
     return obdSessionStateMachine.getState();
   },
 
+  /** Rà soát 24/7 (user báo cáo "Phân tích dữ liệu OBD2" hiện phiên cũ/ngắn
+   * hơn phiên lái thật vừa xong): checkpoint mồ côi (app bị kill giữa phiên,
+   * rút cáp/tắt Bluetooth đột ngột không qua disconnect listener bình thường)
+   * trước đây CHỈ được đẩy lên server ở lần connect() KẾ TIẾP
+   * (recoverOrphanedCheckpoint() trong start()) - nếu user mở màn Báo cáo mà
+   * chưa cắm lại OBD, dữ liệu phiên lái nhanh vừa rồi vẫn kẹt trong
+   * AsyncStorage cục bộ, màn Báo cáo chỉ thấy được phiên cũ hơn đã đồng bộ
+   * trước đó. Gọi được sớm hơn từ màn Báo cáo qua hàm này. Chỉ an toàn khi
+   * KHÔNG có phiên nào đang chạy - nếu đang chạy, checkpoint hiện tại là của
+   * chính phiên sống (ghi mỗi 60s), CHƯA mồ côi, đừng đẩy nó lên như 1 phiên
+   * đã kết thúc (sẽ tách 1 chuyến lái thành 2 bản ghi sai). */
+  async recoverPendingCheckpoint(): Promise<void> {
+    if (running) return;
+    await recoverOrphanedCheckpoint();
+  },
+
   /** Bắt đầu theo phiên kết nối - gọi sau khi connect thành công. */
   start(vehicleId: number): void {
     if (running) {

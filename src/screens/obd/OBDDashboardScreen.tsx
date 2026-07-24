@@ -271,6 +271,13 @@ export default function OBDDashboardScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }, safeInsets]}>
       <AppBgPattern />
+      {/* Rà soát 24/7 (ảnh thật trên đầu Android ô tô: header này vẫn đứng TRÊN
+          toolbar riêng của GaugeCluster thành 2 hàng chrome chồng nhau, chưa
+          full màn hình) - ẩn HẲN ở chế độ Đồng hồ, back/ngắt kết nối chuyển
+          xuống làm props của GaugeCluster, gộp vào đúng 1 hàng toolbar có sẵn
+          của nó. Vẫn giữ nguyên cho chế độ Lưới (màn danh sách chẩn đoán không
+          cần full màn hình, cần tiêu đề/tên thiết bị rõ ràng như trước). */}
+      {viewMode === 'grid' && (
       <View style={styles.header}>
         {/* Đi thẳng về Trang chủ (phản hồi 20/7): trước đây goBack() lần theo
             đúng stack lúc vào (Home → chi tiết xe → Setup → Dashboard qua
@@ -299,10 +306,11 @@ export default function OBDDashboardScreen() {
           </TouchableOpacity>
         </View>
       </View>
+      )}
 
       {/* Chế độ Đồng hồ: giữ màn hình sáng + ẩn status bar hệ thống, đúng tinh
-          thần "gắn cố định trên xe" - không ẩn header của app (vẫn cần lối
-          thoát/ngắt kết nối), chỉ ẩn thanh trạng thái Android/iOS. */}
+          thần "gắn cố định trên xe" - lối thoát/ngắt kết nối nay nằm trong
+          toolbar của chính GaugeCluster (xem onBack/onDisconnect ở trên). */}
       <StatusBar hidden={viewMode === 'gauge'} />
 
       {viewMode === 'gauge' && showSafetyAlerts && (
@@ -312,7 +320,16 @@ export default function OBDDashboardScreen() {
       )}
 
       {viewMode === 'gauge' ? (
-        <GaugeCluster vehicleId={vehicleId} vehicleName={vehicleName} snapshot={snap} fastSnapshot={fastSnapshot} capability={capability} isConnected={isConnected} />
+        <GaugeCluster
+          vehicleId={vehicleId}
+          vehicleName={vehicleName}
+          snapshot={snap}
+          fastSnapshot={fastSnapshot}
+          capability={capability}
+          isConnected={isConnected}
+          onBack={() => setViewMode('grid')}
+          onDisconnect={handleDisconnect}
+        />
       ) : (
       <ScrollView contentContainerStyle={[styles.body, contentWide]}>
         {/* Connection status */}
