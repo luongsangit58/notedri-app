@@ -35,10 +35,10 @@
     },
     "android": {
       "package": "com.notedri",
-      "versionCode": 35,
+      "versionCode": 36,
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
-        "backgroundColor": "#06070A",
+        "backgroundColor": "#030304",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png"
       },
