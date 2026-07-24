@@ -6,6 +6,7 @@ import { useVehicles } from '../../hooks/useVehicles';
 import { useSelectedVehicleStore } from '../../store/selectedVehicleStore';
 import { useNoriSummary } from '../../services/nori/noriSummary';
 import { useColors } from '../../utils/theme';
+import { NORI_MOOD_COLOR } from '../../services/nori/nori';
 import NoriAvatar from './NoriAvatar';
 import NoriPopover from './NoriPopover';
 
@@ -43,12 +44,20 @@ export default function NoriFloatingButton() {
 
   const [open, setOpen] = useState(false);
   // Rà soát 24/7: "docked" ĐỌC bên trong closure của PanResponder (tạo 1 LẦN
-  // DUY NHẤT qua useRef().current, xem panResponder bên dưới) - nếu để dạng
-  // useState, closure đó mãi mãi thấy giá trị docked của LẦN RENDER ĐẦU TIÊN
-  // (luôn false), setDocked(true) sau đó vô nghĩa với closure cũ. Dùng useRef
-  // thuần (không cần re-render khi đổi - không có UI nào vẽ theo docked cả,
-  // vị trí hiển thị đã do `pos` Animated đảm nhiệm).
+  // DUY NHẤT qua useRef().current, xem panResponder bên dưới) - nếu chỉ dùng
+  // useState, closure đó mãi mãi thấy giá trị docked của LẦN RENDER ĐẦU TIÊN.
+  // Giữ dockedRef cho LOGIC (đọc trong closure PanResponder), thêm dockUi
+  // (useState) chỉ để KÍCH HOẠT RE-RENDER đổi giao diện - 2 biến luôn set
+  // cùng lúc trong dockTo/undockTo.
+  //
+  // Rà soát tiếp (góp ý user 24/7): quầng sáng mờ dần (giống web) mờ hẳn ra
+  // TỚI RÌA theo đúng thiết kế - lúc đã gạt vào cạnh chỉ lộ ra ĐÚNG phần rìa
+  // gần như trong suốt đó, gần như vô hình, khó tìm lại để kéo ra. Khi
+  // dockUi.docked=true, đổi hẳn sang 1 "tay cầm" đặc màu mood, rõ ràng, dễ
+  // thấy để bấm/kéo lại - lúc hiện đầy đủ (không docked) mới dùng quầng sáng
+  // mờ giống web.
   const dockedRef = useRef(false);
+  const [dockUi, setDockUi] = useState<{ docked: boolean; side: 'left' | 'right' }>({ docked: false, side: 'right' });
   // Chỉ tính mood khi CÓ vehicleId để tránh gọi API thừa lúc chưa đăng nhập/chưa có xe.
   const { mood } = useNoriSummary(token && vehicleId ? vehicleId : undefined);
 
@@ -71,6 +80,7 @@ export default function NoriFloatingButton() {
     posValue.current = { x, y };
     Animated.spring(pos, { toValue: { x, y }, useNativeDriver: false, friction: 8 }).start();
     dockedRef.current = true;
+    setDockUi({ docked: true, side });
   };
 
   const undockTo = (side: 'left' | 'right', y: number) => {
@@ -79,6 +89,7 @@ export default function NoriFloatingButton() {
     posValue.current = { x, y };
     Animated.spring(pos, { toValue: { x, y }, useNativeDriver: false, friction: 8 }).start();
     dockedRef.current = false;
+    setDockUi({ docked: false, side });
   };
 
   const panResponder = useRef(
@@ -131,22 +142,46 @@ export default function NoriFloatingButton() {
             width: boxSize,
             height: boxSize,
           }}>
-          {/* Rà soát 24/7 (góp ý user: bên web Nori chỉ có 1 quầng sáng mờ dần
-              phía sau, app trước đó bọc icon trong 1 vòng tròn viền cứng + chấm
-              màu - không giống nhau) - đổi sang quầng sáng mờ dần (radial
-              gradient, không viền) khớp đúng hiệu ứng web thay vì khoanh tròn. */}
-          <Svg width={boxSize} height={boxSize} style={StyleSheet.absoluteFillObject}>
-            <Defs>
-              <RadialGradient id="noriGlow" cx="50%" cy="50%" r="50%">
-                <Stop offset="0%" stopColor={colors.background} stopOpacity={0.9} />
-                <Stop offset="100%" stopColor={colors.background} stopOpacity={0} />
-              </RadialGradient>
-            </Defs>
-            <Circle cx={boxSize / 2} cy={boxSize / 2} r={boxSize / 2} fill="url(#noriGlow)" />
-          </Svg>
-          <View style={{ margin: BACKDROP_PAD }}>
-            <NoriAvatar mood={mood} size={SIZE} />
-          </View>
+          {dockUi.docked ? (
+            // Đã gạt vào cạnh, chỉ lộ DOCK_PEEK - "tay cầm" đặc màu mood, rõ
+            // ràng để dễ tìm/bấm lại (quầng sáng mờ dần bên dưới không đủ rõ
+            // ở phần rìa gần như trong suốt này).
+            <View style={{ flex: 1, alignItems: dockUi.side === 'left' ? 'flex-end' : 'flex-start' }}>
+              <View
+                style={{
+                  width: DOCK_PEEK + 10,
+                  height: SIZE * 0.85,
+                  borderRadius: 14,
+                  backgroundColor: NORI_MOOD_COLOR[mood],
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  shadowColor: '#000',
+                  shadowOpacity: 0.25,
+                  shadowRadius: 4,
+                  elevation: 6,
+                }}>
+                <View style={{ width: 3, height: 22, borderRadius: 2, backgroundColor: '#fff8' }} />
+              </View>
+            </View>
+          ) : (
+            // Hiện đầy đủ - quầng sáng mờ dần (radial gradient, không viền)
+            // khớp đúng hiệu ứng web (rà soát 24/7, góp ý user: app trước đó
+            // bọc icon trong 1 vòng tròn viền cứng + chấm màu, không giống web).
+            <>
+              <Svg width={boxSize} height={boxSize} style={StyleSheet.absoluteFillObject}>
+                <Defs>
+                  <RadialGradient id="noriGlow" cx="50%" cy="50%" r="50%">
+                    <Stop offset="0%" stopColor={colors.background} stopOpacity={0.9} />
+                    <Stop offset="100%" stopColor={colors.background} stopOpacity={0} />
+                  </RadialGradient>
+                </Defs>
+                <Circle cx={boxSize / 2} cy={boxSize / 2} r={boxSize / 2} fill="url(#noriGlow)" />
+              </Svg>
+              <View style={{ margin: BACKDROP_PAD }}>
+                <NoriAvatar mood={mood} size={SIZE} />
+              </View>
+            </>
+          )}
         </Animated.View>
       )}
       <NoriPopover visible={open} onClose={() => setOpen(false)} vehicleId={vehicleId} vehicleName={vehicleName} />
