@@ -11,6 +11,8 @@
  * thường (chính là thứ jest fake timers "chuẩn" không thể tạo ra).
  */
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 const validSnapshot = {
   rpm: 800, speedKmh: 0, engineLoadPct: 20, coolantTempC: 84, fuelLevelPct: 50,
   oilTempC: 90, throttlePct: 15, controlModuleVoltage: 14.2, timestamp: 0,
@@ -28,6 +30,7 @@ jest.mock('../BleService', () => ({
     isConnected: () => true,
     getLinkQuality: () => 'good',
     getSessionAgeSeconds: () => 9,
+    getDeviceName: () => 'IOS-Vlink',
     addReconnectedListener: () => () => {},
     addDisconnectListener: () => () => {},
     logDiagnostic: () => {},
@@ -192,5 +195,67 @@ describe('obdLiveMonitor - xe không phản hồi (đuôi fixture #5: NO DATA li
     await jest.advanceTimersByTimeAsync(3000); // đã đủ ngưỡng nhưng handler đã unsubscribe
 
     expect(handler).not.toHaveBeenCalled();
+  });
+});
+
+describe('obdLiveMonitor - checkpoint phiên (rà soát 24/7: app bị kill giữa phiên không rút cáp đàng hoàng -> mất trắng, không dấu vết)', () => {
+  beforeEach(async () => {
+    mockAllNull = false;
+    jest.useFakeTimers();
+    await AsyncStorage.clear();
+  });
+
+  afterEach(async () => {
+    obdLiveMonitor.stop();
+    await jest.advanceTimersByTimeAsync(0);
+    jest.useRealTimers();
+    jest.restoreAllMocks();
+    await AsyncStorage.clear();
+  });
+
+  it('ghi checkpoint định kỳ (60s) trong lúc phiên đang sống', async () => {
+    obdLiveMonitor.start(1);
+    await jest.advanceTimersByTimeAsync(3000); // vài poll để có dữ liệu cho buildSessionSummary
+    await jest.advanceTimersByTimeAsync(60000); // đủ 1 chu kỳ checkpoint
+
+    const raw = await AsyncStorage.getItem('obd_session_checkpoint');
+    expect(raw).not.toBeNull();
+    expect(JSON.parse(raw as string).vehicleId).toBe(1);
+  });
+
+  it('kết thúc phiên bình thường (stop()) xoá sạch checkpoint - không đẩy trùng ở lần start() kế tiếp', async () => {
+    obdLiveMonitor.start(1);
+    await jest.advanceTimersByTimeAsync(3000);
+    await jest.advanceTimersByTimeAsync(60000);
+    expect(await AsyncStorage.getItem('obd_session_checkpoint')).not.toBeNull();
+
+    obdLiveMonitor.stop();
+    await jest.advanceTimersByTimeAsync(0);
+
+    expect(await AsyncStorage.getItem('obd_session_checkpoint')).toBeNull();
+  });
+
+  it('checkpoint còn sót từ lần app chạy TRƯỚC (app bị kill giữa phiên) được đẩy vào hàng đợi offline khi bắt đầu phiên mới, rồi tự dọn', async () => {
+    const orphaned = {
+      vehicleId: 42,
+      deviceName: 'IOS-Vlink',
+      startedAt: Date.now() - 120000,
+      summary: { samples: 10, coolant_max: 85 },
+    };
+    await AsyncStorage.setItem('obd_session_checkpoint', JSON.stringify(orphaned));
+
+    obdLiveMonitor.start(1);
+    await jest.advanceTimersByTimeAsync(0);
+    await jest.advanceTimersByTimeAsync(0);
+
+    // checkpoint cũ đã "tiêu thụ" - không còn sót lại để đẩy trùng lần sau
+    expect(await AsyncStorage.getItem('obd_session_checkpoint')).toBeNull();
+
+    // phiên mồ côi đó phải nằm trong hàng đợi offline (obd_pending_sessions) - cùng
+    // hàng đợi ObdSessionSyncQueue.ts dùng cho phiên kết thúc bình thường
+    const pendingRaw = await AsyncStorage.getItem('obd_pending_sessions');
+    expect(pendingRaw).not.toBeNull();
+    const pending = JSON.parse(pendingRaw as string);
+    expect(pending.some((p: any) => p.vehicle_id === 42)).toBe(true);
   });
 });

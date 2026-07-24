@@ -18,7 +18,19 @@ client.interceptors.request.use(async (config) => {
 });
 
 client.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Rà soát 24/7: hàng đợi phiên OBD offline (ObdSessionSyncQueue.ts) trước
+    // đây chỉ thử đẩy lại đúng 2 thời điểm (kết thúc phiên, lúc kết nối OBD kế
+    // tiếp) - mạng có lại giữa chừng (không có sự kiện OBD nào) không tự đẩy.
+    // Bất kỳ response 2xx nào ở ĐÂY cũng là bằng chứng mạng đang hoạt động NGAY
+    // LÚC NÀY - tranh thủ đẩy nốt, không cần thêm thư viện theo dõi kết nối
+    // mạng (netinfo) hay rebuild native. Dynamic import (không import tĩnh):
+    // client.ts <- ObdSessionSyncQueue.ts <- api/obd.ts -> client.ts sẽ vòng lặp.
+    import('../services/obd/ObdSessionSyncQueue')
+      .then(({ flushPendingObdSessions }) => flushPendingObdSessions())
+      .catch(() => {});
+    return response;
+  },
   async (error) => {
     // 401 -> tự đăng xuất. NHƯNG bỏ qua nếu CHÍNH request /auth/logout bị 401: nếu không,
     // logout() gọi authApi.logout() -> 401 -> interceptor lại gọi logout() -> đệ quy không thoát

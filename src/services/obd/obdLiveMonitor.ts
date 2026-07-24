@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { obdApi } from '../../api/obd';
 import { bleService } from './BleService';
 import { enqueueObdSession, flushPendingObdSessions } from './ObdSessionSyncQueue';
@@ -251,6 +252,66 @@ export function buildSessionSummary(): Record<string, unknown> | null {
       permanent: lastPermanentDtc,
     },
   };
+}
+
+// Rà soát 24/7: buildSessionSummary() chỉ được ghi vào hàng đợi offline lúc
+// NGẮT KẾT NỐI (bleService.addDisconnectListener bên dưới) - nếu app bị OS/
+// user kill giữa lúc đang kết nối (không rút cáp đàng hoàng), listener đó
+// không có cơ hội chạy -> mất trắng phiên, không dấu vết. Checkpoint định kỳ
+// (persistCheckpoint, đăng ký làm 1 task riêng của scheduler) ghi tạm tóm tắt
+// hiện tại xuống AsyncStorage; recoverOrphanedCheckpoint() ở đầu start() đọc
+// lại checkpoint còn sót từ lần chạy app TRƯỚC (nếu có) và coi như 1 phiên đã
+// hoàn tất, đẩy vào đúng hàng đợi offline hiện có - không cần API/schema mới.
+const CHECKPOINT_KEY = 'obd_session_checkpoint';
+
+type SessionCheckpoint = {
+  vehicleId: number;
+  deviceName: string | null;
+  startedAt: number;
+  summary: Record<string, unknown>;
+};
+
+// Chống race hiếm (cùng tinh thần clearEpoch ở syncQueue.ts): nếu ngắt kết nối
+// rơi ĐÚNG lúc 1 lần ghi checkpoint đang bay (await AsyncStorage.setItem chưa
+// xong) thì checkpoint có thể ghi lại SAU khi stop() đã xoá sạch - phiên đã
+// lưu đúng cách qua đường bình thường sẽ bị recoverOrphanedCheckpoint() đọc
+// lại và đẩy TRÙNG ở lần start() kế tiếp. Tăng epoch mỗi lần stop() để phát
+// hiện và huỷ ghi.
+let checkpointEpoch = 0;
+
+async function persistCheckpoint(): Promise<void> {
+  if (!activeVehicleId || !sessionStartedAtMs) return;
+  const epochAtStart = checkpointEpoch;
+  const summary = buildSessionSummary();
+  if (!summary) return;
+  const checkpoint: SessionCheckpoint = {
+    vehicleId: activeVehicleId,
+    deviceName: bleService.getDeviceName(),
+    startedAt: sessionStartedAtMs,
+    summary,
+  };
+  if (checkpointEpoch !== epochAtStart) return; // stop() đã chạy giữa chừng - đừng ghi đè checkpoint đã bị xoá
+  await AsyncStorage.setItem(CHECKPOINT_KEY, JSON.stringify(checkpoint)).catch(() => {});
+}
+
+async function recoverOrphanedCheckpoint(): Promise<void> {
+  try {
+    const raw = await AsyncStorage.getItem(CHECKPOINT_KEY);
+    if (!raw) return;
+    const checkpoint = JSON.parse(raw) as SessionCheckpoint;
+    const durationSeconds = Math.max(0, Math.round((Date.now() - checkpoint.startedAt) / 1000));
+    await enqueueObdSession({
+      vehicle_id: checkpoint.vehicleId,
+      device_name: checkpoint.deviceName,
+      connected_at: new Date(checkpoint.startedAt).toISOString(),
+      duration_seconds: durationSeconds,
+      summary: checkpoint.summary,
+    });
+  } catch {
+    // Checkpoint hỏng/parse lỗi - bỏ qua, không được để crash luồng start() bình thường.
+  } finally {
+    await AsyncStorage.removeItem(CHECKPOINT_KEY).catch(() => {});
+  }
 }
 
 const snapshotListeners = new Set<(s: ObdSnapshot) => void>();
@@ -537,6 +598,10 @@ export const obdLiveMonitor = {
     pollCount = 0;
     reportedCodes = new Set();
     resetSessionStats();
+    // Rà soát 24/7: đẩy nốt checkpoint còn sót từ lần chạy app TRƯỚC (app bị
+    // kill giữa phiên, không rút cáp đàng hoàng) TRƯỚC KHI bắt đầu phiên mới -
+    // xem persistCheckpoint()/recoverOrphanedCheckpoint() ở trên.
+    recoverOrphanedCheckpoint().catch(() => {});
     // Tải rule mới nhất đúng lúc sắp dùng - không chặn vòng poll đầu tiên
     refreshRulesFromServer().catch(() => {});
 
@@ -545,6 +610,9 @@ export const obdLiveMonitor = {
     obdPollingScheduler.register({ id: 'core-medium', tier: 'medium', intervalMs: POLL_INTERVAL_MS, run: poll });
     obdPollingScheduler.register({ id: 'core-fast', tier: 'fast', run: pollFastTier });
     obdPollingScheduler.register({ id: 'core-slow', tier: 'slow', run: pollSlowTier });
+    // Checkpoint mỗi 60s (không cần nhanh như slow tier fuel/oil-temp) - xem
+    // persistCheckpoint() ở trên.
+    obdPollingScheduler.register({ id: 'core-checkpoint', tier: 'slow', intervalMs: 60000, run: persistCheckpoint });
     obdPollingScheduler.start();
     running = true;
 
@@ -563,9 +631,17 @@ export const obdLiveMonitor = {
     obdPollingScheduler.unregister('core-medium');
     obdPollingScheduler.unregister('core-fast');
     obdPollingScheduler.unregister('core-slow');
+    obdPollingScheduler.unregister('core-checkpoint');
     running = false;
     activeVehicleId = null;
     stopObdKeepAlive().catch(() => {});
+    // Phiên vừa kết thúc qua đường bình thường (disconnect listener đã enqueue
+    // summary thật) - checkpoint tạm không còn cần nữa, tránh recoverOrphanedCheckpoint()
+    // đọc lại và đẩy trùng phiên này lần start() kế tiếp. Tăng epoch TRƯỚC khi
+    // xoá - persistCheckpoint() đang bay giữa chừng sẽ tự huỷ ghi thay vì ghi
+    // đè lại sau khi đã xoá (xem checkpointEpoch ở trên).
+    checkpointEpoch++;
+    AsyncStorage.removeItem(CHECKPOINT_KEY).catch(() => {});
   },
 
   onSnapshot(fn: (s: ObdSnapshot) => void): () => void {
