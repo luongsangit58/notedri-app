@@ -25,7 +25,6 @@ import { getMostRecentPairing, PairedDevice } from '../../services/obd/pairedDev
 import { useObdSessionStore } from '../../store/obdSessionStore';
 import { useSelectedVehicleStore } from '../../store/selectedVehicleStore';
 import client from '../../api/client';
-import NoriDailyCard from '../../components/nori/NoriDailyCard';
 
 function VehicleSelector({ vehicles, selectedId, onSelect }: {
   vehicles: any[]; selectedId?: number; onSelect: (id: number) => void;
@@ -334,11 +333,6 @@ export default function HomeScreen() {
 
         {vehicles.length > 0 && (
         <>
-        {/* Nori - báo cáo sức khỏe xe hôm nay */}
-        {vehicleId && (
-          <NoriDailyCard vehicleId={vehicleId} vehicleName={vehicleName} obdConnected={obdSession.connected} />
-        )}
-
         {/* Noi bat - viec gap nhat */}
         {topHighlight && (
           <TouchableOpacity

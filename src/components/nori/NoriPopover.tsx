@@ -12,14 +12,18 @@ interface NoriPopoverProps {
   onClose: () => void;
   vehicleId: number;
   vehicleName: string;
-  onHide?: () => void;
 }
 
 // Bong bóng Nori (rà soát 22/7, góp ý user: Nori bên web là icon nổi bấm ra
 // bong bóng, bên app trước đó chỉ có card/avatar tĩnh) - tóm tắt 3 tầng: hôm
 // nay / tuần này / xu hướng theo phiên OBD2, rồi trỏ sang 2 màn đã có sẵn đầy
 // đủ chi tiết (Health, ObdReport) thay vì lặp lại UI ở đây.
-export default function NoriPopover({ visible, onClose, vehicleId, vehicleName, onHide }: NoriPopoverProps) {
+//
+// Rà soát 24/7: KHÔNG có nút "ẩn" ở đây nữa - việc thu gọn Nori giờ làm bằng
+// cách kéo icon nổi vào sát cạnh màn hình (xem NoriFloatingButton.tsx), bấm
+// vào phần lộ ra để hiện lại - luôn có đường quay lại từ UI, khác bản cũ dùng
+// cờ AsyncStorage ẩn vĩnh viễn không có nút hiện lại.
+export default function NoriPopover({ visible, onClose, vehicleId, vehicleName }: NoriPopoverProps) {
   const colors = useColors();
   const t = useT();
   const navigation = useNavigation<any>();
@@ -69,14 +73,6 @@ export default function NoriPopover({ visible, onClose, vehicleId, vehicleName, 
               {t('nori.popover_title')}
             </Text>
             {isLoading && <ActivityIndicator size="small" color={colors.textSecondary} />}
-            {onHide && (
-              <TouchableOpacity
-                onPress={() => { onHide(); onClose(); }}
-                hitSlop={10}
-                style={{ marginRight: 8 }}>
-                <Text style={{ color: colors.textSecondary, fontSize: 13 }}>{t('nori.hide')}</Text>
-              </TouchableOpacity>
-            )}
             <TouchableOpacity onPress={onClose} hitSlop={10}>
               <FontAwesome5 name="times" size={16} color={colors.textSecondary} />
             </TouchableOpacity>

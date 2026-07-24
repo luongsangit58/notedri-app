@@ -1487,15 +1487,12 @@ const en = {
   "management.tab_reminders": "Reminders",
 
   // ==== Nori - vehicle health mascot ====
-  "nori.card_title": "Nori's report today",
   "nori.happy": "Your car's doing great, nothing unusual!",
   "nori.warn": "A few things worth checking, see details.",
   "nori.urgent": "Something needs attention soon, check now!",
   "nori.unknown": "Not enough data for Nori to assess today.",
   "nori.warn_detail": "Nori spotted: {{issue}} - see details.",
-  "nori.obd_live_note": "OBD2 connected - live monitoring",
   "nori.popover_title": "Nori",
-  "nori.hide": "Hide Nori",
   "nori.week_score": "Avg driving score this week: {{score}}",
   "nori.week_delta_up": "up {{delta}} from last week",
   "nori.week_delta_down": "down {{delta}} from last week",
