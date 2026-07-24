@@ -33,7 +33,7 @@ import type { VehiclePhoto } from '../../api/vehicles';
 // Chỉ hỗ trợ ô tô. Xe điện KHÔNG phải loại riêng (nhận biết qua nhiên liệu
 // "Điện"/spec is_ev). DB lưu vehicle_type = 'oto' (xe máy đã ngừng hỗ trợ tạo mới).
 type Brand  = { id: number; name: string; color?: string };
-type VModel = { id: number; brand_id: number; name: string; type: string };
+type VModel = { id: number; brand_id: number; name: string };
 type Spec   = { id: number; model_id: number; version?: string; year_from?: number; year_to?: number;
                  is_ev: boolean; is_hybrid?: boolean; tank?: number; comb?: number; battery?: number; range_km?: number };
 
@@ -200,14 +200,14 @@ export default function AddVehicleScreen() {
 
   // ── Derived cascade data ──────────────────────────────────────────────────
   const brandsForType = useMemo(() => {
-    const brandIds = new Set(allModels.filter(m => (m.type || 'oto') === 'oto').map(m => m.brand_id));
+    const brandIds = new Set(allModels.map(m => m.brand_id));
     const filtered = allBrands.filter(b => brandIds.has(b.id));
     return sortByPopularity(filtered, POPULAR_BRANDS_OTO);
   }, [allBrands, allModels]);
 
   const modelsForBrand = useMemo(() => {
     if (!selectedBrand) return [];
-    return allModels.filter(m => m.brand_id === selectedBrand.id && (m.type || 'oto') === 'oto');
+    return allModels.filter(m => m.brand_id === selectedBrand.id);
   }, [allModels, selectedBrand]);
 
   const specsForModel = useMemo(() => {
