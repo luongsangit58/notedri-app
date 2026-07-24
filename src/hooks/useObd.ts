@@ -7,6 +7,7 @@ import { getCachedCapability, discoverCapability, clearCapability, readCurrentVi
 import { obdLiveMonitor, FastSnapshot } from '../services/obd/obdLiveMonitor';
 import { obdSessionStateMachine } from '../services/obd/obdSessionStateMachine';
 import { flushPendingObdSessions } from '../services/obd/ObdSessionSyncQueue';
+import { autoArmIfReady } from '../services/gps/GpsTripTracker';
 import { Finding } from '../services/obd/diagnosticEngine';
 import { savePairing } from '../services/obd/pairedDevices';
 import { useAuthStore } from '../store/authStore';
@@ -263,6 +264,14 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
 
     // Live monitor sống theo phiên kết nối (thay trip manager)
     obdLiveMonitor.start(vehicleId);
+
+    // Cắm OBD2 = tín hiệu đáng tin "sắp/đang lái" (24/7): re-arm ngay task GPS
+    // nếu nó đã tự tắt do rảnh 20 phút hoặc chưa bật lần này, để không phải chờ
+    // tới lần mở app kế tiếp. Vẫn CHỈ tự bật khi quyền vị trí nền đã có sẵn -
+    // im lặng, không tự xin quyền hộ (giữ đúng nguyên tắc autoArmIfReady()).
+    // GPS vẫn là nguồn CHUYẾN ĐI duy nhất - đây không phải OBD-trigger, chỉ là
+    // thêm 1 thời điểm gọi lại hàm re-arm đã có sẵn.
+    autoArmIfReady(vehicleId).catch(() => {});
 
     // E2: đẩy nốt phiên còn tồn trong hàng đợi (rút cáp lúc offline lần trước).
     // Điểm nghiệp vụ chắc chắn có mạng-hoạt-động-lại gần nhất, mirror cách GPS

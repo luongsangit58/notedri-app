@@ -20,7 +20,7 @@ import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { useObdConnection } from '../../hooks/useObd';
 import { bleService, LinkQuality } from '../../services/obd/BleService';
 import { requestKeepAlivePermissions, startObdKeepAlive } from '../../services/obd/obdKeepAliveService';
-import { openBatterySettings } from '../../services/gps/GpsTripTracker';
+import { openBatterySettings, getReadiness, requestPermissionsAndStart } from '../../services/gps/GpsTripTracker';
 import AppBgPattern from '../../components/AppBgPattern';
 import { useColors } from '../../utils/theme';
 import { useT } from '../../i18n';
@@ -37,6 +37,16 @@ import NotedriPip from '../../../modules/notedri-pip/src/NotedriPipModule';
 // LẦN/xe, chỉ khi quyền CHƯA có (khỏi làm phiền nếu đã cấp qua GPS trip rồi).
 function keepAliveNudgeKey(vehicleId: number): string {
   return `obd_keepalive_nudge_shown_${vehicleId}`;
+}
+
+// Rà soát 24/7 (user báo: kết nối OBD2 rồi lái mà chuyến không được tự ghi):
+// OBDDashboardScreen trước đây không có bất kỳ cảnh báo nào về quyền vị trí
+// nền cho GPS trip - user cắm OBD2 và cứ nghĩ vậy là "đang ghi hành trình",
+// không biết ghi hành trình đi qua GPS (xem quyết định 14/7 trong useObd.ts)
+// và cần quyền riêng. Nhắc 1 LẦN/xe, chỉ khi thiếu quyền (giống pattern
+// keepAliveNudgeKey ở trên).
+function gpsTripNudgeKey(vehicleId: number): string {
+  return `obd_gps_trip_nudge_shown_${vehicleId}`;
 }
 
 export default function OBDDashboardScreen() {
@@ -208,6 +218,36 @@ export default function OBDDashboardScreen() {
     })();
     return () => { cancelled = true; };
   }, [isConnected, vehicleId]);
+
+  // Nhắc thiếu quyền GPS trip (24/7) - chạy SAU khi nhắc keep-alive đã settle
+  // (không chồng 2 Alert). Chỉ hiện khi vehicleId hợp lệ + còn thiếu quyền nền,
+  // dùng lại chính flow bật GPS trip (requestPermissionsAndStart) để user không
+  // phải tự tìm màn GpsTripsScreen.
+  useEffect(() => {
+    if (!isConnected || !vehicleId || !keepAliveNudgeSettled) return;
+    let cancelled = false;
+    (async () => {
+      const key = gpsTripNudgeKey(vehicleId);
+      const shown = await AsyncStorage.getItem(key);
+      if (shown || cancelled) return;
+      const readiness = await getReadiness();
+      if (readiness.foreground && readiness.background) return;
+      if (cancelled) return;
+      await AsyncStorage.setItem(key, '1');
+      Alert.alert(
+        t('obd.gps_trip_nudge_title'),
+        t('obd.gps_trip_nudge_body'),
+        [
+          { text: t('gps_trips.later'), style: 'cancel' },
+          {
+            text: t('obd.gps_trip_nudge_cta'),
+            onPress: () => { requestPermissionsAndStart(vehicleId).catch(() => {}); },
+          },
+        ],
+      );
+    })();
+    return () => { cancelled = true; };
+  }, [isConnected, vehicleId, keepAliveNudgeSettled]);
 
   // Đã bỏ nhắc ghép thẻ NFC tự động sau khi kết nối OBD (từng hiện Alert ở đây) -
   // tránh chồng dialog nhắc với các popup xin quyền khác ngay sau login/kết nối.
