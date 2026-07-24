@@ -7,6 +7,7 @@ import { usePremiumPalette } from '../../../../theme/cockpitPalettes';
 import { CockpitLayoutProps, CockpitMetricValue } from '../types';
 import { PRIMARY_METRIC_KEYS, FEATURED_SECONDARY_KEYS } from '../../../../constants/obdMetrics';
 import { useCountingNumber } from '../../../../hooks/useCountingNumber';
+import ArcGauge from '../primitives/ArcGauge';
 
 // Premium "HUD Đua xe" - bản sắc RIÊNG (carbon fiber + số vòng tua khổng lồ +
 // dải shift-light) không đổi theo NỘI DUNG (vẫn luôn "HUD đua xe"), nhưng góp
@@ -51,21 +52,20 @@ function MiniStat({ item, palette, textSize, valSize, animate }: {
   );
 }
 
-// Rà soát 24/7 (góp ý user: số quá nhỏ so với màn hình to trên đầu xe) -
-// layout này trước đó KHÔNG nhận `size` (gaugeSize), chữ khoá cứng bất kể
-// màn hình to bao nhiêu - chưa ăn theo lần nâng trần gaugeSize
-// (useCockpitLayout.ts). Nhận `size` và tỉ lệ theo nó như mọi layout khác.
+// Rà soát 24/7 (góp ý user: theme phải LÀ đồng hồ đo có kim/cung, không chỉ
+// hiện số như đồng hồ điện tử) - số vòng tua khổng lồ ở giữa đổi sang
+// ArcGauge (đúng primitive Analog/Retro đã dùng), giữ nguyên dải shift-light
+// bên dưới (không phải số, vẫn đúng chất HUD đua xe) + badge tốc độ góc trên
+// (số phụ nhỏ, cùng vai trò với sideStack số phụ của Analog/Retro).
 export default function RacingLayout({ metrics, size, isPortrait, animate }: CockpitLayoutProps) {
   const t = useT();
   const PALETTE = usePremiumPalette(DARK_PALETTE, LIGHT_PALETTE);
   const speedValSize = Math.max(22, Math.min(48, size * 0.16));
-  const rpmValSize = Math.max(56, Math.min(150, size * 0.55));
   const miniLabelSize = Math.max(9, Math.min(15, size * 0.05));
   const miniValSize = Math.max(14, Math.min(22, size * 0.075));
   const speed = metrics.find((m) => m.def.key === 'speedKmh');
   const rpm = metrics.find((m) => m.def.key === 'rpm');
   const speedDisplay = useCountingNumber(speed?.value ?? null, 0, animate);
-  const rpmDisplay = useCountingNumber(rpm?.value ?? null, 0, animate, rpm?.def.quantizeStep);
   const rpmFrac = rpm ? Math.max(0, Math.min(1, (rpm.value ?? 0) / rpm.def.max)) : 0;
   const litSegments = Math.round(rpmFrac * SHIFT_SEGMENTS);
   const secondary = metrics.filter((m) => !PRIMARY_METRIC_KEYS.includes(m.def.key));
@@ -107,14 +107,12 @@ export default function RacingLayout({ metrics, size, isPortrait, animate }: Coc
       </View>
 
       <View style={styles.center}>
-        <Text
-          style={[styles.rpmVal, { color: PALETTE.rpmColor, fontFamily: monoFontFamily, textShadowColor: PALETTE.rpmColor, fontSize: rpmValSize }]}
-          numberOfLines={1}
-          adjustsFontSizeToFit
-        >
-          {rpmDisplay != null ? Number(rpmDisplay).toLocaleString('vi-VN') : '-'}
-        </Text>
-        <Text style={[styles.rpmUnit, { color: PALETTE.textDim }]}>{t('obd.stat_rpm')}</Text>
+        <ArcGauge
+          value={rpm?.value ?? null} min={0} max={rpm?.def.max ?? 8000} size={size}
+          unit={t('obd.stat_rpm')} valueFontFamily={monoFontFamily} quantizeStep={rpm?.def.quantizeStep}
+          trackColor={PALETTE.stripeA} fillColor={PALETTE.rpmColor} needleColor={PALETTE.rpmColor} tickColor={PALETTE.textDim}
+          valueColor={PALETTE.rpmColor} labelColor={PALETTE.textDim} animate={animate}
+        />
 
         <View style={styles.shiftRow}>
           {Array.from({ length: SHIFT_SEGMENTS }, (_, i) => {
@@ -150,8 +148,6 @@ const styles = StyleSheet.create({
   speedVal: { fontSize: 22, fontWeight: '800' },
   speedUnit: { fontSize: 10, letterSpacing: 0.5, textTransform: 'uppercase', marginTop: -2 },
   center: { alignItems: 'center', gap: 6 },
-  rpmVal: { fontSize: 56, fontWeight: '800', letterSpacing: -1, textShadowOffset: { width: 0, height: 0 }, textShadowRadius: 18 },
-  rpmUnit: { fontSize: 11, letterSpacing: 1, textTransform: 'uppercase' },
   shiftRow: { flexDirection: 'row', gap: 4, marginTop: 8 },
   shiftSeg: { width: 20, height: 10, borderRadius: 3 },
   secondaryRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap', justifyContent: 'center' },
