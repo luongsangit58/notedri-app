@@ -1,4 +1,4 @@
-import { useThemeStore } from '../utils/theme';
+import { useCockpitThemeStore } from '../store/cockpitThemeStore';
 
 // Bảng màu "mặt kính đồng hồ" cho 2 style MIỄN PHÍ (Analog, Lưới thẻ số) -
 // theo đúng biến --d* trong bản thiết kế artifact, có bản sáng vì 2 style này
@@ -47,7 +47,7 @@ export const cockpitLight: CockpitPalette = {
 };
 
 export function useCockpitPalette(): CockpitPalette {
-  const mode = useThemeStore((s) => s.mode);
+  const mode = useCockpitThemeStore((s) => s.mode);
   return mode === 'light' ? cockpitLight : cockpitDark;
 }
 
@@ -58,6 +58,6 @@ export function useCockpitPalette(): CockpitPalette {
 // không có khái niệm "bản sáng", khác 5 style Premium còn lại vốn chỉ đang
 // thiếu bản kia (chưa từng có ý định cố định 1 hướng sáng/tối).
 export function usePremiumPalette<T>(dark: T, light: T): T {
-  const mode = useThemeStore((s) => s.mode);
+  const mode = useCockpitThemeStore((s) => s.mode);
   return mode === 'light' ? light : dark;
 }

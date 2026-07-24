@@ -7,17 +7,21 @@ import { CockpitLayoutProps, CockpitMetricValue } from '../types';
 import { FEATURED_SECONDARY_KEYS } from '../../../../constants/obdMetrics';
 import { useCountingNumber } from '../../../../hooks/useCountingNumber';
 
-function MiniStat({ item, animate }: { item: CockpitMetricValue; animate?: boolean }) {
+function MiniStat({ item, size, animate }: { item: CockpitMetricValue; size: number; animate?: boolean }) {
   const p = useCockpitPalette();
   const t = useT();
   const { def, value } = item;
   const display = useCountingNumber(value, 1, animate);
+  // Rà soát 24/7 (góp ý user: chữ quá nhỏ, khó đọc) - cỡ chữ tỉ lệ theo
+  // gaugeSize thay vì cố định 15/10, cùng nhịp phóng to với 2 đồng hồ chính.
+  const labelSize = Math.max(10, Math.min(18, size * 0.065));
+  const valSize = Math.max(15, Math.min(26, size * 0.11));
   return (
     <View style={[styles.mini, { backgroundColor: p.surface, borderColor: p.border }]}>
-      <Text style={[styles.miniLabel, { color: p.textDim }]} numberOfLines={1}>{t(def.labelKey)}</Text>
-      <Text style={[styles.miniVal, { color: p.text }]} numberOfLines={1}>
+      <Text style={[styles.miniLabel, { color: p.textDim, fontSize: labelSize }]} numberOfLines={1}>{t(def.labelKey)}</Text>
+      <Text style={[styles.miniVal, { color: p.text, fontSize: valSize }]} numberOfLines={1}>
         {display ?? '-'}
-        <Text style={{ fontSize: 10, fontWeight: '600', color: p.textDim }}> {def.unit}</Text>
+        <Text style={{ fontSize: labelSize, fontWeight: '600', color: p.textDim }}> {def.unit}</Text>
       </Text>
     </View>
   );
@@ -54,14 +58,14 @@ export default function AnalogLayout({ metrics, size, isPortrait, animate }: Coc
         />
         <ArcGauge
           value={rpm?.value ?? null} min={0} max={8000} size={size}
-          label={t('obd.stat_rpm')} unit="v/ph"
+          label={t('obd.stat_rpm')} unit="v/ph" quantizeStep={rpm?.def.quantizeStep}
           trackColor={p.surface2} fillColor={p.accent2} needleColor={p.text} tickColor={p.textDim}
           valueColor={p.text} labelColor={p.textDim} animate={animate}
         />
       </View>
       {featured.length > 0 && (
         <View style={styles.sideStack}>
-          {featured.map((item) => <MiniStat key={item.def.key} item={item} animate={animate} />)}
+          {featured.map((item) => <MiniStat key={item.def.key} item={item} size={size} animate={animate} />)}
         </View>
       )}
     </View>

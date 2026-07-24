@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, LayoutChangeEvent } from 'react-native';
 import Svg, { Defs, Pattern, Rect } from 'react-native-svg';
 import { monoFontFamily } from '../../../../theme/fonts';
 import { useT } from '../../../../i18n';
@@ -33,29 +33,39 @@ const LIGHT_PALETTE = {
 // vùng nguy hiểm nào cả.
 const SHIFT_SEGMENTS = 8;
 
-// Component RIÊNG cho từng ô - xem lý do trong CardsLayout.tsx (không gọi
+// Component RIÊNG cho từng ô - không gọi
 // hook trực tiếp trong .map vì số ô có thể đổi giữa các lần render).
-function MiniStat({ item, palette, animate }: { item: CockpitMetricValue; palette: typeof DARK_PALETTE; animate?: boolean }) {
+function MiniStat({ item, palette, textSize, valSize, animate }: {
+  item: CockpitMetricValue; palette: typeof DARK_PALETTE; textSize: number; valSize: number; animate?: boolean;
+}) {
   const t = useT();
   const { def, value } = item;
   const display = useCountingNumber(value, 1, animate);
   return (
     <View style={[styles.mini, { borderColor: palette.border, backgroundColor: palette.stripeA + 'AA' }]}>
-      <Text style={[styles.miniLabel, { color: palette.textDim }]} numberOfLines={1}>{t(def.labelKey)}</Text>
-      <Text style={[styles.miniVal, { color: palette.text, fontFamily: monoFontFamily }]} numberOfLines={1}>
+      <Text style={[styles.miniLabel, { color: palette.textDim, fontSize: textSize }]} numberOfLines={1}>{t(def.labelKey)}</Text>
+      <Text style={[styles.miniVal, { color: palette.text, fontFamily: monoFontFamily, fontSize: valSize }]} numberOfLines={1}>
         {display ?? '-'}{def.unit}
       </Text>
     </View>
   );
 }
 
-export default function RacingLayout({ metrics, isPortrait, animate }: CockpitLayoutProps) {
+// Rà soát 24/7 (góp ý user: số quá nhỏ so với màn hình to trên đầu xe) -
+// layout này trước đó KHÔNG nhận `size` (gaugeSize), chữ khoá cứng bất kể
+// màn hình to bao nhiêu - chưa ăn theo lần nâng trần gaugeSize
+// (useCockpitLayout.ts). Nhận `size` và tỉ lệ theo nó như mọi layout khác.
+export default function RacingLayout({ metrics, size, isPortrait, animate }: CockpitLayoutProps) {
   const t = useT();
   const PALETTE = usePremiumPalette(DARK_PALETTE, LIGHT_PALETTE);
+  const speedValSize = Math.max(22, Math.min(48, size * 0.16));
+  const rpmValSize = Math.max(56, Math.min(150, size * 0.55));
+  const miniLabelSize = Math.max(9, Math.min(15, size * 0.05));
+  const miniValSize = Math.max(14, Math.min(22, size * 0.075));
   const speed = metrics.find((m) => m.def.key === 'speedKmh');
   const rpm = metrics.find((m) => m.def.key === 'rpm');
   const speedDisplay = useCountingNumber(speed?.value ?? null, 0, animate);
-  const rpmDisplay = useCountingNumber(rpm?.value ?? null, 0, animate);
+  const rpmDisplay = useCountingNumber(rpm?.value ?? null, 0, animate, rpm?.def.quantizeStep);
   const rpmFrac = rpm ? Math.max(0, Math.min(1, (rpm.value ?? 0) / rpm.def.max)) : 0;
   const litSegments = Math.round(rpmFrac * SHIFT_SEGMENTS);
   const secondary = metrics.filter((m) => !PRIMARY_METRIC_KEYS.includes(m.def.key));
@@ -63,20 +73,34 @@ export default function RacingLayout({ metrics, isPortrait, animate }: CockpitLa
     .map((k) => secondary.find((s) => s.def.key === k))
     .filter((x): x is NonNullable<typeof x> => !!x);
 
+  // Rà soát 24/7 (góp ý user: nền carbon không phủ hết bề ngang, để lộ khoảng
+  // trống màu nền phía sau ở cạnh phải - ảnh chụp thật xác nhận) - Svg/Rect
+  // width="100%" height="100%" (chuỗi %) có thể không đồng bộ đúng theo kích
+  // thước thật của View cha trên Android tuỳ thời điểm đo layout. Đo kích
+  // thước THẬT bằng onLayout rồi truyền số px cụ thể vào Svg, khớp tuyệt đối
+  // với View cha - không còn phụ thuộc cách Yoga/react-native-svg diễn giải %.
+  const [bg, setBg] = useState({ w: 0, h: 0 });
+  const onRootLayout = (e: LayoutChangeEvent) => {
+    const { width, height } = e.nativeEvent.layout;
+    if (width !== bg.w || height !== bg.h) setBg({ w: width, h: height });
+  };
+
   return (
-    <View style={[styles.root, { backgroundColor: PALETTE.bg }, isPortrait && { paddingVertical: 20 }]}>
-      <Svg width="100%" height="100%" style={StyleSheet.absoluteFillObject}>
-        <Defs>
-          <Pattern id="carbon" width={14} height={14} patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-            <Rect width={14} height={14} fill={PALETTE.stripeA} />
-            <Rect width={7} height={14} fill={PALETTE.stripeB} />
-          </Pattern>
-        </Defs>
-        <Rect width="100%" height="100%" fill="url(#carbon)" />
-      </Svg>
+    <View style={[styles.root, { backgroundColor: PALETTE.bg }, isPortrait && { paddingVertical: 20 }]} onLayout={onRootLayout}>
+      {bg.w > 0 && bg.h > 0 && (
+        <Svg width={bg.w} height={bg.h} style={StyleSheet.absoluteFillObject}>
+          <Defs>
+            <Pattern id="carbon" width={14} height={14} patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+              <Rect width={14} height={14} fill={PALETTE.stripeA} />
+              <Rect width={7} height={14} fill={PALETTE.stripeB} />
+            </Pattern>
+          </Defs>
+          <Rect width={bg.w} height={bg.h} fill="url(#carbon)" />
+        </Svg>
+      )}
 
       <View style={styles.speedBadge}>
-        <Text style={[styles.speedVal, { color: PALETTE.speedColor, fontFamily: monoFontFamily }]}>
+        <Text style={[styles.speedVal, { color: PALETTE.speedColor, fontFamily: monoFontFamily, fontSize: speedValSize }]}>
           {speedDisplay ?? '-'}
         </Text>
         <Text style={[styles.speedUnit, { color: PALETTE.textDim }]}>km/h</Text>
@@ -84,7 +108,7 @@ export default function RacingLayout({ metrics, isPortrait, animate }: CockpitLa
 
       <View style={styles.center}>
         <Text
-          style={[styles.rpmVal, { color: PALETTE.rpmColor, fontFamily: monoFontFamily, textShadowColor: PALETTE.rpmColor }]}
+          style={[styles.rpmVal, { color: PALETTE.rpmColor, fontFamily: monoFontFamily, textShadowColor: PALETTE.rpmColor, fontSize: rpmValSize }]}
           numberOfLines={1}
           adjustsFontSizeToFit
         >
@@ -111,7 +135,7 @@ export default function RacingLayout({ metrics, isPortrait, animate }: CockpitLa
 
       {featured.length > 0 && (
         <View style={styles.secondaryRow}>
-          {featured.map((item) => <MiniStat key={item.def.key} item={item} palette={PALETTE} animate={animate} />)}
+          {featured.map((item) => <MiniStat key={item.def.key} item={item} palette={PALETTE} textSize={miniLabelSize} valSize={miniValSize} animate={animate} />)}
         </View>
       )}
     </View>

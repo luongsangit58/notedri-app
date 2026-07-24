@@ -3,21 +3,20 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { TranslationKey } from '../i18n/vi';
 import { CockpitLayoutProps } from '../components/obd/dashboard/types';
 import AnalogLayout from '../components/obd/dashboard/layouts/AnalogLayout';
-import CardsLayout from '../components/obd/dashboard/layouts/CardsLayout';
 import RacingLayout from '../components/obd/dashboard/layouts/RacingLayout';
 import MinimalLayout from '../components/obd/dashboard/layouts/MinimalLayout';
 import RetroLayout from '../components/obd/dashboard/layouts/RetroLayout';
 import NightLayout from '../components/obd/dashboard/layouts/NightLayout';
-import FamilyLayout from '../components/obd/dashboard/layouts/FamilyLayout';
 import FleetLayout from '../components/obd/dashboard/layouts/FleetLayout';
 
 // Registry style Dashboard OBD2 (thay `gaugeThemes.ts` - "3 theme" cũ thực ra
 // chỉ là 3 màu accent của cùng 1 mặt đồng hồ, không phải bố cục khác nhau).
-// 8 style này lấy đúng từ bản thiết kế artifact: 2 style Miễn phí theo theme
-// sáng/tối app, 6 style Premium mỗi cái có 1 bảng màu cố định làm bản sắc
-// riêng (xem comment trong từng file layout).
+// Rà soát 24/7 (góp ý user: "Lưới thẻ số"/"Gia đình" không có đồng hồ/kim,
+// không có điểm nhấn) - XOÁ HẲN 2 style này (không chỉ ẩn) để thay thế bằng
+// style mới sau này; user cũ đang chọn 1 trong 2 id đó tự rơi về Analog qua
+// pickDashboardStyle() (id không khớp entry nào -> fallback DASHBOARD_STYLES[0]).
 export type DashboardStyleId =
-  | 'analog' | 'cards' | 'racing' | 'minimal' | 'retro' | 'night' | 'family' | 'fleet';
+  | 'analog' | 'racing' | 'minimal' | 'retro' | 'night' | 'fleet';
 
 export interface DashboardStyleDef {
   id: DashboardStyleId;
@@ -40,12 +39,10 @@ export interface DashboardStyleDef {
 
 export const DASHBOARD_STYLES: DashboardStyleDef[] = [
   { id: 'analog', nameKey: 'obd.dashboard_style_analog_name', descKey: 'obd.dashboard_style_analog_desc', isPremiumOnly: false, previewColor: '#FF8A3D', Layout: AnalogLayout },
-  { id: 'cards', nameKey: 'obd.dashboard_style_cards_name', descKey: 'obd.dashboard_style_cards_desc', isPremiumOnly: false, previewColor: '#34D5C4', Layout: CardsLayout },
   { id: 'racing', nameKey: 'obd.dashboard_style_racing_name', descKey: 'obd.dashboard_style_racing_desc', isPremiumOnly: true, previewColor: '#FB4B4B', Layout: RacingLayout },
   { id: 'minimal', nameKey: 'obd.dashboard_style_minimal_name', descKey: 'obd.dashboard_style_minimal_desc', isPremiumOnly: true, previewColor: '#111111', Layout: MinimalLayout },
   { id: 'retro', nameKey: 'obd.dashboard_style_retro_name', descKey: 'obd.dashboard_style_retro_desc', isPremiumOnly: true, previewColor: '#B08D4F', Layout: RetroLayout },
   { id: 'night', nameKey: 'obd.dashboard_style_night_name', descKey: 'obd.dashboard_style_night_desc', isPremiumOnly: true, previewColor: '#FF3B30', Layout: NightLayout },
-  { id: 'family', nameKey: 'obd.dashboard_style_family_name', descKey: 'obd.dashboard_style_family_desc', isPremiumOnly: true, previewColor: '#1D4ED8', Layout: FamilyLayout },
   { id: 'fleet', nameKey: 'obd.dashboard_style_fleet_name', descKey: 'obd.dashboard_style_fleet_desc', isPremiumOnly: true, previewColor: '#9CA3AF', Layout: FleetLayout, hiddenFromPicker: true },
 ];
 

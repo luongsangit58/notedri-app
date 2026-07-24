@@ -15,27 +15,38 @@ import { useCountingNumber } from '../../../../hooks/useCountingNumber';
 const LIGHT_PALETTE = { bg: '#F4F4F2', text: '#111111', textDim: '#6B7280', track: '#11111116' };
 const DARK_PALETTE = { bg: '#111112', text: '#F4F4F2', textDim: '#9AA0AC', track: '#F4F4F216' };
 
-function MiniStat({ label, value, unit, palette, animate }: {
+function MiniStat({ label, value, unit, palette, textSize, valSize, animate }: {
   label: string;
   value: number | null;
   unit: string;
   palette: typeof LIGHT_PALETTE;
+  textSize: number;
+  valSize: number;
   animate?: boolean;
 }) {
   const display = useCountingNumber(value, 1, animate);
   return (
     <View style={styles.mini}>
-      <Text style={[styles.secondaryText, { color: palette.textDim }]} numberOfLines={1}>{label}</Text>
-      <Text style={[styles.miniVal, { color: palette.text }]} numberOfLines={1}>
+      <Text style={[styles.secondaryText, { color: palette.textDim, fontSize: textSize }]} numberOfLines={1}>{label}</Text>
+      <Text style={[styles.miniVal, { color: palette.text, fontSize: valSize }]} numberOfLines={1}>
         {display ?? '-'}{unit}
       </Text>
     </View>
   );
 }
 
-export default function MinimalLayout({ metrics, isPortrait, animate = true }: CockpitLayoutProps) {
+// Rà soát 24/7 (góp ý user: số "43" cô đơn giữa mảng đen mênh mông trên đầu
+// xe, ảnh chụp thật xác nhận) - layout này KHÔNG nhận `size` (gaugeSize) như
+// các layout có kim/cung khác, chữ khoá cứng 48px bất kể màn hình to bao
+// nhiêu -> chưa ăn theo lần nâng trần gaugeSize (useCockpitLayout.ts) trước
+// đó. Nhận `size` và tỉ lệ theo nó, giống mọi layout khác.
+export default function MinimalLayout({ metrics, size, isPortrait, animate = true }: CockpitLayoutProps) {
   const t = useT();
   const PALETTE = usePremiumPalette(DARK_PALETTE, LIGHT_PALETTE);
+  const speedValSize = Math.max(48, Math.min(140, size * 0.55));
+  const speedUnitSize = Math.max(15, Math.min(30, size * 0.1));
+  const secondaryTextSize = Math.max(11, Math.min(18, size * 0.06));
+  const miniValSize = Math.max(11, Math.min(20, size * 0.07));
   const speed = metrics.find((m) => m.def.key === 'speedKmh');
   const speedDisplay = useCountingNumber(speed?.value ?? null, 0, animate);
   const frac = speed ? Math.max(0, Math.min(1, (speed.value ?? 0) / speed.def.max)) : 0;
@@ -55,9 +66,9 @@ export default function MinimalLayout({ metrics, isPortrait, animate = true }: C
 
   return (
     <View style={[styles.root, { backgroundColor: PALETTE.bg }, isPortrait && { paddingVertical: 28 }]}>
-      <Text style={[styles.speedVal, { color: PALETTE.text }]} numberOfLines={1} adjustsFontSizeToFit>
+      <Text style={[styles.speedVal, { color: PALETTE.text, fontSize: speedValSize }]} numberOfLines={1} adjustsFontSizeToFit>
         {speedDisplay ?? '-'}
-        <Text style={[styles.speedUnit, { color: PALETTE.textDim }]}> km/h</Text>
+        <Text style={[styles.speedUnit, { color: PALETTE.textDim, fontSize: speedUnitSize }]}> km/h</Text>
       </Text>
 
       {/* Thanh tốc độ NGANG làm chủ đạo (thay vì số tròn cô lập như "Ban đêm") -
@@ -75,7 +86,7 @@ export default function MinimalLayout({ metrics, isPortrait, animate = true }: C
           {featured.map(({ def, value }, i) => (
             <React.Fragment key={def.key}>
               {i > 0 && <View style={[styles.dot, { backgroundColor: PALETTE.textDim }]} />}
-              <MiniStat label={t(def.labelKey)} value={value} unit={def.unit} palette={PALETTE} animate={animate} />
+              <MiniStat label={t(def.labelKey)} value={value} unit={def.unit} palette={PALETTE} textSize={secondaryTextSize} valSize={miniValSize} animate={animate} />
             </React.Fragment>
           ))}
         </View>

@@ -28,6 +28,9 @@ export interface ArcGaugeProps {
   labelColor?: string;
   valueFontFamily?: string;
   strokeWidth?: number;
+  // Bước làm tròn của số liệu (vd RPM=50) - truyền vào để số ĐẾM chỉ đi qua
+  // các mốc tròn bước khi đang chạy animation, xem useCountingNumber.
+  quantizeStep?: number;
   glow?: boolean;
   showNeedle?: boolean;
   showTicks?: boolean;
@@ -41,9 +44,13 @@ export interface ArcGaugeProps {
 export default function ArcGauge({
   value, min, max, size, label, unit,
   trackColor, fillColor, needleColor, tickColor, valueColor, labelColor, valueFontFamily,
-  strokeWidth = 9, glow = true, showNeedle = true, showTicks = true, showReadout = true,
+  strokeWidth, quantizeStep = 1, glow = true, showNeedle = true, showTicks = true, showReadout = true,
   showMinMax = true, animate = true,
 }: ArcGaugeProps) {
+  // Rà soát 24/7 (góp ý user: nét cung quá mảnh trên đồng hồ to ở đầu xe) -
+  // nét cung tỉ lệ theo size khi không truyền cứng, thay vì cố định 9px cho
+  // mọi kích thước (9px hợp lý ở gauge 190dp nhưng quá mảnh ở 340dp).
+  const resolvedStrokeWidth = strokeWidth ?? Math.max(9, Math.min(18, size * 0.06));
   const clamped = Math.max(min, Math.min(max, value ?? min));
   const frac = max > min ? (clamped - min) / (max - min) : 0;
 
@@ -62,20 +69,23 @@ export default function ArcGauge({
   const needleLength = size / 2 - size * 0.1;
   // Số liệu ĐẾM mượt theo cùng nhịp với kim/cung (góp ý user: bản đầu chỉ có
   // kim/cung chạy mượt, con số nhảy khựng ngay lập tức) - xem useCountingNumber.
-  const display = useCountingNumber(value, 0, animate);
-  const valueFontSize = Math.max(14, Math.min(32, size * 0.17));
-  const unitFontSize = Math.max(9, Math.min(12, size * 0.065));
-  const labelFontSize = Math.max(9, Math.min(12, size * 0.065));
-  const minMaxFontSize = Math.max(8, Math.min(11, size * 0.06));
+  const display = useCountingNumber(value, 0, animate, quantizeStep);
+  // Rà soát 24/7 (góp ý user: chữ/số quá nhỏ, khó đọc trên màn đầu xe) - trần
+  // cũ (32/12/12/11) được tính cho gaugeSize tối đa 190dp, giữ nguyên trần đó
+  // sẽ vô hiệu hoá việc gaugeSize giờ có thể lên tới 340dp (xem useCockpitLayout).
+  const valueFontSize = Math.max(14, Math.min(56, size * 0.17));
+  const unitFontSize = Math.max(9, Math.min(18, size * 0.065));
+  const labelFontSize = Math.max(9, Math.min(18, size * 0.065));
+  const minMaxFontSize = Math.max(8, Math.min(16, size * 0.06));
 
   return (
     <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
       <Svg width={size} height={size} viewBox="0 0 100 100" style={StyleSheet.absoluteFillObject}>
-        <Path d={ARC_D} stroke={trackColor} strokeWidth={strokeWidth} strokeLinecap="round" fill="none" />
+        <Path d={ARC_D} stroke={trackColor} strokeWidth={resolvedStrokeWidth} strokeLinecap="round" fill="none" />
         <AnimatedPath
           d={ARC_D}
           stroke={fillColor}
-          strokeWidth={strokeWidth}
+          strokeWidth={resolvedStrokeWidth}
           strokeLinecap="round"
           fill="none"
           strokeDasharray="100"

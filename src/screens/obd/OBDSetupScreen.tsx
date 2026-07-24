@@ -398,14 +398,14 @@ export default function OBDSetupScreen() {
                     onPress={() => handleConnectClassic(item)}
                     disabled={isConnecting}
                   >
-                    <FontAwesome5 name="car" size={16} color="#3B82F6" />
+                    <FontAwesome5 name="car" size={20} color="#3B82F6" />
                     <View style={{ flex: 1 }}>
                       <Text style={[styles.deviceName, { color: colors.text }]}>{item.name}</Text>
                       {item.bonded && (
-                        <Text style={{ fontSize: 11, color: colors.textSecondary }}>{t('obd.classic_bonded_tag')}</Text>
+                        <Text style={{ fontSize: 12, color: colors.textSecondary }}>{t('obd.classic_bonded_tag')}</Text>
                       )}
                     </View>
-                    <FontAwesome5 name="chevron-right" size={14} color={colors.textSecondary} />
+                    <FontAwesome5 name="chevron-right" size={16} color={colors.textSecondary} />
                   </TouchableOpacity>
                 ))}
               </View>
@@ -534,11 +534,11 @@ export default function OBDSetupScreen() {
                 onPress={() => handleConnect(item.id, item.name)}
                 disabled={isConnecting}
               >
-                <FontAwesome5 name="car" size={16} color="#3B82F6" />
+                <FontAwesome5 name="car" size={20} color="#3B82F6" />
                 <Text style={[styles.deviceName, { color: colors.text }]}>
                   {item.name}
                 </Text>
-                <FontAwesome5 name="chevron-right" size={14} color={colors.textSecondary} />
+                <FontAwesome5 name="chevron-right" size={16} color={colors.textSecondary} />
               </TouchableOpacity>
             ))}
           </View>
@@ -632,15 +632,21 @@ const styles = StyleSheet.create({
   },
   statusText: { fontSize: 15, fontWeight: '500', textAlign: 'center' },
   errorText: { color: '#EF4444', fontSize: 13, textAlign: 'center', marginTop: 4 },
+  // Rà soát 24/7 (góp ý user: nút chuyển sang OBD2 Live - tức hàng thiết bị
+  // bấm để kết nối - quá bé, khó bấm chính xác trên màn cảm ứng lớn đầu
+  // Android ô tô) - tăng padding/minHeight/cỡ chữ để thành mục tiêu bấm rõ
+  // ràng, dễ trúng hơn (chuẩn Material touch target tối thiểu 48dp, ở đây
+  // rộng rãi hơn hẳn vì màn hình xe nhìn xa hơn điện thoại).
   deviceRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    padding: 14,
-    borderRadius: 10,
-    marginBottom: 8,
+    gap: 14,
+    padding: 18,
+    minHeight: 64,
+    borderRadius: 12,
+    marginBottom: 10,
   },
-  deviceName: { flex: 1, fontSize: 15, fontWeight: '500' },
+  deviceName: { flex: 1, fontSize: 17, fontWeight: '600' },
   scanBtn: {
     flexDirection: 'row',
     alignItems: 'center',

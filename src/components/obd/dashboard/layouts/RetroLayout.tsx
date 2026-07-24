@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, LayoutChangeEvent } from 'react-native';
 import Svg, { Defs, RadialGradient, Stop, Rect } from 'react-native-svg';
 import ArcGauge from '../primitives/ArcGauge';
 import { serifFontFamily } from '../../../../theme/fonts';
@@ -22,7 +22,7 @@ const DARK_PALETTE = {
   text: '#EDE0C8', textDim: '#A6957A', track: '#3A2E1E',
 };
 
-// Component RIÊNG cho từng ô - xem lý do trong CardsLayout.tsx (không gọi
+// Component RIÊNG cho từng ô - không gọi
 // hook trực tiếp trong .map vì số ô có thể đổi giữa các lần render).
 function MiniStat({ item, palette, animate }: { item: CockpitMetricValue; palette: typeof LIGHT_PALETTE; animate?: boolean }) {
   const t = useT();
@@ -48,17 +48,30 @@ export default function RetroLayout({ metrics, size, isPortrait, animate }: Cock
     .map((k) => secondary.find((s) => s.def.key === k))
     .filter((x): x is NonNullable<typeof x> => !!x);
 
+  // Rà soát 24/7 (góp ý user: nền mặt số không phủ hết bề ngang thẻ, để lộ
+  // khoảng trống ở cạnh phải - ảnh chụp thật xác nhận) - xem comment tương tự
+  // trong RacingLayout.tsx: đo kích thước THẬT bằng onLayout, truyền số px cụ
+  // thể vào Svg thay vì chuỗi "100%" (không đáng tin cậy theo View cha trên
+  // Android tuỳ thời điểm đo layout).
+  const [bg, setBg] = useState({ w: 0, h: 0 });
+  const onRootLayout = (e: LayoutChangeEvent) => {
+    const { width, height } = e.nativeEvent.layout;
+    if (width !== bg.w || height !== bg.h) setBg({ w: width, h: height });
+  };
+
   return (
-    <View style={[styles.root, { borderColor: PALETTE.chrome }, isPortrait && { paddingVertical: 20 }]}>
-      <Svg width="100%" height="100%" style={StyleSheet.absoluteFillObject}>
-        <Defs>
-          <RadialGradient id="cream" cx="50%" cy="38%" r="75%">
-            <Stop offset="0%" stopColor={PALETTE.bg1} />
-            <Stop offset="100%" stopColor={PALETTE.bg2} />
-          </RadialGradient>
-        </Defs>
-        <Rect width="100%" height="100%" fill="url(#cream)" />
-      </Svg>
+    <View style={[styles.root, { borderColor: PALETTE.chrome }, isPortrait && { paddingVertical: 20 }]} onLayout={onRootLayout}>
+      {bg.w > 0 && bg.h > 0 && (
+        <Svg width={bg.w} height={bg.h} style={StyleSheet.absoluteFillObject}>
+          <Defs>
+            <RadialGradient id="cream" cx="50%" cy="38%" r="75%">
+              <Stop offset="0%" stopColor={PALETTE.bg1} />
+              <Stop offset="100%" stopColor={PALETTE.bg2} />
+            </RadialGradient>
+          </Defs>
+          <Rect width={bg.w} height={bg.h} fill="url(#cream)" />
+        </Svg>
+      )}
 
       <View style={[styles.gaugesRow, isPortrait && styles.gaugesCol]}>
         <ArcGauge
@@ -70,7 +83,7 @@ export default function RetroLayout({ metrics, size, isPortrait, animate }: Cock
         />
         <ArcGauge
           value={rpm?.value ?? null} min={0} max={8000} size={size}
-          label={t('obd.stat_rpm')} unit="v/ph"
+          label={t('obd.stat_rpm')} unit="v/ph" quantizeStep={rpm?.def.quantizeStep}
           trackColor={PALETTE.track} fillColor={PALETTE.chrome} needleColor={PALETTE.needle} tickColor={PALETTE.chrome}
           valueColor={PALETTE.text} labelColor={PALETTE.textDim} valueFontFamily={serifFontFamily}
           glow={false} animate={animate} strokeWidth={4}

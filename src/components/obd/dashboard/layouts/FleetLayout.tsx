@@ -17,7 +17,7 @@ import { useCountingNumber } from '../../../../hooks/useCountingNumber';
 const DARK_PALETTE = { bg1: '#1A1A1A', bg2: '#2B2B2B', surface: '#232323', border: '#3A3A3A', text: '#F5F5F5', textDim: '#9CA3AF', accent: '#9CA3AF' };
 const LIGHT_PALETTE = { bg1: '#F2F2F2', bg2: '#FFFFFF', surface: '#F7F7F7', border: '#DDDDDD', text: '#1A1A1A', textDim: '#6B7280', accent: '#4B5563' };
 
-// Component RIÊNG cho từng thẻ - xem lý do trong CardsLayout.tsx (không gọi
+// Component RIÊNG cho từng thẻ - không gọi
 // hook trực tiếp trong .map vì số lượng `metrics` có thể đổi giữa các lần render).
 function MetricCard({ item, ringSize, cols, palette, animate }: { item: CockpitMetricValue; ringSize: number; cols: number; palette: typeof DARK_PALETTE; animate?: boolean }) {
   const t = useT();

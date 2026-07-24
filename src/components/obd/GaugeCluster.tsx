@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useColors } from '../../utils/theme';
+import { useCockpitThemeStore } from '../../store/cockpitThemeStore';
 import { ObdSnapshot } from '../../services/obd/ObdReader';
 import { FastSnapshot } from '../../services/obd/obdLiveMonitor';
 import { VehicleCapability } from '../../services/obd/capabilityService';
@@ -26,6 +27,8 @@ export default function GaugeCluster({
 }) {
   const colors = useColors();
   const layout = useCockpitLayout();
+  const cockpitMode = useCockpitThemeStore((s) => s.mode);
+  const toggleCockpitMode = useCockpitThemeStore((s) => s.toggle);
 
   // Style chọn lưu ở AsyncStorage THEO TỪNG XE - đọc lại mỗi khi vehicleId đổi;
   // đổi style trong DashboardStylePicker cập nhật cả state lẫn storage của xe này.
@@ -63,12 +66,31 @@ export default function GaugeCluster({
           Không còn overlap với BẤT KỲ style nào (kể cả Lưới thẻ số lấp đủ 4
           góc), đổi lại tốn 1 dải cao cố định nhỏ phía trên. */}
       <View style={styles.toolbar}>
-        <TouchableOpacity
-          onPress={() => setPickerVisible(true)}
-          style={[styles.styleBtn, { backgroundColor: colors.card }]}
-        >
-          <FontAwesome5 name="palette" size={16} color={style.previewColor} solid />
-        </TouchableOpacity>
+        {/* Thương hiệu NoteDri (góp ý user: cần nổi bật hơn ở màn OBD2 Live để
+            khẳng định thương hiệu) - đặt cùng hàng toolbar, không chiếm thêm
+            khoảng trống dọc vốn đã eo hẹp trên đầu Android ô tô. */}
+        <View style={styles.brandRow}>
+          <FontAwesome5 name="tachometer-alt" size={15} color={style.previewColor} solid />
+          <Text style={[styles.brandText, { color: colors.text }]}>NoteDri</Text>
+        </View>
+        {/* Rà soát 24/7 (góp ý user: theme OBD2 Live nên tối mặc định + tự bấm
+            chuyển sáng, KHÔNG phụ thuộc theme sáng/tối chung của app) - toggle
+            riêng, đổi useCockpitThemeStore (xem cockpitPalettes.ts), không đụng
+            useThemeStore của phần còn lại app. */}
+        <View style={styles.toolbarBtns}>
+          <TouchableOpacity
+            onPress={toggleCockpitMode}
+            style={[styles.styleBtn, { backgroundColor: colors.card }]}
+          >
+            <FontAwesome5 name={cockpitMode === 'dark' ? 'sun' : 'moon'} size={16} color={style.previewColor} solid />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => setPickerVisible(true)}
+            style={[styles.styleBtn, { backgroundColor: colors.card }]}
+          >
+            <FontAwesome5 name="palette" size={16} color={style.previewColor} solid />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* ScrollView thay vì View cố định flex:1 - gaugeSize co theo màn hình
@@ -109,7 +131,10 @@ export default function GaugeCluster({
 
 const styles = StyleSheet.create({
   root: { flexGrow: 1, padding: 8 },
-  toolbar: { flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: 8, paddingTop: 4 },
+  toolbar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingTop: 4, gap: 8 },
+  brandRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  brandText: { fontSize: 14, fontWeight: '800', letterSpacing: 0.3 },
+  toolbarBtns: { flexDirection: 'row', gap: 8 },
   styleBtn: {
     width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center',
   },
