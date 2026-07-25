@@ -612,7 +612,6 @@ const vi = {
   "obd.keepalive_disclosure_body": "Để tiếp tục đọc dữ liệu OBD2 ngay cả khi bạn tắt màn hình hoặc chuyển sang ứng dụng khác lúc đang lái, NoteDri cần quyền truy cập vị trí \"Luôn cho phép\" (ở chế độ nền) - đây là cách Android cho phép ứng dụng chạy nền. Vị trí không được dùng cho mục đích nào khác ở đây. Sau bước này, hệ thống sẽ hỏi thêm 1 lần nữa để loại NoteDri khỏi tối ưu hoá pin - cũng để tránh gián đoạn khi khoá màn hình. Ở màn hình tiếp theo, hãy chọn \"Luôn cho phép\".",
   "obd.radio_picker_title": "Nghe radio",
   "obd.radio_off": "Tắt radio",
-  "obd.radio_error": "Không phát được đài này, thử đài khác",
   "home.obd_quick_setup": "Kết nối adapter OBD2 cho xe của bạn",
   "home.obd_quick_upsell": "Tính năng Premium - chẩn đoán lỗi xe qua Bluetooth",
   "vehicle_detail.vin_prefill_title": "Đã đọc được số khung xe (VIN) qua OBD",

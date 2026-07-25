@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, Modal, Pressable, StyleSheet, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, Modal, Pressable, StyleSheet } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useAudioPlayer, useAudioPlayerStatus, setAudioModeAsync } from 'expo-audio';
 import { RADIO_STATIONS } from '../../services/radio/radioStations';
@@ -30,6 +30,15 @@ export default function CockpitRadio({ accent }: { accent: string }) {
 
   useEffect(() => { ensureAudioMode(); }, []);
 
+  // Chọn đài trong danh sách phải PHÁT LUÔN (đúng kỳ vọng khi bấm vào 1 đài) -
+  // không gọi play() thẳng trong selectStation() vì `player` lúc đó vẫn là
+  // player CŨ (useAudioPlayer chỉ trỏ tới nguồn mới ở lần render kế tiếp) - đợi
+  // qua effect để chắc chắn player đã gắn đúng station.url mới rồi mới play().
+  useEffect(() => {
+    if (station) player.play();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [station?.url]);
+
   function selectStation(i: number) {
     setStationIndex(i);
     setPickerVisible(false);
@@ -43,12 +52,8 @@ export default function CockpitRadio({ accent }: { accent: string }) {
 
   function togglePlay() {
     if (!station) { setPickerVisible(true); return; }
-    try {
-      if (status.playing) player.pause();
-      else player.play();
-    } catch {
-      Alert.alert(t('obd.radio_error'));
-    }
+    if (status.playing) player.pause();
+    else player.play();
   }
 
   const isPlaying = !!station && status.playing;
