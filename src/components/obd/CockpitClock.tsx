@@ -13,6 +13,6 @@ export default function CockpitClock({ color }: { color: string }) {
     return () => clearInterval(timer);
   }, []);
   return (
-    <Text style={{ color, fontWeight: '700', fontSize: 13 }}>{now.format('HH:mm')}</Text>
+    <Text style={{ color, fontWeight: '800', fontSize: 18, letterSpacing: 0.3 }}>{now.format('HH:mm')}</Text>
   );
 }

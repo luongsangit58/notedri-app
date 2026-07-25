@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, Pressable, Animated } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
-import { useColors } from '../../utils/theme';
+import * as Location from 'expo-location';
 import { useCockpitThemeStore } from '../../store/cockpitThemeStore';
 import { ObdSnapshot } from '../../services/obd/ObdReader';
 import { FastSnapshot } from '../../services/obd/obdLiveMonitor';
@@ -10,10 +10,24 @@ import { OBD_METRICS, filterSupportedMetrics, readMetricValue, quantizeValue } f
 import { pickDashboardStyle, getSelectedDashboardStyleId, setSelectedDashboardStyleId, isStyleUsable, DASHBOARD_STYLES } from '../../constants/dashboardStyles';
 import { useCockpitLayout } from '../../hooks/useCockpitLayout';
 import { useAuthStore } from '../../store/authStore';
+import { requestKeepAlivePermissions, startObdKeepAlive } from '../../services/obd/obdKeepAliveService';
 import NotedriPip from '../../../modules/notedri-pip/src/NotedriPipModule';
 import DashboardStylePicker from './DashboardStylePicker';
 import CockpitClock from './CockpitClock';
 import CockpitWeather from './CockpitWeather';
+
+// Rà soát 24/7 (góp ý user, ảnh thật trên đầu Android ô tô): toolbar cũ ăn
+// nguyên 1 dải cao CỐ ĐỊNH phía trên (chưa full màn thật), nút bấm quá bé, và
+// dùng màu app chung (colors.card/colors.text) - LỆCH tone với màu riêng của
+// theme đang chọn (mỗi Premium có bảng màu riêng, xem cockpitPalettes.ts).
+// Đổi hẳn sang toolbar NỔI (position:absolute, không chiếm chỗ của khung đồng
+// hồ bên dưới - đồng hồ giờ LUÔN full màn thật), nền kính mờ đen trung tính
+// (đủ tương phản trên MỌI theme kể cả Minimal nền sáng) + icon/viền tô theo
+// `style.previewColor` của theme đang chọn cho cảm giác "ăn nhập". Giờ/thời
+// tiết ở giữa LUÔN hiện (mục đích ban đầu: liếc giờ không cần chạm màn) -
+// riêng back/brand/nút chức năng bên trái-phải ẩn mặc định, chạm màn hình để
+// hiện lại (tự ẩn sau 4s không thao tác) - đúng tinh thần "full hoàn toàn".
+const AUTO_HIDE_MS = 4000;
 
 export default function GaugeCluster({
   vehicleId, vehicleName, snapshot, fastSnapshot, capability, isConnected, onBack, onDisconnect,
@@ -34,7 +48,6 @@ export default function GaugeCluster({
   onBack: () => void;
   onDisconnect: () => void;
 }) {
-  const colors = useColors();
   const layout = useCockpitLayout();
   const cockpitMode = useCockpitThemeStore((s) => s.mode);
   const toggleCockpitMode = useCockpitThemeStore((s) => s.toggle);
@@ -51,6 +64,23 @@ export default function GaugeCluster({
     NotedriPip.isPipSupported().then(setPipSupported).catch(() => {});
   }, []);
 
+  // Rà soát 24/7 (user báo: bấm PiP thu nhỏ được nhưng bị đơ, số đứng yên 1
+  // mức) - PiP KHÔNG tự nó gây đơ, nguyên nhân là thiếu foreground service
+  // (obdKeepAliveService.ts): thiếu quyền vị trí nền -> Android đóng băng
+  // setInterval của vòng poll BLE ngay khi Activity không còn ở tiền cảnh
+  // (đúng cơ chế đã vá cho trường hợp khoá màn hình, PiP cũng là 1 dạng "rời
+  // tiền cảnh" y hệt). Trước khi thu nhỏ, đảm bảo keep-alive đang chạy - nếu
+  // chưa có quyền, xin ngay lúc này (đúng thời điểm user cần, thay vì đợi lần
+  // nhắc chung 1-lần/xe mà có thể họ đã bỏ qua trước đó).
+  async function handlePressPip() {
+    const perm = await Location.getBackgroundPermissionsAsync().catch(() => null);
+    if (perm?.status !== 'granted') {
+      const granted = await requestKeepAlivePermissions();
+      if (granted) await startObdKeepAlive().catch(() => {});
+    }
+    NotedriPip.enterPipMode().catch(() => {});
+  }
+
   // Style chọn lưu ở AsyncStorage THEO TỪNG XE - đọc lại mỗi khi vehicleId đổi;
   // đổi style trong DashboardStylePicker cập nhật cả state lẫn storage của xe này.
   const [styleId, setStyleId] = useState(DASHBOARD_STYLES[0].id as string);
@@ -65,6 +95,37 @@ export default function GaugeCluster({
   const style = isStyleUsable(selectedStyle, isPremium) ? selectedStyle : DASHBOARD_STYLES[0];
   const [pickerVisible, setPickerVisible] = useState(false);
 
+  // Ẩn/hiện toolbar chạm-màn-hình + tự ẩn sau AUTO_HIDE_MS - xem comment đầu file.
+  const [controlsVisible, setControlsVisible] = useState(true);
+  const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const controlsOpacity = useRef(new Animated.Value(1)).current;
+
+  const scheduleAutoHide = () => {
+    if (hideTimer.current) clearTimeout(hideTimer.current);
+    hideTimer.current = setTimeout(() => setControlsVisible(false), AUTO_HIDE_MS);
+  };
+
+  useEffect(() => {
+    scheduleAutoHide();
+    return () => { if (hideTimer.current) clearTimeout(hideTimer.current); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    Animated.timing(controlsOpacity, { toValue: controlsVisible ? 1 : 0, duration: 220, useNativeDriver: true }).start();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [controlsVisible]);
+
+  function handleTapScreen() {
+    if (controlsVisible) {
+      setControlsVisible(false);
+      if (hideTimer.current) clearTimeout(hideTimer.current);
+    } else {
+      setControlsVisible(true);
+      scheduleAutoHide();
+    }
+  }
+
   // Ưu tiên fastSnapshot (500ms, raw) cho tốc độ/vòng tua - rơi về snapshot
   // (3s) khi chưa có mẫu fast nào (vừa kết nối, hoặc không truyền prop này).
   const supported = filterSupportedMetrics(OBD_METRICS, capability?.supportedPids ?? null);
@@ -78,87 +139,82 @@ export default function GaugeCluster({
   });
 
   const Layout = style.Layout;
+  const accent = style.previewColor;
 
   return (
     <View style={{ flex: 1 }}>
-      {/* Rà soát (góp ý user: nút đổi style nổi đè lên góc trên-phải, có style
-          (Racing) đặt số liệu ngay góc đó nên bị nút che mất) - đưa nút ra 1
-          HÀNG TOOLBAR riêng phía trên thay vì đè (absolute) lên khung đồng hồ.
-          Không còn overlap với BẤT KỲ style nào (kể cả Lưới thẻ số lấp đủ 4
-          góc), đổi lại tốn 1 dải cao cố định nhỏ phía trên. */}
-      <View style={styles.toolbar}>
-        {/* Back + thương hiệu NoteDri bên trái - back trước đây nằm ở header
-            riêng của OBDDashboardScreen (nay đã ẩn ở chế độ Đồng hồ), gộp vào
-            đây để chỉ còn ĐÚNG 1 hàng chrome full màn hình. */}
-        <View style={styles.brandRow}>
-          <TouchableOpacity onPress={onBack} style={styles.iconBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <FontAwesome5 name="arrow-left" size={16} color={colors.text} />
+      <Pressable style={{ flex: 1 }} onPress={handleTapScreen}>
+        {/* ScrollView thay vì View cố định flex:1 - gaugeSize co theo màn hình
+            rồi nhưng vẫn cần cuộn dự phòng cho màn landscape rất thấp/nhiều PID
+            phụ cùng lúc, tránh cắt mất nội dung mà không có cách nào xem tiếp.
+            Rà soát: toolbar giờ NỔI (absolute) chứ không chiếm chỗ riêng -
+            ScrollView này chiếm ĐÚNG flex:1 toàn bộ container, full màn thật. */}
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={[styles.root, !isConnected && snapshot ? { opacity: 0.5 } : null]}
+        >
+          <Layout
+            metrics={metrics}
+            size={layout.gaugeSize}
+            heroSize={layout.heroGaugeSize}
+            ringSize={layout.ringSize}
+            isPortrait={layout.isPortrait}
+            animate
+          />
+        </ScrollView>
+      </Pressable>
+
+      {/* Giờ + thời tiết (góp ý user: màn Đồng hồ ẩn StatusBar hệ thống nên mất
+          luôn đồng hồ giờ của máy) - LUÔN hiện, không theo chạm-màn-hình như
+          nút chức năng (đúng mục đích ban đầu: liếc giờ không cần thao tác). */}
+      <View pointerEvents="none" style={styles.clockPill}>
+        <CockpitClock color="#FFFFFF" />
+        <CockpitWeather color="#FFFFFF" />
+      </View>
+
+      {/* Nút chức năng - ẩn mặc định (full màn thật), chạm màn hình để hiện,
+          tự ẩn lại sau 4s không thao tác. */}
+      <Animated.View
+        pointerEvents={controlsVisible ? 'box-none' : 'none'}
+        style={[styles.toolbar, { opacity: controlsOpacity }]}
+      >
+        <View style={[styles.chip, { backgroundColor: accent + '33', borderColor: accent + '77' }]}>
+          <TouchableOpacity onPress={onBack} style={styles.iconBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <FontAwesome5 name="arrow-left" size={19} color="#FFFFFF" />
           </TouchableOpacity>
-          <FontAwesome5 name="tachometer-alt" size={15} color={style.previewColor} solid />
-          <Text style={[styles.brandText, { color: colors.text }]}>NoteDri</Text>
+          <FontAwesome5 name="tachometer-alt" size={17} color={accent} solid />
+          <Text style={styles.brandText}>NoteDri</Text>
         </View>
 
-        {/* Giờ + thời tiết (góp ý user: màn Đồng hồ ẩn StatusBar hệ thống nên
-            mất luôn đồng hồ giờ của máy) - đặt 1 LẦN ở toolbar dùng chung,
-            tự động có mặt ở cả 8 style vì toolbar nằm ngoài <Layout/>. */}
-        <View style={styles.toolbarCenter}>
-          <CockpitClock color={colors.text} />
-          <CockpitWeather color={colors.text} />
-        </View>
-
-        {/* Rà soát 24/7 (góp ý user: theme OBD2 Live nên tối mặc định + tự bấm
-            chuyển sáng, KHÔNG phụ thuộc theme sáng/tối chung của app) - toggle
-            riêng, đổi useCockpitThemeStore (xem cockpitPalettes.ts), không đụng
-            useThemeStore của phần còn lại app. */}
         <View style={styles.toolbarBtns}>
           {pipSupported && (
             <TouchableOpacity
-              onPress={() => NotedriPip.enterPipMode().catch(() => {})}
-              style={[styles.styleBtn, { backgroundColor: colors.card }]}
+              onPress={handlePressPip}
+              style={[styles.styleBtn, { backgroundColor: accent + '33', borderColor: accent + '77' }]}
             >
-              <FontAwesome5 name="compress" size={16} color={style.previewColor} solid />
+              <FontAwesome5 name="compress" size={18} color={accent} solid />
             </TouchableOpacity>
           )}
           <TouchableOpacity
             onPress={toggleCockpitMode}
-            style={[styles.styleBtn, { backgroundColor: colors.card }]}
+            style={[styles.styleBtn, { backgroundColor: accent + '33', borderColor: accent + '77' }]}
           >
-            <FontAwesome5 name={cockpitMode === 'dark' ? 'sun' : 'moon'} size={16} color={style.previewColor} solid />
+            <FontAwesome5 name={cockpitMode === 'dark' ? 'sun' : 'moon'} size={18} color={accent} solid />
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => setPickerVisible(true)}
-            style={[styles.styleBtn, { backgroundColor: colors.card }]}
+            style={[styles.styleBtn, { backgroundColor: accent + '33', borderColor: accent + '77' }]}
           >
-            <FontAwesome5 name="palette" size={16} color={style.previewColor} solid />
+            <FontAwesome5 name="palette" size={18} color={accent} solid />
           </TouchableOpacity>
-          <TouchableOpacity onPress={onDisconnect} style={[styles.styleBtn, { backgroundColor: colors.card }]}>
-            <FontAwesome5 name="times" size={16} color="#EF4444" solid />
+          <TouchableOpacity
+            onPress={onDisconnect}
+            style={[styles.styleBtn, { backgroundColor: '#EF444433', borderColor: '#EF444477' }]}
+          >
+            <FontAwesome5 name="times" size={18} color="#EF4444" solid />
           </TouchableOpacity>
         </View>
-      </View>
-
-      {/* ScrollView thay vì View cố định flex:1 - gaugeSize co theo màn hình
-          rồi nhưng vẫn cần cuộn dự phòng cho màn landscape rất thấp/nhiều PID
-          phụ cùng lúc, tránh cắt mất nội dung mà không có cách nào xem tiếp.
-          Rà soát (góp ý user: đầu Android ô tô nằm ngang không full màn hình) -
-          trước đây contentContainerStyle CĂN GIỮA 1 "thẻ" nhỏ hơn màn hình,
-          để lộ nền app trống phía trên/dưới trên màn ngang rộng-thấp. Bỏ
-          alignItems/justifyContent center ở đây, để chính Layout (flex:1)
-          tự kéo giãn lấp ĐẦY vùng cuộn rồi mới tự căn giữa nội dung BÊN
-          TRONG nó - card giờ luôn phủ kín khung hình, không còn khoảng trống. */}
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={[styles.root, !isConnected && snapshot ? { opacity: 0.5 } : null]}
-      >
-        <Layout
-          metrics={metrics}
-          size={layout.gaugeSize}
-          heroSize={layout.heroGaugeSize}
-          ringSize={layout.ringSize}
-          isPortrait={layout.isPortrait}
-          animate
-        />
-      </ScrollView>
+      </Animated.View>
 
       <DashboardStylePicker
         visible={pickerVisible}
@@ -176,13 +232,23 @@ export default function GaugeCluster({
 
 const styles = StyleSheet.create({
   root: { flexGrow: 1, padding: 8 },
-  toolbar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 12, paddingTop: 4, gap: 8 },
+  clockPill: {
+    position: 'absolute', top: 8, alignSelf: 'center',
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: '#00000066', borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8,
+  },
+  toolbar: {
+    position: 'absolute', top: 8, left: 12, right: 12,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+  },
+  chip: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    borderRadius: 22, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 8,
+  },
   iconBtn: { padding: 2 },
-  brandRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  brandText: { fontSize: 14, fontWeight: '800', letterSpacing: 0.3 },
-  toolbarCenter: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  toolbarBtns: { flexDirection: 'row', gap: 8 },
+  brandText: { fontSize: 15, fontWeight: '800', letterSpacing: 0.3, color: '#FFFFFF' },
+  toolbarBtns: { flexDirection: 'row', gap: 10 },
   styleBtn: {
-    width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center',
+    width: 46, height: 46, borderRadius: 23, borderWidth: 1, alignItems: 'center', justifyContent: 'center',
   },
 });

@@ -36,9 +36,9 @@ export default function CockpitWeather({ color }: { color: string }) {
   const rawIcon = (data.condition?.icon ?? 'fa-sun').replace('fa-', '');
   const icon = FA5_ICON_MAP[rawIcon] ?? rawIcon;
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-      <FontAwesome5 name={icon} size={13} color={color} solid />
-      <Text style={{ color, fontWeight: '700', fontSize: 13 }}>{data.temp}°</Text>
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+      <FontAwesome5 name={icon} size={17} color={color} solid />
+      <Text style={{ color, fontWeight: '800', fontSize: 18 }}>{data.temp}°</Text>
     </View>
   );
 }

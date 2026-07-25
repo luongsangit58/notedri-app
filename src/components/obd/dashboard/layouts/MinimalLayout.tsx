@@ -55,7 +55,7 @@ export default function MinimalLayout({ metrics, size, heroSize, isPortrait, ani
         label={t('obd.stat_speed')} unit="km/h"
         trackColor={PALETTE.track} fillColor={PALETTE.text} needleColor={PALETTE.text} tickColor={PALETTE.textDim}
         valueColor={PALETTE.text} labelColor={PALETTE.textDim} animate={animate}
-        strokeWidth={Math.max(5, heroSize * 0.025)} glow={false} showTicks={false} showMinMax={false}
+        strokeWidth={Math.max(5, heroSize * 0.025)} glow={false} showTicks={false}
       />
 
       {featured.length > 0 && (
