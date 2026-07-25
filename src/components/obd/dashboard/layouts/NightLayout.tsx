@@ -3,7 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { monoFontFamily } from '../../../../theme/fonts';
 import { useT } from '../../../../i18n';
 import { CockpitLayoutProps } from '../types';
-import { FEATURED_SECONDARY_KEYS } from '../../../../constants/obdMetrics';
+import { pickFeaturedSecondary } from '../../../../constants/obdMetrics';
 import { useCountingNumber } from '../../../../hooks/useCountingNumber';
 import ArcGauge from '../primitives/ArcGauge';
 
@@ -45,9 +45,7 @@ export default function NightLayout({ metrics, size, heroSize, isPortrait, anima
   const t = useT();
   const speed = metrics.find((m) => m.def.key === 'speedKmh');
   const secondary = metrics.filter((m) => m.def.key !== 'speedKmh');
-  const featured = FEATURED_SECONDARY_KEYS
-    .map((k) => secondary.find((s) => s.def.key === k))
-    .filter((x): x is NonNullable<typeof x> => !!x);
+  const featured = pickFeaturedSecondary(secondary);
   const secondaryTextSize = Math.max(9, Math.min(16, size * 0.05));
   const miniValSize = Math.max(15, Math.min(24, size * 0.08));
 

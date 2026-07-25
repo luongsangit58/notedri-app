@@ -50,9 +50,31 @@ export const OBD_METRICS: ObdMetricDef[] = [
 // lại danh sách 2 key ở từng layout.
 export const PRIMARY_METRIC_KEYS: ObdMetricKey[] = ['speedKmh', 'rpm'];
 
-// 3 chỉ số ưu tiên hiển thị khi 1 style chỉ có chỗ cho ít số liệu phụ (Tối
-// giản EV, Gia đình, Ban đêm...) - đúng bộ 3 phổ biến nhất tài xế quan tâm.
-export const FEATURED_SECONDARY_KEYS: ObdMetricKey[] = ['coolantTempC', 'fuelLevelPct', 'controlModuleVoltage'];
+// Rà soát 24/7 (góp ý user: nhiên liệu là PID rất ít xe hỗ trợ, xe không có
+// PID này trước đây bị BỎ TRỐNG hẳn ô thứ 3 thay vì thay bằng chỉ số khác) -
+// đổi từ 1 bộ 3 CỐ ĐỊNH sang THỨ TỰ ƯU TIÊN đầy đủ, xếp theo mức hữu ích cho
+// tài xế VÀ mức phổ biến PID trên xe thật (2F nhiên liệu và 5C dầu máy là PID
+// mở rộng/hãng-riêng, nhiều xe không phát; 04/05/11/42 gần như xe OBD2 chuẩn
+// nào cũng có). pickFeaturedSecondary() chọn ĐỘNG đủ 3 chỉ số khả dụng theo
+// đúng thứ tự này - PID nào xe không hỗ trợ tự nhường chỗ cho PID kế tiếp.
+export const SECONDARY_PRIORITY_KEYS: ObdMetricKey[] = [
+  'coolantTempC',
+  'controlModuleVoltage',
+  'engineLoadPct',
+  'throttlePct',
+  'fuelLevelPct',
+  'oilTempC',
+];
+
+export function pickFeaturedSecondary(
+  secondary: { def: ObdMetricDef; value: number | null }[],
+  count = 3,
+): { def: ObdMetricDef; value: number | null }[] {
+  return SECONDARY_PRIORITY_KEYS
+    .map((k) => secondary.find((s) => s.def.key === k))
+    .filter((x): x is { def: ObdMetricDef; value: number | null } => !!x)
+    .slice(0, count);
+}
 
 export function filterSupportedMetrics(
   metrics: ObdMetricDef[],

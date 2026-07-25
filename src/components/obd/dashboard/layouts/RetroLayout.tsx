@@ -6,7 +6,7 @@ import { serifFontFamily } from '../../../../theme/fonts';
 import { useT } from '../../../../i18n';
 import { usePremiumPalette } from '../../../../theme/cockpitPalettes';
 import { CockpitLayoutProps, CockpitMetricValue } from '../types';
-import { PRIMARY_METRIC_KEYS, FEATURED_SECONDARY_KEYS } from '../../../../constants/obdMetrics';
+import { PRIMARY_METRIC_KEYS, pickFeaturedSecondary } from '../../../../constants/obdMetrics';
 import { useCountingNumber } from '../../../../hooks/useCountingNumber';
 
 // Premium "Cổ điển" - bản sắc RIÊNG (mặt kem/crôm, kim đỏ mảnh) gợi bảng đồng
@@ -44,9 +44,7 @@ export default function RetroLayout({ metrics, size, isPortrait, animate }: Cock
   const speed = metrics.find((m) => m.def.key === 'speedKmh');
   const rpm = metrics.find((m) => m.def.key === 'rpm');
   const secondary = metrics.filter((m) => !PRIMARY_METRIC_KEYS.includes(m.def.key));
-  const featured = FEATURED_SECONDARY_KEYS
-    .map((k) => secondary.find((s) => s.def.key === k))
-    .filter((x): x is NonNullable<typeof x> => !!x);
+  const featured = pickFeaturedSecondary(secondary);
 
   // Rà soát 24/7 (góp ý user: nền mặt số không phủ hết bề ngang thẻ, để lộ
   // khoảng trống ở cạnh phải - ảnh chụp thật xác nhận) - xem comment tương tự

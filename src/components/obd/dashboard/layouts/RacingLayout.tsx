@@ -5,7 +5,7 @@ import { monoFontFamily } from '../../../../theme/fonts';
 import { useT } from '../../../../i18n';
 import { usePremiumPalette } from '../../../../theme/cockpitPalettes';
 import { CockpitLayoutProps, CockpitMetricValue } from '../types';
-import { PRIMARY_METRIC_KEYS, FEATURED_SECONDARY_KEYS } from '../../../../constants/obdMetrics';
+import { PRIMARY_METRIC_KEYS, pickFeaturedSecondary } from '../../../../constants/obdMetrics';
 import { useCountingNumber } from '../../../../hooks/useCountingNumber';
 import ArcGauge from '../primitives/ArcGauge';
 
@@ -69,9 +69,7 @@ export default function RacingLayout({ metrics, size, heroSize, isPortrait, anim
   const rpmFrac = rpm ? Math.max(0, Math.min(1, (rpm.value ?? 0) / rpm.def.max)) : 0;
   const litSegments = Math.round(rpmFrac * SHIFT_SEGMENTS);
   const secondary = metrics.filter((m) => !PRIMARY_METRIC_KEYS.includes(m.def.key));
-  const featured = FEATURED_SECONDARY_KEYS
-    .map((k) => secondary.find((s) => s.def.key === k))
-    .filter((x): x is NonNullable<typeof x> => !!x);
+  const featured = pickFeaturedSecondary(secondary);
 
   // Rà soát 24/7 (góp ý user: nền carbon không phủ hết bề ngang, để lộ khoảng
   // trống màu nền phía sau ở cạnh phải - ảnh chụp thật xác nhận) - Svg/Rect

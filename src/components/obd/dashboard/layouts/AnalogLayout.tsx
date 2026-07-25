@@ -4,7 +4,7 @@ import ArcGauge from '../primitives/ArcGauge';
 import { useCockpitPalette } from '../../../../theme/cockpitPalettes';
 import { useT } from '../../../../i18n';
 import { CockpitLayoutProps, CockpitMetricValue } from '../types';
-import { FEATURED_SECONDARY_KEYS } from '../../../../constants/obdMetrics';
+import { pickFeaturedSecondary } from '../../../../constants/obdMetrics';
 import { useCountingNumber } from '../../../../hooks/useCountingNumber';
 
 function MiniStat({ item, size, animate }: { item: CockpitMetricValue; size: number; animate?: boolean }) {
@@ -32,7 +32,7 @@ function MiniStat({ item, size, animate }: { item: CockpitMetricValue; size: num
 // theme sáng/tối app (useCockpitPalette).
 //
 // Rà soát (góp ý user: quá nhiều thứ trên 1 màn hình, rối mắt) - CHỈ hiện 3
-// chỉ số phụ ưu tiên nhất (FEATURED_SECONDARY_KEYS), bỏ hàng phụ tràn thêm
+// chỉ số phụ ưu tiên nhất (pickFeaturedSecondary), bỏ hàng phụ tràn thêm
 // (trước đây nhồi thêm engineLoad/oilTemp/throttle bên dưới khiến có tới 8 số
 // liệu cùng lúc). Đúng tinh thần bản thiết kế gốc: Analog ưu tiên sự tập
 // trung vào 2 đồng hồ chính, ai cần xem đủ 8 chỉ số thì chuyển sang style
@@ -43,9 +43,7 @@ export default function AnalogLayout({ metrics, size, isPortrait, animate }: Coc
 
   const speed = metrics.find((m) => m.def.key === 'speedKmh') ?? null;
   const rpm = metrics.find((m) => m.def.key === 'rpm') ?? null;
-  const featured = FEATURED_SECONDARY_KEYS
-    .map((k) => metrics.find((s) => s.def.key === k))
-    .filter((x): x is CockpitMetricValue => !!x);
+  const featured = pickFeaturedSecondary(metrics);
 
   return (
     <View style={[styles.root, { backgroundColor: p.bg, borderColor: p.border }]}>
