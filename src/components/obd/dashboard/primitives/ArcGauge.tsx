@@ -11,22 +11,44 @@ const AnimatedPath = Animated.createAnimatedComponent(Path);
 // (+90deg), quét qua đỉnh (0deg) ở giữa thang.
 const ARC_D = 'M 10 50 A 40 40 0 0 1 90 50';
 
-// Rà soát 24/7 (góp ý user: đồng hồ hiện xấu, chỉ có 1 đường bo tròn dày, chưa
-// giống đồng hồ xe thật) - đổi từ 7 vạch trơn sang vạch CHÍNH (có số) + vạch
-// PHỤ mảnh xen giữa, đúng kiểu mặt đồng hồ tốc độ/vòng tua ô tô thật.
-const MAJOR_COUNT = 6;
 const MINOR_PER_GAP = 3;
-const MAJOR_ANGLES = Array.from({ length: MAJOR_COUNT }, (_, i) => -90 + (i / (MAJOR_COUNT - 1)) * 180);
-const ALL_TICKS: { deg: number; major: boolean }[] = [];
-for (let i = 0; i < MAJOR_COUNT - 1; i++) {
-  const a0 = MAJOR_ANGLES[i];
-  const a1 = MAJOR_ANGLES[i + 1];
-  ALL_TICKS.push({ deg: a0, major: true });
-  for (let j = 1; j <= MINOR_PER_GAP; j++) {
-    ALL_TICKS.push({ deg: a0 + (j / (MINOR_PER_GAP + 1)) * (a1 - a0), major: false });
-  }
+
+// Rà soát 24/7 (góp ý user: vạch chia ra số xấu kiểu "44/88/132/176" thay vì
+// số tròn như đồng hồ thật) - bản trước chỉ chia đều THEO SỐ LƯỢNG vạch (6
+// vạch, kể cả 2 đầu min/max), không quan tâm bước chia có "tròn" hay không.
+// Đổi sang thuật toán chọn bước "đẹp" (1-2-5 × 10ⁿ, cùng cách các phần mềm
+// biểu đồ/đồng hồ thật hay dùng) - hướng tới ~5 vạch chính, bước có thể không
+// vừa khít tới max (kim vẫn đi tới max, chỉ vạch cuối có thể dừng trước đó
+// 1 chút) - ĐÚNG kiểu đồng hồ tốc độ thật (vd tốc kế 220 thường có vạch tại
+// 0-50-100-150-200, không cần vạch đúng tại 220).
+function niceTickStep(range: number): number {
+  if (range <= 0) return 1;
+  const raw = range / 5;
+  const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const norm = raw / mag;
+  const nice = norm < 1.5 ? 1 : norm < 3 ? 2 : norm < 7 ? 5 : 10;
+  return nice * mag;
 }
-ALL_TICKS.push({ deg: MAJOR_ANGLES[MAJOR_COUNT - 1], major: true });
+
+function buildTicks(min: number, max: number): { deg: number; major: boolean; value?: number }[] {
+  const step = niceTickStep(max - min);
+  const majors: number[] = [];
+  for (let v = min; v <= max + step * 0.001; v += step) majors.push(Math.round(v));
+  const valueToDeg = (v: number) => -90 + ((v - min) / (max - min)) * 180;
+
+  const ticks: { deg: number; major: boolean; value?: number }[] = [];
+  for (let i = 0; i < majors.length; i++) {
+    ticks.push({ deg: valueToDeg(majors[i]), major: true, value: majors[i] });
+    if (i < majors.length - 1) {
+      const a0 = valueToDeg(majors[i]);
+      const a1 = valueToDeg(majors[i + 1]);
+      for (let j = 1; j <= MINOR_PER_GAP; j++) {
+        ticks.push({ deg: a0 + (j / (MINOR_PER_GAP + 1)) * (a1 - a0), major: false });
+      }
+    }
+  }
+  return ticks;
+}
 
 export interface ArcGaugeProps {
   value: number | null;
@@ -69,6 +91,7 @@ export default function ArcGauge({
   const resolvedStrokeWidth = strokeWidth ?? Math.max(3, Math.min(8, size * 0.026));
   const clamped = Math.max(min, Math.min(max, value ?? min));
   const frac = max > min ? (clamped - min) / (max - min) : 0;
+  const ticks = showTicks ? buildTicks(min, max) : [];
 
   const progress = useRef(new Animated.Value(frac)).current;
   useEffect(() => {
@@ -128,7 +151,7 @@ export default function ArcGauge({
         />
       </Svg>
 
-      {showTicks && ALL_TICKS.map(({ deg, major }, i) => (
+      {ticks.map(({ deg, major }, i) => (
         <View
           key={i}
           pointerEvents="none"
@@ -146,26 +169,23 @@ export default function ArcGauge({
         </View>
       ))}
 
-      {/* Số trị tại vạch chính (đầu 0/cuối = min/max, giữa chia đều) - đúng
-          kiểu đồng hồ đo ô tô thật thay vì chỉ ghi min/max ở 2 góc dưới. Chữ
-          số tự XOAY NGƯỢC lại (transform lồng nhau) để luôn đứng thẳng dù vị
-          trí đặt theo góc vạch. */}
-      {showTicks && MAJOR_ANGLES.map((deg, i) => {
-        const tickValue = Math.round(min + (i / (MAJOR_COUNT - 1)) * (max - min));
-        return (
-          <View
-            key={`lbl-${i}`}
-            pointerEvents="none"
-            style={{ position: 'absolute', width: size, height: size, alignItems: 'center', transform: [{ rotate: `${deg}deg` }] }}
-          >
-            <View style={{ marginTop: size * 0.14, transform: [{ rotate: `${-deg}deg` }] }}>
-              <Text allowFontScaling={false} style={{ color: tickColor ?? labelColor, fontSize: tickLabelSize, fontWeight: '700' }}>
-                {tickValue}
-              </Text>
-            </View>
+      {/* Số trị tại vạch chính - bước chia "đẹp" (xem niceTickStep/buildTicks
+          ở trên), đúng kiểu đồng hồ đo ô tô thật thay vì chỉ ghi min/max ở 2
+          góc dưới. Chữ số tự XOAY NGƯỢC lại (transform lồng nhau) để luôn
+          đứng thẳng dù vị trí đặt theo góc vạch. */}
+      {ticks.filter((t) => t.major).map(({ deg, value: tickValue }, i) => (
+        <View
+          key={`lbl-${i}`}
+          pointerEvents="none"
+          style={{ position: 'absolute', width: size, height: size, alignItems: 'center', transform: [{ rotate: `${deg}deg` }] }}
+        >
+          <View style={{ marginTop: size * 0.14, transform: [{ rotate: `${-deg}deg` }] }}>
+            <Text allowFontScaling={false} style={{ color: tickColor ?? labelColor, fontSize: tickLabelSize, fontWeight: '700' }}>
+              {tickValue}
+            </Text>
           </View>
-        );
-      })}
+        </View>
+      ))}
 
       {showNeedle && (
         <View
