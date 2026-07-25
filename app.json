@@ -113,7 +113,8 @@
           "modes": [
             "central"
           ],
-          "bluetoothAlwaysPermission": "NoteDri cần Bluetooth để kết nối với thiết bị OBD2 của xe bạn"
+          "bluetoothAlwaysPermission": "NoteDri cần Bluetooth để kết nối với thiết bị OBD2 của xe bạn",
+          "neverForLocation": true
         }
       ],
       [

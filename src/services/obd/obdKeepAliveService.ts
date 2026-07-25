@@ -1,7 +1,8 @@
-import { Platform, Alert } from 'react-native';
+import { Platform } from 'react-native';
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 import { useI18nStore } from '../../i18n';
+import { showBackgroundLocationDisclosure } from '../permissions/backgroundLocationDisclosure';
 
 // Trùng GPS_TASK_NAME (GpsTripTracker.ts) - KHÔNG import trực tiếp từ đó: module
 // này kéo theo expo-notifications/gpsTripsApi, chuỗi phụ thuộc nặng không cần
@@ -104,18 +105,10 @@ export async function requestKeepAlivePermissions(platformOS: string = Platform.
   const existing = await Location.getBackgroundPermissionsAsync().catch(() => null);
   if (existing?.status === 'granted') return true;
 
-  const t = useI18nStore.getState().t;
-  const proceed = await new Promise<boolean>((resolve) => {
-    Alert.alert(
-      t('obd.keepalive_disclosure_title'),
-      t('obd.keepalive_disclosure_body'),
-      [
-        { text: t('gps_trips.disclosure_cancel'), style: 'cancel', onPress: () => resolve(false) },
-        { text: t('gps_trips.disclosure_continue'), onPress: () => resolve(true) },
-      ],
-      { cancelable: false },
-    );
-  });
+  const proceed = await showBackgroundLocationDisclosure(
+    'obd.keepalive_disclosure_title',
+    'obd.keepalive_disclosure_body',
+  );
   if (!proceed) return false;
 
   // Android bắt buộc phải có quyền foreground TRƯỚC khi xin được quyền nền.

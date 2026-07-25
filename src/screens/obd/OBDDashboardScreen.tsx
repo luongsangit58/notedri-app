@@ -203,11 +203,16 @@ export default function OBDDashboardScreen() {
             text: t('obd.keepalive_nudge_cta'),
             onPress: async () => {
               const granted = await requestKeepAlivePermissions();
+              // User từ chối ở bước disclosure ("Không, cảm ơn") -> không mở
+              // thêm hộp thoại miễn trừ pin nữa (rà soát 25/7: trước đây gọi
+              // openBatterySettings() VÔ ĐIỀU KIỆN kể cả khi granted=false,
+              // ép user nhận thêm 1 hộp thoại hệ thống dù đã từ chối tính năng).
+              if (!granted) { settle(); return; }
               // Phiên OBD hiện tại đã start() TRƯỚC khi user cấp quyền ở đây -
               // keep-alive lúc đó đã bỏ qua (skipped_no_permission) và sẽ KHÔNG
               // tự thử lại. Gọi lại ngay để có tác dụng cho phiên đang chạy,
               // không phải đợi tới lần kết nối sau.
-              if (granted) await startObdKeepAlive().then((s) => bleService.logDiagnostic('#keepalive', s));
+              await startObdKeepAlive().then((s) => bleService.logDiagnostic('#keepalive', s));
               await openBatterySettings();
               settle();
             },

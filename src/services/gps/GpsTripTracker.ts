@@ -1,11 +1,12 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Alert, Platform } from 'react-native';
+import { Platform } from 'react-native';
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 import * as Notifications from 'expo-notifications';
 import { gpsTripsApi } from '../../api/gpsTrips';
 import { getDeviceId } from '../../utils/deviceId';
 import { useI18nStore } from '../../i18n';
+import { showBackgroundLocationDisclosure } from '../permissions/backgroundLocationDisclosure';
 
 export const GPS_TASK_NAME = 'GPS_TRIP_TRACKING';
 
@@ -486,23 +487,6 @@ async function autoShutdown(vehicleId: number | null): Promise<void> {
   } catch { /* notifications non-critical */ }
 }
 
-// Công bố nổi bật (prominent disclosure) bắt buộc theo chính sách Google Play: phải
-// giải thích lý do xin vị trí NỀN cho người dùng TRƯỚC khi hộp thoại hệ thống hiện ra.
-function showBackgroundLocationDisclosure(): Promise<boolean> {
-  return new Promise((resolve) => {
-    const t = useI18nStore.getState().t;
-    Alert.alert(
-      t('gps_trips.disclosure_title'),
-      t('gps_trips.disclosure_body'),
-      [
-        { text: t('gps_trips.disclosure_cancel'), style: 'cancel', onPress: () => resolve(false) },
-        { text: t('gps_trips.disclosure_continue'), onPress: () => resolve(true) },
-      ],
-      { cancelable: false },
-    );
-  });
-}
-
 export async function requestPermissionsAndStart(vehicleId: number): Promise<StartResult> {
   // 0) Kiểm tra lock: chỉ 1 thiết bị/xe cùng lúc.
   //    Nếu mạng lỗi -> offline-first: cho phép bật, tránh chặn oan.
@@ -543,7 +527,7 @@ export async function requestPermissionsAndStart(vehicleId: number): Promise<Sta
     const existing = await Location.getBackgroundPermissionsAsync().catch(() => null);
     if (existing?.status === 'granted') {
       backgroundGranted = true;
-    } else if (await showBackgroundLocationDisclosure()) {
+    } else if (await showBackgroundLocationDisclosure('gps_trips.disclosure_title', 'gps_trips.disclosure_body')) {
       const bg = await Location.requestBackgroundPermissionsAsync();
       backgroundGranted = bg.status === 'granted';
     }

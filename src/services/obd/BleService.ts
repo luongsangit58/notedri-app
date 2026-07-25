@@ -460,11 +460,16 @@ class BleService {
       // Bluetooth để bật vì quyền đó không áp dụng cho OS này). Trước 12,
       // BLUETOOTH/BLUETOOTH_ADMIN là quyền cài-đặt-thời (không cần xin runtime)
       // nên chỉ cần xin vị trí để quét BLE.
+      //
+      // Sửa 25/7 (rà soát permission): BLUETOOTH_SCAN đã khai báo cờ
+      // neverForLocation trong manifest (app.json plugin react-native-ble-plx) -
+      // app không suy ra vị trí thật từ kết quả quét, nên KHÔNG cần xin
+      // ACCESS_FINE_LOCATION nữa trên API 31+. Bớt hẳn 1 quyền nhạy cảm (và bớt
+      // luôn phụ thuộc vào công tắc "Vị trí" hệ thống - xem isLocationServicesEnabled).
       if (Platform.Version >= 31) {
         const result = await PermissionsAndroid.requestMultiple([
           PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
           PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
-          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
         ]);
         const granted = Object.values(result).every(
           (r) => r === PermissionsAndroid.RESULTS.GRANTED
@@ -475,6 +480,9 @@ class BleService {
         this.logSession('#permission', Object.entries(result).map(([k, v]) => `${k}=${v}`).join(','));
         return granted;
       }
+      // API <31: BLUETOOTH_SCAN/CONNECT chưa tồn tại, OS bắt buộc phải có vị trí
+      // để quét BLE (neverForLocation chỉ áp dụng từ API 31) - không có cách nào
+      // tránh xin quyền này trên bản Android cũ.
       const result = await PermissionsAndroid.request(
         PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
       );
@@ -485,16 +493,22 @@ class BleService {
   }
 
   /**
-   * Android: startDeviceScan() trả về DANH SÁCH RỖNG (không lỗi) nếu quyền vị
-   * trí đã cấp nhưng công tắc "Vị trí" (Location Services) toàn hệ thống đang
-   * TẮT - yêu cầu của OS khi app không khai báo neverForLocation cho
+   * Android <31: startDeviceScan() trả về DANH SÁCH RỖNG (không lỗi) nếu quyền
+   * vị trí đã cấp nhưng công tắc "Vị trí" (Location Services) toàn hệ thống
+   * đang TẮT - yêu cầu của OS khi app không khai báo neverForLocation cho
    * BLUETOOTH_SCAN. Đầu Android ô tô không có GPS rời thường tắt sẵn công tắc
    * này (báo cáo 20/7: quét mãi không thấy Vgate dù Bluetooth đã bật, quyền
    * đã cấp) - phải phát hiện TRƯỚC khi quét để báo đúng nguyên nhân, nếu không
    * user chỉ thấy "không tìm thấy thiết bị" chung chung và bó tay.
+   *
+   * Sửa 25/7: từ API 31, BLUETOOTH_SCAN đã khai neverForLocation (xem
+   * requestPermissions ở trên) nên OS KHÔNG còn ràng buộc công tắc Vị trí cho
+   * việc quét BLE nữa - luôn coi như "đã bật" trên các máy này, tránh báo lỗi
+   * oan (và tránh dẫn user đi bật 1 công tắc không còn liên quan gì tới BLE).
    */
   async isLocationServicesEnabled(): Promise<boolean> {
     if (Platform.OS !== 'android') return true;
+    if (Platform.Version >= 31) return true;
     const enabled = await Location.hasServicesEnabledAsync().catch(() => true);
     this.logSession('#location_services', String(enabled));
     return enabled;
