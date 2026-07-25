@@ -26,15 +26,18 @@ export function useCockpitLayout(preview = false): CockpitLayout {
   const shortSide = Math.min(width, height);
   const isPortrait = height >= width;
 
-  // Rà soát 24/7 (góp ý user: đồng hồ quá nhỏ, để trống mảng lớn trên màn hình
-  // đầu Android ô tô 10-13", chụp ảnh thật xác nhận) - trần 190/64dp cũ được
-  // tính cho màn điện thoại (shortSide ~380-430dp), đầu xe có shortSide lớn
-  // hơn nhiều (thường 600-900dp) nhưng vẫn bị chặn cứng ở mức trần đó, không
-  // bao giờ lớn thêm dù màn hình còn rất nhiều chỗ trống. Nâng trần lên đủ
-  // cho màn lớn, giữ nguyên hệ số nhân theo shortSide.
+  // Rà soát 24/7 (góp ý user: Analog vẫn nhỏ dù đã nâng trần lần trước) - công
+  // thức cũ chỉ tính theo shortSide, bỏ qua việc 2 kim ĐỨNG CẠNH NHAU (ngang)
+  // chỉ cần chia đôi BỀ NGANG (thường dư dả trên đầu xe rộng), còn ở chế độ
+  // dọc (AnalogLayout.gaugesCol) 2 kim XẾP CHỒNG nên bị giới hạn bởi CHIỀU CAO
+  // chia đôi, không phải bề ngang. Tính riêng theo từng hướng, lấy giá trị nhỏ
+  // hơn giữa 2 ràng buộc thật (không tràn khỏi màn) thay vì 1 công thức chung
+  // đang bỏ phí không gian còn dư ở hướng kia.
   const gaugeSize = preview
     ? Math.max(100, Math.min(150, shortSide * 0.3))
-    : Math.max(130, Math.min(340, shortSide * 0.42));
+    : isPortrait
+      ? Math.max(150, Math.min(320, Math.min(width * 0.66, height * 0.32)))
+      : Math.max(160, Math.min(420, Math.min(height * 0.58, (width - 48) * 0.42)));
   // Hệ số/trần cao hơn hẳn gaugeSize (0.42/340) - đồng hồ ĐƠN không phải chia
   // chỗ với đồng hồ thứ 2, dùng được nhiều không gian hơn để nổi bật, tự vẫn
   // theo shortSide nên không bao giờ tràn khỏi cạnh ngắn hơn của màn hình.

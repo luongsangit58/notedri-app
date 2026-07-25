@@ -14,7 +14,7 @@ const FA5_ICON_MAP: Record<string, string> = {
 // quyền vị trí đã có sẵn (getForegroundPermissionsAsync, không tự xin quyền -
 // widget phụ không được ép user quyết định giữa lúc đang lái), ẩn hẳn khi
 // chưa có quyền/chưa có dữ liệu thay vì hiện loading gây rối trên màn lái xe.
-export default function CockpitWeather({ color }: { color: string }) {
+export default function CockpitWeather({ color, fontSize = 18 }: { color: string; fontSize?: number }) {
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   useEffect(() => {
     Location.getForegroundPermissionsAsync().then(({ status }) => {
@@ -37,8 +37,8 @@ export default function CockpitWeather({ color }: { color: string }) {
   const icon = FA5_ICON_MAP[rawIcon] ?? rawIcon;
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-      <FontAwesome5 name={icon} size={17} color={color} solid />
-      <Text style={{ color, fontWeight: '800', fontSize: 18 }}>{data.temp}°</Text>
+      <FontAwesome5 name={icon} size={fontSize * 0.94} color={color} solid />
+      <Text style={{ color, fontWeight: '800', fontSize }}>{data.temp}°</Text>
     </View>
   );
 }

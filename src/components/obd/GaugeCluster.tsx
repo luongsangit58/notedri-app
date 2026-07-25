@@ -140,6 +140,11 @@ export default function GaugeCluster({
 
   const Layout = style.Layout;
   const accent = style.previewColor;
+  // Rà soát 24/7 (góp ý user: giờ/thời tiết vẫn nhỏ trên màn đầu xe to, chưa
+  // "ăn nhập" màu theme đang chọn) - cỡ chữ tỉ lệ theo heroGaugeSize (đã tính
+  // theo cạnh ngắn hơn màn hình thật), và tô theo accent của theme thay vì
+  // trắng trung tính cố định - đồng bộ với các nút chức năng đã tô accent.
+  const clockFontSize = Math.max(16, Math.min(30, layout.heroGaugeSize * 0.09));
 
   return (
     <View style={{ flex: 1 }}>
@@ -167,9 +172,9 @@ export default function GaugeCluster({
       {/* Giờ + thời tiết (góp ý user: màn Đồng hồ ẩn StatusBar hệ thống nên mất
           luôn đồng hồ giờ của máy) - LUÔN hiện, không theo chạm-màn-hình như
           nút chức năng (đúng mục đích ban đầu: liếc giờ không cần thao tác). */}
-      <View pointerEvents="none" style={styles.clockPill}>
-        <CockpitClock color="#FFFFFF" />
-        <CockpitWeather color="#FFFFFF" />
+      <View pointerEvents="none" style={[styles.clockPill, { backgroundColor: accent + '33', borderColor: accent + '77' }]}>
+        <CockpitClock color={accent} fontSize={clockFontSize} />
+        <CockpitWeather color={accent} fontSize={clockFontSize} />
       </View>
 
       {/* Nút chức năng - ẩn mặc định (full màn thật), chạm màn hình để hiện,
@@ -235,7 +240,7 @@ const styles = StyleSheet.create({
   clockPill: {
     position: 'absolute', top: 8, alignSelf: 'center',
     flexDirection: 'row', alignItems: 'center', gap: 10,
-    backgroundColor: '#00000066', borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8,
+    borderRadius: 20, borderWidth: 1, paddingHorizontal: 16, paddingVertical: 8,
   },
   toolbar: {
     position: 'absolute', top: 8, left: 12, right: 12,

@@ -56,6 +56,9 @@ export default function NightLayout({ metrics, size, heroSize, isPortrait, anima
         label={t('obd.stat_speed')} unit="km/h" valueFontFamily={monoFontFamily}
         trackColor={PALETTE.redDim + '55'} fillColor={PALETTE.red} needleColor={PALETTE.red} tickColor={PALETTE.redDim}
         valueColor={PALETTE.red} labelColor={PALETTE.redDim} animate={animate}
+        // Vẫn giữ tông ấm (nguyên lý bảo vệ thị lực đêm) khi "sink động" hơn -
+        // cam rồi mới tới đỏ tươi, không nhảy sang màu lạnh phá tinh thần buồng lái ban đêm.
+        zones={[{ min: 80, color: '#FF7A1A' }, { min: 100, color: '#FF3B30' }]}
       />
 
       {featured.length > 0 && (

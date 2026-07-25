@@ -78,6 +78,7 @@ export default function RetroLayout({ metrics, size, isPortrait, animate }: Cock
           trackColor={PALETTE.track} fillColor={PALETTE.chrome} needleColor={PALETTE.needle} tickColor={PALETTE.chrome}
           valueColor={PALETTE.text} labelColor={PALETTE.textDim} valueFontFamily={serifFontFamily}
           glow={false} animate={animate} strokeWidth={4}
+          zones={[{ min: 80, color: PALETTE.needle }, { min: 100, color: '#8C1C13' }]}
         />
         <ArcGauge
           value={rpm?.value ?? null} min={0} max={8000} size={size}
@@ -85,6 +86,7 @@ export default function RetroLayout({ metrics, size, isPortrait, animate }: Cock
           trackColor={PALETTE.track} fillColor={PALETTE.chrome} needleColor={PALETTE.needle} tickColor={PALETTE.chrome}
           valueColor={PALETTE.text} labelColor={PALETTE.textDim} valueFontFamily={serifFontFamily}
           glow={false} animate={animate} strokeWidth={4}
+          zones={[{ min: 3000, color: PALETTE.needle }, { min: 4000, color: '#8C1C13' }]}
         />
       </View>
 

@@ -110,6 +110,9 @@ export default function RacingLayout({ metrics, size, heroSize, isPortrait, anim
           unit={t('obd.stat_rpm')} valueFontFamily={monoFontFamily} quantizeStep={rpm?.def.quantizeStep}
           trackColor={PALETTE.stripeA} fillColor={PALETTE.rpmColor} needleColor={PALETTE.rpmColor} tickColor={PALETTE.textDim}
           valueColor={PALETTE.rpmColor} labelColor={PALETTE.textDim} animate={animate}
+          // "Nóng máy" kiểu HUD đua xe - qua mốc cao thì rực trắng như đèn
+          // nitro, đúng chất HUD hơn là chỉ đổi sang màu cảnh báo thông thường.
+          zones={[{ min: 3000, color: PALETTE.shiftOn }, { min: 4000, color: '#FFFFFF' }]}
         />
 
         <View style={styles.shiftRow}>

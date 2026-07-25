@@ -74,6 +74,14 @@ export interface ArcGaugeProps {
   // showTicks/showMinMax - gộp làm 1 vì luôn đi cùng nhau trên đồng hồ thật).
   showTicks?: boolean;
   showReadout?: boolean;
+  // Rà soát 24/7 (góp ý user: kim chỉ lên xuống đơn điệu, muốn có gì đó "sinh
+  // động" hơn khi vượt 1 ngưỡng nhất định, vd tốc độ qua 80/100, vòng tua qua
+  // 3000/4000) - danh sách mốc ĐỘNG, không gắn với redline/an toàn thật của xe
+  // (khác hẳn "shift-light" đã bỏ ở Racing vì không có dữ liệu redline thật) -
+  // thuần tuý hiệu ứng thị giác cho cảm giác "tăng tốc". Mốc cao nhất mà giá
+  // trị hiện tại đã vượt qua quyết định màu cung/kim/số + kích hoạt glow nhấp
+  // nháy nhẹ (không đổi màu thì vẫn cho pulse để báo "đang ở mốc cao").
+  zones?: { min: number; color: string }[];
   // false cho ảnh xem trước tĩnh trong DashboardStylePicker - không cần
   // animate lại mỗi lần list re-render.
   animate?: boolean;
@@ -83,7 +91,7 @@ export default function ArcGauge({
   value, min, max, size, label, unit,
   trackColor, fillColor, needleColor, tickColor, valueColor, labelColor, valueFontFamily,
   strokeWidth, quantizeStep = 1, glow = true, showNeedle = true, showTicks = true, showReadout = true,
-  animate = true,
+  zones, animate = true,
 }: ArcGaugeProps) {
   // Rà soát 24/7 (góp ý user: cung quá dày trông thô, đồng hồ xe thật có nét
   // mảnh + nhiều chi tiết vạch/số hơn là 1 khối màu to) - giảm hẳn độ dày mặc
@@ -92,6 +100,33 @@ export default function ArcGauge({
   const clamped = Math.max(min, Math.min(max, value ?? min));
   const frac = max > min ? (clamped - min) / (max - min) : 0;
   const ticks = showTicks ? buildTicks(min, max) : [];
+
+  // Mốc cao nhất đã vượt (xem comment `zones` ở ArcGaugeProps) - sort phòng
+  // trường hợp truyền không theo thứ tự tăng dần.
+  const activeZone = zones && zones.length
+    ? [...zones].sort((a, b) => b.min - a.min).find((z) => (value ?? min) >= z.min)
+    : undefined;
+  const effectiveFillColor = activeZone?.color ?? fillColor;
+  const effectiveNeedleColor = activeZone?.color ?? (needleColor ?? fillColor);
+  const effectiveValueColor = activeZone?.color ?? (valueColor ?? fillColor);
+
+  // Glow nhấp nháy nhẹ khi đang ở 1 mốc "sinh động" - dừng hẳn animation khi
+  // rời mốc (đỡ hao pin/CPU khi không cần), khởi động lại khi vào mốc MỚI
+  // (key theo màu, không theo object - object đổi identity mỗi lần render).
+  const pulse = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!activeZone) { pulse.stopAnimation(); pulse.setValue(0); return; }
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1, duration: 650, easing: Easing.inOut(Easing.quad), useNativeDriver: false }),
+        Animated.timing(pulse, { toValue: 0, duration: 650, easing: Easing.inOut(Easing.quad), useNativeDriver: false }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeZone?.color]);
+  const pulseRadius = pulse.interpolate({ inputRange: [0, 1], outputRange: [10, 24] });
 
   const progress = useRef(new Animated.Value(frac)).current;
   useEffect(() => {
@@ -142,7 +177,7 @@ export default function ArcGauge({
         <Path d={ARC_D} stroke={trackColor} strokeWidth={resolvedStrokeWidth} strokeLinecap="round" fill="none" />
         <AnimatedPath
           d={ARC_D}
-          stroke={fillColor}
+          stroke={effectiveFillColor}
           strokeWidth={resolvedStrokeWidth}
           strokeLinecap="round"
           fill="none"
@@ -194,36 +229,36 @@ export default function ArcGauge({
         >
           <Animated.View style={{ width: needleLength * 2, height: needleLength * 2, transform: [{ rotate }] }}>
             <Svg width={needleW} height={needleW} style={StyleSheet.absoluteFillObject}>
-              <Polygon points={needlePoints} fill={needleColor ?? fillColor} />
+              <Polygon points={needlePoints} fill={effectiveNeedleColor} />
             </Svg>
           </Animated.View>
         </View>
       )}
       {showNeedle && (
         <Svg width={size} height={size} viewBox="0 0 100 100" style={StyleSheet.absoluteFillObject} pointerEvents="none">
-          <Circle cx={50} cy={50} r={4.2} stroke={needleColor ?? fillColor} strokeWidth={1.4} fill="none" opacity={0.9} />
-          <Circle cx={50} cy={50} r={1.6} fill={needleColor ?? fillColor} />
+          <Circle cx={50} cy={50} r={4.2} stroke={effectiveNeedleColor} strokeWidth={1.4} fill="none" opacity={0.9} />
+          <Circle cx={50} cy={50} r={1.6} fill={effectiveNeedleColor} />
         </Svg>
       )}
 
       {showReadout && (
         <View pointerEvents="none" style={{ position: 'absolute', top: size * 0.58, maxWidth: size * 0.62, alignItems: 'center' }}>
-          <Text
+          <Animated.Text
             allowFontScaling={false}
             numberOfLines={1}
             adjustsFontSizeToFit
             style={{
               fontSize: valueFontSize,
               fontWeight: '800',
-              color: valueColor ?? fillColor,
+              color: effectiveValueColor,
               fontFamily: valueFontFamily,
-              textShadowColor: glow ? fillColor : 'transparent',
+              textShadowColor: activeZone ? activeZone.color : glow ? fillColor : 'transparent',
               textShadowOffset: { width: 0, height: 0 },
-              textShadowRadius: glow ? 10 : 0,
+              textShadowRadius: activeZone ? pulseRadius : glow ? 10 : 0,
             }}
           >
             {display ?? '-'}
-          </Text>
+          </Animated.Text>
           {unit ? <Text allowFontScaling={false} numberOfLines={1} style={{ fontSize: unitFontSize, color: labelColor, marginTop: -2 }}>{unit}</Text> : null}
           {label ? <Text allowFontScaling={false} numberOfLines={1} style={{ fontSize: labelFontSize, color: labelColor, marginTop: 2, textTransform: 'uppercase', letterSpacing: 0.5 }}>{label}</Text> : null}
         </View>

@@ -54,6 +54,9 @@ export default function MinimalLayout({ metrics, size, heroSize, isPortrait, ani
         trackColor={PALETTE.track} fillColor={PALETTE.text} needleColor={PALETTE.text} tickColor={PALETTE.textDim}
         valueColor={PALETTE.text} labelColor={PALETTE.textDim} animate={animate}
         strokeWidth={Math.max(5, heroSize * 0.025)} glow={false} showTicks={false}
+        // Tối giản = KHÔNG đổi màu (giữ đơn sắc) - vẫn cho glow nhấp nháy nhẹ
+        // qua mốc cao để có cảm giác "sinh động", cùng 1 màu cả 2 mốc.
+        zones={[{ min: 80, color: PALETTE.text }, { min: 100, color: PALETTE.text }]}
       />
 
       {featured.length > 0 && (

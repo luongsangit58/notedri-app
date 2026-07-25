@@ -45,6 +45,11 @@ export default function AnalogLayout({ metrics, size, isPortrait, animate }: Coc
   const rpm = metrics.find((m) => m.def.key === 'rpm') ?? null;
   const featured = pickFeaturedSecondary(metrics);
 
+  // Rà soát 24/7 (góp ý user: kim chỉ lên xuống đơn điệu, muốn "sinh động"
+  // hơn khi qua 1 mốc nào đó) - mốc thuần hiệu ứng thị giác (KHÔNG phải cảnh
+  // báo redline thật của xe), dùng đúng cặp màu warn/crit sẵn có trong
+  // cockpitPalette - xem prop `zones` trong ArcGauge.tsx.
+
   return (
     <View style={[styles.root, { backgroundColor: p.bg, borderColor: p.border }]}>
       <View style={[styles.gaugesRow, isPortrait && styles.gaugesCol]}>
@@ -53,12 +58,14 @@ export default function AnalogLayout({ metrics, size, isPortrait, animate }: Coc
           label={t('obd.stat_speed')} unit="km/h"
           trackColor={p.surface2} fillColor={p.accent} needleColor={p.text} tickColor={p.textDim}
           valueColor={p.text} labelColor={p.textDim} animate={animate}
+          zones={[{ min: 80, color: p.warn }, { min: 100, color: p.crit }]}
         />
         <ArcGauge
           value={rpm?.value ?? null} min={0} max={8000} size={size}
           label={t('obd.stat_rpm')} unit="v/ph" quantizeStep={rpm?.def.quantizeStep}
           trackColor={p.surface2} fillColor={p.accent2} needleColor={p.text} tickColor={p.textDim}
           valueColor={p.text} labelColor={p.textDim} animate={animate}
+          zones={[{ min: 3000, color: p.warn }, { min: 4000, color: p.crit }]}
         />
       </View>
       {featured.length > 0 && (
