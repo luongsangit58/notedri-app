@@ -15,6 +15,7 @@ import NotedriPip from '../../../modules/notedri-pip/src/NotedriPipModule';
 import DashboardStylePicker from './DashboardStylePicker';
 import CockpitClock from './CockpitClock';
 import CockpitWeather from './CockpitWeather';
+import CockpitRadio from './CockpitRadio';
 
 // Rà soát 24/7 (góp ý user, ảnh thật trên đầu Android ô tô): toolbar cũ ăn
 // nguyên 1 dải cao CỐ ĐỊNH phía trên (chưa full màn thật), nút bấm quá bé, và
@@ -192,6 +193,7 @@ export default function GaugeCluster({
         </View>
 
         <View style={styles.toolbarBtns}>
+          <CockpitRadio accent={accent} />
           {pipSupported && (
             <TouchableOpacity
               onPress={handlePressPip}

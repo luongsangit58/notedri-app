@@ -35,7 +35,7 @@
     },
     "android": {
       "package": "com.notedri",
-      "versionCode": 36,
+      "versionCode": 37,
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#060507",
@@ -48,7 +48,10 @@
         {
           "action": "VIEW",
           "autoVerify": true,
-          "category": ["BROWSABLE", "DEFAULT"],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ],
           "data": [
             {
               "scheme": "https",
@@ -141,7 +144,13 @@
       "./withOptionalHardwareFeatures.js",
       "./withNfcIntentFilter.js",
       "./withPictureInPicture.js",
-      "./withAndroidReleaseSigning.js"
+      "./withAndroidReleaseSigning.js",
+      [
+        "expo-audio",
+        {
+          "enableBackgroundPlayback": true
+        }
+      ]
     ]
   }
 }
