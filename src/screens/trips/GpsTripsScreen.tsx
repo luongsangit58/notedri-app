@@ -470,6 +470,19 @@ function ActiveTripCard({ vehicleId }: { vehicleId: number }) {
   );
 }
 
+function DayHeader({ item, t, colors }: { item: { label: string; dateLabel: string; count: number; km: number }; t: ReturnType<typeof useT>; colors: any }) {
+  return (
+    <View style={[styles.dayHeader, { backgroundColor: colors.surfaceAlt ?? colors.surface, borderColor: colors.border }]}>
+      <Text style={[styles.dayHeaderLabel, { color: colors.text }]}>
+        {item.label} <Text style={{ fontWeight: '400', color: colors.textSecondary }}>· {item.dateLabel}</Text>
+      </Text>
+      <Text style={[styles.dayHeaderSummary, { color: colors.textSecondary }]}>
+        {t('gps_trips.day_summary', { n: item.count, km: item.km.toFixed(1) })}
+      </Text>
+    </View>
+  );
+}
+
 function TripRow({ trip, expanded, onToggle, onDelete, onEditNote }: {
   trip: GpsTripRecord; expanded: boolean; onToggle: () => void;
   onDelete: (t: GpsTripRecord) => void; onEditNote: (t: GpsTripRecord) => void;
@@ -648,6 +661,10 @@ function GpsPrimaryBanner() {
   );
 }
 
+type GpsHeaderItem = { kind: 'header'; key: string; label: string; dateLabel: string; count: number; km: number };
+type GpsTripItem = { kind: 'trip'; key: string; trip: GpsTripRecord };
+type GpsListItem = GpsHeaderItem | GpsTripItem;
+
 export default function GpsTripsScreen({ embedded }: { embedded?: boolean } = {}) {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
@@ -670,6 +687,35 @@ export default function GpsTripsScreen({ embedded }: { embedded?: boolean } = {}
 
   const { data, isLoading, refetch, isFetching } = useGpsTrips(vehicleId);
   const trips: GpsTripRecord[] = data?.data ?? [];
+
+  // Đồng bộ với web (Hành trình): nhóm danh sách theo NGÀY - mỗi chuyến vẫn là 1
+  // dòng riêng (khác tuyến đường/điểm đầu-cuối, không thể gộp như phiên OBD),
+  // chỉ thêm tiêu đề ngày + tổng km/số chuyến cho dễ đọc khi 1 ngày nhiều chuyến.
+  const listData = useMemo<GpsListItem[]>(() => {
+    const today = dayjs().format('YYYY-MM-DD');
+    const yesterday = dayjs().subtract(1, 'day').format('YYYY-MM-DD');
+    const items: GpsListItem[] = [];
+    let currentKey = '';
+    let headerIndex = -1;
+    for (const trip of trips) {
+      const d = dayjs(trip.started_at);
+      const key = d.format('YYYY-MM-DD');
+      if (key !== currentKey) {
+        currentKey = key;
+        const label = key === today ? t('gps_trips.day_today')
+          : key === yesterday ? t('gps_trips.day_yesterday')
+          : d.format('dddd');
+        headerIndex = items.length;
+        items.push({ kind: 'header', key: `h-${key}`, label, dateLabel: d.format('DD/MM/YYYY'), count: 0, km: 0 });
+      }
+      const header = items[headerIndex] as GpsHeaderItem;
+      header.count += 1;
+      header.km += Number(trip.distance_km ?? 0);
+      items.push({ kind: 'trip', key: String(trip.id), trip });
+    }
+    return items;
+  }, [trips, t]);
+
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [noteTrip, setNoteTrip] = useState<GpsTripRecord | null>(null);
   const [noteText, setNoteText] = useState('');
@@ -731,8 +777,8 @@ export default function GpsTripsScreen({ embedded }: { embedded?: boolean } = {}
       )}
 
       <FlatList
-        data={trips}
-        keyExtractor={(item) => String(item.id)}
+        data={listData}
+        keyExtractor={(item) => item.key}
         refreshControl={<RefreshControl refreshing={isFetching} onRefresh={handleRefresh} tintColor={colors.primary} />}
         ListHeaderComponent={
           <>
@@ -751,15 +797,19 @@ export default function GpsTripsScreen({ embedded }: { embedded?: boolean } = {}
             </View>
           )
         }
-        renderItem={({ item }) => (
-          <TripRow
-            trip={item}
-            expanded={expandedId === item.id}
-            onToggle={() => setExpandedId((prev) => (prev === item.id ? null : item.id))}
-            onDelete={handleDelete}
-            onEditNote={openNote}
-          />
-        )}
+        renderItem={({ item }) =>
+          item.kind === 'header' ? (
+            <DayHeader item={item} t={t} colors={colors} />
+          ) : (
+            <TripRow
+              trip={item.trip}
+              expanded={expandedId === item.trip.id}
+              onToggle={() => setExpandedId((prev) => (prev === item.trip.id ? null : item.trip.id))}
+              onDelete={handleDelete}
+              onEditNote={openNote}
+            />
+          )
+        }
         contentContainerStyle={[styles.list, isLandscape && { maxWidth: 760, alignSelf: 'center', width: '100%' }]}
         ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
       />
@@ -808,6 +858,12 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 17, fontWeight: '700' },
   headerSub: { fontSize: 12, marginTop: 1 },
   list: { padding: 10, gap: 8, paddingBottom: 24 },
+  dayHeader: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, marginTop: 4,
+  },
+  dayHeaderLabel: { fontSize: 14, fontWeight: '700' },
+  dayHeaderSummary: { fontSize: 12, fontWeight: '500' },
   loader: { marginTop: 40 },
   empty: { alignItems: 'center', paddingTop: 60, gap: 10 },
   emptyTitle: { fontSize: 16, fontWeight: '600' },
