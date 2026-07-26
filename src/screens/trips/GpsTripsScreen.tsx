@@ -31,7 +31,12 @@ import { openLocationSettings, openBatterySettings } from '../../services/gps/Gp
 import { detectDrivingEvents, computeDrivingScoreByDistance } from '../../services/drivingScore/drivingScoreEngine';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import RouteMap from '../../components/RouteMap';
+import DayRouteMap from '../../components/DayRouteMap';
 import dayjs from 'dayjs';
+
+// Đồng bộ với web (trips/index.blade.php $dayRouteColors) - mỗi chuyến trong "xem cả ngày"
+// 1 màu riêng, đủ tương phản trên nền bản đồ sáng.
+const DAY_ROUTE_COLORS = ['#2563eb', '#dc2626', '#16a34a', '#d97706', '#7c3aed', '#0891b2', '#db2777', '#65a30d'];
 
 // Mẹo tắt tối ưu pin - chỉ hiện 1 lần (lần đầu bật theo dõi thành công)
 async function maybeShowBatteryTip() {
@@ -470,16 +475,21 @@ function ActiveTripCard({ vehicleId }: { vehicleId: number }) {
   );
 }
 
-function DayHeader({ item, t, colors }: { item: { label: string; dateLabel: string; count: number; km: number }; t: ReturnType<typeof useT>; colors: any }) {
+function DayHeader({ item, t, colors, onPress }: {
+  item: { label: string; dateLabel: string; count: number; km: number };
+  t: ReturnType<typeof useT>; colors: any; onPress: () => void;
+}) {
   return (
-    <View style={[styles.dayHeader, { backgroundColor: colors.surfaceAlt ?? colors.surface, borderColor: colors.border }]}>
-      <Text style={[styles.dayHeaderLabel, { color: colors.text }]}>
-        {item.label} <Text style={{ fontWeight: '400', color: colors.textSecondary }}>· {item.dateLabel}</Text>
+    <TouchableOpacity
+      style={[styles.dayHeader, { backgroundColor: colors.surfaceAlt ?? colors.surface, borderColor: colors.border }]}
+      onPress={onPress} activeOpacity={0.7}>
+      <Text style={[styles.dayHeaderLabel, { color: colors.text }]} numberOfLines={1}>
+        <FontAwesome5 name="map-marked-alt" size={11} color={colors.primary} solid /> {item.label} <Text style={{ fontWeight: '400', color: colors.textSecondary }}>· {item.dateLabel}</Text>
       </Text>
       <Text style={[styles.dayHeaderSummary, { color: colors.textSecondary }]}>
         {t('gps_trips.day_summary', { n: item.count, km: item.km.toFixed(1) })}
       </Text>
-    </View>
+    </TouchableOpacity>
   );
 }
 
@@ -661,7 +671,7 @@ function GpsPrimaryBanner() {
   );
 }
 
-type GpsHeaderItem = { kind: 'header'; key: string; label: string; dateLabel: string; count: number; km: number };
+type GpsHeaderItem = { kind: 'header'; key: string; label: string; dateLabel: string; dateKey: string; count: number; km: number };
 type GpsTripItem = { kind: 'trip'; key: string; trip: GpsTripRecord };
 type GpsListItem = GpsHeaderItem | GpsTripItem;
 
@@ -706,7 +716,7 @@ export default function GpsTripsScreen({ embedded }: { embedded?: boolean } = {}
           : key === yesterday ? t('gps_trips.day_yesterday')
           : d.format('dddd');
         headerIndex = items.length;
-        items.push({ kind: 'header', key: `h-${key}`, label, dateLabel: d.format('DD/MM/YYYY'), count: 0, km: 0 });
+        items.push({ kind: 'header', key: `h-${key}`, label, dateLabel: d.format('DD/MM/YYYY'), dateKey: key, count: 0, km: 0 });
       }
       const header = items[headerIndex] as GpsHeaderItem;
       header.count += 1;
@@ -720,6 +730,23 @@ export default function GpsTripsScreen({ embedded }: { embedded?: boolean } = {}
   const [noteTrip, setNoteTrip] = useState<GpsTripRecord | null>(null);
   const [noteText, setNoteText] = useState('');
   const [busy, setBusy] = useState(false);
+
+  // "Xem cả ngày" (đồng bộ web): bấm tiêu đề ngày -> gộp tất cả tuyến đường hôm đó trên 1 bản
+  // đồ, mỗi chuyến 1 màu. Dùng lại chính `trips` đã tải (không gọi API riêng) - đủ cho phạm vi
+  // trang hiện đang xem, giống cách danh sách đã nhóm theo ngày ở trên.
+  const [dayMapKey, setDayMapKey] = useState<string | null>(null);
+  const dayMapTrips = useMemo(
+    () => trips.filter((tr) => dayjs(tr.started_at).format('YYYY-MM-DD') === dayMapKey)
+      .sort((a, b) => dayjs(a.started_at).valueOf() - dayjs(b.started_at).valueOf()),
+    [trips, dayMapKey],
+  );
+  const dayMapRoutes = useMemo(
+    () => dayMapTrips.map((tr, i) => ({
+      points: Array.isArray(tr.route_points) ? tr.route_points.map((p) => ({ lat: p.lat, lng: p.lng })) : [],
+      color: DAY_ROUTE_COLORS[i % DAY_ROUTE_COLORS.length],
+    })),
+    [dayMapTrips],
+  );
 
   const handleRefresh = useCallback(async () => {
     await refetch();
@@ -799,7 +826,7 @@ export default function GpsTripsScreen({ embedded }: { embedded?: boolean } = {}
         }
         renderItem={({ item }) =>
           item.kind === 'header' ? (
-            <DayHeader item={item} t={t} colors={colors} />
+            <DayHeader item={item} t={t} colors={colors} onPress={() => setDayMapKey(item.dateKey)} />
           ) : (
             <TripRow
               trip={item.trip}
@@ -839,6 +866,58 @@ export default function GpsTripsScreen({ embedded }: { embedded?: boolean } = {}
           </Pressable>
           </KeyboardAvoidingView>
         </Pressable>
+      </Modal>
+
+      {/* Modal "Xem cả ngày" (đồng bộ web/trips/index.blade.php): gộp tất cả tuyến đường 1
+          ngày trên 1 bản đồ, mỗi chuyến 1 màu - bấm 1 dòng chú giải để đóng modal và mở
+          nhanh đúng chuyến đó trong danh sách. */}
+      <Modal visible={dayMapKey !== null} animationType="slide" onRequestClose={() => setDayMapKey(null)}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'left', 'right']}>
+          <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+            <TouchableOpacity onPress={() => setDayMapKey(null)} style={styles.backBtn}>
+              <FontAwesome5 name="arrow-left" size={16} color={colors.text} />
+            </TouchableOpacity>
+            <View>
+              <Text style={[styles.headerTitle, { color: colors.text }]}>
+                {dayMapKey === dayjs().format('YYYY-MM-DD') ? t('gps_trips.day_today')
+                  : dayMapKey === dayjs().subtract(1, 'day').format('YYYY-MM-DD') ? t('gps_trips.day_yesterday')
+                  : (dayMapKey ? dayjs(dayMapKey).format('dddd') : '')}
+              </Text>
+              <Text style={[styles.headerSub, { color: colors.textSecondary }]}>{dayMapKey ? dayjs(dayMapKey).format('DD/MM/YYYY') : ''}</Text>
+            </View>
+          </View>
+          <FlatList
+            data={dayMapTrips}
+            keyExtractor={(tr) => String(tr.id)}
+            contentContainerStyle={styles.list}
+            ListHeaderComponent={
+              <View style={{ marginBottom: 4 }}>
+                <DayRouteMap routes={dayMapRoutes} height={240} />
+                <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 10, marginBottom: 2 }}>
+                  {t('gps_trips.day_summary', { n: dayMapTrips.length, km: dayMapTrips.reduce((s, tr) => s + Number(tr.distance_km ?? 0), 0).toFixed(1) })}
+                </Text>
+              </View>
+            }
+            renderItem={({ item: tr, index }) => {
+              const durationSec = Number(tr.driving_time_seconds ?? 0) + Number(tr.idle_time_seconds ?? 0);
+              return (
+                <TouchableOpacity
+                  onPress={() => { setDayMapKey(null); setExpandedId(tr.id); }}
+                  style={[styles.row, { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.surface, borderColor: colors.border }]}>
+                  <View style={{ width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: DAY_ROUTE_COLORS[index % DAY_ROUTE_COLORS.length] }}>
+                    <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>{index + 1}</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: colors.text, fontSize: 14, fontWeight: '600' }}>{dayjs(tr.started_at).format('HH:mm')}</Text>
+                    <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 1 }}>{formatDuration(durationSec)}</Text>
+                  </View>
+                  <Text style={{ color: colors.text, fontSize: 14, fontWeight: '700' }}>{Number(tr.distance_km ?? 0).toFixed(1)} km</Text>
+                </TouchableOpacity>
+              );
+            }}
+            ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
+          />
+        </SafeAreaView>
       </Modal>
     </Container>
   );
