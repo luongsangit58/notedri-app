@@ -947,6 +947,10 @@ const vi = {
   "feedback.content_label": "Nội dung",
   "feedback.placeholder_detailed": "Mô tả chi tiết - bước nào xảy ra, trên thiết bị gì, kỳ vọng là gì...",
   "feedback.char_count": "{{count}} / 2000 ký tự (tối thiểu 10)",
+  "feedback.store_review_title": "Cảm ơn bạn đã đánh giá cao!",
+  "feedback.store_review_body": "Bạn có muốn chia sẻ đánh giá 5 sao này lên Google Play để giúp NoteDri đến với nhiều người hơn không?",
+  "feedback.store_review_cta": "Đánh giá trên Google Play",
+  "feedback.store_review_later": "Để sau",
 
   // NotificationSettings (new)
   "notification_settings.level_all_desc": "Nhận mọi nhắc nhở theo lịch",

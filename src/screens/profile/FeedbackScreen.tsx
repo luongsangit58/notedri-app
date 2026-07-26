@@ -1,20 +1,44 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  ScrollView, Alert, ActivityIndicator,
+  ScrollView, Alert, ActivityIndicator, Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useMutation } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import client from '../../api/client';
 import { useColors } from '../../utils/theme';
-import { useT } from '../../i18n';
+import { useT, useI18nStore } from '../../i18n';
 import AppBgPattern from '../../components/AppBgPattern';
 
 type LoaiKey = 'loi' | 'y_tuong' | 'khac';
 
 const STARS = [1, 2, 3, 4, 5];
+const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.notedri';
+const STORE_REVIEW_PROMPTED_KEY = 'store_review_prompted';
+
+/**
+ * Chỉ mời đánh giá Google Play khi user vừa cho 4-5 sao NGAY TRONG APP (đã chứng tỏ hài
+ * lòng) - không chặn/mời user đang cho điểm thấp lên store công khai. Chỉ hỏi 1 LẦN DUY
+ * NHẤT (đánh dấu AsyncStorage) dù sau này còn gửi góp ý tích cực nữa - tránh làm phiền.
+ */
+async function maybePromptStoreReview() {
+  try {
+    if (await AsyncStorage.getItem(STORE_REVIEW_PROMPTED_KEY)) return;
+    await AsyncStorage.setItem(STORE_REVIEW_PROMPTED_KEY, '1');
+    const t = useI18nStore.getState().t;
+    Alert.alert(
+      t('feedback.store_review_title'),
+      t('feedback.store_review_body'),
+      [
+        { text: t('feedback.store_review_later'), style: 'cancel' },
+        { text: t('feedback.store_review_cta'), onPress: () => Linking.openURL(PLAY_STORE_URL) },
+      ],
+    );
+  } catch { /* ignore - không quan trọng bằng luồng góp ý chính */ }
+}
 
 export default function FeedbackScreen() {
   const colors = useColors();
@@ -33,8 +57,17 @@ export default function FeedbackScreen() {
   const { mutate, isPending } = useMutation({
     mutationFn: () => client.post('/feedback', { loai, noi_dung, rating }),
     onSuccess: () => {
+      const isHappy = (rating ?? 0) >= 4;
       Alert.alert(t('feedback.success_title'), t('feedback.success_message'), [
-        { text: 'OK', onPress: () => navigation.goBack() },
+        {
+          text: 'OK',
+          onPress: () => {
+            navigation.goBack();
+            // Delay nhỏ để Alert "Cảm ơn" đóng hẳn trước khi mở Alert mời đánh giá store -
+            // gọi 2 Alert.alert liền nhau (đặc biệt trên iOS) dễ bị chồng/mất Alert sau.
+            if (isHappy) setTimeout(maybePromptStoreReview, 300);
+          },
+        },
       ]);
     },
     onError: (err: any) => {

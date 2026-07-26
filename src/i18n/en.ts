@@ -947,6 +947,10 @@ const en = {
   "feedback.content_label": "Content",
   "feedback.placeholder_detailed": "Describe in detail - what steps, what device, what you expected...",
   "feedback.char_count": "{{count}} / 2000 chars (min 10)",
+  "feedback.store_review_title": "Thanks for the great rating!",
+  "feedback.store_review_body": "Would you like to share this 5-star rating on Google Play to help more people find NoteDri?",
+  "feedback.store_review_cta": "Rate on Google Play",
+  "feedback.store_review_later": "Maybe later",
 
   // NotificationSettings (new)
   "notification_settings.level_all_desc": "Receive all reminders on schedule",
