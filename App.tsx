@@ -9,6 +9,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import RootNavigator from './src/navigation/RootNavigator';
 import { navigationRef } from './src/navigation/navigationRef';
 import ObdSessionBanner from './src/components/ObdSessionBanner';
+import ObdAutoConnect from './src/components/ObdAutoConnect';
 import NoriFloatingButton from './src/components/nori/NoriFloatingButton';
 import { useThemeStore } from './src/utils/theme';
 import { useCockpitThemeStore } from './src/store/cockpitThemeStore';
@@ -152,6 +153,7 @@ export default function App() {
             <NavigationContainer ref={navigationRef}>
               <RootNavigator />
               <ObdSessionBanner />
+              <ObdAutoConnect />
               <NoriFloatingButton />
             </NavigationContainer>
           </AppLoader>

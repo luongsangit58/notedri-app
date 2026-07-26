@@ -18,7 +18,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { State as BtState } from 'react-native-ble-plx';
 import { useObdConnection } from '../../hooks/useObd';
 import { bleService } from '../../services/obd/BleService';
-import { getPairingForVehicle, getPairingForDevice } from '../../services/obd/pairedDevices';
+import { getPairingForVehicle, getPairingForDevice, setAutoConnect } from '../../services/obd/pairedDevices';
 import AppBgPattern from '../../components/AppBgPattern';
 import { useColors } from '../../utils/theme';
 import { useAuthStore } from '../../store/authStore';
@@ -300,12 +300,23 @@ export default function OBDSetupScreen() {
   // Transport của lần kết nối gần nhất (22/7) - quyết định tự chuyển mode +
   // auto-connect nên dò ở danh sách BLE hay Classic (xem savePairing() ở useObd.ts).
   const [pairedTransport, setPairedTransport] = useState<'ble' | 'classic'>('ble');
+  // Tự kết nối khi MỞ APP (25/7, khác auto-connect foreground ở trên - cái này
+  // chỉ chạy khi user đã tự vào màn hình này). Opt-in theo từng xe, mặc định
+  // TẮT (xem ObdAutoConnect.tsx) - chỉ hiện switch khi xe này đã từng ghép ít
+  // nhất 1 thiết bị (chưa ghép thì chưa có gì để tự kết nối tới).
+  const [autoConnectOnLaunch, setAutoConnectOnLaunchState] = useState(false);
   useEffect(() => {
     getPairingForVehicle(vehicleId).then((p) => {
       setPairedDeviceId(p?.bleDeviceId ?? null);
       setPairedTransport(p?.transport ?? 'ble');
+      setAutoConnectOnLaunchState(!!p?.autoConnect);
     });
   }, [vehicleId]);
+
+  async function handleToggleAutoConnectOnLaunch(next: boolean) {
+    setAutoConnectOnLaunchState(next); // phản hồi tức thì, không đợi AsyncStorage
+    await setAutoConnect(vehicleId, next);
+  }
 
   // NFC tag chỉ mang theo deviceId (viết lúc đó có thể là địa chỉ Classic) -
   // tra lại đúng transport đã lưu cho CHÍNH thiết bị này, không dùng chung
@@ -572,6 +583,27 @@ export default function OBDSetupScreen() {
           />
         </View>
         </>
+        )}
+
+        {/* Tự động kết nối khi mở app (25/7) - chỉ hiện khi xe này đã từng
+            ghép ít nhất 1 thiết bị, không phụ thuộc đang ở mode BLE hay
+            Classic. Mặc định TẮT - xem ObdAutoConnect.tsx. */}
+        {pairedDeviceId && (
+          <View style={[styles.showAllRow, { backgroundColor: colors.card }]}>
+            <View style={{ flex: 1, paddingRight: 12 }}>
+              <Text style={[styles.showAllLabel, { color: colors.text }]}>
+                {t('obd.auto_connect_launch_title')}
+              </Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 12, lineHeight: 17, marginTop: 2 }}>
+                {t('obd.auto_connect_launch_desc')}
+              </Text>
+            </View>
+            <Switch
+              value={autoConnectOnLaunch}
+              onValueChange={handleToggleAutoConnectOnLaunch}
+              trackColor={{ true: '#3B82F6' }}
+            />
+          </View>
         )}
 
         {/* Hướng dẫn kết nối (component chỉn chu thay card 3 dòng cũ) */}

@@ -1100,6 +1100,7 @@ const en = {
   "home.charging_short": "Charging",
   "home.no_vehicle_title": "Start with your vehicle",
   "home.no_vehicle_desc": "Add a vehicle to track fuel, servicing, trips and document reminders.",
+  "home.vehicles_load_error_desc": "This may be due to a network issue - your vehicle is still there, try reloading.",
   "home.charging_hint": "Find charging nearby",
   "home.odo_hint": "Log current km",
   "home.odo_history": "ODO history",

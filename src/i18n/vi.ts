@@ -1100,6 +1100,7 @@ const vi = {
   "home.charging_short": "Trạm sạc",
   "home.no_vehicle_title": "Bắt đầu với chiếc xe của bạn",
   "home.no_vehicle_desc": "Thêm xe để theo dõi nhiên liệu, bảo dưỡng, hành trình và nhắc nhở giấy tờ.",
+  "home.vehicles_load_error_desc": "Có thể do mất mạng - xe của bạn vẫn còn, thử tải lại nhé.",
   "home.charging_hint": "Tìm trạm sạc quanh bạn",
   "home.odo_hint": "Ghi số km hiện tại",
   "home.odo_history": "Lịch sử ODO",

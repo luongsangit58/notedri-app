@@ -16,6 +16,11 @@ export type PairedDevice = {
   // Dùng để OBDSetupScreen tự chuyển đúng mode + tự kết nối lại (auto-reconnect
   // cho Classic, xem targetTransport ở đó) thay vì luôn mặc định BLE.
   transport?: 'ble' | 'classic';
+  // Opt-in (25/7, góp ý user: mở lại app không tự kết nối, nhưng KHÔNG được tự
+  // bật mặc định cho mọi người - tốn pin quét BLE mỗi lần mở app kể cả khi
+  // không ở trong xe) - user tự bật ở OBDSetupScreen. undefined = chưa từng
+  // chọn (coi như false, không nudge lại nếu đã có giá trị rõ ràng).
+  autoConnect?: boolean;
 };
 
 async function readAll(): Promise<PairedDevice[]> {
@@ -35,9 +40,36 @@ async function writeAll(devices: PairedDevice[]): Promise<void> {
 // background restore) và NFC tag biết thiết bị BLE này thuộc xe nào.
 export async function savePairing(pairing: PairedDevice): Promise<void> {
   const devices = await readAll();
+  // Giữ lại lựa chọn autoConnect đã có (25/7) - useObd.ts gọi hàm này sau MỌI
+  // lần connect thành công mà không biết gì về field này, ghi đè trực tiếp sẽ
+  // âm thầm xoá mất lựa chọn user đã bật ở OBDSetupScreen mỗi khi họ kết nối lại.
+  const previous = devices.find((d) => d.bleDeviceId === pairing.bleDeviceId);
   const next = devices.filter((d) => d.bleDeviceId !== pairing.bleDeviceId);
-  next.push({ ...pairing, lastConnectedAt: pairing.lastConnectedAt ?? Date.now() });
+  next.push({
+    ...pairing,
+    autoConnect: pairing.autoConnect ?? previous?.autoConnect,
+    lastConnectedAt: pairing.lastConnectedAt ?? Date.now(),
+  });
   await writeAll(next);
+}
+
+// User bật/tắt "Tự động kết nối khi mở app" cho 1 xe cụ thể (OBDSetupScreen).
+export async function setAutoConnect(vehicleId: number, enabled: boolean): Promise<void> {
+  const devices = await readAll();
+  const idx = devices.findIndex((d) => d.vehicleId === vehicleId);
+  if (idx === -1) return;
+  devices[idx] = { ...devices[idx], autoConnect: enabled };
+  await writeAll(devices);
+}
+
+// Pairing ĐỦ ĐIỀU KIỆN tự kết nối khi mở app (đã bật autoConnect) - dùng gần
+// nhất trong số đó, để ObdAutoConnect chỉ thử ĐÚNG 1 xe mỗi lần mở/quay lại
+// app thay vì quét song song nhiều xe cùng lúc.
+export async function getAutoConnectPairing(): Promise<PairedDevice | null> {
+  const devices = await readAll();
+  const eligible = devices.filter((d) => d.autoConnect);
+  if (eligible.length === 0) return null;
+  return eligible.slice().sort((a, b) => (b.lastConnectedAt ?? 0) - (a.lastConnectedAt ?? 0))[0];
 }
 
 // Có từng ghép ít nhất 1 thiết bị chưa - dùng để quyết định có đáng khởi tạo

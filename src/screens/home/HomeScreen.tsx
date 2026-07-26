@@ -159,7 +159,7 @@ export default function HomeScreen() {
 
   const user = useAuthStore(s => s.user);
 
-  const { data: vehiclesRaw, refetch: refetchVehicles, isFetching, isLoading: vehiclesLoading } = useVehicles();
+  const { data: vehiclesRaw, refetch: refetchVehicles, isFetching, isLoading: vehiclesLoading, isError: vehiclesError } = useVehicles();
   const vehicles: any[] = Array.isArray(vehiclesRaw?.data) ? vehiclesRaw.data
     : Array.isArray(vehiclesRaw) ? vehiclesRaw : [];
 
@@ -313,8 +313,32 @@ export default function HomeScreen() {
           </View>
         )}
 
-        {/* Chưa có xe -> mời thêm xe làm điểm khởi đầu (hầu hết tính năng cần 1 chiếc xe) */}
-        {vehicles.length === 0 && (
+        {/* Không tải được danh sách xe (mất mạng/lỗi API) - rà soát 26/7 (góp ý
+            user: có xe rồi mà mất mạng thì Home hiện y hệt "chưa có xe", dẫn
+            thẳng qua nút Thêm xe). vehicles rỗng vì fetch LỖI khác hẳn vehicles
+            rỗng vì user THẬT SỰ chưa có xe nào - phải tách 2 case, y như
+            VehiclesScreen.tsx đã làm đúng, không dùng chung 1 khối UI. */}
+        {vehicles.length === 0 && vehiclesError && (
+          <View style={{ backgroundColor: colors.surface, borderRadius: 18, padding: 28, alignItems: 'center', borderWidth: 1, borderColor: colors.border, marginTop: 8 }}>
+            <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: colors.error + '1f', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+              <FontAwesome5 name="wifi" size={28} color={colors.error} solid />
+            </View>
+            <Text style={{ color: colors.text, fontSize: 18, fontWeight: '800', textAlign: 'center' }}>{t('vehicles.cannot_load_list')}</Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 14, textAlign: 'center', marginTop: 8, lineHeight: 20 }}>{t('home.vehicles_load_error_desc')}</Text>
+            <TouchableOpacity
+              onPress={() => refetchVehicles()}
+              activeOpacity={0.85}
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.primary, borderRadius: 12, paddingHorizontal: 22, paddingVertical: 13, marginTop: 20 }}>
+              <FontAwesome5 name="sync" size={13} color={colors.primaryText} solid />
+              <Text style={{ color: colors.primaryText, fontWeight: '800', fontSize: 15 }}>{t('common.retry')}</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Chưa có xe -> mời thêm xe làm điểm khởi đầu (hầu hết tính năng cần 1 chiếc xe).
+            CHỈ hiện khi chắc chắn KHÔNG phải do lỗi tải (xem khối trên) - nếu không,
+            mất mạng sẽ trông y hệt "chưa từng thêm xe" dù user đã có xe từ trước. */}
+        {vehicles.length === 0 && !vehiclesError && (
           <View style={{ backgroundColor: colors.surface, borderRadius: 18, padding: 28, alignItems: 'center', borderWidth: 1, borderColor: colors.border, marginTop: 8 }}>
             <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: colors.primary + '1f', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
               <FontAwesome5 name="car-side" size={30} color={colors.primary} solid />

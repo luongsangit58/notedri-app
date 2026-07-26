@@ -493,6 +493,31 @@ class BleService {
   }
 
   /**
+   * Kiểm tra quyền HIỆN CÓ, KHÔNG xin thêm (25/7, cho auto-connect chạy nền lúc
+   * mở app) - khác requestPermissions() ở trên vốn CHỦ ĐỘNG bật popup hệ thống,
+   * chỉ nên gọi khi user tự tay vào màn kết nối. Tự động quét ngầm mà bật popup
+   * xin quyền không rõ ngữ cảnh (user còn chưa biết app đang làm gì) đúng là
+   * kiểu "phiền" cần tránh - auto-connect phải bỏ qua im lặng nếu quyền chưa có.
+   */
+  async hasScanPermissions(): Promise<boolean> {
+    if (Platform.OS !== 'android') return true;
+    try {
+      if (Platform.Version >= 31) {
+        const [scan, connect] = await Promise.all([
+          PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN),
+          PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT),
+        ]);
+        return scan && connect;
+      }
+      return await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION);
+    } catch {
+      // Không xác định được -> coi như CHƯA có, để auto-connect bỏ qua im lặng
+      // thay vì lỡ tay gọi tiếp startScan() rồi tự bật popup xin quyền.
+      return false;
+    }
+  }
+
+  /**
    * Android <31: startDeviceScan() trả về DANH SÁCH RỖNG (không lỗi) nếu quyền
    * vị trí đã cấp nhưng công tắc "Vị trí" (Location Services) toàn hệ thống
    * đang TẮT - yêu cầu của OS khi app không khai báo neverForLocation cho
