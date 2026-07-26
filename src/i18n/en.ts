@@ -609,8 +609,6 @@ const en = {
   "obd.gps_trip_nudge_cta": "Enable auto trip recording",
   "obd.keepalive_disclosure_title": "Keep the OBD2 connection alive when locked",
   "obd.keepalive_disclosure_body": "To keep reading OBD2 data even when you turn off the screen or switch to another app while driving, NoteDri needs \"Allow all the time\" location access - this is how Android allows an app to keep running in the background. Location isn't used for anything else here. After this, the system will ask once more to exempt NoteDri from battery optimization - also to prevent interruptions when the screen locks. On the next screen, choose \"Allow all the time\".",
-  "obd.radio_picker_title": "Listen to radio",
-  "obd.radio_off": "Turn off radio",
   "home.obd_quick_setup": "Connect an OBD2 adapter for your car",
   "home.obd_quick_upsell": "Premium feature - diagnose car issues via Bluetooth",
   "vehicle_detail.vin_prefill_title": "VIN read via OBD",
