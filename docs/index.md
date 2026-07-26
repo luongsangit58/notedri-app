@@ -20,6 +20,7 @@ Master navigation index for all project documentation.
 | Verify a formula/threshold against source | [ALGORITHMS.md](ALGORITHMS.md) |
 | Set up local development | [development-guide.md](development-guide.md) |
 | Build and release to stores | [deployment-guide.md](deployment-guide.md) |
+| Xem kế hoạch triển khai Nori Agent (AI Agent, chưa xong) | [nori-agent-plan.md](nori-agent-plan.md) |
 
 ---
 
@@ -96,6 +97,10 @@ Step-by-step local development setup. Includes:
 - Code conventions (TypeScript, styles, translations, dates, navigation)
 - Common development tasks (add screen, add endpoint, add translation)
 - Debugging tips
+
+### [nori-agent-plan.md](nori-agent-plan.md)
+
+Kế hoạch triển khai **Nori Agent** — trợ lý AI điều khiển tính năng NoteDri qua Tool Calling (không phải chatbot). Bản nháp kiến trúc, khảo sát hiện trạng codebase, danh sách Tool, việc cần làm ở cả app và backend Laravel, roadmap theo phase, và câu hỏi còn mở. Đọc file này trước khi bắt tay code phần Nori/AI.
 
 ### [deployment-guide.md](deployment-guide.md)
 
