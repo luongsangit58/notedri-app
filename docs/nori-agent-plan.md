@@ -153,6 +153,10 @@ Mỗi tool trả JSON thuần, map thẳng vào service/API **đã tồn tại**
 | `expense.summary()` | API đã có, chỉ lấy field chi phí NHIÊN LIỆU (`this_month`/`last_month`/`all_time`) | `src/api/dashboard.ts` → `dashboardApi.get()` (xác nhận 2026-07-27, xem mục 15) | read-only |
 | `maintenance.getUpcoming()` | API reminders đã có | `src/api/reminders.ts` → `remindersApi.list()` | read-only |
 | `insurance.getStatus()` / `inspection.getReminder()` | **Không cần tool riêng** (xác nhận 2026-07-27): `bảo hiểm`/`đăng kiểm` chỉ là 2 giá trị `loai` (`bao_hiem`, `dang_kiem`) trong CÙNG hệ thống reminders - đã trả về sẵn qua `maintenance.getUpcoming()`, lọc theo `eval.reminder.loai` | `app/Services/ReminderService.php` (backend) | read-only |
+| `vehicle.getRecentIssues()` | **Thêm 2026-07-27** theo góp ý thực tế (tốc độ/vòng tua lúc đang lái ít giá trị vì đổi liên tục — user ưu tiên hỏi kiểu "tuần qua xe có vấn đề gì không"). TÁI DÙNG đúng pure function mood/top-issue/so sánh tuần của Nori mascot (`noriSummary.ts`), không tự diễn giải lại từ raw DTC events | `src/services/nori/nori.ts`, `src/services/obd/sessionTrend.ts` | read-only |
+| `fuel.findNearbyStations()` | **Thêm 2026-07-27**. GPS lấy tại tool layer qua `expo-location`, KHÔNG bao giờ đưa vào nội dung gửi LLM (mục 4) | `src/api/refuels.ts` → `refuelsApi.nearbyStations()` | read-only |
+
+> Bảng đầy đủ câu hỏi user hay hỏi ↔ mức độ xử lý (kể cả các câu CHƯA có tool): xem `docs/nori-agent-qa-coverage.md`.
 
 **Chưa làm ở Phase 1** (để Phase 2, vì cần luồng hội thoại nhiều lượt kiểu "hỏi lại người dùng" + có `authority: mutating/destructive` → cần xác nhận + khoá thực thi, xem mục 7):
 
