@@ -161,13 +161,22 @@ export default function NoriChatScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom']}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        // 'undefined' trên Android (dùng ở các form khác trong app) KHÔNG đủ cho màn hình này:
-        // form thường chỉ cần cuộn để thấy input, còn ở đây thanh nhập BỊ GHIM cố định dưới
-        // cùng (không nằm trong ScrollView) nên bàn phím che mất hoàn toàn nếu không tự đẩy
-        // lên - dùng 'height' giống đúng pattern modal chấm điểm bên dưới trong CHÍNH file
-        // này (ProfileScreen cũng dùng 'height' cho modal). Bug thật phát hiện lúc build app
-        // test, không phải suy đoán.
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        // Rà soát lại 2026-07-27 (user báo "height" vẫn chưa "triệt để"): AndroidManifest.xml
+        // của app đã khai `android:windowSoftInputMode="adjustResize"` - nghĩa là HỆ ĐIỀU HÀNH
+        // tự co nhỏ cửa sổ app khi bàn phím mở, KHÔNG cần KeyboardAvoidingView làm việc đó lại
+        // trên Android. Trước đây dùng `behavior="height"` CÙNG LÚC với `adjustResize` là tổ
+        // hợp hay gây lỗi (RN tính lại height dựa theo sự kiện bàn phím, CHỒNG lên phần OS đã
+        // tự co - dễ ra kết quả co 2 lần hoặc giật/lệch tuỳ loại bàn phím). Giờ FlatList bên
+        // dưới đã có `style={{flex:1}}` (fix cùng đợt trước, xem mục layout chip gợi ý) - khi
+        // OS co cửa sổ, FlatList tự co theo (flex:1 hấp thụ hết phần hụt), thanh nhập (không có
+        // flex, đứng NGAY SAU FlatList) tự động trồi lên sát mép trên bàn phím mà KHÔNG cần
+        // logic JS nào thêm - để Android tự lo trọn vẹn qua `adjustResize`, KHÔNG chồng thêm
+        // `KeyboardAvoidingView` (behavior=undefined). iOS KHÔNG có cơ chế tương đương
+        // `adjustResize` nên vẫn cần `padding` như cũ.
+        // Lưu ý: đây là suy luận đúng theo tài liệu RN/Android (adjustResize + KeyboardAvoidingView
+        // trên Android là tổ hợp không nên dùng chung) - CẦN test lại trên thiết bị thật để xác
+        // nhận hết hẳn, môi trường này không có device/simulator để tự kiểm chứng bằng mắt.
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
         <FlatList

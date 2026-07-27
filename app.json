@@ -37,6 +37,7 @@
       "package": "com.notedri",
       "versionCode": 38,
       "googleServicesFile": "./google-services.json",
+      "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
         "backgroundColor": "#060507",
         "foregroundImage": "./assets/android-icon-foreground.png",
