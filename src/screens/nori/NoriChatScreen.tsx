@@ -4,12 +4,14 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
+import * as Speech from 'expo-speech';
 import { useColors } from '../../utils/theme';
 import { useNoriAgentStore } from '../../store/noriAgentStore';
 import { useObdSessionStore } from '../../store/obdSessionStore';
 import { useSelectedVehicleStore } from '../../store/selectedVehicleStore';
 import { useVehicles } from '../../hooks/useVehicles';
 import { useAuthStore } from '../../store/authStore';
+import { useVoiceInput } from '../../hooks/useVoiceInput';
 import { NoriFeedbackRating } from '../../api/nori';
 
 const RATING_OPTIONS: { value: NoriFeedbackRating; label: string; emoji: string }[] = [
@@ -30,8 +32,18 @@ const SUGGESTED_QUESTIONS = [
 ];
 
 /**
- * Màn hình chat TEXT để test Phase 1 (docs/nori-agent-plan.md mục 10.1, 13) - chưa nối
- * voice (Phase 3).
+ * Màn hình chat TEXT + VOICE (docs/nori-agent-plan.md mục 10.1, 13, Phase 3).
+ *
+ * Voice (thêm 2026-07-27): tái dùng NGUYÊN `useVoiceInput` (STT, đã có sẵn cho nhập ODO/số
+ * tiền) - chỉ dùng tham số `raw` (transcript gốc) thay vì `parsed` (parser dành riêng cho số).
+ * TTS dùng `expo-speech` (MỚI cài - cần rebuild app, không chỉ reload JS). Chỉ tự đọc to câu
+ * trả lời nếu LƯỢT HỎI VỪA RỒI là bằng giọng nói (gõ chữ thì không đọc, tránh làm phiền) -
+ * theo dõi qua `lastInputWasVoiceRef`. Bấm mic lúc Nori đang đọc sẽ NGẮT LỜI (dừng TTS) trước
+ * khi bắt đầu nghe, vì không nghe-nói được cùng lúc.
+ *
+ * CHƯA làm ở lượt này (cố tình giới hạn phạm vi, xem trao đổi với user 2026-07-27): "phản hồi
+ * hai pha" (câu đệm "để mình kiểm tra..." trước khi tool chạy xong) - đọc thẳng câu trả lời
+ * CUỐI CÙNG như đường text, có thể có độ trễ trước khi Nori bắt đầu nói nếu phải gọi tool.
  *
  * ToolContext.vehicleId ưu tiên xe đang có phiên OBD sống (obdSessionStore) - đúng cho
  * vehicleTools (mục 7: activeVehicleId là tham số thay đổi được, không hardcode 1 xe). Nhưng
@@ -75,11 +87,55 @@ export default function NoriChatScreen() {
     }, userName);
   }, [init, userName]);
 
+  const { listen, stop: stopListening, status: voiceStatus, error: voiceError } = useVoiceInput();
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  // true nếu lượt hỏi VỪA RỒI là bằng giọng nói - chỉ đọc to trả lời trong trường hợp đó
+  // (gõ chữ thì Nori không tự đọc, tránh gây phiền/ồn không mong muốn).
+  const lastInputWasVoiceRef = useRef(false);
+  const prevMessageCountRef = useRef(uiMessages.length);
+
+  useEffect(() => {
+    const newMessage = uiMessages[uiMessages.length - 1];
+    const hasNewMessage = uiMessages.length > prevMessageCountRef.current;
+    prevMessageCountRef.current = uiMessages.length;
+
+    if (hasNewMessage && newMessage?.role === 'assistant' && lastInputWasVoiceRef.current) {
+      lastInputWasVoiceRef.current = false;
+      Speech.speak(newMessage.text, {
+        language: 'vi-VN',
+        onStart: () => setIsSpeaking(true),
+        onDone: () => setIsSpeaking(false),
+        onStopped: () => setIsSpeaking(false),
+        onError: () => setIsSpeaking(false),
+      });
+    }
+  }, [uiMessages]);
+
+  // Dừng TTS khi rời màn hình - không để Nori tiếp tục nói sau khi user đã back ra.
+  useEffect(() => () => { Speech.stop(); }, []);
+
   const handleSend = (textOverride?: string) => {
     const text = (textOverride ?? input).trim();
     if (!text) return;
     setInput('');
     sendMessage(text);
+  };
+
+  const handleMicPress = async () => {
+    if (isSpeaking) {
+      await Speech.stop(); // Ngắt lời Nori trước - không nghe-nói được cùng lúc.
+      setIsSpeaking(false);
+    }
+    if (voiceStatus === 'listening') {
+      stopListening();
+      return;
+    }
+    await listen((_parsed, raw) => {
+      if (raw.trim()) {
+        lastInputWasVoiceRef.current = true;
+        handleSend(raw);
+      }
+    });
   };
 
   const openFeedback = (requestId?: string) => {
@@ -169,6 +225,27 @@ export default function NoriChatScreen() {
           </View>
         )}
 
+        {voiceStatus === 'listening' && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 6, gap: 8 }}>
+            <FontAwesome5 name="microphone" size={13} color={colors.error} solid />
+            <Text style={{ color: colors.error }}>Đang nghe...</Text>
+          </View>
+        )}
+
+        {isSpeaking && (
+          <TouchableOpacity
+            onPress={() => { Speech.stop(); setIsSpeaking(false); }}
+            style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 6, gap: 8 }}
+          >
+            <FontAwesome5 name="volume-up" size={13} color={colors.primary} solid />
+            <Text style={{ color: colors.primary }}>Nori đang nói... (bấm để dừng)</Text>
+          </TouchableOpacity>
+        )}
+
+        {voiceError && voiceStatus === 'error' && (
+          <Text style={{ color: colors.error, fontSize: 12, paddingHorizontal: 16, paddingBottom: 6 }}>{voiceError}</Text>
+        )}
+
         <View
           style={{
             flexDirection: 'row',
@@ -196,6 +273,18 @@ export default function NoriChatScreen() {
             onSubmitEditing={() => handleSend()}
             editable={!isThinking}
           />
+          <TouchableOpacity
+            onPress={handleMicPress}
+            disabled={isThinking}
+            style={{
+              width: 40, height: 40, borderRadius: 20,
+              backgroundColor: voiceStatus === 'listening' ? colors.error : colors.background,
+              alignItems: 'center', justifyContent: 'center',
+              opacity: isThinking ? 0.5 : 1,
+            }}
+          >
+            <FontAwesome5 name="microphone" size={16} color={voiceStatus === 'listening' ? '#fff' : colors.textSecondary} solid />
+          </TouchableOpacity>
           <TouchableOpacity
             onPress={() => handleSend()}
             disabled={isThinking || !input.trim()}
