@@ -314,6 +314,12 @@ export default function ProfileScreen() {
             label={t('profile.feedback')}
             onPress={() => navigation.navigate('Feedback')}
           />
+          {/* Nori Agent - Phase 1 text chat, đang test (chưa i18n, xem docs/nori-agent-plan.md) */}
+          <MenuItem
+            icon={<FontAwesome5 name="robot" size={16} color={colors.textSecondary} solid />}
+            label="Nori (thử nghiệm)"
+            onPress={() => navigation.navigate('NoriChat')}
+          />
           <MenuItem
             icon={<FontAwesome5 name="download" size={16} color={colors.textSecondary} solid />}
             label={t('profile.export')}

@@ -54,6 +54,7 @@ import DtcLookupScreen from '../screens/obd/DtcLookupScreen';
 import ObdReportScreen from '../screens/obd/ObdReportScreen';
 import GpsTripsScreen from '../screens/trips/GpsTripsScreen';
 import DevicesScreen from '../screens/profile/DevicesScreen';
+import NoriChatScreen from '../screens/nori/NoriChatScreen';
 
 const Tab = createBottomTabNavigator();
 const RootStack = createStackNavigator();
@@ -231,6 +232,10 @@ export default function AppNavigator() {
       {/* Feedback */}
       <RootStack.Screen name="Feedback" component={FeedbackScreen}
         options={{ headerShown: true, ...headerOpts, title: t('feedback.title') }} />
+
+      {/* Nori Agent - Phase 1 text chat, xem docs/nori-agent-plan.md (chưa i18n, còn đang test) */}
+      <RootStack.Screen name="NoriChat" component={NoriChatScreen}
+        options={{ headerShown: true, ...headerOpts, title: 'Nori (thử nghiệm)' }} />
 
       {/* About */}
       <RootStack.Screen name="About" component={AboutScreen}
