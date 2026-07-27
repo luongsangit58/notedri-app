@@ -28,6 +28,8 @@ export const vehiclesApi = {
   },
   delete: (id: number) => client.delete(`/vehicles/${id}`),
   health: (id: number) => client.get(`/vehicles/${id}/health`),
+  costSummary: (id: number, days = 30) =>
+    client.get<{ data: { fuel: number; service: number; total: number } }>(`/vehicles/${id}/cost-summary`, { params: { days } }),
   reminders: (id: number) => client.get(`/vehicles/${id}/reminders`),
   setDefault: (id: number) => client.post(`/vehicles/${id}/default`),
   toggleRest: (id: number) => client.post(`/vehicles/${id}/rest`),

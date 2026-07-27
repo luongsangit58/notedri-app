@@ -98,6 +98,13 @@ export function buildLocalReply(toolName: string, result: any): string {
         : 'Chưa có dữ liệu chi phí nhiên liệu tháng này.';
     }
 
+    case 'maintenance.expenseSummary': {
+      const service = result.service ?? 0;
+      const fuel = result.fuel ?? 0;
+      if (service === 0) return 'Trong 30 ngày gần đây bạn chưa có chi phí bảo dưỡng/sửa chữa nào được ghi nhận.';
+      return `30 ngày gần đây bạn đã chi ${service.toLocaleString('vi-VN')}đ cho bảo dưỡng/sửa chữa (chi phí xăng cùng kỳ: ${fuel.toLocaleString('vi-VN')}đ).`;
+    }
+
     case 'maintenance.getUpcoming': {
       const reminders = result.reminders?.data ?? result.reminders ?? [];
       const urgent = Array.isArray(reminders) ? reminders.filter((r: any) => r?.eval?.status === 'qua_han' || r?.eval?.status === 'sap_toi') : [];

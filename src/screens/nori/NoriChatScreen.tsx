@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity, FlatList, KeyboardAvoidingView, Platform, ActivityIndicator, Modal,
+  View, Text, TextInput, TouchableOpacity, FlatList, KeyboardAvoidingView, Platform, ActivityIndicator, Modal, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
@@ -16,6 +16,17 @@ const RATING_OPTIONS: { value: NoriFeedbackRating; label: string; emoji: string 
   { value: 'good', label: 'Đúng', emoji: '✅' },
   { value: 'partial', label: 'Một phần đúng', emoji: '🟡' },
   { value: 'bad', label: 'Sai', emoji: '❌' },
+];
+
+// Câu hỏi mẫu hiện ngay sau lời chào - user mới mở màn hình lần đầu không biết hỏi gì (góp ý
+// thực tế lúc build app test), che rõ vài nhóm tool chính (sức khoẻ/chi phí/bảo dưỡng/hành
+// trình) để user hình dung phạm vi Nori trả lời được. Chỉ hiện khi CHƯA có tin nhắn nào ngoài
+// lời chào (uiMessages.length <= 1) - biến mất sau khi user bắt đầu hỏi, không chiếm chỗ mãi.
+const SUGGESTED_QUESTIONS = [
+  'Xe tôi sức khoẻ thế nào?',
+  'Tháng này tôi tốn bao nhiêu tiền xăng?',
+  'Xe tôi có gì sắp đến hạn không?',
+  'Hôm nay tôi chạy được bao nhiêu km?',
 ];
 
 /**
@@ -64,8 +75,8 @@ export default function NoriChatScreen() {
     }, userName);
   }, [init, userName]);
 
-  const handleSend = () => {
-    const text = input.trim();
+  const handleSend = (textOverride?: string) => {
+    const text = (textOverride ?? input).trim();
     if (!text) return;
     setInput('');
     sendMessage(text);
@@ -87,7 +98,13 @@ export default function NoriChatScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom']}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        // 'undefined' trên Android (dùng ở các form khác trong app) KHÔNG đủ cho màn hình này:
+        // form thường chỉ cần cuộn để thấy input, còn ở đây thanh nhập BỊ GHIM cố định dưới
+        // cùng (không nằm trong ScrollView) nên bàn phím che mất hoàn toàn nếu không tự đẩy
+        // lên - dùng 'height' giống đúng pattern modal chấm điểm bên dưới trong CHÍNH file
+        // này (ProfileScreen cũng dùng 'height' cho modal). Bug thật phát hiện lúc build app
+        // test, không phải suy đoán.
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
         <FlatList
@@ -124,6 +141,27 @@ export default function NoriChatScreen() {
           )}
         />
 
+        {uiMessages.length <= 1 && !isThinking && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 10, gap: 8 }}
+          >
+            {SUGGESTED_QUESTIONS.map((q) => (
+              <TouchableOpacity
+                key={q}
+                onPress={() => handleSend(q)}
+                style={{
+                  paddingVertical: 8, paddingHorizontal: 14, borderRadius: 16,
+                  backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
+                }}
+              >
+                <Text style={{ color: colors.text, fontSize: 13 }}>{q}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        )}
+
         {isThinking && (
           <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 6, gap: 8 }}>
             <ActivityIndicator size="small" color={colors.primary} />
@@ -155,11 +193,11 @@ export default function NoriChatScreen() {
               paddingVertical: 10,
               color: colors.text,
             }}
-            onSubmitEditing={handleSend}
+            onSubmitEditing={() => handleSend()}
             editable={!isThinking}
           />
           <TouchableOpacity
-            onPress={handleSend}
+            onPress={() => handleSend()}
             disabled={isThinking || !input.trim()}
             style={{
               width: 40, height: 40, borderRadius: 20,

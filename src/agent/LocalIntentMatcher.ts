@@ -66,6 +66,12 @@ const RULES: Rule[] = [
     phrases: ['cay xang gan day', 'tim cay xang', 'cay xang gan nhat', 'tram xang gan day'],
   },
   {
+    // Đứng TRƯỚC expense.summary - "tiền bảo dưỡng"/"tiền sửa xe" phải không rơi nhầm vào
+    // rule chi phí xăng (thứ tự mảng RULES quyết định rule nào được xét trước).
+    toolName: 'maintenance.expenseSummary',
+    phrases: ['tien bao duong', 'chi phi bao duong', 'tien sua xe', 'chi phi sua xe', 'tien sua chua'],
+  },
+  {
     toolName: 'expense.summary',
     phrases: ['ton bao nhieu tien xang', 'chi phi xang', 'tien xang thang', 'het bao nhieu tien xang'],
   },

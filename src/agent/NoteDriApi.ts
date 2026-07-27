@@ -83,4 +83,15 @@ export const NoteDriApi = {
     const res = await refuelsApi.nearbyStations(lat, lng);
     return (res.data as any)?.stations ?? (res.data as any)?.data ?? [];
   },
+
+  /**
+   * `/vehicles/{id}/cost-summary` - MỚI (2026-07-27), thêm sau khi user test thật hỏi "tổng
+   * tiền bảo dưỡng tháng trước" và KHÔNG có tool nào trả lời được (grounding validator đã chặn
+   * đúng số bịa của LLM, nhưng vẫn không giúp gì được user - thiếu tool thật). Tái dùng
+   * CostSummary::since() (backend) - nguồn sự thật chi phí đã dùng chung ở nhiều nơi khác.
+   */
+  async getCostSummary(vehicleId: number, days = 30) {
+    const res = await vehiclesApi.costSummary(vehicleId, days);
+    return res.data.data;
+  },
 };

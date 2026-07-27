@@ -67,6 +67,17 @@ export function buildBusinessTools(): ToolDefinition[] {
       },
     },
     {
+      name: 'maintenance.expenseSummary',
+      description: 'Lấy tổng chi phí BẢO DƯỠNG/SỬA CHỮA (và xăng, để so sánh) trong 30 ngày gần nhất - vd "tổng tiền bảo dưỡng tháng trước", "tháng này tốn bao nhiêu tiền sửa xe". Khác với expense.summary (chỉ tính xăng).',
+      authority: 'read-only',
+      inputSchema: NO_INPUT_SCHEMA,
+      async execute(_input, ctx) {
+        if (!ctx.vehicleId) return { status: 'unavailable', reason: 'no_active_vehicle' };
+        const data = await NoteDriApi.getCostSummary(ctx.vehicleId, 30);
+        return { status: 'ok', ...data, age_seconds: 0 };
+      },
+    },
+    {
       name: 'maintenance.getUpcoming',
       description: 'Lấy danh sách nhắc nhở bảo dưỡng/giấy tờ sắp đến hạn của xe.',
       authority: 'read-only',

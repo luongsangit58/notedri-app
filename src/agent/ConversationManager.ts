@@ -28,8 +28,12 @@ let localRequestCounter = 0;
  *
  * Grounding validator (Phase 1, bản thật - không chỉ dặn dò prompt, chỉ áp dụng cho đường LLM):
  * mọi token giống-số trong câu trả lời cuối phải xuất hiện trong ít nhất 1 tool_result đã thực
- * thi TRONG LƯỢT NÀY. Nếu không, coi output đó là vi phạm hợp đồng grounding - không hiển thị
- * nguyên văn, trả về câu an toàn kèm log cảnh báo để dev soát lại (không phải throw làm crash).
+ * thi TỪ TRƯỚC ĐẾN GIỜ TRONG CẢ CUỘC HỘI THOẠI (không chỉ lượt này - xem bug thật đã bắt được
+ * 2026-07-27: hỏi "P0120 có lái tiếp được không" NGAY SAU KHI đã hỏi "P0120 là gì" ở lượt trước
+ * bị chặn nhầm, vì LLM trả lời dựa vào tool_result CŨ đã có trong lịch sử, không gọi tool mới ở
+ * lượt này - nếu chỉ soát tool_result "trong lượt này" thì mọi câu hỏi nối tiếp hợp lệ kiểu này
+ * đều bị chặn oan). Nếu không khớp bất kỳ tool_result nào (cũ lẫn mới), coi là vi phạm hợp đồng
+ * grounding - không hiển thị nguyên văn, trả về câu an toàn kèm log cảnh báo để dev soát lại.
  */
 export class ConversationManager {
   private messages: NoriMessage[] = [];
@@ -59,7 +63,6 @@ export class ConversationManager {
 
     this.messages.push({ role: 'user', content: userText });
 
-    const toolResultContentsThisTurn: string[] = [];
     const tools = this.registry.getSchemas();
 
     for (let iteration = 0; iteration < MAX_TOOL_LOOP_ITERATIONS; iteration++) {
@@ -91,7 +94,7 @@ export class ConversationManager {
       if (stopReason !== 'tool_use') {
         const text = extractText(content);
         return {
-          text: this.applyGroundingValidator(text, toolResultContentsThisTurn),
+          text: this.applyGroundingValidator(text),
           requestId,
           source: 'llm',
         };
@@ -105,7 +108,6 @@ export class ConversationManager {
       for (const block of toolCalls) {
         const call: NoriToolCall = { id: block.id, name: block.name, input: block.input };
         const result = await this.executor.execute(call, this.getContext());
-        toolResultContentsThisTurn.push(result.content);
         toolResultBlocks.push({
           type: 'tool_result',
           tool_use_id: result.toolUseId,
@@ -124,7 +126,8 @@ export class ConversationManager {
     };
   }
 
-  private applyGroundingValidator(text: string, toolResultContents: string[]): string {
+  private applyGroundingValidator(text: string): string {
+    const toolResultContents = this.getAllToolResultContents();
     const numberTokens = text.match(/\d+([.,]\d+)?/g) ?? [];
     const ungrounded = numberTokens.filter(
       (token) => !toolResultContents.some((result) => result.includes(token)),
@@ -138,6 +141,20 @@ export class ConversationManager {
     }
 
     return text;
+  }
+
+  /** Quét TOÀN BỘ lịch sử hội thoại (không chỉ lượt hiện tại) lấy nội dung mọi tool_result đã
+   * từng thực thi - xem docblock class ở trên (bug thật 2026-07-27: câu hỏi nối tiếp tham
+   * chiếu tool_result CŨ bị chặn nhầm nếu chỉ soát lượt hiện tại). */
+  private getAllToolResultContents(): string[] {
+    const contents: string[] = [];
+    for (const msg of this.messages) {
+      if (!Array.isArray(msg.content)) continue;
+      for (const block of msg.content) {
+        if (block.type === 'tool_result') contents.push(block.content);
+      }
+    }
+    return contents;
   }
 }
 
