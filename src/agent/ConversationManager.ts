@@ -93,6 +93,21 @@ export class ConversationManager {
         // nếu lỗi xảy ra ở vòng lặp tool sau) vẫn là 1 chuỗi hợp lệ kết thúc bằng lượt "user" -
         // lượt sendMessage() kế tiếp chỉ cần nối thêm 1 user turn nữa lên trên (Anthropic tự
         // gộp 2 lượt user liên tiếp thành 1 turn, không lỗi "roles must alternate").
+        //
+        // Nori Agent giờ là tính năng Premium (2026-07-27, `AiNoriController::chat()` chặn 403
+        // + `premium_required:true` - cùng shape response gas_finder/export đã dùng khắp app,
+        // xem `isPremiumRequiredError()` trong businessTools.ts) - nhận diện riêng để nói đúng
+        // lý do thay vì báo nhầm "mất mạng" cho user Free.
+        const status = (err as any)?.response?.status;
+        const premiumRequired = (err as any)?.response?.data?.premium_required === true;
+        if (status === 403 && premiumRequired) {
+          return {
+            text: 'Nori hiện là tính năng dành cho Premium - bạn nâng cấp gói Premium để trò chuyện cùng Nori nhé!',
+            requestId: `local-${Date.now()}-${localRequestCounter++}`,
+            source: 'local',
+          };
+        }
+
         return {
           text: 'Mình đang không kết nối được với máy chủ, bạn kiểm tra mạng rồi thử lại giúp mình nhé.',
           requestId: `local-${Date.now()}-${localRequestCounter++}`,

@@ -2,6 +2,10 @@ import { create } from 'zustand';
 import { NoriAgent } from '../agent/NoriAgent';
 import { VehicleContext } from '../agent/VehicleContext';
 import { noriApi, NoriFeedbackRating } from '../api/nori';
+import { useAuthStore } from './authStore';
+
+const PREMIUM_REQUIRED_TEXT =
+  'Nori hiện là tính năng dành cho Premium - bạn nâng cấp gói Premium để trò chuyện cùng Nori nhé!';
 
 /**
  * Trạng thái hội thoại Nori Agent (docs/nori-agent-plan.md mục 10.1), theo pattern
@@ -85,6 +89,18 @@ export const useNoriAgentStore = create<NoriAgentState>((set, get) => ({
     set((state) => ({
       uiMessages: [...state.uiMessages, { id: String(nextId++), role: 'user', text }],
     }));
+
+    // Nori Agent là tính năng Premium (2026-07-27) - backend đã chặn ở `/ai/nori/chat`
+    // (`AiNoriController::chat()`, 403 + `premium_required`), nhưng đường LocalIntentMatcher
+    // KHÔNG đi qua endpoint đó (trả lời thẳng từ tool_result app-side) - nếu không chặn ở ĐÂY,
+    // user Free vẫn "lách" được vào Nori miễn phí qua các câu hỏi khớp mẫu local. Chặn TRƯỚC
+    // khi gọi agent.sendMessage() để chắn CẢ 2 đường (local lẫn LLM) cho user Free.
+    if (!useAuthStore.getState().user?.is_premium) {
+      set((state) => ({
+        uiMessages: [...state.uiMessages, { id: String(nextId++), role: 'assistant', text: PREMIUM_REQUIRED_TEXT }],
+      }));
+      return;
+    }
 
     const reply = await agent.sendMessage(text);
 
