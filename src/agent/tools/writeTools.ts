@@ -1,3 +1,4 @@
+import dayjs from 'dayjs';
 import { ToolDefinition } from '../types';
 import { NoteDriApi } from '../NoteDriApi';
 
@@ -109,7 +110,12 @@ export function buildWriteTools(): ToolDefinition[] {
         }
         try {
           const data = await NoteDriApi.createRefuel(ctx.vehicleId, {
-            ngay: input.ngay as string | undefined,
+            // Khác odometer.create (backend tự mặc định "hôm nay" khi thiếu `ngay`),
+            // RefuelController::validateData() bắt `ngay` là REQUIRED - thiếu sẽ luôn 422 "The
+            // ngay field is required." Bug thật bắt được lúc test (curl không truyền `ngay`,
+            // đúng tình huống LLM bỏ trống theo description cũ) - phải tự điền mặc định ở tầng
+            // app, không thể tin backend tự lo như odometer.
+            ngay: (input.ngay as string | undefined) ?? dayjs().format('YYYY-MM-DD'),
             odometer: input.odometer != null ? Number(input.odometer) : undefined,
             so_lit: soLit,
             gia_lit: giaLit,
