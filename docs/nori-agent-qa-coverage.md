@@ -57,7 +57,8 @@
 |---|---|---|---|---|
 | "Tháng này tôi tốn bao nhiêu tiền xăng?" | ✅ | ⚡ Local | `expense.summary` | Chỉ tính chi phí NHIÊN LIỆU (xăng/điện), KHÔNG gồm bảo dưỡng/sửa chữa. |
 | "Tháng trước so với tháng này thế nào?" | ✅ | ⚡ Local | `expense.summary` | Trả cả `this_month`/`last_month`/`all_time` cùng lúc. |
-| "Tổng chi phí xe tôi từ trước tới giờ (xăng + bảo dưỡng)?" | ❌ | — | — | Chưa có tool — dữ liệu tồn tại ở backend (`CostSummary::lifetime()`) nhưng chỉ lộ qua endpoint báo cáo theo năm, Premium-gated cho năm cũ. Cần cân nhắc thêm route/tool riêng nếu câu hỏi này phổ biến. |
+| "Tổng tiền bảo dưỡng tháng trước?" | ✅ | ⚡ Local | `maintenance.expenseSummary` | **Thêm 2026-07-27** - phát hiện thiếu lúc user test thật (không tool nào trả lời được, grounding validator đúng đắn chặn số LLM tự bịa nhưng vẫn không giúp ích gì). Route mới `GET vehicles/{id}/cost-summary` tái dùng `CostSummary::since()`. Trả cả `service` (bảo dưỡng) lẫn `fuel` (xăng) trong 30 ngày để so sánh. |
+| "Tổng chi phí xe tôi từ trước tới giờ (xăng + bảo dưỡng, TRỌN ĐỜI)?" | ❌ | — | — | Vẫn chưa có - `CostSummary::lifetime()` tồn tại nhưng chỉ lộ qua endpoint báo cáo theo năm, Premium-gated cho năm cũ. Khác với "30 ngày gần đây" (đã có ở trên) - đây là hỏi TOÀN BỘ lịch sử. |
 
 ## Bảo dưỡng & giấy tờ
 
