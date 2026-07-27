@@ -7,21 +7,46 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import { useColors } from '../../utils/theme';
 import { useNoriAgentStore } from '../../store/noriAgentStore';
 import { useObdSessionStore } from '../../store/obdSessionStore';
+import { useSelectedVehicleStore } from '../../store/selectedVehicleStore';
+import { useVehicles } from '../../hooks/useVehicles';
 
 /**
  * Màn hình chat TEXT để test Phase 1 (docs/nori-agent-plan.md mục 10.1, 13) - chưa nối
- * voice (Phase 3). Dùng activeVehicleId từ obdSessionStore (xe đang có phiên OBD sống) làm
- * ToolContext.vehicleId - đúng tinh thần "activeVehicleId là tham số thay đổi được" (mục 7).
+ * voice (Phase 3).
+ *
+ * ToolContext.vehicleId ưu tiên xe đang có phiên OBD sống (obdSessionStore) - đúng cho
+ * vehicleTools (mục 7: activeVehicleId là tham số thay đổi được, không hardcode 1 xe). Nhưng
+ * businessTools (health/trip/odo/expense/maintenance) không cần BLE để có dữ liệu - nếu CHỈ
+ * dùng obdSessionStore, mọi câu hỏi kiểu "tháng này tốn bao nhiêu tiền xăng" sẽ luôn báo
+ * "unavailable" khi chưa kết nối OBD dù xe đã có đủ dữ liệu trên server. Fallback theo đúng
+ * cách HomeScreen.tsx đang chọn "xe đang xem" (selectedVehicleStore -> xe mặc định -> xe đầu
+ * tiên) để business tools hoạt động độc lập với BLE, giống hành vi user thấy ở Trang chủ.
  */
 export default function NoriChatScreen() {
   const colors = useColors();
   const { uiMessages, isThinking, init, sendMessage } = useNoriAgentStore();
-  const activeVehicleId = useObdSessionStore((s) => s.vehicleId);
   const [input, setInput] = useState('');
   const listRef = useRef<FlatList>(null);
 
+  const { data: vehiclesRaw } = useVehicles();
+  const vehicles: any[] = Array.isArray(vehiclesRaw?.data) ? vehiclesRaw.data
+    : Array.isArray(vehiclesRaw) ? vehiclesRaw : [];
+  // init() chỉ tạo NoriAgent 1 LẦN DUY NHẤT (no-op nếu gọi lại) - closure truyền vào lần đầu
+  // sẽ bị "đóng băng" mãi mãi nếu đọc thẳng `vehicles` (lúc đó danh sách xe thường CHƯA tải
+  // xong, `vehicles = []`). Dùng ref để callback luôn đọc được danh sách xe MỚI NHẤT tại thời
+  // điểm NoriAgent thực sự gọi getVehicleId(), bất kể init() chạy trước hay sau khi tải xong.
+  const vehiclesRef = useRef(vehicles);
+  vehiclesRef.current = vehicles;
+
   useEffect(() => {
-    init(() => useObdSessionStore.getState().vehicleId);
+    init(() => {
+      const obdVehicleId = useObdSessionStore.getState().vehicleId;
+      if (obdVehicleId) return obdVehicleId;
+      const selectedVehicleId = useSelectedVehicleStore.getState().selectedVehicleId;
+      if (selectedVehicleId) return selectedVehicleId;
+      const defaultVehicle = vehiclesRef.current.find((v) => v.is_default) ?? vehiclesRef.current[0];
+      return defaultVehicle?.id ?? null;
+    });
   }, [init]);
 
   const handleSend = () => {
