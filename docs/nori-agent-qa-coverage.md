@@ -56,7 +56,9 @@
 | Câu hỏi ví dụ | Đã xử lý | Xử lý qua | Tool | Ghi chú |
 |---|---|---|---|---|
 | "Tháng này tôi tốn bao nhiêu tiền xăng?" | ✅ | ⚡ Local | `expense.summary` | Chỉ tính chi phí NHIÊN LIỆU (xăng/điện), KHÔNG gồm bảo dưỡng/sửa chữa. |
-| "Tháng trước so với tháng này thế nào?" | ✅ | ⚡ Local | `expense.summary` | Trả cả `this_month`/`last_month`/`all_time` cùng lúc. |
+| "Tiền xăng tháng trước / tháng 6" (khi tháng 6 = tháng trước) | ✅ | ⚡ Local | `expense.summary` | **Sửa 2026-07-27** - bug thật: trước đây LUÔN trả lời "tháng này" bất kể hỏi tháng nào (template chỉ đọc `this_month`, bỏ qua `last_month` dù đã có sẵn trong tool_result). Giờ `resolveRequestedMonth()` nhận diện "tháng trước"/số tháng cụ thể (so với ngày thật) → trả đúng `last_month`. |
+| "Tháng trước so với tháng này thế nào?" | ✅ | ⚡ Local | `expense.summary` | Trả cả `this_month` VÀ `last_month` trong 1 câu (trước đây tài liệu này từng ghi nhầm là code đã làm vậy - thực tế code CHỈ trả `this_month` cho tới khi sửa cùng đợt 2026-07-27 ở trên). |
+| "Tiền xăng tháng 3" (không phải tháng này/tháng trước) | ✅ | ⚡ Local | `expense.summary` | Trả lời THẬT là chưa hỗ trợ tra 1 tháng cụ thể xa hơn quá khứ (backend chỉ có this_month/last_month/all_time, không có API theo tháng bất kỳ) - KHÔNG ngầm định về tháng này như trước. |
 | "Tổng tiền bảo dưỡng tháng trước?" | ✅ | ⚡ Local | `maintenance.expenseSummary` | **Thêm 2026-07-27** - phát hiện thiếu lúc user test thật (không tool nào trả lời được, grounding validator đúng đắn chặn số LLM tự bịa nhưng vẫn không giúp ích gì). Route mới `GET vehicles/{id}/cost-summary` tái dùng `CostSummary::since()`. Trả cả `service` (bảo dưỡng) lẫn `fuel` (xăng) trong 30 ngày để so sánh. |
 | "Tổng chi phí xe tôi từ trước tới giờ (xăng + bảo dưỡng, TRỌN ĐỜI)?" | ❌ | — | — | Vẫn chưa có - `CostSummary::lifetime()` tồn tại nhưng chỉ lộ qua endpoint báo cáo theo năm, Premium-gated cho năm cũ. Khác với "30 ngày gần đây" (đã có ở trên) - đây là hỏi TOÀN BỘ lịch sử. |
 

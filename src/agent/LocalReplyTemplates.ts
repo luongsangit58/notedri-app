@@ -1,3 +1,5 @@
+import { normalize } from './LocalIntentMatcher';
+
 /**
  * Dựng câu trả lời tiếng Việt THẲNG từ tool_result cho các intent khớp LocalIntentMatcher -
  * KHÔNG qua LLM. Vì vậy câu trả lời chắc chắn grounded (không có bước "LLM diễn đạt lại" nên
@@ -5,6 +7,46 @@
  * cảnh hội thoại. Giữ mỗi template ngắn, đúng dữ liệu, đúng giọng đã định trong system prompt
  * (mục 1: nhắc tuổi dữ liệu khi có ý nghĩa, nói rõ "chưa kết nối" thay vì im lặng/bịa).
  */
+
+type MonthIntent = 'this_month' | 'last_month' | 'both' | 'unsupported';
+
+/**
+ * Bug thật bắt được lúc test app build (2026-07-27): user hỏi "tiền xăng tháng 6" nhưng
+ * expense.summary LUÔN trả lời "tháng này" bất kể tháng nào được hỏi - vì LocalIntentMatcher chỉ
+ * khớp cụm "tien xang thang" (không quan tâm số tháng theo sau), và template cũ CHỈ đọc
+ * `result.this_month`, bỏ qua `result.last_month` dù dữ liệu đã có sẵn. Backend
+ * (NoteDriApi.getFuelExpenseSummary) chỉ hỗ trợ this_month/last_month/all_time - KHÔNG có API
+ * cho 1 tháng cụ thể bất kỳ - nên chỉ map được khi tháng hỏi trùng tháng hiện tại hoặc tháng
+ * liền trước, ngoài ra phải trả lời thật là chưa hỗ trợ (không được ngầm định về tháng này).
+ */
+function resolveRequestedMonth(userText: string): MonthIntent {
+  const normalized = normalize(userText);
+  const mentionsThis = /\bthang nay\b/.test(normalized);
+  const mentionsLast = /\bthang truoc\b|\bthang roi\b/.test(normalized);
+  if (mentionsThis && mentionsLast) return 'both';
+  if (mentionsLast) return 'last_month';
+  if (mentionsThis) return 'this_month';
+
+  const explicitMonth = normalized.match(/\bthang (\d{1,2})\b/);
+  if (explicitMonth) {
+    const requested = parseInt(explicitMonth[1], 10);
+    const now = new Date();
+    const thisMonthNum = now.getMonth() + 1;
+    const lastMonthNum = thisMonthNum === 1 ? 12 : thisMonthNum - 1;
+    if (requested === thisMonthNum) return 'this_month';
+    if (requested === lastMonthNum) return 'last_month';
+    return 'unsupported';
+  }
+
+  // Không nói rõ tháng nào -> mặc định tháng hiện tại (giữ hành vi cũ cho câu hỏi chung chung
+  // kiểu "tốn bao nhiêu tiền xăng").
+  return 'this_month';
+}
+
+function formatMonthLine(label: string, m: { tong_tien?: number; tong_lit?: number; so_lan?: number } | null | undefined): string {
+  if (!m) return `${label} chưa có dữ liệu chi phí nhiên liệu.`;
+  return `${label} bạn đã chi ${m.tong_tien?.toLocaleString('vi-VN')}đ tiền nhiên liệu (${m.tong_lit}L, ${m.so_lan} lần đổ).`;
+}
 
 function ageSuffix(ageSeconds: number | undefined): string {
   if (ageSeconds == null) return '';
@@ -29,7 +71,7 @@ function unavailableText(reason: string | undefined): string {
   }
 }
 
-export function buildLocalReply(toolName: string, result: any): string {
+export function buildLocalReply(toolName: string, result: any, userText: string): string {
   if (result?.status === 'unavailable') {
     return unavailableText(result.reason);
   }
@@ -93,9 +135,16 @@ export function buildLocalReply(toolName: string, result: any): string {
     }
 
     case 'expense.summary': {
-      const m = result.this_month;
-      return m ? `Tháng này bạn đã chi ${m.tong_tien?.toLocaleString('vi-VN')}đ tiền nhiên liệu (${m.tong_lit}L, ${m.so_lan} lần đổ).`
-        : 'Chưa có dữ liệu chi phí nhiên liệu tháng này.';
+      const monthIntent = resolveRequestedMonth(userText);
+      if (monthIntent === 'unsupported') {
+        return 'Mình hiện chỉ tra được chi phí xăng của THÁNG NÀY hoặc THÁNG TRƯỚC, chưa hỗ trợ tra một tháng cụ thể xa hơn trong quá khứ - bạn hỏi lại cho tháng này/tháng trước giúp mình nhé.';
+      }
+      if (monthIntent === 'both') {
+        return `${formatMonthLine('Tháng này', result.this_month)} ${formatMonthLine('Tháng trước', result.last_month)}`;
+      }
+      const label = monthIntent === 'last_month' ? 'Tháng trước' : 'Tháng này';
+      const data = monthIntent === 'last_month' ? result.last_month : result.this_month;
+      return formatMonthLine(label, data);
     }
 
     case 'maintenance.expenseSummary': {

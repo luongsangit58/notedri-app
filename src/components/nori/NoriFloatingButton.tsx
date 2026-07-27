@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { Animated, Dimensions, PanResponder, StyleSheet, View } from 'react-native';
 import Svg, { Defs, RadialGradient, Stop, Circle } from 'react-native-svg';
+import { useNavigation, useNavigationState } from '@react-navigation/native';
 import { useAuthStore } from '../../store/authStore';
 import { useVehicles } from '../../hooks/useVehicles';
 import { useSelectedVehicleStore } from '../../store/selectedVehicleStore';
@@ -8,7 +9,19 @@ import { useNoriSummary } from '../../services/nori/noriSummary';
 import { useColors } from '../../utils/theme';
 import { NORI_MOOD_COLOR } from '../../services/nori/nori';
 import NoriAvatar from './NoriAvatar';
-import NoriPopover from './NoriPopover';
+
+// Rà soát 2026-07-27 (góp ý user: "tích hợp vào linh vật Nori", "bỏ logic Nori cũ đi, thay bằng
+// Nori Agent vào") - trước đây bấm icon nổi này mở NoriPopover (bong bóng tĩnh, chỉ đọc mood/tuần/
+// phiên lái, KHÔNG liên quan gì tới Nori Agent hỏi-đáp thật ở NoriChatScreen). Giờ bấm icon nổi
+// điều hướng THẲNG sang NoriChatScreen (Nori Agent thật) - bỏ hẳn NoriPopover (đã xoá file, không
+// còn nơi nào import). Cũng là lý do icon nổi này từng bị chụp màn hình đè lên trên chính
+// NoriChatScreen (2 "Nori" cùng hiện 1 lúc, rất rối) - giờ ẩn hẳn khi ĐANG Ở TRONG NoriChatScreen.
+function getActiveRouteName(state: any): string | undefined {
+  if (!state || state.index == null) return undefined;
+  const route = state.routes[state.index];
+  if (route.state) return getActiveRouteName(route.state);
+  return route.name;
+}
 
 // Icon Nori nổi toàn cục (rà soát 22/7, góp ý user: bên web Nori là icon nổi cố
 // định ở góc màn hình, bấm ra bong bóng - bên app trước đó KHÔNG có, Nori chỉ
@@ -31,6 +44,8 @@ const DEFAULT_BOTTOM_OFFSET = 140; // tránh đè lên pill kết nối OBD2 (Ob
 
 export default function NoriFloatingButton() {
   const colors = useColors();
+  const navigation = useNavigation<any>();
+  const activeRouteName = useNavigationState((state) => getActiveRouteName(state));
   const token = useAuthStore((s) => s.token);
   const { data: vehiclesRaw } = useVehicles({ enabled: !!token });
   const vehicles: any[] = Array.isArray(vehiclesRaw?.data) ? vehiclesRaw.data
@@ -39,10 +54,7 @@ export default function NoriFloatingButton() {
   const selectedVehicleId = useSelectedVehicleStore((s) => s.selectedVehicleId) ?? undefined;
   const defaultVehicle = vehicles.find((v) => v.is_default) ?? vehicles[0];
   const vehicleId = selectedVehicleId ?? defaultVehicle?.id;
-  const vehicle = vehicles.find((v) => v.id === vehicleId);
-  const vehicleName = vehicle?.ten ?? vehicle?.name ?? vehicle?.ten_xe ?? '';
 
-  const [open, setOpen] = useState(false);
   // Rà soát 24/7: "docked" ĐỌC bên trong closure của PanResponder (tạo 1 LẦN
   // DUY NHẤT qua useRef().current, xem panResponder bên dưới) - nếu chỉ dùng
   // useState, closure đó mãi mãi thấy giá trị docked của LẦN RENDER ĐẦU TIÊN.
@@ -110,12 +122,13 @@ export default function NoriFloatingButton() {
         const clampedY = Math.max(60, Math.min(height - boxSize - 60, rawY));
 
         if (isTap) {
-          // Bấm: nếu đang gạt vào cạnh -> hiện ra trước, CHƯA mở bong bóng ngay
+          // Bấm: nếu đang gạt vào cạnh -> hiện ra trước, CHƯA điều hướng ngay
           // (đỡ bấm nhầm khi chỉ định kéo icon ra để dùng lại). Nếu đã hiện đầy
-          // đủ -> mở bong bóng như bình thường.
+          // đủ -> mở thẳng Nori Agent (NoriChatScreen) - KHÔNG còn mở bong bóng
+          // tĩnh NoriPopover cũ nữa (rà soát 2026-07-27, xem chú thích đầu file).
           const side = posValue.current.x < width / 2 ? 'left' : 'right';
           if (dockedRef.current) undockTo(side, posValue.current.y);
-          else setOpen(true);
+          else navigation.navigate('NoriChat');
           return;
         }
 
@@ -127,64 +140,61 @@ export default function NoriFloatingButton() {
     }),
   ).current;
 
-  if (!token || !vehicleId) return null;
+  // Ẩn hẳn khi chưa đăng nhập/chưa có xe, HOẶC khi đang ở NGAY TRONG NoriChatScreen - bấm icon
+  // này giờ mở thẳng màn đó, nên hiện đè icon nổi lên trên chính nó không còn ý nghĩa gì
+  // (bug thật bắt được qua ảnh chụp màn hình user gửi: icon nổi lúc nào cũng theo cùng, che/rối
+  // giao diện NoriChatScreen).
+  if (!token || !vehicleId || activeRouteName === 'NoriChat') return null;
 
   return (
-    <>
-      {/* Ẩn nút khi bong bóng đang mở - giống web chỉ ẩn icon ở đúng trang
-          /nori, không hiện icon nổi đè lên bong bóng của chính nó. */}
-      {!open && (
-        <Animated.View
-          {...panResponder.panHandlers}
-          style={{
-            position: 'absolute',
-            transform: pos.getTranslateTransform(),
-            width: boxSize,
-            height: boxSize,
-          }}>
-          {dockUi.docked ? (
-            // Đã gạt vào cạnh, chỉ lộ DOCK_PEEK - "tay cầm" đặc màu mood, rõ
-            // ràng để dễ tìm/bấm lại (quầng sáng mờ dần bên dưới không đủ rõ
-            // ở phần rìa gần như trong suốt này).
-            <View style={{ flex: 1, alignItems: dockUi.side === 'left' ? 'flex-end' : 'flex-start' }}>
-              <View
-                style={{
-                  width: DOCK_PEEK + 10,
-                  height: SIZE * 0.85,
-                  borderRadius: 14,
-                  backgroundColor: NORI_MOOD_COLOR[mood],
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  shadowColor: '#000',
-                  shadowOpacity: 0.25,
-                  shadowRadius: 4,
-                  elevation: 6,
-                }}>
-                <View style={{ width: 3, height: 22, borderRadius: 2, backgroundColor: '#fff8' }} />
-              </View>
-            </View>
-          ) : (
-            // Hiện đầy đủ - quầng sáng mờ dần (radial gradient, không viền)
-            // khớp đúng hiệu ứng web (rà soát 24/7, góp ý user: app trước đó
-            // bọc icon trong 1 vòng tròn viền cứng + chấm màu, không giống web).
-            <>
-              <Svg width={boxSize} height={boxSize} style={StyleSheet.absoluteFillObject}>
-                <Defs>
-                  <RadialGradient id="noriGlow" cx="50%" cy="50%" r="50%">
-                    <Stop offset="0%" stopColor={colors.background} stopOpacity={0.9} />
-                    <Stop offset="100%" stopColor={colors.background} stopOpacity={0} />
-                  </RadialGradient>
-                </Defs>
-                <Circle cx={boxSize / 2} cy={boxSize / 2} r={boxSize / 2} fill="url(#noriGlow)" />
-              </Svg>
-              <View style={{ margin: BACKDROP_PAD }}>
-                <NoriAvatar mood={mood} size={SIZE} />
-              </View>
-            </>
-          )}
-        </Animated.View>
+    <Animated.View
+      {...panResponder.panHandlers}
+      style={{
+        position: 'absolute',
+        transform: pos.getTranslateTransform(),
+        width: boxSize,
+        height: boxSize,
+      }}>
+      {dockUi.docked ? (
+        // Đã gạt vào cạnh, chỉ lộ DOCK_PEEK - "tay cầm" đặc màu mood, rõ
+        // ràng để dễ tìm/bấm lại (quầng sáng mờ dần bên dưới không đủ rõ
+        // ở phần rìa gần như trong suốt này).
+        <View style={{ flex: 1, alignItems: dockUi.side === 'left' ? 'flex-end' : 'flex-start' }}>
+          <View
+            style={{
+              width: DOCK_PEEK + 10,
+              height: SIZE * 0.85,
+              borderRadius: 14,
+              backgroundColor: NORI_MOOD_COLOR[mood],
+              alignItems: 'center',
+              justifyContent: 'center',
+              shadowColor: '#000',
+              shadowOpacity: 0.25,
+              shadowRadius: 4,
+              elevation: 6,
+            }}>
+            <View style={{ width: 3, height: 22, borderRadius: 2, backgroundColor: '#fff8' }} />
+          </View>
+        </View>
+      ) : (
+        // Hiện đầy đủ - quầng sáng mờ dần (radial gradient, không viền)
+        // khớp đúng hiệu ứng web (rà soát 24/7, góp ý user: app trước đó
+        // bọc icon trong 1 vòng tròn viền cứng + chấm màu, không giống web).
+        <>
+          <Svg width={boxSize} height={boxSize} style={StyleSheet.absoluteFillObject}>
+            <Defs>
+              <RadialGradient id="noriGlow" cx="50%" cy="50%" r="50%">
+                <Stop offset="0%" stopColor={colors.background} stopOpacity={0.9} />
+                <Stop offset="100%" stopColor={colors.background} stopOpacity={0} />
+              </RadialGradient>
+            </Defs>
+            <Circle cx={boxSize / 2} cy={boxSize / 2} r={boxSize / 2} fill="url(#noriGlow)" />
+          </Svg>
+          <View style={{ margin: BACKDROP_PAD }}>
+            <NoriAvatar mood={mood} size={SIZE} />
+          </View>
+        </>
       )}
-      <NoriPopover visible={open} onClose={() => setOpen(false)} vehicleId={vehicleId} vehicleName={vehicleName} />
-    </>
+    </Animated.View>
   );
 }

@@ -16,8 +16,10 @@ export type LocalIntentMatch = {
   toolInput: Record<string, unknown>;
 };
 
-/** Bỏ dấu tiếng Việt để khớp được cả khi user gõ không dấu. */
-function normalize(text: string): string {
+/** Bỏ dấu tiếng Việt để khớp được cả khi user gõ không dấu. Export để LocalReplyTemplates.ts
+ * tái dùng (vd nhận diện "tháng trước"/"tháng 6" cho expense.summary) - tránh viết lại logic bỏ
+ * dấu 2 nơi lệch nhau. */
+export function normalize(text: string): string {
   return text
     .toLowerCase()
     .normalize('NFD')

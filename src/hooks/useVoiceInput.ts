@@ -62,17 +62,31 @@ export function useVoiceInput(): UseVoiceInputResult {
   // Bug fix: use ref instead of state so event handlers always see the latest callback
   // (state captured in useSpeechRecognitionEvent closure would be stale after first render)
   const callbackRef = useRef<((value: string, raw: string) => void) | null>(null);
+  // Bug thật bắt được lúc test app build (2026-07-27): với câu dài có khoảng dừng giữa các từ
+  // ("tiền xăng... tháng... 6"), thiết bị Android đôi khi bắn NHIỀU sự kiện 'result' trong CÙNG
+  // 1 phiên nghe (mỗi lần dừng ngắn coi như 1 "final" riêng) dù đã đặt `interimResults: false` -
+  // trước đây gọi callback NGAY tại mỗi 'result' khiến parent (NoriChatScreen) gửi NHIỀU tin
+  // nhắn rời rạc ("tiền", "tiền xăng", "tiền xăng tháng", "tiền xăng tháng 6"...) thay vì 1 câu
+  // hoàn chỉnh - làm rối transcript và khiến LocalIntentMatcher/LLM hiểu sai ý (khớp nhầm câu
+  // hỏi "tiền xăng" cụt trước khi user nói xong "tháng 6"). Giờ CHỈ lưu lại transcript MỚI NHẤT
+  // trong lúc nghe, và CHỈ gọi callback 1 LẦN DUY NHẤT khi phiên nghe thật sự kết thúc ('end').
+  const latestResultRef = useRef<{ parsed: string; raw: string } | null>(null);
 
   useSpeechRecognitionEvent('result', (event) => {
     const raw = event.results[0]?.transcript ?? '';
     const parsed = parseNumberFromSpeech(raw);
-    // Luôn gọi callback dù parsed rỗng — để parent hiển thị lỗi thay vì im lặng
-    if (callbackRef.current) callbackRef.current(parsed, raw);
-    setStatus('idle');
+    latestResultRef.current = { parsed, raw };
   });
 
   useSpeechRecognitionEvent('end', () => {
-    setStatus(s => s === 'listening' ? 'done' : s);
+    setStatus((s) => {
+      if (s !== 'listening') return s;
+      const result = latestResultRef.current;
+      latestResultRef.current = null;
+      // Luôn gọi callback dù parsed rỗng — để parent hiển thị lỗi thay vì im lặng.
+      if (callbackRef.current && result) callbackRef.current(result.parsed, result.raw);
+      return 'done';
+    });
   });
 
   useSpeechRecognitionEvent('error', (event) => {
@@ -104,6 +118,7 @@ export function useVoiceInput(): UseVoiceInputResult {
       return;
     }
     callbackRef.current = onResult;
+    latestResultRef.current = null;
     setError(null);
     setStatus('listening');
     ExpoSpeechRecognitionModule.start({

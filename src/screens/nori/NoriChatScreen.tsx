@@ -29,6 +29,11 @@ const SUGGESTED_QUESTIONS = [
   'Tháng này tôi tốn bao nhiêu tiền xăng?',
   'Xe tôi có gì sắp đến hạn không?',
   'Hôm nay tôi chạy được bao nhiêu km?',
+  // Thêm 2026-07-27 (bug thật: nói "ghi ODO" bằng giọng nói bị STT nghe nhầm thành "đi ô tô"
+  // hoặc từ khác - "ODO" là từ vay mượn, dễ nhầm hơn nhiều so với "công-tơ-mét" (đúng thuật ngữ
+  // app đã dùng ở AddOdometerScreen). Chip này DẠY user gõ/nói đúng cụm từ ít bị nghe nhầm hơn,
+  // thay vì cố sửa lỗi nhận diện giọng nói ở tầng app (không kiểm soát được STT engine).
+  'Ghi công-tơ-mét xe tôi',
 ];
 
 /**
@@ -169,6 +174,7 @@ export default function NoriChatScreen() {
           ref={listRef}
           data={uiMessages}
           keyExtractor={(item) => item.id}
+          style={{ flex: 1 }}
           contentContainerStyle={{ padding: 16, gap: 10 }}
           onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
           ListEmptyComponent={
@@ -203,7 +209,14 @@ export default function NoriChatScreen() {
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 10, gap: 8 }}
+            // flexGrow/flexShrink: 0 - chip gợi ý không được phép giãn ra chiếm khoảng trống còn
+            // lại của layout (bug thật lúc test app build: thiếu khai báo này khiến hàng chip
+            // giãn cao gần hết màn hình). alignItems:'flex-start' trên contentContainerStyle -
+            // ScrollView ngang mặc định alignItems:'stretch' (kế thừa flexbox chuẩn), khiến MỌI
+            // chip bị kéo cao bằng chiều cao khả dụng của ScrollView thay vì cao vừa đúng nội
+            // dung chữ bên trong.
+            style={{ flexGrow: 0, flexShrink: 0 }}
+            contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 10, gap: 8, alignItems: 'flex-start' }}
           >
             {SUGGESTED_QUESTIONS.map((q) => (
               <TouchableOpacity

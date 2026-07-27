@@ -56,7 +56,7 @@ export class ConversationManager {
         { id: toolUseId, name: localMatch.toolName, input: localMatch.toolInput },
         this.getContext(),
       );
-      const text = buildLocalReply(localMatch.toolName, JSON.parse(result.content));
+      const text = buildLocalReply(localMatch.toolName, JSON.parse(result.content), userText);
       this.messages.push({ role: 'user', content: userText });
       // Ghi lại đúng shape tool_use/tool_result như đường LLM (KHÔNG chỉ đẩy thẳng text) - nếu
       // không, số liệu trong câu trả lời local này sẽ vô hình với getAllToolResultContents(),
