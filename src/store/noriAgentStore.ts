@@ -4,7 +4,9 @@ import { VehicleContext } from '../agent/VehicleContext';
 import { noriApi, NoriFeedbackRating } from '../api/nori';
 import { useAuthStore } from './authStore';
 
-const PREMIUM_REQUIRED_TEXT =
+// Export để NoriQuickPopover.tsx tái dùng - tránh mở mic (xin quyền micro) rồi mới báo Premium
+// SAU KHI user đã nói xong (trải nghiệm ngược, xin quyền xâm phạm hơn hẳn 1 API call thường).
+export const PREMIUM_REQUIRED_TEXT =
   'Nori hiện là tính năng dành cho Premium - bạn nâng cấp gói Premium để trò chuyện cùng Nori nhé!';
 
 /**

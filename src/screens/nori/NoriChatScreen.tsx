@@ -7,10 +7,7 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import * as Speech from 'expo-speech';
 import { useColors } from '../../utils/theme';
 import { useNoriAgentStore } from '../../store/noriAgentStore';
-import { useObdSessionStore } from '../../store/obdSessionStore';
-import { useSelectedVehicleStore } from '../../store/selectedVehicleStore';
-import { useVehicles } from '../../hooks/useVehicles';
-import { useAuthStore } from '../../store/authStore';
+import { useInitNoriAgent } from '../../agent/useInitNoriAgent';
 import { useVoiceInput } from '../../hooks/useVoiceInput';
 import { NoriFeedbackRating } from '../../api/nori';
 
@@ -65,34 +62,13 @@ const SUGGESTED_QUESTIONS = [
 export default function NoriChatScreen() {
   const colors = useColors();
   const {
-    uiMessages, isThinking, init, sendMessage, submitFeedback, pendingConfirmation, resolveConfirmation,
+    uiMessages, isThinking, sendMessage, submitFeedback, pendingConfirmation, resolveConfirmation,
   } = useNoriAgentStore();
-  const userName = useAuthStore((s) => s.user?.name);
+  useInitNoriAgent();
   const [input, setInput] = useState('');
   const [feedbackRequestId, setFeedbackRequestId] = useState<string | null>(null);
   const [feedbackNote, setFeedbackNote] = useState('');
   const listRef = useRef<FlatList>(null);
-
-  const { data: vehiclesRaw } = useVehicles();
-  const vehicles: any[] = Array.isArray(vehiclesRaw?.data) ? vehiclesRaw.data
-    : Array.isArray(vehiclesRaw) ? vehiclesRaw : [];
-  // init() chỉ tạo NoriAgent 1 LẦN DUY NHẤT (no-op nếu gọi lại) - closure truyền vào lần đầu
-  // sẽ bị "đóng băng" mãi mãi nếu đọc thẳng `vehicles` (lúc đó danh sách xe thường CHƯA tải
-  // xong, `vehicles = []`). Dùng ref để callback luôn đọc được danh sách xe MỚI NHẤT tại thời
-  // điểm NoriAgent thực sự gọi getVehicleId(), bất kể init() chạy trước hay sau khi tải xong.
-  const vehiclesRef = useRef(vehicles);
-  vehiclesRef.current = vehicles;
-
-  useEffect(() => {
-    init(() => {
-      const obdVehicleId = useObdSessionStore.getState().vehicleId;
-      if (obdVehicleId) return obdVehicleId;
-      const selectedVehicleId = useSelectedVehicleStore.getState().selectedVehicleId;
-      if (selectedVehicleId) return selectedVehicleId;
-      const defaultVehicle = vehiclesRef.current.find((v) => v.is_default) ?? vehiclesRef.current[0];
-      return defaultVehicle?.id ?? null;
-    }, userName);
-  }, [init, userName]);
 
   const { listen, stop: stopListening, status: voiceStatus, error: voiceError } = useVoiceInput();
   const [isSpeaking, setIsSpeaking] = useState(false);

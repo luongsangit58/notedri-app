@@ -90,24 +90,39 @@ export function useVoiceInput(): UseVoiceInputResult {
   });
 
   useSpeechRecognitionEvent('error', (event) => {
-    setStatus('error');
-    const code = ((event as any).error ?? '').toLowerCase();
-    const msg = (event.message ?? '').toLowerCase();
-    let viMsg: string;
-    if (code === 'no-speech' || msg.includes('no speech') || msg.includes('no_speech')) {
-      viMsg = t('voice.error_no_speech');
-    } else if (code === 'not-allowed' || code === 'service-not-allowed' || msg.includes('permission') || msg.includes('not_allowed')) {
-      viMsg = t('voice.error_permission');
-    } else if (code === 'network' || msg.includes('network')) {
-      viMsg = t('voice.error_network');
-    } else if (code === 'audio-capture' || msg.includes('audio')) {
-      viMsg = t('voice.error_audio');
-    } else if (code === 'aborted' || msg.includes('aborted')) {
-      viMsg = t('voice.error_aborted');
-    } else {
-      viMsg = t('voice.error_unknown');
-    }
-    setError(viMsg);
+    // Bug thật bắt được lúc rà soát 2026-07-27 (sau khi NoriQuickPopover giữ 1 instance
+    // useVoiceInput() sống XUYÊN SUỐT phiên app, không riêng lúc mở popup): sự kiện native của
+    // expo-speech-recognition là TOÀN CỤC (1 module singleton, không scope theo instance JS nào
+    // gọi start()) - handler 'end' đã có sẵn guard `s !== 'listening'` để chỉ phản ứng với phiên
+    // nghe do CHÍNH instance gọi, nhưng handler 'error' này thì KHÔNG - nghĩa là 1 lỗi giọng nói
+    // xảy ra ở màn hình HOÀN TOÀN KHÁC (vd "không nghe thấy gì" lúc nhập ODO thủ công) sẽ làm
+    // MỌI instance useVoiceInput() đang mount (kể cả NoriQuickPopover đang ẩn) cũng bị đẩy sang
+    // status 'error' - khiến lần sau mở popup Nori, điều kiện tự nghe (`voiceStatus === 'idle'`)
+    // không còn đúng nữa, popup lặng lẽ KHÔNG tự nghe được, kèm hiện nhầm thông báo lỗi của 1
+    // màn hình khác. Thêm guard giống hệt 'end' - chỉ áp dụng lỗi khi CHÍNH instance này đang
+    // thật sự ở trạng thái 'listening'.
+    setStatus((s) => {
+      if (s !== 'listening') return s;
+
+      const code = ((event as any).error ?? '').toLowerCase();
+      const msg = (event.message ?? '').toLowerCase();
+      let viMsg: string;
+      if (code === 'no-speech' || msg.includes('no speech') || msg.includes('no_speech')) {
+        viMsg = t('voice.error_no_speech');
+      } else if (code === 'not-allowed' || code === 'service-not-allowed' || msg.includes('permission') || msg.includes('not_allowed')) {
+        viMsg = t('voice.error_permission');
+      } else if (code === 'network' || msg.includes('network')) {
+        viMsg = t('voice.error_network');
+      } else if (code === 'audio-capture' || msg.includes('audio')) {
+        viMsg = t('voice.error_audio');
+      } else if (code === 'aborted' || msg.includes('aborted')) {
+        viMsg = t('voice.error_aborted');
+      } else {
+        viMsg = t('voice.error_unknown');
+      }
+      setError(viMsg);
+      return 'error';
+    });
   });
 
   const listen = useCallback(async (onResult: (value: string, raw: string) => void) => {
