@@ -3,12 +3,14 @@ import { Platform } from 'react-native';
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 import * as Notifications from 'expo-notifications';
+import * as BackgroundTask from 'expo-background-task';
 import { gpsTripsApi } from '../../api/gpsTrips';
 import { getDeviceId } from '../../utils/deviceId';
 import { useI18nStore } from '../../i18n';
 import { showBackgroundLocationDisclosure } from '../permissions/backgroundLocationDisclosure';
 
 export const GPS_TASK_NAME = 'GPS_TRIP_TRACKING';
+export const RECOVERY_TASK_NAME = 'GPS_TRIP_RECOVERY';
 
 const KEY_STATE = 'gps_trip_state';
 const KEY_ROUTE = 'gps_trip_route';
@@ -211,6 +213,41 @@ TaskManager.defineTask(GPS_TASK_NAME, async ({ data, error }: any) => {
   if (!locations.length) return;
   await runSerialized(() => handleLocation(locations[locations.length - 1]));
 });
+
+// Rà soát 27/7 (user báo: đầu Android ô tô mất điện đột ngột giữa chuyến, tắt
+// máy xong nhiều giờ sau vẫn chưa thấy chuyến được ghi nhận): dọn chuyến kẹt
+// (maybeAutoShutdownStale, định nghĩa dưới) trước đây CHỈ chạy khi app thật sự
+// lên foreground/cold-start (App.tsx) hoặc khi OBD2 vừa kết nối (useObd.ts) -
+// cả 2 đều cần user thao tác gì đó trên chính máy đã ghi chuyến. Nếu đầu xe
+// mất điện hoàn toàn, không gì chạy được cho tới khi có điện lại VÀ user tự mở
+// app - có thể rất lâu sau khi thực tế đã tắt máy.
+//
+// expo-background-task (BackgroundTask.registerTaskAsync, gọi ở App.tsx) chạy
+// task NÀY định kỳ qua WorkManager (Android) - tự phục hồi lịch chạy sau khi
+// máy khởi động lại (tính năng lõi của WorkManager, không cần tự viết receiver
+// BOOT_COMPLETED), không cần app đang mở, không cần có location fix mới như
+// đường vào qua GPS_TASK_NAME ở trên. Đây là lưới an toàn CUỐI CÙNG, độc lập
+// với mọi đường vào khác.
+TaskManager.defineTask(RECOVERY_TASK_NAME, async () => {
+  try {
+    await maybeAutoShutdownStale();
+    return BackgroundTask.BackgroundTaskResult.Success;
+  } catch {
+    return BackgroundTask.BackgroundTaskResult.Failed;
+  }
+});
+
+// Gọi 1 lần lúc app khởi động (App.tsx, gate theo token) - đăng ký xong thì
+// WorkManager tự lo phần còn lại (định kỳ + phục hồi sau khởi động lại máy).
+// An toàn gọi lại nhiều lần (registerTaskAsync ghi đè, không tạo trùng).
+export async function registerGpsRecoveryTask(): Promise<void> {
+  try {
+    await BackgroundTask.registerTaskAsync(RECOVERY_TASK_NAME, { minimumInterval: 15 });
+  } catch {
+    // Máy/nền tảng không hỗ trợ (vd web, hoặc bị hạn chế) - các lưới an toàn
+    // khác (foreground/cold-start, OBD2-connect) vẫn còn nguyên, không chặn gì.
+  }
+}
 
 async function handleLocation(loc: Location.LocationObject): Promise<void> {
   const now = loc.timestamp;

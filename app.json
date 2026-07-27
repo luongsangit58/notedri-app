@@ -145,7 +145,8 @@
       "./withOptionalHardwareFeatures.js",
       "./withNfcIntentFilter.js",
       "./withPictureInPicture.js",
-      "./withAndroidReleaseSigning.js"
+      "./withAndroidReleaseSigning.js",
+      "expo-background-task"
     ]
   }
 }

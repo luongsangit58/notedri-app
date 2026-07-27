@@ -18,7 +18,7 @@ import { flushPendingTrips } from './src/services/obd/TripSyncQueue';
 import { bleService } from './src/services/obd/BleService';
 import { hasAnyPairing } from './src/services/obd/pairedDevices';
 import { flushPendingGpsTrips } from './src/services/gps/GpsTripSyncQueue';
-import { maybeAutoShutdownStale, autoArmIfReady } from './src/services/gps/GpsTripTracker';
+import { maybeAutoShutdownStale, autoArmIfReady, registerGpsRecoveryTask } from './src/services/gps/GpsTripTracker';
 import { vehiclesApi } from './src/api/vehicles';
 import { initDeepLinkService } from './src/services/nfc/DeepLinkService';
 import { sendDeviceHeartbeat } from './src/api/devices';
@@ -93,6 +93,10 @@ function AppLoader({ children }: { children: React.ReactNode }) {
     // khi service tự tắt do rảnh 20 phút - dễ quên trước khi lái, mất chuyến oan.
     // Tự bật lại NẾU quyền đã có sẵn (im lặng); nếu thiếu quyền, nhắc 1 lần duy nhất.
     tryAutoArmGpsTracking();
+    // Rà soát 27/7: lưới an toàn cuối cùng dọn chuyến kẹt định kỳ (~15 phút, qua
+    // WorkManager) - chạy được cả khi app không mở, tự phục hồi sau khi đầu xe
+    // khởi động lại. Xem comment RECOVERY_TASK_NAME trong GpsTripTracker.ts.
+    registerGpsRecoveryTask();
   }, [token]);
 
   useEffect(() => {
