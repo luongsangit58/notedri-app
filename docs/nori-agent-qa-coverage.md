@@ -7,7 +7,7 @@
 > - ✅ Xong — có tool thật, dữ liệu thật, đã test qua Groq (xem mục 15 `nori-agent-plan.md`)
 > - 🟡 Có nhưng có điều kiện — chạy được nhưng phụ thuộc Premium/BLE/vị trí, có thể báo "unavailable"
 > - ❌ Chưa có — không có tool nào xử lý, Nori sẽ trả lời chung chung hoặc nói không biết
-> - 🚫 Cố tình không làm — nằm ngoài phạm vi Phase 1 (ghi/xoá dữ liệu), để Phase 2
+> - 🚫 Cố tình không làm — nằm ngoài phạm vi đã chốt (xoá/sửa dữ liệu khác), để Phase 2 sau
 >
 > Quy ước cột "Xử lý qua" (thêm 2026-07-27, sau khi có `LocalIntentMatcher`):
 > - ⚡ Local — khớp mẫu câu hỏi trên thiết bị (`src/agent/LocalIntentMatcher.ts`), trả lời THẲNG
@@ -76,14 +76,15 @@
 | "Tìm trạm sạc gần đây" (xe điện) | ❌ | — | — | Backend có endpoint `nearby-charging` tương tự nearby-stations nhưng CHƯA làm tool riêng — dễ thêm nếu cần (giống hệt pattern `fuel.findNearbyStations`). |
 | "Tìm garage/tiệm sửa xe gần đây" | ❌ | — | — | Backend có `services/garages` (`ServiceLogController@garages`) nhưng chưa xác nhận có filter theo vị trí không — cần rà soát riêng nếu muốn làm. |
 
-## Ghi/sửa dữ liệu (cố tình NGOÀI phạm vi Phase 1)
+## Ghi/sửa dữ liệu
 
-| Câu hỏi ví dụ | Đã xử lý | Ghi chú |
-|---|---|---|
-| "Ghi giúp tôi vừa đổ 50k tiền xăng" | 🚫 | Phase 2 (`fuel.create`) — cần hội thoại nhiều lượt xác nhận trước khi ghi (authority: mutating). |
-| "Cập nhật số công-tơ-mét thành 45.230" | 🚫 | Phase 2 (`odometer.create`) — tương tự. |
-| "Xoá mã lỗi vừa quét được" | 🚫 | Phase 2, đánh dấu `destructive` — bắt buộc xác nhận + khoá thực thi (mục 7 kế hoạch), KHÔNG làm trước khi có cơ chế confirm rõ ràng. |
-| "Đặt lịch nhắc bảo dưỡng mới" | 🚫 | Phase 2 (`maintenance.create` kiểu). |
+| Câu hỏi ví dụ | Đã xử lý | Xử lý qua | Tool | Ghi chú |
+|---|---|---|---|---|
+| "Ghi công-tơ-mét 15234 km" | ✅ | 🧠 LLM | `odometer.create` | **Thêm 2026-07-27 (Phase 2)** - `authority: mutating`, `requiresConfirmation: true`. Hiện Modal xác nhận số cụ thể trước khi ghi thật, user bấm Đồng ý/Huỷ. Backend từ chối (422) nếu ODO lùi so với mốc đã biết trước đó - lý do cụ thể được Nori nói lại nguyên văn. |
+| "Vừa đổ xăng 5 lít hết 150 nghìn, đầy bình" | ✅ | 🧠 LLM | `fuel.create` | **Thêm 2026-07-27 (Phase 2)** - như trên. Backend bắt buộc >= 2 trong 3 số (lít/đơn giá/tổng tiền) - nếu user chỉ cho 1 số, Nori sẽ hỏi thêm trước khi gọi tool (đã ghi rõ trong description tool, bắt được lúc test thật với backend). |
+| "Ghi giúp tôi vừa đổ 50k tiền xăng" (chỉ 1 số) | 🟡 | 🧠 LLM | `fuel.create` | Thiếu 1 số (chỉ có tổng tiền) - Nori sẽ hỏi lại số lít hoặc đơn giá trước khi ghi, không tự đoán. |
+| "Xoá mã lỗi vừa quét được" | 🚫 | — | — | Phase 2 sau, đánh dấu `destructive` — bắt buộc xác nhận + khoá thực thi (mục 7 kế hoạch), CHƯA làm - nằm ngoài phạm vi "chỉ ghi ODO/đổ xăng" đã chốt lần này. |
+| "Đặt lịch nhắc bảo dưỡng mới" | 🚫 | — | — | Phase 2 sau (`maintenance.create` kiểu) - chưa làm, cùng lý do trên. |
 
 ## Ngoài phạm vi tool (Nori tự trả lời tự nhiên, không ép gọi tool)
 
@@ -110,13 +111,15 @@ request/response tương ứng — `request_id` dạng `local-<timestamp>-<count
 
 ## Tổng kết nhanh
 
-- **15 tool đã xây** (11 tool gốc + 2 tool thêm 2026-07-27 `getRecentIssues`/`findNearbyStations`,
-  cộng `vehicle.getLiveData`/`readDTC` tách riêng khỏi 5 tool đơn lẻ) — phủ hầu hết câu hỏi
-  "hỏi đáp thường ngày" trừ vài câu chi phí tổng/trạm sạc/garage.
-- **14/15 tool có mẫu Local Intent Matcher** (chỉ `vehicle.getLiveData` chưa có, vì câu hỏi
+- **17 tool đã xây** (15 tool đọc + 2 tool ghi mới `odometer.create`/`fuel.create`, Phase 2) —
+  phủ hầu hết câu hỏi "hỏi đáp thường ngày" trừ vài câu chi phí tổng/trạm sạc/garage, cộng 2
+  hành động ghi dữ liệu cơ bản nhất (ODO, đổ xăng).
+- **14/15 tool ĐỌC có mẫu Local Intent Matcher** (chỉ `vehicle.getLiveData` chưa có, vì câu hỏi
   "cho xem hết thông số" ít cố định phrasing hơn để viết mẫu tin cậy) — phần lớn câu hỏi phổ
   biến giờ KHÔNG cần gọi LLM nữa. *(Sửa lại so với lần báo cáo trước: đã nói nhầm "9/13" — con
-  số đúng sau khi đếm lại kỹ code là 14/15.)*
+  số đúng sau khi đếm lại kỹ code là 14/15.)* 2 tool GHI mới cố tình luôn đi qua LLM, không có
+  mẫu Local (mục 15 `nori-agent-plan.md`: số liệu ghi vào là dữ liệu thật, cần LLM linh hoạt
+  parse câu tự nhiên + có bước xác nhận UI, không tin tưởng regex trích số tự động ghi thẳng).
 - **Khoảng trống lớn nhất hiện tại**: tổng chi phí trọn đời (xăng + bảo dưỡng), tìm trạm sạc điện,
   tìm garage gần đây — đều là mở rộng nhỏ, không phải thiết kế lại.
 - **Mọi câu hỏi "sống" (tốc độ/vòng tua lúc đang lái)** đã xây nhưng giá trị thực tế thấp theo

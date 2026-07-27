@@ -1,10 +1,11 @@
 import { ConversationManager, NoriReply } from './ConversationManager';
-import { ToolExecutor } from './ToolExecutor';
+import { ConfirmActionFn, ToolExecutor } from './ToolExecutor';
 import { ToolRegistry } from './ToolRegistry';
 import { SafetyPolicy } from './safety/SafetyPolicy';
 import { buildBusinessTools } from './tools/businessTools';
 import { buildKnowledgeTools } from './tools/knowledgeTools';
 import { buildVehicleTools } from './tools/vehicleTools';
+import { buildWriteTools } from './tools/writeTools';
 import { IVehicleIO } from './platform/types';
 
 export type NoriAgentState = 'idle' | 'thinking';
@@ -28,9 +29,13 @@ export class NoriAgent {
   constructor(
     private vehicleIO: IVehicleIO,
     getVehicleId: () => number | null,
+    /** Phase 2 (mục 7): hỏi user xác nhận trước khi thực thi tool mutating (odometer.create,
+     * fuel.create). Không truyền -> ToolExecutor tự từ chối mọi tool cần xác nhận (an toàn hơn
+     * là âm thầm ghi dữ liệu không qua xác nhận). */
+    confirmAction?: ConfirmActionFn,
   ) {
     this.safetyPolicy = new SafetyPolicy(vehicleIO);
-    this.executor = new ToolExecutor(this.registry, this.safetyPolicy);
+    this.executor = new ToolExecutor(this.registry, this.safetyPolicy, confirmAction);
     this.conversation = new ConversationManager(this.registry, this.executor, () => ({
       vehicleId: getVehicleId(),
     }));
@@ -38,6 +43,7 @@ export class NoriAgent {
     buildVehicleTools(vehicleIO).forEach((t) => this.registry.register(t));
     buildKnowledgeTools().forEach((t) => this.registry.register(t));
     buildBusinessTools().forEach((t) => this.registry.register(t));
+    buildWriteTools().forEach((t) => this.registry.register(t));
   }
 
   getState(): NoriAgentState {

@@ -19,29 +19,50 @@ export type UiMessage = {
   feedbackRating?: NoriFeedbackRating;
 };
 
+/** Yêu cầu xác nhận đang chờ user trả lời (Phase 2, mục 7) - NoriChatScreen render Modal khi
+ * field này khác null, và gọi resolveConfirmation() khi user bấm Đồng ý/Huỷ. */
+export type PendingConfirmation = {
+  toolName: string;
+  summary: string;
+};
+
 type NoriAgentState = {
   agent: NoriAgent | null;
   vehicleContext: VehicleContext | null;
   uiMessages: UiMessage[];
   isThinking: boolean;
+  pendingConfirmation: PendingConfirmation | null;
   init: (getVehicleId: () => number | null, userName?: string | null) => void;
   sendMessage: (text: string) => Promise<void>;
   submitFeedback: (requestId: string, rating: NoriFeedbackRating, note?: string) => Promise<void>;
+  resolveConfirmation: (approved: boolean) => void;
   dispose: () => void;
 };
 
 let nextId = 0;
+
+// Resolver của Promise confirmAction() đang chờ (mục 7) - sống ở module scope (không phải
+// zustand state, vì hàm không nên đi qua set()/react re-render) chỉ trong lúc Modal xác nhận
+// đang mở. Tại 1 thời điểm chỉ có tối đa 1 tool-call mutating chờ xác nhận (ConversationManager
+// await tuần tự từng tool), nên không cần hàng đợi nhiều resolver.
+let pendingResolve: ((approved: boolean) => void) | null = null;
 
 export const useNoriAgentStore = create<NoriAgentState>((set, get) => ({
   agent: null,
   vehicleContext: null,
   uiMessages: [],
   isThinking: false,
+  pendingConfirmation: null,
 
   init: (getVehicleId, userName) => {
     if (get().agent) return;
     const vehicleContext = new VehicleContext();
-    const agent = new NoriAgent(vehicleContext, getVehicleId);
+    const confirmAction = (toolName: string, summary: string) =>
+      new Promise<boolean>((resolve) => {
+        pendingResolve = resolve;
+        set({ pendingConfirmation: { toolName, summary } });
+      });
+    const agent = new NoriAgent(vehicleContext, getVehicleId, confirmAction);
     agent.onStateChange((s) => set({ isThinking: s === 'thinking' }));
     // Lời chào tĩnh, KHÔNG gọi LLM (miễn phí, tức thời) - chỉ hiển thị 1 lần khi tạo agent
     // (không lặp lại nếu rời màn rồi quay lại trong cùng phiên app, vì init() no-op sau lần
@@ -88,8 +109,16 @@ export const useNoriAgentStore = create<NoriAgentState>((set, get) => ({
     }
   },
 
+  resolveConfirmation: (approved: boolean) => {
+    const resolve = pendingResolve;
+    pendingResolve = null;
+    set({ pendingConfirmation: null });
+    resolve?.(approved);
+  },
+
   dispose: () => {
     get().vehicleContext?.dispose();
-    set({ agent: null, vehicleContext: null, uiMessages: [], isThinking: false });
+    pendingResolve = null;
+    set({ agent: null, vehicleContext: null, uiMessages: [], isThinking: false, pendingConfirmation: null });
   },
 }));

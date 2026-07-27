@@ -8,7 +8,10 @@ import { IVehicleIO } from '../platform/types';
  * thêm tên tool vào đây, không phải sửa lại ToolExecutor.
  */
 const BLOCKED_WHILE_DRIVING = new Set<string>([
-  // Phase 2 sẽ thêm 'ocr.scanReceipt', 'ocr.scanOdometer'... (mục 4: cần nhìn màn hình lâu).
+  // odometer.create/fuel.create cần nhìn màn hình xác nhận trước khi ghi (mục 4/7) - Phase 2
+  // sẽ thêm tiếp 'ocr.scanReceipt', 'ocr.scanOdometer'... khi làm tới OCR.
+  'odometer.create',
+  'fuel.create',
 ]);
 
 export class SafetyPolicy {

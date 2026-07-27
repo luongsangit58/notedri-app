@@ -52,8 +52,13 @@ export type ToolDefinition = {
   authority: ToolAuthority;
   /** JSON Schema chuẩn Anthropic tool `input_schema`. */
   inputSchema: Record<string, unknown>;
-  /** requiresConfirmation bắt buộc true cho authority=destructive (mục 6/7) - chưa dùng ở Phase 1. */
+  /** requiresConfirmation bắt buộc true cho authority=destructive, và dùng cho các tool ghi dữ
+   * liệu (authority='mutating') ở Phase 2 (mục 6/7) - trước khi execute(), ToolExecutor phải
+   * hỏi user xác nhận qua confirmAction. */
   requiresConfirmation?: boolean;
+  /** Sinh câu tóm tắt tiếng Việt hiển thị trong hộp thoại xác nhận (chỉ cần khi
+   * requiresConfirmation=true) - vd "Ghi số công-tơ-mét: 15234 km (hôm nay)". */
+  confirmationSummary?: (input: Record<string, unknown>) => string;
   execute: (input: Record<string, unknown>, ctx: ToolContext) => Promise<unknown>;
 };
 

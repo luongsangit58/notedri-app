@@ -94,4 +94,37 @@ export const NoteDriApi = {
     const res = await vehiclesApi.costSummary(vehicleId, days);
     return res.data.data;
   },
+
+  /**
+   * `POST /vehicles/{id}/odometer` (OdometerController@store) - Phase 2 ghi ODO (mục 6/7).
+   * Backend có thể trả 422 với `message` tiếng Việt cụ thể (vd "ODO nhỏ hơn mốc đã biết") khi
+   * số liệu không hợp lệ - ném lại nguyên lỗi để writeTools.ts bắt và trả reason cho LLM, thay
+   * vì nuốt lỗi ở đây.
+   */
+  async createOdometerReading(vehicleId: number, data: { odometer: number; ngay?: string; ghi_chu?: string }) {
+    const res = await odometerApi.create(vehicleId, data);
+    return res.data;
+  },
+
+  /**
+   * `POST /refuels` (RefuelController@store, validateData()) - Phase 2 ghi đổ xăng (mục 6/7).
+   * vehicle_id gắn ở đây (từ ToolContext), KHÔNG để LLM tự chọn xe. Các field còn lại đều
+   * nullable phía backend (FuelCalculator::autoCalc tự suy 1 trong 3: lít/giá/tổng nếu có đủ 2).
+   */
+  async createRefuel(
+    vehicleId: number,
+    data: {
+      ngay?: string;
+      odometer?: number;
+      so_lit?: number;
+      gia_lit?: number;
+      tong_tien?: number;
+      cay_xang?: string;
+      is_full_tank?: boolean;
+      ghi_chu?: string;
+    },
+  ) {
+    const res = await refuelsApi.create({ vehicle_id: vehicleId, ...data });
+    return res.data;
+  },
 };

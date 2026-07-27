@@ -59,7 +59,9 @@ const SUGGESTED_QUESTIONS = [
  */
 export default function NoriChatScreen() {
   const colors = useColors();
-  const { uiMessages, isThinking, init, sendMessage, submitFeedback } = useNoriAgentStore();
+  const {
+    uiMessages, isThinking, init, sendMessage, submitFeedback, pendingConfirmation, resolveConfirmation,
+  } = useNoriAgentStore();
   const userName = useAuthStore((s) => s.user?.name);
   const [input, setInput] = useState('');
   const [feedbackRequestId, setFeedbackRequestId] = useState<string | null>(null);
@@ -340,6 +342,36 @@ export default function NoriChatScreen() {
             </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Xác nhận trước khi ghi dữ liệu (Phase 2, mục 7: odometer.create/fuel.create là tool
+          mutating) - ConversationManager đang await confirmAction() nên chỉ tiếp tục vòng lặp
+          tool-call sau khi user bấm 1 trong 2 nút này. */}
+      <Modal visible={!!pendingConfirmation} transparent animationType="fade" onRequestClose={() => resolveConfirmation(false)}>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)', padding: 24 }}>
+          <View style={{ backgroundColor: colors.surface, borderRadius: 16, padding: 20, width: '100%' }}>
+            <Text style={{ color: colors.text, fontSize: 17, fontWeight: '700', marginBottom: 10 }}>
+              Nori muốn ghi dữ liệu
+            </Text>
+            <Text style={{ color: colors.text, fontSize: 15, marginBottom: 20 }}>
+              {pendingConfirmation?.summary}
+            </Text>
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <TouchableOpacity
+                onPress={() => resolveConfirmation(false)}
+                style={{ flex: 1, alignItems: 'center', paddingVertical: 12, borderRadius: 10, backgroundColor: colors.background }}
+              >
+                <Text style={{ color: colors.text }}>Huỷ</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => resolveConfirmation(true)}
+                style={{ flex: 1, alignItems: 'center', paddingVertical: 12, borderRadius: 10, backgroundColor: colors.primary }}
+              >
+                <Text style={{ color: '#fff', fontWeight: '600' }}>Đồng ý</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
       </Modal>
     </SafeAreaView>
   );
