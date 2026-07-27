@@ -9,6 +9,7 @@ import { useColors } from '../../utils/theme';
 import { useNoriAgentStore } from '../../store/noriAgentStore';
 import { useInitNoriAgent } from '../../agent/useInitNoriAgent';
 import { useVoiceInput } from '../../hooks/useVoiceInput';
+import VoiceWaveform from '../../components/nori/VoiceWaveform';
 import { NoriFeedbackRating } from '../../api/nori';
 
 const RATING_OPTIONS: { value: NoriFeedbackRating; label: string; emoji: string }[] = [
@@ -70,7 +71,7 @@ export default function NoriChatScreen() {
   const [feedbackNote, setFeedbackNote] = useState('');
   const listRef = useRef<FlatList>(null);
 
-  const { listen, stop: stopListening, status: voiceStatus, error: voiceError } = useVoiceInput();
+  const { listen, stop: stopListening, status: voiceStatus, error: voiceError, volume: voiceVolume } = useVoiceInput();
   const [isSpeaking, setIsSpeaking] = useState(false);
   // true nếu lượt hỏi VỪA RỒI là bằng giọng nói - chỉ đọc to trả lời trong trường hợp đó
   // (gõ chữ thì Nori không tự đọc, tránh gây phiền/ồn không mong muốn).
@@ -226,9 +227,13 @@ export default function NoriChatScreen() {
         )}
 
         {voiceStatus === 'listening' && (
-          <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 6, gap: 8 }}>
-            <FontAwesome5 name="microphone" size={13} color={colors.error} solid />
-            <Text style={{ color: colors.error }}>Đang nghe...</Text>
+          // Rà soát 2026-07-27 (góp ý user, kiểu Kiki): thay icon mic tĩnh bằng waveform sống
+          // theo âm lượng thật (VoiceWaveform đọc useVoiceInput().volume) - không cần bấm gì
+          // thêm, Nori tự dừng nghe khi bạn ngừng nói (hoặc sau tối đa 10s, xem MAX_LISTEN_MS ở
+          // useVoiceInput.ts) rồi tự gửi câu hỏi, không cần bấm nút gửi.
+          <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 6, gap: 10 }}>
+            <VoiceWaveform volume={voiceVolume} color={colors.error} />
+            <Text style={{ color: colors.error, fontSize: 13 }}>Đang nghe... (tự gửi khi bạn dừng nói)</Text>
           </View>
         )}
 

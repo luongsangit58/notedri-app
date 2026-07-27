@@ -6,6 +6,7 @@ import { useColors } from '../../utils/theme';
 import { useNoriAgentStore, PREMIUM_REQUIRED_TEXT } from '../../store/noriAgentStore';
 import { useInitNoriAgent } from '../../agent/useInitNoriAgent';
 import { useVoiceInput } from '../../hooks/useVoiceInput';
+import VoiceWaveform from './VoiceWaveform';
 import { useAuthStore } from '../../store/authStore';
 import { navigationRef } from '../../navigation/navigationRef';
 
@@ -49,7 +50,7 @@ export default function NoriQuickPopover({ visible, onClose }: NoriQuickPopoverP
   const isPremium = useAuthStore((s) => !!s.user?.is_premium);
   const [input, setInput] = useState('');
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const { listen, stop: stopListening, status: voiceStatus, error: voiceError } = useVoiceInput();
+  const { listen, stop: stopListening, status: voiceStatus, error: voiceError, volume: voiceVolume } = useVoiceInput();
   const prevMessageCountRef = useRef(uiMessages.length);
   const lastMessage = uiMessages[uiMessages.length - 1];
 
@@ -159,9 +160,12 @@ export default function NoriQuickPopover({ visible, onClose }: NoriQuickPopoverP
                 <Text style={{ color: colors.textSecondary }}>Nori đang kiểm tra...</Text>
               </View>
             ) : voiceStatus === 'listening' ? (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <FontAwesome5 name="microphone" size={13} color={colors.error} solid />
-                <Text style={{ color: colors.error }}>Đang nghe...</Text>
+              // Rà soát 2026-07-27 (góp ý user, kiểu Kiki): waveform sống theo âm lượng thay icon
+              // mic tĩnh - popup này đã tự nghe ngay khi mở (xem useEffect [visible, isPremium]
+              // phía trên), không cần bấm gì thêm, tự dừng+gửi khi bạn ngừng nói.
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <VoiceWaveform volume={voiceVolume} color={colors.error} />
+                <Text style={{ color: colors.error, fontSize: 13 }}>Đang nghe...</Text>
               </View>
             ) : lastMessage ? (
               <Text style={{ color: colors.text, fontSize: 15, lineHeight: 21 }}>{lastMessage.text}</Text>

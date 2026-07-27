@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { ExpoSpeechRecognitionModule, useSpeechRecognitionEvent } from 'expo-speech-recognition';
 import { useT } from '../i18n';
 
@@ -9,6 +9,11 @@ interface UseVoiceInputResult {
   stop: () => void;
   status: Status;
   error: string | null;
+  /** Rà soát 2026-07-27 (góp ý user: muốn hiệu ứng "sóng sánh" thay cho nút bấm tĩnh) - cường độ
+   * âm lượng hiện tại, chuẩn hoá về 0..1, chỉ khác 0 lúc đang nghe. Dùng để vẽ waveform sống theo
+   * giọng nói thật (native trả về qua sự kiện `volumechange` của expo-speech-recognition, range
+   * gốc -2..10 - xem ExpoSpeechRecognitionModule.types.d.ts). 0 khi không nghe. */
+  volume: number;
 }
 
 // Bộ số nhân tiếng Việt thường xuất hiện trong Google STT transcript.
@@ -55,10 +60,17 @@ export function parseNumberFromSpeech(text: string): string {
   return t.replace(/\D/g, '');
 }
 
+// Rà soát 2026-07-27 (góp ý user, kiểu Kiki): không bắt user tự bấm dừng - nghe tối đa ngần này
+// rồi TỰ dừng (native tự dừng sớm hơn nếu phát hiện im lặng sau khi nói xong - đây chỉ là giới
+// hạn AN TOÀN, tránh treo "Đang nghe..." vô thời hạn nếu recognizer của 1 ROM/thiết bị nào đó
+// không tự kết thúc phiên).
+const MAX_LISTEN_MS = 10_000;
+
 export function useVoiceInput(): UseVoiceInputResult {
   const t = useT();
   const [status, setStatus] = useState<Status>('idle');
   const [error, setError] = useState<string | null>(null);
+  const [volume, setVolume] = useState(0);
   // Bug fix: use ref instead of state so event handlers always see the latest callback
   // (state captured in useSpeechRecognitionEvent closure would be stale after first render)
   const callbackRef = useRef<((value: string, raw: string) => void) | null>(null);
@@ -71,14 +83,33 @@ export function useVoiceInput(): UseVoiceInputResult {
   // hỏi "tiền xăng" cụt trước khi user nói xong "tháng 6"). Giờ CHỈ lưu lại transcript MỚI NHẤT
   // trong lúc nghe, và CHỈ gọi callback 1 LẦN DUY NHẤT khi phiên nghe thật sự kết thúc ('end').
   const latestResultRef = useRef<{ parsed: string; raw: string } | null>(null);
+  const maxListenTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Lưới an toàn cho stop() thủ công (bên dưới) - phòng trường hợp hiếm gặp 1 ROM/thiết bị nào
+  // đó gọi native stop() xong không bao giờ bắn sự kiện 'end' (lẽ ra luôn phải bắn theo hợp đồng
+  // của SpeechRecognizer, nhưng OEM tự chế không phải lúc nào cũng tuân thủ đúng) - nếu không có
+  // lưới này, status sẽ kẹt mãi ở 'listening', còn TỆ HƠN bug gốc (ít nhất bug gốc còn về được
+  // 'idle', chỉ là mất kết quả).
+  const stopFallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useSpeechRecognitionEvent('result', (event) => {
-    const raw = event.results[0]?.transcript ?? '';
-    const parsed = parseNumberFromSpeech(raw);
-    latestResultRef.current = { parsed, raw };
-  });
+  const clearMaxListenTimer = () => {
+    if (maxListenTimerRef.current) {
+      clearTimeout(maxListenTimerRef.current);
+      maxListenTimerRef.current = null;
+    }
+  };
+  const clearStopFallbackTimer = () => {
+    if (stopFallbackTimerRef.current) {
+      clearTimeout(stopFallbackTimerRef.current);
+      stopFallbackTimerRef.current = null;
+    }
+  };
 
-  useSpeechRecognitionEvent('end', () => {
+  // Dùng chung cho cả sự kiện 'end' thật LẪN lưới an toàn của stop() - tránh lặp logic đóng phiên
+  // nghe (chốt volume=0, gọi callback với kết quả gần nhất, chuyển status).
+  const finishListening = useCallback(() => {
+    clearMaxListenTimer();
+    clearStopFallbackTimer();
+    setVolume(0);
     setStatus((s) => {
       if (s !== 'listening') return s;
       const result = latestResultRef.current;
@@ -87,7 +118,23 @@ export function useVoiceInput(): UseVoiceInputResult {
       if (callbackRef.current && result) callbackRef.current(result.parsed, result.raw);
       return 'done';
     });
+  }, []);
+
+  useSpeechRecognitionEvent('result', (event) => {
+    const raw = event.results[0]?.transcript ?? '';
+    const parsed = parseNumberFromSpeech(raw);
+    latestResultRef.current = { parsed, raw };
   });
+
+  // Rà soát 2026-07-27 (bug thật bắt qua feedback user: bấm mic lần 2 để "dừng" xong không thấy
+  // gửi gì cả) - guard `s !== 'listening'` bên trong finishListening() ĐÚNG như thiết kế ban đầu,
+  // nhưng trước đây `stop()` (bên dưới) tự set status='idle' NGAY LẬP TỨC (đồng bộ) trước khi sự
+  // kiện 'end' này (mang transcript thật) kịp tới - nên tới lúc 'end' chạy, guard đã thấy status
+  // là 'idle' chứ không còn 'listening' nữa, ÂM THẦM BỎ QUA kết quả vừa nói, callback không bao
+  // giờ được gọi. Fix tận gốc ở `stop()` (không set 'idle' sớm nữa) - guard giữ nguyên logic cũ,
+  // chỉ còn đúng vai trò lọc sự kiện 'end' từ MỘT PHIÊN NGHE KHÁC hoàn toàn (native module là
+  // singleton toàn cục, xem chú thích guard 'error' bên dưới).
+  useSpeechRecognitionEvent('end', finishListening);
 
   useSpeechRecognitionEvent('error', (event) => {
     // Bug thật bắt được lúc rà soát 2026-07-27 (sau khi NoriQuickPopover giữ 1 instance
@@ -103,6 +150,9 @@ export function useVoiceInput(): UseVoiceInputResult {
     // thật sự ở trạng thái 'listening'.
     setStatus((s) => {
       if (s !== 'listening') return s;
+      clearMaxListenTimer();
+      clearStopFallbackTimer();
+      setVolume(0);
 
       const code = ((event as any).error ?? '').toLowerCase();
       const msg = (event.message ?? '').toLowerCase();
@@ -125,6 +175,21 @@ export function useVoiceInput(): UseVoiceInputResult {
     });
   });
 
+  // Hiệu ứng "sóng sánh" (góp ý user 2026-07-27, kiểu Kiki): volumechange trả cường độ âm lượng
+  // sống trong lúc nghe (range gốc -2..10, "dưới 0 coi như im lặng" theo docs expo-speech-
+  // recognition) - chuẩn hoá về 0..1 cho UI vẽ waveform. CHỈ áp dụng khi CHÍNH instance này đang
+  // 'listening' - cùng lý do guard 'end'/'error' ở trên (native event toàn cục, không riêng theo
+  // instance nào gọi start()).
+  useSpeechRecognitionEvent('volumechange', (event) => {
+    setStatus((s) => {
+      if (s === 'listening') {
+        const clamped = Math.max(0, Math.min(10, event.value));
+        setVolume(clamped / 10);
+      }
+      return s;
+    });
+  });
+
   const listen = useCallback(async (onResult: (value: string, raw: string) => void) => {
     const { granted } = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
     if (!granted) {
@@ -134,19 +199,54 @@ export function useVoiceInput(): UseVoiceInputResult {
     }
     callbackRef.current = onResult;
     latestResultRef.current = null;
+    clearStopFallbackTimer();
     setError(null);
+    setVolume(0);
     setStatus('listening');
     ExpoSpeechRecognitionModule.start({
       lang: 'vi-VN',
       interimResults: false,
       maxAlternatives: 1,
+      volumeChangeEventOptions: { enabled: true, intervalMillis: 100 },
     });
-  }, []);
+
+    // Giới hạn an toàn (mục đích: "có thời hạn nói" - góp ý user): gọi stop() (KHÔNG phải
+    // abort()) sau MAX_LISTEN_MS nếu phiên nghe vẫn chưa tự kết thúc - stop() vẫn cố lấy kết quả
+    // cuối cùng qua sự kiện 'result'/'end' thay vì huỷ trắng như abort(). Native tự dừng SỚM HƠN
+    // mốc này nếu phát hiện user đã im lặng sau khi nói xong (hành vi mặc định của
+    // SpeechRecognizer/interimResults:false, xem ExpoSpeechRecognitionOptions.continuous) - timer
+    // này chỉ là lưới an toàn cho trường hợp recognizer không tự kết thúc.
+    clearMaxListenTimer();
+    maxListenTimerRef.current = setTimeout(() => {
+      ExpoSpeechRecognitionModule.stop();
+      // Cùng lưới an toàn với stop() thủ công bên dưới (phòng 'end' không bao giờ tới) - gọi
+      // thẳng finishListening thay vì stop() để khỏi phụ thuộc thứ tự khai báo trong file.
+      clearStopFallbackTimer();
+      stopFallbackTimerRef.current = setTimeout(finishListening, 3_000);
+    }, MAX_LISTEN_MS);
+  }, [t, finishListening]);
 
   const stop = useCallback(() => {
+    // Rà soát 2026-07-27 (fix bug thật): KHÔNG tự set status='idle' ở đây nữa - trước đây làm
+    // vậy khiến handler 'end' phía trên (mang transcript thật qua guard `s !== 'listening'`) âm
+    // thầm bỏ qua kết quả vừa nói mỗi khi user chủ động bấm dừng, callback không bao giờ được
+    // gọi (bug thật user báo: "ấn mic, nói xong ấn lần 2 để dừng thì không thấy gửi gì"). Chỉ gọi
+    // native stop() - vẫn cố trả kết quả cuối qua 'result' rồi 'end' xử lý status/callback như
+    // bình thường (dùng chung logic với native tự dừng, không lặp code).
+    clearMaxListenTimer();
     ExpoSpeechRecognitionModule.stop();
-    setStatus('idle');
+
+    // Lưới an toàn: nếu 'end' vẫn không tới sau ngần này (ROM lỗi/không tuân thủ hợp đồng
+    // SpeechRecognizer), tự đóng phiên nghe thay vì kẹt mãi ở 'listening' - xem chú thích
+    // stopFallbackTimerRef phía trên.
+    clearStopFallbackTimer();
+    stopFallbackTimerRef.current = setTimeout(finishListening, 3_000);
+  }, [finishListening]);
+
+  useEffect(() => () => {
+    clearMaxListenTimer();
+    clearStopFallbackTimer();
   }, []);
 
-  return { listen, stop, status, error };
+  return { listen, stop, status, error, volume };
 }
