@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { SafeAreaInsetsContext, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRoute } from '@react-navigation/native';
+import { useRoute, useNavigation } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useColors } from '../../utils/theme';
 import { useT } from '../../i18n';
 import RemindersScreen from '../reminders/RemindersScreen';
 import HealthScreen from '../health/HealthScreen';
+import { resolveDefaultVehicle } from '../../services/vehicles/resolveDefaultVehicle';
 
 type Tab = 0 | 1;
 
 export default function QuanLyScreen() {
   const route = useRoute<any>();
+  const navigation = useNavigation<any>();
   const [activeTab, setActiveTab] = useState<Tab>(0);
   // Cho phep dieu huong tu Trang chu (vd bam Loi nhac) mo dung tab.
   // _ts thay doi moi lan navigate de effect chay lai ke ca khi tab lap lai gia tri.
@@ -29,6 +31,21 @@ export default function QuanLyScreen() {
   ];
 
   const childInsets = { top: 0, bottom: insets.bottom, left: insets.left, right: insets.right };
+
+  // Rà soát 27/7 (đối chiếu web: nhóm "Quản lý" trên web gồm Sức khỏe + OBD2 +
+  // Lời nhắc, còn mobile thiếu OBD2) - thêm mục OBD2 cho khớp nhóm với web.
+  // KHÔNG làm 1 tab nội dung như 2 tab trên (OBDSetup là luồng nhiều bước gắn
+  // với 1 xe cụ thể, không hợp để nhồi làm nội dung con tĩnh) - bấm vào là
+  // điều hướng thẳng sang OBDSetup với xe mặc định (đúng quy ước is_default
+  // mọi màn khác đã dùng), không đổi activeTab.
+  async function goToObd() {
+    const vehicle = await resolveDefaultVehicle();
+    if (!vehicle) {
+      navigation.navigate('AddVehicle');
+      return;
+    }
+    navigation.navigate('OBDSetup', { vehicleId: vehicle.id, vehicleName: vehicle.ten });
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -55,6 +72,14 @@ export default function QuanLyScreen() {
             </TouchableOpacity>
           );
         })}
+        {/* Mục OBD2 (shortcut, không phải tab nội dung - xem goToObd() ở trên) */}
+        <TouchableOpacity onPress={goToObd} style={styles.tabItem} activeOpacity={0.75}>
+          <FontAwesome5 name="microchip" size={13} color={colors.textSecondary} solid />
+          <Text style={[styles.tabLabel, { color: colors.textSecondary }]}>
+            {t('management.tab_obd')}
+          </Text>
+          <FontAwesome5 name="external-link-alt" size={8} color={colors.textSecondary} style={{ position: 'absolute', top: 10, right: '28%' }} />
+        </TouchableOpacity>
       </View>
 
       {/* Content */}

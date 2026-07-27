@@ -15,6 +15,7 @@ import { BASE_URL } from '../../utils/api';
 import { useColors, useThemeStore } from '../../utils/theme';
 import { useI18nStore, useLang, useT } from '../../i18n';
 import { markGooglePending, clearGooglePending } from '../../services/googleAuthRecovery';
+import { safeFaIcon } from '../../utils/faIcon';
 
 function MenuItem({ icon, label, onPress, danger, right }: { icon: React.ReactNode; label: string; onPress?: () => void; danger?: boolean; right?: React.ReactNode }) {
   const colors = useColors();
@@ -193,7 +194,7 @@ export default function ProfileScreen() {
                 backgroundColor: lvColor, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3,
                 marginTop: -12, borderWidth: 2, borderColor: colors.background,
               }}>
-                <FontAwesome5 name={level.icon || 'star'} size={10} color="#fff" solid />
+                <FontAwesome5 name={level.icon ? safeFaIcon(level.icon) : 'star'} size={10} color="#fff" solid />
                 <Text style={{ color: '#fff', fontSize: 11, fontWeight: '800' }}>LV.{level.level} · {level.name}</Text>
               </View>
             )}

@@ -12,15 +12,7 @@ import AppBgPattern from '../../components/AppBgPattern';
 import { useColors } from '../../utils/theme';
 import { contentWide } from '../../utils/layout';
 import { useT } from '../../i18n';
-
-// FA6-only icons → FA5 fallbacks
-const ICON_FALLBACK: Record<string, string> = {
-  'mountain-sun': 'mountain',
-  'gauge-high':   'tachometer-alt',
-};
-function safeIcon(icon: string): string {
-  return ICON_FALLBACK[icon] ?? icon;
-}
+import { safeFaIcon as safeIcon } from '../../utils/faIcon';
 
 const LEVEL_COLORS: Record<string, string> = {
   slate:   '#94a3b8',

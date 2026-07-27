@@ -389,7 +389,9 @@ export default function NearbyStationsScreen() {
       return (
         <View style={styles.center}>
           <View style={styles.bigIconWrap}>
-            <FontAwesome5 name="map-marker-slash" size={40} color={colors.warning} solid />
+            {/* map-marker-slash không có trong FontAwesome5Free đóng gói (icon FA6) -
+                hiện dấu hỏi thay vì icon (rà soát 27/7) - dùng map-marker-alt thường. */}
+            <FontAwesome5 name="map-marker-alt" size={40} color={colors.warning} solid />
           </View>
           <Text style={styles.errorTitle}>{t('nearby_stations.permission_title')}</Text>
           <Text style={styles.errorBody}>

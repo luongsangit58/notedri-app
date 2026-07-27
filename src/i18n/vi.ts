@@ -1482,6 +1482,7 @@ const vi = {
   "auth.slogan": "Quản lý chi phí, tối ưu vận hành",
   "management.tab_health": "Kiểm tra xe",
   "management.tab_reminders": "Lời nhắc",
+  "management.tab_obd": "OBD2",
 
   // ==== Nori - linh vật báo cáo sức khỏe xe ====
   "nori.happy": "Xe khỏe re, chưa thấy gì bất thường!",

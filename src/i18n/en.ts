@@ -1482,6 +1482,7 @@ const en = {
   "auth.slogan": "Track costs, optimize every drive",
   "management.tab_health": "Vehicle check",
   "management.tab_reminders": "Reminders",
+  "management.tab_obd": "OBD2",
 
   // ==== Nori - vehicle health mascot ====
   "nori.happy": "Your car's doing great, nothing unusual!",
