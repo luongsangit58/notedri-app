@@ -51,14 +51,27 @@ export class ConversationManager {
   async sendMessage(userText: string): Promise<NoriReply> {
     const localMatch = matchLocalIntent(userText);
     if (localMatch) {
+      const toolUseId = `local-${Date.now()}-${localRequestCounter++}`;
       const result = await this.executor.execute(
-        { id: 'local', name: localMatch.toolName, input: localMatch.toolInput },
+        { id: toolUseId, name: localMatch.toolName, input: localMatch.toolInput },
         this.getContext(),
       );
       const text = buildLocalReply(localMatch.toolName, JSON.parse(result.content));
       this.messages.push({ role: 'user', content: userText });
+      // Ghi lại đúng shape tool_use/tool_result như đường LLM (KHÔNG chỉ đẩy thẳng text) - nếu
+      // không, số liệu trong câu trả lời local này sẽ vô hình với getAllToolResultContents(),
+      // và 1 câu hỏi nối tiếp qua đường LLM tham chiếu lại số này sẽ bị grounding validator
+      // chặn nhầm (cùng gốc bug với follow-up LLM-LLM đã fix, nhưng ở nhánh local->LLM).
+      this.messages.push({
+        role: 'assistant',
+        content: [{ type: 'tool_use', id: toolUseId, name: localMatch.toolName, input: localMatch.toolInput }],
+      });
+      this.messages.push({
+        role: 'user',
+        content: [{ type: 'tool_result', tool_use_id: toolUseId, content: result.content, is_error: result.isError }],
+      });
       this.messages.push({ role: 'assistant', content: text });
-      return { text, requestId: `local-${Date.now()}-${localRequestCounter++}`, source: 'local' };
+      return { text, requestId: toolUseId, source: 'local' };
     }
 
     this.messages.push({ role: 'user', content: userText });
