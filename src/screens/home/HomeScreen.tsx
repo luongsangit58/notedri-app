@@ -264,28 +264,36 @@ export default function HomeScreen() {
           </Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
             <WeatherCard data={weatherData} loading={isWeatherLoading && !!coords} />
-            <TouchableOpacity onPress={() => nav.navigate('Profile')} style={{ position: 'relative' }}>
+            <TouchableOpacity
+              onPress={() => nav.navigate('Profile')}
+              style={{ position: 'relative' }}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
               {user?.avatar ? (
                 <Image
                   source={{ uri: user.avatar }}
-                  style={{ width: 32, height: 32, borderRadius: 16, borderWidth: 1.5, borderColor: colors.border }}
+                  style={{ width: 44, height: 44, borderRadius: 22, borderWidth: 1.5, borderColor: colors.border }}
                 />
               ) : (
                 <View style={{
-                  width: 32, height: 32, borderRadius: 16,
+                  width: 44, height: 44, borderRadius: 22,
                   backgroundColor: colors.primary + '22',
                   alignItems: 'center', justifyContent: 'center',
                   borderWidth: 1.5, borderColor: colors.border,
                 }}>
-                  <Text style={{ color: colors.primary, fontWeight: '800', fontSize: 13 }}>
+                  <Text style={{ color: colors.primary, fontWeight: '800', fontSize: 17 }}>
                     {(user?.name ?? '?').charAt(0).toUpperCase()}
                   </Text>
                 </View>
               )}
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => nav.navigate('Notifications')} style={{ padding: 2 }}>
+            <TouchableOpacity
+              onPress={() => nav.navigate('Notifications')}
+              style={{ padding: 6 }}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
               <View style={{ position: 'relative' }}>
-                <FontAwesome5 name="bell" size={18} color={colors.text} solid />
+                <FontAwesome5 name="bell" size={20} color={colors.text} solid />
                 {unreadCount > 0 && (
                   <View style={{
                     position: 'absolute', top: -5, right: -6,

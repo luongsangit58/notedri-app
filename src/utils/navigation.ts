@@ -61,7 +61,7 @@ export function navigateFromCta(
   if (cta.action) {
     switch (cta.action) {
       case 'obd_dtc':
-        navigation.navigate('OBDTrips', vehicleId ? { vehicleId } : undefined);
+        navigation.navigate('DtcLookup');
         return;
       default:
         break;

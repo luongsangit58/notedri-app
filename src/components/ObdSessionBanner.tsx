@@ -68,7 +68,7 @@ function useTransitionToast(): [string | null, () => void] {
 }
 
 // Các màn đã tự hiển thị trạng thái OBD - banner ở đó là thừa
-const HIDDEN_ON = new Set(['OBDSetup', 'OBDDashboard', 'OBDTrips', 'NfcSetup']);
+const HIDDEN_ON = new Set(['OBDSetup', 'OBDDashboard', 'NfcSetup']);
 
 /**
  * Banner mini "phiên OBD đang sống" (C5 tầng 2): kiểu thanh cuộc-gọi-đang-diễn-ra,

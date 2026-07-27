@@ -14,6 +14,15 @@ const OPTIONAL_FEATURES = [
   'android.hardware.location.gps',
   'android.hardware.location.network',
   'android.hardware.bluetooth_le',
+  'android.hardware.bluetooth',
+  // Rà soát 27/7: thêm react-native-nfc-manager (ghép thẻ NFC nhận diện xe)
+  // sau khi danh sách này được viết lần đầu - permission NFC tự động suy ra
+  // <uses-feature android:name="android.hardware.nfc" required="true">
+  // giống hệt cơ chế CAMERA/RECORD_AUDIO/ACCESS_FINE_LOCATION đã nêu trên.
+  // Đầu Android ô tô hầu như không có chip NFC rời -> đây là nguyên nhân mới
+  // khiến Google Play báo "không tương thích thiết bị" trên đầu xe (app vẫn
+  // hoạt động tốt không cần NFC, tính năng ghép thẻ chỉ là tiện ích thêm).
+  'android.hardware.nfc',
   // Một số ROM đầu Android ô tô đời rẻ (không phải AAOS chính chủ) tự set
   // cờ "loại thiết bị = automotive" dù chỉ là Android thường cài sẵn Play
   // Store. Nếu không khai báo tường minh, Play có thể áp bộ lọc tương thích

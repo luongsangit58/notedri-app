@@ -615,11 +615,11 @@ export default function OBDSetupScreen() {
         <View style={{ flexDirection: 'row', gap: 12, marginTop: 20 }}>
           <TouchableOpacity
             style={[styles.actionBtn, { borderColor: colors.border, flex: 1 }]}
-            onPress={() => navigation.navigate('OBDTrips', { vehicleId, vehicleName, consumptionOfficial })}
+            onPress={() => navigation.navigate('GpsTrips', { vehicleId, vehicleName })}
             disabled={!vehicleId}
           >
-            <FontAwesome5 name="route" size={13} color={colors.textSecondary} />
-            <Text style={[styles.actionBtnText, { color: colors.textSecondary }]}>{t('obd.trip_history')}</Text>
+            <FontAwesome5 name="satellite-dish" size={13} color={colors.textSecondary} />
+            <Text style={[styles.actionBtnText, { color: colors.textSecondary }]}>{t('gps_trips.title')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.actionBtn, { borderColor: colors.border, flex: 1 }]}

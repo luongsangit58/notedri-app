@@ -21,6 +21,7 @@ import { useObdConnection } from '../../hooks/useObd';
 import { bleService, LinkQuality } from '../../services/obd/BleService';
 import { requestKeepAlivePermissions, startObdKeepAlive } from '../../services/obd/obdKeepAliveService';
 import { openBatterySettings, getReadiness, requestPermissionsAndStart } from '../../services/gps/GpsTripTracker';
+import { isNfcSupported } from '../../services/nfc/NfcService';
 import AppBgPattern from '../../components/AppBgPattern';
 import { useColors } from '../../utils/theme';
 import { useT } from '../../i18n';
@@ -77,6 +78,19 @@ export default function OBDDashboardScreen() {
     paddingBottom: Math.min(rawInsets.bottom, MAX_SAFE_INSET),
     paddingLeft: Math.min(rawInsets.left, MAX_SAFE_INSET),
     paddingRight: Math.min(rawInsets.right, MAX_SAFE_INSET),
+  };
+  // Rà soát 27/7 (ảnh thật đầu Android ô tô: mảng trống dày phía trên
+  // GaugeCluster dù đã ẩn status bar) - chế độ Đồng hồ ẩn HẲN status bar +
+  // dùng toolbar nổi riêng của GaugeCluster (top: 8), không cần chừa
+  // top/bottom inset chung như chế độ Lưới. Áp nguyên safeInsets vào chế độ
+  // này khiến full-screen "gắn cố định trên xe" bị co lại, để trống viền dày
+  // trên/dưới y hệt ảnh chụp. Giữ lại left/right (đề phòng notch khi màn dọc
+  // xoay ngang) nhưng bỏ top/bottom.
+  const gaugeInsets = {
+    paddingTop: 0,
+    paddingBottom: 0,
+    paddingLeft: safeInsets.paddingLeft,
+    paddingRight: safeInsets.paddingRight,
   };
   const {
     connectionState,
@@ -166,6 +180,20 @@ export default function OBDDashboardScreen() {
     if (Platform.OS !== 'android') return;
     const sub = NotedriPip.addListener('onPipModeChanged', (e) => setIsInPip(e.isInPip));
     return () => sub.remove();
+  }, []);
+
+  // Rà soát 27/7 (user báo vẫn thấy nút ghép thẻ NFC trên đầu Android ô tô):
+  // withOptionalHardwareFeatures.js chỉ tránh Play Store lọc thiết bị thiếu
+  // NFC, không có nghĩa là màn hình nên HIỆN nút cho phần cứng không có sẵn.
+  // NfcSetupScreen đã tự check isNfcSupported() và hiện trạng thái
+  // 'unsupported' nếu thiếu chip - nhưng user vẫn phải bấm vào rồi mới biết,
+  // ngõ cụt trên các đầu xe không có NFC (đa số). Ẩn hẳn nút từ nguồn thay vì
+  // để user bấm vào một tính năng chắc chắn không dùng được trên máy họ.
+  const [nfcSupported, setNfcSupported] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    isNfcSupported().then((supported) => { if (!cancelled) setNfcSupported(supported); });
+    return () => { cancelled = true; };
   }, []);
 
   // Badge chất lượng kết nối (ý #16): chỉ hiện khi có vấn đề, sóng tốt thì im lặng
@@ -274,7 +302,7 @@ export default function OBDDashboardScreen() {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }, safeInsets]}>
+    <View style={[styles.container, { backgroundColor: colors.background }, viewMode === 'gauge' ? gaugeInsets : safeInsets]}>
       <AppBgPattern />
       {/* Rà soát 24/7 (ảnh thật trên đầu Android ô tô: header này vẫn đứng TRÊN
           toolbar riêng của GaugeCluster thành 2 hàng chrome chồng nhau, chưa
@@ -291,23 +319,29 @@ export default function OBDDashboardScreen() {
             "xong việc, về nhà" chứ không phải lần lại lịch sử điều hướng. */}
         <TouchableOpacity
           onPress={() => navigation.navigate('Tabs', { screen: 'Dashboard' })}
-          style={styles.backBtn}
+          style={[styles.backBtn, { backgroundColor: colors.card }]}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
-          <FontAwesome5 name="arrow-left" size={18} color={colors.text} />
+          <FontAwesome5 name="arrow-left" size={20} color={colors.text} />
         </TouchableOpacity>
         <View>
           <Text style={[styles.title, { color: colors.text }]}>{t('obd.dashboard_title')}</Text>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{deviceName}</Text>
         </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           <TouchableOpacity
             onPress={() => setViewMode((m) => (m === 'grid' ? 'gauge' : 'grid'))}
-            style={styles.disconnectBtn}
+            style={[styles.disconnectBtn, { backgroundColor: colors.card }]}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >
-            <FontAwesome5 name={viewMode === 'grid' ? 'tachometer-alt' : 'th-large'} size={18} color={colors.primary} />
+            <FontAwesome5 name={viewMode === 'grid' ? 'tachometer-alt' : 'th-large'} size={20} color={colors.primary} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={handleDisconnect} style={styles.disconnectBtn}>
-            <FontAwesome5 name="times" size={18} color="#EF4444" />
+          <TouchableOpacity
+            onPress={handleDisconnect}
+            style={[styles.disconnectBtn, { backgroundColor: '#EF444422' }]}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <FontAwesome5 name="times" size={20} color="#EF4444" />
           </TouchableOpacity>
         </View>
       </View>
@@ -480,18 +514,10 @@ export default function OBDDashboardScreen() {
           <FontAwesome5 name="chevron-right" size={12} color={colors.textSecondary} />
         </TouchableOpacity>
 
-        {/* Trip history link */}
-        <TouchableOpacity
-          style={[styles.historyBtn, { backgroundColor: colors.card }]}
-          onPress={() => navigation.navigate('OBDTrips', { vehicleId, vehicleName, consumptionOfficial })}>
-          <FontAwesome5 name="route" size={14} color={colors.primary} />
-          <Text style={[styles.historyBtnText, { color: colors.primary }]}>{t('obd.trip_history')}</Text>
-          <FontAwesome5 name="chevron-right" size={12} color={colors.textSecondary} />
-        </TouchableOpacity>
-
-        {/* NFC pairing link - chỉ hiện khi đang thực sự kết nối, tránh bấm vào im
-            lặng không phản hồi nếu xe vừa mất kết nối giữa chừng */}
-        {isConnected && (
+        {/* NFC pairing link - chỉ hiện khi đang thực sự kết nối (tránh bấm vào im
+            lặng không phản hồi nếu xe vừa mất kết nối giữa chừng) VÀ máy có chip
+            NFC (đa số đầu Android ô tô không có - xem effect nfcSupported ở trên) */}
+        {isConnected && nfcSupported && (
         <TouchableOpacity
           style={[styles.historyBtn, { backgroundColor: colors.card }]}
           onPress={() => {
@@ -538,8 +564,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
-  backBtn: { padding: 4 },
-  disconnectBtn: { padding: 4 },
+  backBtn: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  disconnectBtn: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   title: { fontSize: 18, fontWeight: '600', textAlign: 'center' },
   subtitle: { fontSize: 12, textAlign: 'center' },
   body: { padding: 16, gap: 16 },
