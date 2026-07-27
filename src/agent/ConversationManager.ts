@@ -2,18 +2,34 @@ import { noriApi } from '../api/nori';
 import { ToolExecutor } from './ToolExecutor';
 import { ToolRegistry } from './ToolRegistry';
 import { NoriContentBlock, NoriMessage, NoriToolCall, ToolContext } from './types';
+import { matchLocalIntent } from './LocalIntentMatcher';
+import { buildLocalReply } from './LocalReplyTemplates';
 
 const MAX_TOOL_LOOP_ITERATIONS = 6;
+
+export type NoriReply = {
+  text: string;
+  /** Dùng để chấm điểm câu trả lời (noriApi.feedback) - "local-*" cho câu trả lời không qua
+   * LLM (không có request thật ở backend để nối log, nhưng vẫn cần id để UI theo dõi được). */
+  requestId: string;
+  source: 'local' | 'llm';
+};
+
+let localRequestCounter = 0;
 
 /**
  * Giữ transcript tool-call (mục 1: "Transcript tool là nguồn sự thật"), gọi API backend, điều
  * phối vòng lặp tool-calling, và grounding validator (mục 1, 18). Lịch sử chat văn bản tự do
  * (`history`) chỉ là lớp hiển thị phái sinh từ transcript này.
  *
- * Grounding validator (Phase 1, bản thật - không chỉ dặn dò prompt): mọi token giống-số trong
- * câu trả lời cuối phải xuất hiện trong ít nhất 1 tool_result đã thực thi TRONG LƯỢT NÀY. Nếu
- * không, coi output đó là vi phạm hợp đồng grounding - không hiển thị nguyên văn, trả về câu
- * an toàn kèm log cảnh báo để dev soát lại (không phải throw làm crash hội thoại).
+ * Matcher tất định (mục 4, câu hỏi mở mục 12 - đã quyết định làm): câu hỏi khớp mẫu rõ ràng
+ * được trả lời THẲNG từ tool_result, không gọi LLM - nhanh hơn, rẻ hơn, và grounding tự động
+ * đúng 100% (không có bước LLM diễn đạt lại nên không có chỗ để bịa số).
+ *
+ * Grounding validator (Phase 1, bản thật - không chỉ dặn dò prompt, chỉ áp dụng cho đường LLM):
+ * mọi token giống-số trong câu trả lời cuối phải xuất hiện trong ít nhất 1 tool_result đã thực
+ * thi TRONG LƯỢT NÀY. Nếu không, coi output đó là vi phạm hợp đồng grounding - không hiển thị
+ * nguyên văn, trả về câu an toàn kèm log cảnh báo để dev soát lại (không phải throw làm crash).
  */
 export class ConversationManager {
   private messages: NoriMessage[] = [];
@@ -28,7 +44,19 @@ export class ConversationManager {
     return this.messages;
   }
 
-  async sendMessage(userText: string): Promise<string> {
+  async sendMessage(userText: string): Promise<NoriReply> {
+    const localMatch = matchLocalIntent(userText);
+    if (localMatch) {
+      const result = await this.executor.execute(
+        { id: 'local', name: localMatch.toolName, input: localMatch.toolInput },
+        this.getContext(),
+      );
+      const text = buildLocalReply(localMatch.toolName, JSON.parse(result.content));
+      this.messages.push({ role: 'user', content: userText });
+      this.messages.push({ role: 'assistant', content: text });
+      return { text, requestId: `local-${Date.now()}-${localRequestCounter++}`, source: 'local' };
+    }
+
     this.messages.push({ role: 'user', content: userText });
 
     const toolResultContentsThisTurn: string[] = [];
@@ -49,16 +77,24 @@ export class ConversationManager {
         // nếu lỗi xảy ra ở vòng lặp tool sau) vẫn là 1 chuỗi hợp lệ kết thúc bằng lượt "user" -
         // lượt sendMessage() kế tiếp chỉ cần nối thêm 1 user turn nữa lên trên (Anthropic tự
         // gộp 2 lượt user liên tiếp thành 1 turn, không lỗi "roles must alternate").
-        return 'Mình đang không kết nối được với máy chủ, bạn kiểm tra mạng rồi thử lại giúp mình nhé.';
+        return {
+          text: 'Mình đang không kết nối được với máy chủ, bạn kiểm tra mạng rồi thử lại giúp mình nhé.',
+          requestId: `local-${Date.now()}-${localRequestCounter++}`,
+          source: 'local',
+        };
       }
 
-      const { stop_reason: stopReason, content } = response.data;
+      const { stop_reason: stopReason, content, request_id: requestId } = response.data;
 
       this.messages.push({ role: 'assistant', content });
 
       if (stopReason !== 'tool_use') {
         const text = extractText(content);
-        return this.applyGroundingValidator(text, toolResultContentsThisTurn);
+        return {
+          text: this.applyGroundingValidator(text, toolResultContentsThisTurn),
+          requestId,
+          source: 'llm',
+        };
       }
 
       const toolCalls = content.filter(
@@ -81,7 +117,11 @@ export class ConversationManager {
       this.messages.push({ role: 'user', content: toolResultBlocks });
     }
 
-    return 'Xin lỗi, mình đang xử lý mất nhiều bước quá, bạn hỏi lại theo cách khác giúp mình nhé.';
+    return {
+      text: 'Xin lỗi, mình đang xử lý mất nhiều bước quá, bạn hỏi lại theo cách khác giúp mình nhé.',
+      requestId: `local-${Date.now()}-${localRequestCounter++}`,
+      source: 'local',
+    };
   }
 
   private applyGroundingValidator(text: string, toolResultContents: string[]): string {

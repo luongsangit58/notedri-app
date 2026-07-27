@@ -1,4 +1,4 @@
-import { ConversationManager } from './ConversationManager';
+import { ConversationManager, NoriReply } from './ConversationManager';
 import { ToolExecutor } from './ToolExecutor';
 import { ToolRegistry } from './ToolRegistry';
 import { SafetyPolicy } from './safety/SafetyPolicy';
@@ -53,7 +53,7 @@ export class NoriAgent {
     return this.conversation.getMessages();
   }
 
-  async sendMessage(text: string): Promise<string> {
+  async sendMessage(text: string): Promise<NoriReply> {
     this.setState('thinking');
     try {
       return await this.conversation.sendMessage(text);

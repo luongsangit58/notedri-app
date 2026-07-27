@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity, FlatList, KeyboardAvoidingView, Platform, ActivityIndicator,
+  View, Text, TextInput, TouchableOpacity, FlatList, KeyboardAvoidingView, Platform, ActivityIndicator, Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
@@ -10,6 +10,13 @@ import { useObdSessionStore } from '../../store/obdSessionStore';
 import { useSelectedVehicleStore } from '../../store/selectedVehicleStore';
 import { useVehicles } from '../../hooks/useVehicles';
 import { useAuthStore } from '../../store/authStore';
+import { NoriFeedbackRating } from '../../api/nori';
+
+const RATING_OPTIONS: { value: NoriFeedbackRating; label: string; emoji: string }[] = [
+  { value: 'good', label: 'Đúng', emoji: '✅' },
+  { value: 'partial', label: 'Một phần đúng', emoji: '🟡' },
+  { value: 'bad', label: 'Sai', emoji: '❌' },
+];
 
 /**
  * Màn hình chat TEXT để test Phase 1 (docs/nori-agent-plan.md mục 10.1, 13) - chưa nối
@@ -22,12 +29,18 @@ import { useAuthStore } from '../../store/authStore';
  * "unavailable" khi chưa kết nối OBD dù xe đã có đủ dữ liệu trên server. Fallback theo đúng
  * cách HomeScreen.tsx đang chọn "xe đang xem" (selectedVehicleStore -> xe mặc định -> xe đầu
  * tiên) để business tools hoạt động độc lập với BLE, giống hành vi user thấy ở Trang chủ.
+ *
+ * Chấm điểm câu trả lời (nhấn giữ bọt chat của Nori): ghi vào storage/logs/nori.log cùng
+ * request_id của lượt hỏi-đáp đó, để test thủ công có log kèm đánh giá thật thay vì chỉ nhớ
+ * trong đầu - theo yêu cầu track chất lượng trả lời trong giai đoạn test Phase 1.
  */
 export default function NoriChatScreen() {
   const colors = useColors();
-  const { uiMessages, isThinking, init, sendMessage } = useNoriAgentStore();
+  const { uiMessages, isThinking, init, sendMessage, submitFeedback } = useNoriAgentStore();
   const userName = useAuthStore((s) => s.user?.name);
   const [input, setInput] = useState('');
+  const [feedbackRequestId, setFeedbackRequestId] = useState<string | null>(null);
+  const [feedbackNote, setFeedbackNote] = useState('');
   const listRef = useRef<FlatList>(null);
 
   const { data: vehiclesRaw } = useVehicles();
@@ -58,6 +71,18 @@ export default function NoriChatScreen() {
     sendMessage(text);
   };
 
+  const openFeedback = (requestId?: string) => {
+    if (!requestId) return; // Bọt chào tĩnh không có requestId - không chấm điểm được.
+    setFeedbackNote('');
+    setFeedbackRequestId(requestId);
+  };
+
+  const handleRate = (rating: NoriFeedbackRating) => {
+    if (!feedbackRequestId) return;
+    submitFeedback(feedbackRequestId, rating, feedbackNote.trim() || undefined);
+    setFeedbackRequestId(null);
+  };
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom']}>
       <KeyboardAvoidingView
@@ -77,7 +102,9 @@ export default function NoriChatScreen() {
             </Text>
           }
           renderItem={({ item }) => (
-            <View
+            <TouchableOpacity
+              activeOpacity={item.role === 'assistant' && item.requestId ? 0.7 : 1}
+              onLongPress={item.role === 'assistant' ? () => openFeedback(item.requestId) : undefined}
               style={{
                 alignSelf: item.role === 'user' ? 'flex-end' : 'flex-start',
                 backgroundColor: item.role === 'user' ? colors.primary : colors.surface,
@@ -88,7 +115,12 @@ export default function NoriChatScreen() {
               }}
             >
               <Text style={{ color: item.role === 'user' ? '#fff' : colors.text }}>{item.text}</Text>
-            </View>
+              {item.feedbackRating && (
+                <Text style={{ marginTop: 4, fontSize: 12 }}>
+                  {RATING_OPTIONS.find((r) => r.value === item.feedbackRating)?.emoji} Đã chấm điểm
+                </Text>
+              )}
+            </TouchableOpacity>
           )}
         />
 
@@ -139,6 +171,49 @@ export default function NoriChatScreen() {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
+
+      <Modal visible={!!feedbackRequestId} transparent animationType="slide" onRequestClose={() => setFeedbackRequestId(null)}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' }}
+        >
+          <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24 }}>
+            <Text style={{ color: colors.text, fontSize: 17, fontWeight: '700', marginBottom: 12 }}>
+              Câu trả lời này thế nào?
+            </Text>
+            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
+              {RATING_OPTIONS.map((opt) => (
+                <TouchableOpacity
+                  key={opt.value}
+                  onPress={() => handleRate(opt.value)}
+                  style={{
+                    flex: 1, alignItems: 'center', paddingVertical: 12,
+                    backgroundColor: colors.background, borderRadius: 10,
+                  }}
+                >
+                  <Text style={{ fontSize: 20 }}>{opt.emoji}</Text>
+                  <Text style={{ color: colors.text, fontSize: 12, marginTop: 4 }}>{opt.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <TextInput
+              value={feedbackNote}
+              onChangeText={setFeedbackNote}
+              placeholder="Ghi chú thêm (tuỳ chọn)..."
+              placeholderTextColor={colors.textSecondary}
+              multiline
+              style={{
+                backgroundColor: colors.background, color: colors.text,
+                borderRadius: 10, padding: 12, fontSize: 14, minHeight: 60,
+                borderWidth: 1, borderColor: colors.border, marginBottom: 12,
+              }}
+            />
+            <TouchableOpacity onPress={() => setFeedbackRequestId(null)} style={{ alignItems: 'center', padding: 8 }}>
+              <Text style={{ color: colors.textSecondary }}>Huỷ</Text>
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   );
 }
