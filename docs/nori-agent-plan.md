@@ -150,9 +150,9 @@ Mỗi tool trả JSON thuần, map thẳng vào service/API **đã tồn tại**
 | `vehicle.getHealthScore()` | API backend đã có | `src/api/vehicles.ts` → `vehiclesApi.health()` | read-only |
 | `vehicle.getTripToday()` | API GPS trips đã có | `src/api/gpsTrips.ts` | read-only |
 | `vehicle.getCurrentODO()` | API odometer đã có | `src/api/odometer.ts` | read-only |
-| `expense.summary()` | API đã có | `src/api/dashboard.ts` (xác nhận tên chính xác khi implement) | read-only |
-| `maintenance.getUpcoming()` | API services/reminders đã có | `src/api/services.ts`, `src/api/reminders.ts` | read-only |
-| `insurance.getStatus()` / `inspection.getReminder()` | Cần xác nhận đã có endpoint tương ứng chưa | Cần rà soát khi implement | read-only |
+| `expense.summary()` | API đã có, chỉ lấy field chi phí NHIÊN LIỆU (`this_month`/`last_month`/`all_time`) | `src/api/dashboard.ts` → `dashboardApi.get()` (xác nhận 2026-07-27, xem mục 15) | read-only |
+| `maintenance.getUpcoming()` | API reminders đã có | `src/api/reminders.ts` → `remindersApi.list()` | read-only |
+| `insurance.getStatus()` / `inspection.getReminder()` | **Không cần tool riêng** (xác nhận 2026-07-27): `bảo hiểm`/`đăng kiểm` chỉ là 2 giá trị `loai` (`bao_hiem`, `dang_kiem`) trong CÙNG hệ thống reminders - đã trả về sẵn qua `maintenance.getUpcoming()`, lọc theo `eval.reminder.loai` | `app/Services/ReminderService.php` (backend) | read-only |
 
 **Chưa làm ở Phase 1** (để Phase 2, vì cần luồng hội thoại nhiều lượt kiểu "hỏi lại người dùng" + có `authority: mutating/destructive` → cần xác nhận + khoá thực thi, xem mục 7):
 
@@ -268,7 +268,7 @@ Nhóm theo hướng đã chọn ở tổng hợp brainstorm: **Ưu tiên ngay** 
 | Phase | Nội dung | Nhóm | Trạng thái |
 |---|---|---|---|
 | **0** | Tài liệu kế hoạch này | — | ✅ Xong |
-| **1** | Backend: endpoint `ai/nori/chat` + Anthropic tool-use loop + grounding validator. App: `NoriAgent` lõi (state machine) + `ToolRegistry` (tool đọc dữ liệu, mục 6, có `age_seconds`/trạng thái unavailable có cấu trúc) + `SafetyPolicy` tối giản + `PlatformAdapter`/`MockVehicleAdapter` (mục 8) + `NoriChatScreen` (text) | Ưu tiên ngay + Xây hạ tầng trước | ⬜ Chưa bắt đầu |
+| **1** | Backend: endpoint `ai/nori/chat` + Anthropic tool-use loop + grounding validator. App: `NoriAgent` lõi (state machine) + `ToolRegistry` (tool đọc dữ liệu, mục 6, có `age_seconds`/trạng thái unavailable có cấu trúc) + `SafetyPolicy` tối giản + `PlatformAdapter`/`MockVehicleAdapter` (mục 8) + `NoriChatScreen` (text) | Ưu tiên ngay + Xây hạ tầng trước | 🟨 Code xong, chưa test thật (xem mục 15) |
 | **2** | Tool ghi dữ liệu qua hội thoại nhiều lượt (slot-filling tổng quát hoá theo schema, không hardcode cây hội thoại): `fuel.create()`, `maintenance.create()`, `vehicle.clearDTC()` (destructive, cần xác nhận + khoá thực thi per-resource). `OfflineQueue` tái dùng `syncQueue.ts`. `PermissionManager` cho toggle tự động ghi vs luôn xác nhận. | — | ⬜ Chưa bắt đầu |
 | **3** | Voice: nối STT có sẵn vào `NoriAgent` (qua `IVoiceIO`), thêm `TTSManager`, phản hồi hai pha (câu đệm tức thì → câu trả lời thật). | — | ⬜ Chưa bắt đầu |
 | **4** | Wake word, Background service bền vững (foreground service + WorkManager, cân nhắc chuyển `VehicleCache` xuống native Kotlin nếu JS-thread crash vẫn là vấn đề thực tế), `ProactiveTriggerEngine`. | v2+ (đã hoãn có chủ đích) | ⬜ Chưa bắt đầu |
@@ -280,7 +280,7 @@ Nhóm theo hướng đã chọn ở tổng hợp brainstorm: **Ưu tiên ngay** 
 
 ## 12. Câu hỏi còn mở / cần quyết định tiếp
 
-- [ ] Xác nhận tên chính xác của endpoint backend cho `expense.summary()`, `insurance.getStatus()`, `inspection.getReminder()` — cần rà `routes/api.php` kỹ hơn khi implement.
+- [x] ~~Xác nhận tên chính xác của endpoint backend cho `expense.summary()`, `insurance.getStatus()`, `inspection.getReminder()`~~ — Đã xong 2026-07-27, xem mục 6 + mục 15.
 - [ ] Giải pháp TTS cho Phase 3: dùng `expo-speech` (offline, đơn giản) hay TTS cloud (chất lượng giọng tiếng Việt tốt hơn nhưng tốn phí + cần mạng)?
 - [ ] Giới hạn rate-limit/chi phí Haiku 4.5 theo user — có cần gắn vào gói Premium hiện có không, hay free cho mọi user?
 - [ ] Wake word (Phase 4) dùng giải pháp nào trên Android — cần nghiên cứu riêng, chưa có hướng.
@@ -300,3 +300,59 @@ Nếu bạn nhặt việc này lên: đọc mục 3 (quyết định đã chốt
 
 - `_bmad-output/brainstorming/brainstorm-nori-agent-architecture-2026-07-26/brainstorm.html` — nhật ký đầy đủ 11 kỹ thuật brainstorm (First Principles, Morphological Analysis, SCAMPER, Assumption Reversal, Time Horizon Ladder, Constraint Mapping, Lotus Blossom, Nature's Solutions, Chaos Engineering, Role Playing, TRIZ) + tổng hợp cuối. Mở bằng trình duyệt để xem đầy đủ 85 ý tưởng gốc (tài liệu này chỉ giữ phần đã quyết định hành động).
 - `_bmad-output/brainstorming/brainstorm-nori-agent-architecture-2026-07-26/.memlog.md` — nhật ký phiên brainstorm dạng thô.
+  **Lưu ý (2026-07-27):** 2 file này hiện KHÔNG tồn tại trong repo (đã kiểm tra `_bmad-output/brainstorming/` chỉ còn `implementation-artifacts`) — nguồn brainstorm gốc coi như đã mất, tài liệu này (đã giữ lại phần quyết định hành động) là nguồn duy nhất còn lại.
+
+---
+
+## 15. Nhật ký triển khai (2026-07-27)
+
+Phase 1 đã viết xong CODE cho cả 2 repo, **chưa chạy thử thật** (chưa có `ANTHROPIC_API_KEY`). Người/agent tiếp theo nhặt việc: đọc mục này trước khi sửa lại từ đầu.
+
+**Backend (`notedri`)** — đi theo convention raw HTTP (`Http::` facade) như `GeminiClient`/`GroqClient` sẵn có, **không cài `anthropic-ai/sdk`** như mục 9.2 gợi ý ban đầu (lệch có chủ đích khỏi bản kế hoạch gốc để khớp 100% pattern LLM integration đã có trong repo — xem `app/Services/Blog/GeminiClient.php`):
+- `config/services.php` + `.env`/`.env.example`: entry `anthropic` (api_key/model/base_url).
+- `app/Services/Ai/AnthropicNoriService.php`: gọi thẳng `POST {base_url}/messages`, system prompt hardcode (chưa tách PromptTemplateStore), log usage tối thiểu qua `Log::info('nori.chat.usage', ...)`.
+- `app/Http/Controllers/Api/V1/AiNoriController.php` + route `POST v1/ai/nori/chat` (`throttle:20,1`, trong group `auth:sanctum`).
+- Đã `php -l` sạch cả 4 file.
+
+**App (`notedri-app`)** — toàn bộ `src/agent/` theo đúng cấu trúc mục 10.1, cộng `src/api/nori.ts`, `src/store/noriAgentStore.ts`, `src/screens/nori/NoriChatScreen.tsx`. `npx tsc --noEmit` sạch toàn repo (không riêng file mới).
+- `VehicleContext.ts` implement `IVehicleIO` bằng cách LẮNG NGHE `obdLiveMonitor.onSnapshot/onSlowSnapshot` (obdLiveMonitor không có getter đồng bộ, chỉ event listener) — không tự start/stop poll.
+- `ConversationManager.ts` có grounding validator THẬT (không chỉ prompt): regex bắt token giống-số trong câu trả lời cuối, đối chiếu với nội dung mọi `tool_result` đã thực thi trong lượt đó — không khớp thì chặn, trả câu an toàn + `console.warn`.
+- `NoteDriApi.getExpenseSummary`/`getRecentTrips`/`getServiceHistory` còn đánh dấu TODO ngay trong code — endpoint chính xác chưa xác nhận (đúng câu hỏi mở mục 12), tạm dùng `dashboardApi.get()`/`gpsTripsApi.trips()` nguyên trạng.
+- **Chưa đăng ký `NoriChatScreen` vào `AppNavigator.tsx`** — cố ý bỏ qua để không đụng vào cấu trúc stack/tab điều hướng phức tạp sẵn có mà chưa xác nhận; cần thêm 1 dòng `<Stack.Screen name="NoriChat" component={NoriChatScreen} />` ở stack phù hợp (vd `ProfileStack` hoặc màn riêng mở từ Home) trước khi test qua UI thật.
+
+**Việc còn lại trước khi test end-to-end được**:
+1. ~~Lấy `ANTHROPIC_API_KEY`~~ — KHÔNG BẮT BUỘC nữa để test lần đầu, xem "Multi-provider" bên dưới (Groq/Gemini free tier, đã có key sẵn trong repo).
+2. Đăng ký `NoriChatScreen` vào 1 navigator.
+3. Test qua UI thật với xe/BLE thật hoặc `MockVehicleAdapter` (đã viết sẵn, chưa có TestHarness gọi tới nó — mục 7 `TestHarness`/`MockAdapter` vẫn là việc mở).
+
+**Cập nhật 2026-07-27 (rà lại các endpoint từng đánh dấu TODO trong `NoteDriApi.ts`, đối chiếu trực tiếp code backend):**
+- `expense.summary` → xác nhận `/dashboard` (`DashboardController@index`) KHÔNG có endpoint chi phí riêng, chỉ lấy đúng 3 field `this_month`/`last_month`/`all_time` (từ `FuelCalculator::fuelSummary`) thay vì trả nguyên payload trang chủ (tránh rò dữ liệu không liên quan + tốn token). Đây là chi phí **NHIÊN LIỆU**, không gồm bảo dưỡng (chi phí bảo dưỡng gộp nằm ở `CostSummary::lifetime()`, hiện chỉ lộ qua `ReportController@show` theo năm, Premium-gated — không phù hợp làm tool đọc nhanh, để nguyên chưa dùng). Đã đổi tên hàm `NoteDriApi.getExpenseSummary` → `getFuelExpenseSummary` và sửa description tool để LLM không hiểu nhầm là tổng chi phí xe.
+- `vehicle.getTripToday` → xác nhận `/gps/trips` (`GpsTripController@index`) không có filter "hôm nay" phía server (chỉ phân trang 20 bản ghi mới nhất). Tự lọc theo ngày ở tầng `NoteDriApi.getTodayTrips()` (so `started_at` với ngày hôm nay), trả về đã tổng hợp sẵn (`trips_count`/`total_km`/`total_driving_seconds`) thay vì đẩy nguyên payload phân trang cho LLM tự đoán ngày.
+- `insurance.getStatus()` / `inspection.getReminder()` → xác nhận KHÔNG cần tool riêng: `bao_hiem`/`dang_kiem` chỉ là 2 giá trị `loai` trong CÙNG hệ thống reminders (`app/Services/ReminderService.php`), đã trả về sẵn qua `maintenance.getUpcoming()` — lọc theo `eval.reminder.loai` là đủ.
+- Xoá `NoteDriApi.getServiceHistory()` (dead code - viết ra nhưng chưa từng được tool nào gọi tới).
+- `npx tsc --noEmit` vẫn sạch sau các thay đổi này.
+
+**Cập nhật 2026-07-27 (multi-provider để TEST MIỄN PHÍ trước khi trả phí Anthropic):**
+
+Backend giờ đổi được "bộ não ngôn ngữ" qua `NORI_LLM_PROVIDER` (`.env`, để trống = Anthropic như cũ) mà **KHÔNG đụng gì tới app/AiNoriController phía ngoài** - app luôn nói chuyện theo đúng 1 shape (Anthropic Messages API), 2 provider còn lại tự dịch 2 chiều bên trong:
+- `app/Services/Ai/NoriLlmClient.php` (interface chung) + `NoriSystemPrompt.php` (system prompt dùng chung, tách khỏi `AnthropicNoriService` để không lệch giọng giữa các provider).
+- `app/Services/Ai/GroqNoriService.php` — dịch sang OpenAI-compatible chat completions (Groq free tier 1.000 req/ngày, không cần thẻ, dùng chung `GROQ_API_KEY` đã có cho blog). Điểm dễ sai đã xử lý: OpenAI/Groq bắt MỖI tool_result là 1 message `role:"tool"` riêng (Anthropic gộp chung vào 1 message user), khớp qua `tool_call_id`.
+- `app/Services/Ai/GeminiNoriService.php` — dịch sang Gemini `generateContent` function calling (dùng chung `GEMINI_API_KEY` đã có cho blog). Điểm dễ sai đã xử lý: role `"model"` thay vì `"assistant"`; Gemini không trả id ổn định cho lệnh gọi tool nên tự sinh id và LƯU LẠI trong content block để lượt sau dựng lại map id→tên hàm cho `functionResponse`; `functionResponse.response` phải là object dữ liệu thật (đã decode lại JSON string của tool_result), không phải chuỗi JSON bọc trong 1 field.
+- `AiNoriController` chọn client qua `resolveClient()` (match theo `config('services.nori.provider')`) + log usage tập trung 1 chỗ cho cả 3 provider (tách khỏi từng `NoriLlmClient` để không lặp code).
+- `config/services.php` (`nori.provider`) + `.env`/`.env.example` (`NORI_LLM_PROVIDER=`).
+
+**Bug nghiêm trọng bắt được lúc review (đã fix, KHÔNG chỉ ảnh hưởng Groq/Gemini mà cả Anthropic thật):** PHP không phân biệt được JSON object rỗng `{}` với mảng rỗng `[]` sau `json_decode($x, true)` - cả hai đều ra `[]`. 11/12 tool hiện tại không có tham số (`input_schema.properties: {}`), và khi hội thoại nhiều lượt echo lại 1 `tool_use.input: {}` đã gọi trước đó, dữ liệu này bị decode thành `[]` ngay từ `$request->validate()`. Nếu forward thẳng, `Http::post()` re-encode lại thành JSON **array** `[]` thay vì **object** `{}` - JSON Schema bắt buộc `properties`/`input` phải là object, nên khả năng cao MỌI lượt gọi tool không tham số (gần như mọi hội thoại thực tế) sẽ bị Anthropic/Groq/Gemini từ chối request (400). Đã fix bằng `AiNoriController::normalizeToolSchemas()`/`normalizeMessages()` - ép các vị trí này về `stdClass` khi rỗng, TRƯỚC KHI forward tới bất kỳ provider nào (áp dụng chung cho cả 3, không riêng Groq/Gemini). Đã verify lại toàn bộ 3 đường dịch (Groq/Gemini/normalize) qua script PHP mô phỏng dữ liệu thật (Reflection gọi trực tiếp các hàm private) - output JSON đúng `{}` ở mọi vị trí sau fix.
+
+Đã verify: `php -l` sạch toàn bộ file mới/sửa; bootstrap Laravel thật + gọi `AiNoriController::chat()` trực tiếp (không qua HTTP/auth) cho cả 4 case (`anthropic`/`groq`/`gemini`/giá trị lạ) - đều trả JSON 502 gọn gàng khi thiếu key tương ứng, không có exception nào lọt ra ngoài; giá trị lạ rơi đúng về nhánh mặc định Anthropic.
+
+**Cách test miễn phí ngay**: set `NORI_LLM_PROVIDER=groq` (hoặc `gemini`) trong `.env` backend - không cần `ANTHROPIC_API_KEY`, dùng luôn `GROQ_API_KEY`/`GEMINI_API_KEY` đã có sẵn cho blog. Việc còn lại để test qua UI thật vẫn là bước 2-3 ở trên (đăng ký `NoriChatScreen` vào navigator).
+
+**Cập nhật 2026-07-27 (fix 2 lỗ hổng xử lý lỗi + log chẩn đoán riêng cho giai đoạn test):**
+
+- **App**: `ConversationManager.sendMessage()` trước đây KHÔNG bắt lỗi quanh lệnh gọi `noriApi.chat()` - nếu backend trả lỗi (502, mất mạng, timeout...), lỗi sẽ ném xuyên qua `NoriAgent.sendMessage()` (chỉ có `finally`, không `catch`) và `noriAgentStore.sendMessage()` (không có `catch` nào) thành unhandled rejection - user thấy tin nhắn mình gửi đi mà KHÔNG BAO GIỜ có phản hồi, kể cả báo lỗi ("thinking" tự tắt nhưng im lặng hoàn toàn). Đã thêm `try/catch` quanh lệnh gọi, trả câu tiếng Việt báo lỗi mạng thay vì để rơi tự do - đúng nguyên tắc "NoriAgent.sendMessage() luôn resolve, không bao giờ reject" (giống cách lỗi tool đã được xử lý).
+- **Backend**: nhánh `catch (\RuntimeException $e)` trước đây chỉ trả JSON cho app, **không hề ghi log** - không có cách nào tra lại sau này provider nào lỗi/lỗi gì nếu không đứng cạnh xem trực tiếp. Đã thêm kênh log RIÊNG `'nori'` (`config/logging.php` → `storage/logs/nori.log`, tách khỏi `laravel.log` để dễ trích xuất) ghi đủ 3 giai đoạn mỗi lượt chat, nối bằng `request_id` (UUID):
+  - `request`: provider, số message, số tool, preview tin nhắn user gần nhất.
+  - `response` (thành công): `stop_reason`, usage tokens, **tool nào được gọi** + preview text trả lời - để soát "LLM có gọi đúng tool không" mà không cần đọc lại nguyên payload.
+  - `error`: message lỗi đầy đủ từ provider.
+  - **Cách xem/trích xuất khi có sự cố**: `tail -f storage/logs/nori.log` khi đang test, hoặc `cat storage/logs/nori.log` để copy nguyên đoạn log đưa cho dev/AI xem. File này **KHÔNG** được commit (đã có trong `storage/logs/.gitignore`).
+  - Đây là log CHẨN ĐOÁN TẠM THỜI cho giai đoạn test Phase 1 (đúng như đã bàn - xoá được cùng lúc dọn `AiNoriController` khi không còn cần soi chi tiết mức này, không phải hạ tầng Observability lâu dài của mục 7).
