@@ -18,7 +18,7 @@ type NoriAgentState = {
   vehicleContext: VehicleContext | null;
   uiMessages: UiMessage[];
   isThinking: boolean;
-  init: (getVehicleId: () => number | null) => void;
+  init: (getVehicleId: () => number | null, userName?: string | null) => void;
   sendMessage: (text: string) => Promise<void>;
   dispose: () => void;
 };
@@ -31,12 +31,23 @@ export const useNoriAgentStore = create<NoriAgentState>((set, get) => ({
   uiMessages: [],
   isThinking: false,
 
-  init: (getVehicleId) => {
+  init: (getVehicleId, userName) => {
     if (get().agent) return;
     const vehicleContext = new VehicleContext();
     const agent = new NoriAgent(vehicleContext, getVehicleId);
     agent.onStateChange((s) => set({ isThinking: s === 'thinking' }));
-    set({ agent, vehicleContext });
+    // Lời chào tĩnh, KHÔNG gọi LLM (miễn phí, tức thời) - chỉ hiển thị 1 lần khi tạo agent
+    // (không lặp lại nếu rời màn rồi quay lại trong cùng phiên app, vì init() no-op sau lần
+    // đầu). Đây chỉ là UI, KHÔNG đưa vào transcript thật của ConversationManager - LLM không
+    // biết câu chào này từng được nói, đúng tinh thần "transcript tool là nguồn sự thật".
+    const greeting = userName
+      ? `Xin chào ${userName}, mình là Nori - trợ lý xe của bạn. Hỏi mình về tình trạng xe, chi phí, hay lịch bảo dưỡng nhé!`
+      : 'Xin chào, mình là Nori - trợ lý xe của bạn. Hỏi mình về tình trạng xe, chi phí, hay lịch bảo dưỡng nhé!';
+    set({
+      agent,
+      vehicleContext,
+      uiMessages: [{ id: String(nextId++), role: 'assistant', text: greeting }],
+    });
   },
 
   sendMessage: async (text: string) => {

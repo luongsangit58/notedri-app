@@ -9,6 +9,7 @@ import { useNoriAgentStore } from '../../store/noriAgentStore';
 import { useObdSessionStore } from '../../store/obdSessionStore';
 import { useSelectedVehicleStore } from '../../store/selectedVehicleStore';
 import { useVehicles } from '../../hooks/useVehicles';
+import { useAuthStore } from '../../store/authStore';
 
 /**
  * Màn hình chat TEXT để test Phase 1 (docs/nori-agent-plan.md mục 10.1, 13) - chưa nối
@@ -25,6 +26,7 @@ import { useVehicles } from '../../hooks/useVehicles';
 export default function NoriChatScreen() {
   const colors = useColors();
   const { uiMessages, isThinking, init, sendMessage } = useNoriAgentStore();
+  const userName = useAuthStore((s) => s.user?.name);
   const [input, setInput] = useState('');
   const listRef = useRef<FlatList>(null);
 
@@ -46,8 +48,8 @@ export default function NoriChatScreen() {
       if (selectedVehicleId) return selectedVehicleId;
       const defaultVehicle = vehiclesRef.current.find((v) => v.is_default) ?? vehiclesRef.current[0];
       return defaultVehicle?.id ?? null;
-    });
-  }, [init]);
+    }, userName);
+  }, [init, userName]);
 
   const handleSend = () => {
     const text = input.trim();
