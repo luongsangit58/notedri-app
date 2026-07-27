@@ -376,4 +376,12 @@ Backend giờ đổi được "bộ não ngôn ngữ" qua `NORI_LLM_PROVIDER` (`
 - **Bug bàn phím che input (Android)**: `NoriChatScreen` dùng `behavior=undefined` cho Android (đúng cho form cuộn được ở nơi khác trong app, nhưng SAI cho màn này vì thanh nhập bị ghim cố định ngoài ScrollView) - đổi thành `'height'`, khớp đúng pattern modal đã dùng trong CHÍNH file này.
 - **Thiếu câu hỏi mẫu**: thêm 4 chip câu hỏi gợi ý ngay dưới lời chào (ẩn đi sau khi user bắt đầu hỏi).
 - **Thiếu tool "tổng tiền bảo dưỡng"**: thêm `maintenance.expenseSummary` + route backend `GET vehicles/{id}/cost-summary` (tái dùng `CostSummary::since()`) - xem mục 6, `docs/nori-agent-qa-coverage.md`.
-- **Câu hỏi giọng nói (Phase 3)**: chưa triển khai trong lượt này - xem trả lời riêng cho user, cần quyết định phạm vi trước khi bắt đầu (STT/TTS/mic UI/ngắt lời là 4 việc riêng, không nhỏ).
+- **Câu hỏi giọng nói (Phase 3)**: user chọn làm STT+TTS đầy đủ ngay - ĐÃ TRIỂN KHAI cùng ngày (xem bên dưới).
+
+**Cập nhật 2026-07-27 (Phase 3 voice - STT+TTS, sớm hơn dự kiến theo yêu cầu user):**
+
+- Tái dùng NGUYÊN `useVoiceInput` (STT, sẵn có cho nhập ODO/số tiền) - chỉ đổi sang dùng tham số `raw` (transcript gốc) thay vì `parsed` (parser số riêng cho form nhập liệu). Không viết STT wrapper mới.
+- Cài mới `expo-speech` (TTS) - **native dependency mới, BẮT BUỘC rebuild app, không chỉ reload JS** (khác các thay đổi JS thuần trước đó trong phiên này).
+- `NoriChatScreen`: nút mic (bấm nói, bấm lại để dừng sớm), chỉ tự đọc to trả lời nếu lượt hỏi vừa rồi là giọng nói (gõ chữ thì im lặng), bấm mic lúc Nori đang nói sẽ ngắt lời trước khi nghe (không nghe-nói cùng lúc được).
+- **Cố tình CHƯA làm**: "phản hồi hai pha" (câu đệm trước khi tool chạy xong, mục 5 kế hoạch) - đọc thẳng câu trả lời cuối, có thể có độ trễ trước khi Nori bắt đầu nói nếu câu hỏi cần gọi tool. Wake word ("Hey Nori") vẫn để Phase 4 như đã chốt, chưa đụng tới.
+- Chưa test thật trên thiết bị (cần rebuild trước).
