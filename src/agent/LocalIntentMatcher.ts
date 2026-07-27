@@ -23,6 +23,11 @@ function normalize(text: string): string {
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '')
     .replace(/đ/g, 'd')
+    // "công-tơ-mét" phải khớp được với "công tơ mét" - không chỉ bỏ dấu mà còn cần đồng nhất
+    // dấu gạch nối/gạch ngang thành khoảng trắng, nếu không 2 cách viết cùng nghĩa sẽ KHÔNG
+    // khớp nhau dù đã bỏ dấu (phát hiện lúc test thật, không phải suy đoán).
+    .replace(/[-–—]/g, ' ')
+    .replace(/\s+/g, ' ')
     .trim();
 }
 
@@ -30,7 +35,14 @@ function containsAny(normalized: string, phrases: string[]): boolean {
   return phrases.some((p) => normalized.includes(p));
 }
 
-type Rule = { toolName: string; phrases: string[] };
+/** true nếu MỌI term trong ít nhất 1 nhóm đều xuất hiện (thứ tự/khoảng cách không quan trọng) -
+ * dùng cho câu hỏi tiếng Việt hay chêm chủ ngữ/trợ động từ giữa các từ khoá chính (vd "hôm nay
+ * TÔI chạy ĐƯỢC bao nhiêu km") khiến khớp theo cụm liền mạch bị trượt (phát hiện lúc test thật). */
+function matchesAllOfAnyGroup(normalized: string, groups: string[][]): boolean {
+  return groups.some((group) => group.every((term) => normalized.includes(term)));
+}
+
+type Rule = { toolName: string; phrases?: string[]; allOfGroups?: string[][] };
 
 // Thứ tự có ý nghĩa: rule đứng TRƯỚC được xét trước - đặt rule cụ thể/hiếm nhầm lẫn lên đầu.
 const RULES: Rule[] = [
@@ -43,7 +55,11 @@ const RULES: Rule[] = [
   },
   {
     toolName: 'vehicle.getHealthScore',
-    phrases: ['suc khoe xe', 'diem suc khoe', 'health score'],
+    // "suc khoe" đứng riêng (không bắt buộc kèm "xe" ngay trước/sau) - câu hỏi thật kiểu
+    // "xe tôi sức khoẻ thế nào" có "xe" đứng TRƯỚC "sức khoẻ" khá xa, không khớp "suc khoe xe"
+    // liền nhau (phát hiện lúc test thật). Rủi ro nhầm sang "sức khoẻ" của user chấp nhận
+    // được vì đây là app xe, ngữ cảnh chat luôn xoay quanh xe.
+    phrases: ['suc khoe', 'diem suc khoe', 'health score'],
   },
   {
     toolName: 'fuel.findNearbyStations',
@@ -62,7 +78,12 @@ const RULES: Rule[] = [
   },
   {
     toolName: 'vehicle.getTripToday',
-    phrases: ['hom nay chay bao nhieu km', 'hom nay di duoc bao nhieu km', 'hom nay chay bao xa'],
+    // allOfGroups (không phải phrases liền mạch): "hôm nay tôi CHẠY ĐƯỢC bao nhiêu km" có chủ
+    // ngữ/trợ động từ chêm giữa "hôm nay" và "chạy"/"km" - cụm liền mạch sẽ trượt, chỉ cần cả
+    // 2 từ khoá cùng xuất hiện (không quan trọng thứ tự/khoảng cách) là đủ tin cậy ở đây.
+    // Cố tình KHÔNG thêm nhóm ['hom nay', 'km'] đơn thuần - quá lỏng, dễ khớp nhầm câu hỏi
+    // khác có nhắc "hôm nay" và "km" nhưng không hỏi về quãng đường (vd hỏi đổ xăng).
+    allOfGroups: [['hom nay', 'chay'], ['hom nay', 'di duoc']],
   },
   {
     toolName: 'vehicle.getCurrentODO',
@@ -107,7 +128,9 @@ export function matchLocalIntent(userText: string): LocalIntentMatch | null {
   }
 
   for (const rule of RULES) {
-    if (containsAny(normalized, rule.phrases)) {
+    const matched = (rule.phrases && containsAny(normalized, rule.phrases))
+      || (rule.allOfGroups && matchesAllOfAnyGroup(normalized, rule.allOfGroups));
+    if (matched) {
       return { toolName: rule.toolName, toolInput: {} };
     }
   }
