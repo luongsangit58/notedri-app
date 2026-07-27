@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Modal, View, Text, TextInput, TouchableOpacity, ActivityIndicator, Pressable } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import * as Speech from 'expo-speech';
 import { useColors } from '../../utils/theme';
@@ -8,6 +7,7 @@ import { useNoriAgentStore, PREMIUM_REQUIRED_TEXT } from '../../store/noriAgentS
 import { useInitNoriAgent } from '../../agent/useInitNoriAgent';
 import { useVoiceInput } from '../../hooks/useVoiceInput';
 import { useAuthStore } from '../../store/authStore';
+import { navigationRef } from '../../navigation/navigationRef';
 
 interface NoriQuickPopoverProps {
   visible: boolean;
@@ -34,7 +34,11 @@ interface NoriQuickPopoverProps {
  */
 export default function NoriQuickPopover({ visible, onClose }: NoriQuickPopoverProps) {
   const colors = useColors();
-  const navigation = useNavigation<any>();
+  // Rà soát 2026-07-27 (fix crash thật, cùng nguyên nhân với NoriFloatingButton.tsx): KHÔNG
+  // dùng useNavigation() - popup này (qua NoriFloatingButton) mount ngoài mọi Navigator, hook
+  // đó ném "Couldn't find a 'navigation' object..." ngay khi render. Dùng navigationRef (đã
+  // gắn vào <NavigationContainer ref={navigationRef}> ở App.tsx) thay thế, xem
+  // NoriFloatingButton.tsx để biết chi tiết + log crash thật đã bắt được.
   useInitNoriAgent();
   const { uiMessages, isThinking, sendMessage, pendingConfirmation } = useNoriAgentStore();
   // Bắt buộc kiểm tra Premium TRƯỚC khi tự động mở mic (2026-07-27) - nếu không, user Free bị
@@ -118,7 +122,7 @@ export default function NoriQuickPopover({ visible, onClose }: NoriQuickPopoverP
   useEffect(() => {
     if (visible && pendingConfirmation) {
       onClose();
-      navigation.navigate('NoriChat');
+      if (navigationRef.isReady()) navigationRef.navigate('NoriChat' as never);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingConfirmation, visible]);
@@ -129,7 +133,7 @@ export default function NoriQuickPopover({ visible, onClose }: NoriQuickPopoverP
 
   const handleExpand = () => {
     onClose();
-    navigation.navigate('NoriChat');
+    if (navigationRef.isReady()) navigationRef.navigate('NoriChat' as never);
   };
 
   return (

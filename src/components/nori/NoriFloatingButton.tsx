@@ -1,7 +1,7 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Dimensions, PanResponder, StyleSheet, View } from 'react-native';
 import Svg, { Defs, RadialGradient, Stop, Circle } from 'react-native-svg';
-import { useNavigationState } from '@react-navigation/native';
+import { navigationRef } from '../../navigation/navigationRef';
 import { useAuthStore } from '../../store/authStore';
 import { useVehicles } from '../../hooks/useVehicles';
 import { useSelectedVehicleStore } from '../../store/selectedVehicleStore';
@@ -22,13 +22,6 @@ import NoriQuickPopover from './NoriQuickPopover';
 // sử/chấm điểm/xác nhận ghi dữ liệu. Vẫn ẩn hẳn icon nổi khi ĐANG Ở TRONG NoriChatScreen (bug thật
 // bắt được qua ảnh chụp màn hình user gửi: icon nổi lúc nào cũng theo cùng, che/rối giao diện) -
 // và ẩn thêm khi popup đang mở (không hiện icon nổi đè lên popup của chính nó).
-function getActiveRouteName(state: any): string | undefined {
-  if (!state || state.index == null) return undefined;
-  const route = state.routes[state.index];
-  if (route.state) return getActiveRouteName(route.state);
-  return route.name;
-}
-
 // Icon Nori nổi toàn cục (rà soát 22/7, góp ý user: bên web Nori là icon nổi cố
 // định ở góc màn hình, bấm ra bong bóng - bên app trước đó KHÔNG có, Nori chỉ
 // nằm tĩnh trong Home/HealthScreen). Mount 1 lần ở App.tsx (cùng cấp
@@ -50,7 +43,23 @@ const DEFAULT_BOTTOM_OFFSET = 140; // tránh đè lên pill kết nối OBD2 (Ob
 
 export default function NoriFloatingButton() {
   const colors = useColors();
-  const activeRouteName = useNavigationState((state) => getActiveRouteName(state));
+  // Rà soát 2026-07-27 (fix crash thật bắt được qua logcat thiết bị): KHÔNG dùng
+  // useNavigationState() ở đây - hook đó chỉ đọc được state từ bên TRONG 1
+  // Navigator/màn hình thật, còn NoriFloatingButton lại mount làm anh em cùng cấp
+  // với <RootNavigator/> (ngoài mọi Navigator, xem App.tsx) - gọi hook này ném lỗi
+  // "Couldn't get the navigation state. Is your component inside a navigator?"
+  // NGAY LẦN RENDER ĐẦU TIÊN, tức là crash 100% các lần mở app. Dùng navigationRef
+  // (đã có sẵn, gắn vào <NavigationContainer ref={navigationRef}> ở App.tsx) - đọc
+  // được từ NGOÀI cây component, đúng vị trí NoriFloatingButton đang đứng.
+  const [activeRouteName, setActiveRouteName] = useState<string | undefined>(() =>
+    navigationRef.isReady() ? navigationRef.getCurrentRoute()?.name : undefined,
+  );
+  useEffect(() => {
+    const unsubscribe = navigationRef.addListener('state', () => {
+      setActiveRouteName(navigationRef.getCurrentRoute()?.name);
+    });
+    return unsubscribe;
+  }, []);
   const [showPopup, setShowPopup] = useState(false);
   const token = useAuthStore((s) => s.token);
   const { data: vehiclesRaw } = useVehicles({ enabled: !!token });
