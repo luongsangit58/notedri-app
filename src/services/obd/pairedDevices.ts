@@ -65,10 +65,20 @@ export async function setAutoConnect(vehicleId: number, enabled: boolean): Promi
 // Pairing ĐỦ ĐIỀU KIỆN tự kết nối khi mở app (đã bật autoConnect) - dùng gần
 // nhất trong số đó, để ObdAutoConnect chỉ thử ĐÚNG 1 xe mỗi lần mở/quay lại
 // app thay vì quét song song nhiều xe cùng lúc.
-export async function getAutoConnectPairing(): Promise<PairedDevice | null> {
+//
+// Rà soát 27/7 (user hỏi): nếu >1 xe cùng bật switch này, ưu tiên XE MẶC ĐỊNH
+// (preferredVehicleId, do ObdAutoConnect truyền vào từ resolveDefaultVehicle())
+// thay vì luôn lấy "kết nối gần nhất" - trước đây 2 đường vào auto-connect
+// (thẻ NFC/App Link dùng is_default, còn đường này dùng lastConnectedAt) có
+// thể chọn ra 2 xe KHÁC NHAU cho cùng 1 tài khoản, gây lẫn lộn xe.
+export async function getAutoConnectPairing(preferredVehicleId?: number): Promise<PairedDevice | null> {
   const devices = await readAll();
   const eligible = devices.filter((d) => d.autoConnect);
   if (eligible.length === 0) return null;
+  if (preferredVehicleId != null) {
+    const preferred = eligible.find((d) => d.vehicleId === preferredVehicleId);
+    if (preferred) return preferred;
+  }
   return eligible.slice().sort((a, b) => (b.lastConnectedAt ?? 0) - (a.lastConnectedAt ?? 0))[0];
 }
 

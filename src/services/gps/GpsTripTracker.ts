@@ -722,6 +722,21 @@ export type AutoArmResult =
  */
 export async function autoArmIfReady(vehicleId: number): Promise<AutoArmResult> {
   try {
+    // Rà soát 27/7 (user báo: tắt máy giữa chuyến sáng, chiều kết nối lại OBD2
+    // vẫn không thấy chuyến sáng được ghi nhận): autoArmIfReady() trước đây chỉ
+    // kiểm tra isTrackingActive() rồi bật lại luôn nếu false - nếu tiến trình bị
+    // giết đột ngột (đầu Android ô tô mất điện cùng lúc tắt máy, không kịp chạy
+    // gì), state cũ vẫn còn status 'active'/'waiting_stop' với route/km của
+    // chuyến sáng. requestPermissionsAndStart() ở dưới chỉ reset state khi
+    // status đã là 'idle' - state cũ này không phải 'idle' nên bị GIỮ NGUYÊN,
+    // rồi service mới bắt đầu ghi tiếp lên CHÍNH state đó: 2 chuyến (sáng +
+    // chiều, cách nhau nhiều giờ) bị nối thành 1 "chuyến" chưa từng finalize,
+    // không bao giờ xuất hiện trong lịch sử. App.tsx có gọi maybeAutoShutdownStale()
+    // trước khi tự bật lại lúc app foreground, nhưng luồng NÀY (OBD2 vừa kết nối,
+    // xem useObd.ts) không đi qua App.tsx nên không được hưởng bước dọn dẹp đó -
+    // gọi trực tiếp ở đây để mọi đường vào autoArmIfReady() đều an toàn như nhau.
+    await maybeAutoShutdownStale();
+
     const active = await isTrackingActive();
     if (active) return { armed: false, reason: 'already_active' };
 

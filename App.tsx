@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { AppState, AppStateStatus, Appearance } from 'react-native';
+import { AppState, AppStateStatus } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './src/api/queryClient';
@@ -117,12 +117,6 @@ function AppLoader({ children }: { children: React.ReactNode }) {
     return () => sub.remove();
   }, []);
 
-  // Live-follow theme: OS đổi sáng/tối lúc app đang chạy -> đổi ngay NẾU user chưa tự chọn.
-  useEffect(() => {
-    const sub = Appearance.addChangeListener(() => useThemeStore.getState().applySystemIfFollowing());
-    return () => sub.remove();
-  }, []);
-
   // Deep link NFC/OBD - notedri://autodrive (thẻ đã ghi sẵn vehicleId+deviceId) và
   // https://notedri.com/connect (App Link, tự suy ra adapter từ pairing gần nhất).
   // Cold start (app đã đóng) đi qua getInitialURL(); app đang chạy nền/foreground đi
@@ -135,7 +129,7 @@ function AppLoader({ children }: { children: React.ReactNode }) {
     const sub = Notifications.addNotificationResponseReceivedListener((response) => {
       const data = response.notification.request.content.data as { type?: string; vehicleId?: number } | undefined;
       if (data?.type === 'dtc_alert' && data.vehicleId && navigationRef.isReady()) {
-        navigationRef.navigate('OBDTrips', { vehicleId: data.vehicleId });
+        navigationRef.navigate('ObdReport', { vehicleId: data.vehicleId });
       }
     });
     return () => sub.remove();

@@ -481,7 +481,7 @@ function DayHeader({ item, t, colors, onPress }: {
 }) {
   return (
     <TouchableOpacity
-      style={[styles.dayHeader, { backgroundColor: colors.surfaceAlt ?? colors.surface, borderColor: colors.border }]}
+      style={[styles.dayHeader, { backgroundColor: colors.surfaceAlt ?? colors.surface, borderBottomColor: colors.border }]}
       onPress={onPress} activeOpacity={0.7}>
       <Text style={[styles.dayHeaderLabel, { color: colors.text }]} numberOfLines={1}>
         <FontAwesome5 name="map-marked-alt" size={11} color={colors.primary} solid /> {item.label} <Text style={{ fontWeight: '400', color: colors.textSecondary }}>· {item.dateLabel}</Text>
@@ -490,6 +490,41 @@ function DayHeader({ item, t, colors, onPress }: {
         {t('gps_trips.day_summary', { n: item.count, km: item.km.toFixed(1) })}
       </Text>
     </TouchableOpacity>
+  );
+}
+
+// Rà soát 27/7 (user báo: 1 ngày mà tách thành 2 khối rời rạc - tiêu đề ngày và
+// từng chuyến mỗi cái 1 "hộp" viền/bo góc riêng, nhìn rối). Gộp tiêu đề ngày +
+// toàn bộ chuyến trong ngày đó vào CHUNG 1 khối (viền/bo góc/nền ngoài cùng),
+// mỗi chuyến bên trong chỉ còn 1 đường kẻ mảnh ngăn cách - giống kiểu "nhóm" quen
+// thuộc (danh sách Cài đặt iOS) thay vì nhiều thẻ nổi rời nhau xếp chồng.
+function DayGroupCard({
+  group, expandedId, onToggle, onDelete, onEditNote, onViewDay,
+}: {
+  group: GpsDayGroup;
+  expandedId: number | null;
+  onToggle: (id: number) => void;
+  onDelete: (t: GpsTripRecord) => void;
+  onEditNote: (t: GpsTripRecord) => void;
+  onViewDay: () => void;
+}) {
+  const colors = useColors();
+  const t = useT();
+  return (
+    <View style={[styles.dayGroupCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+      <DayHeader item={group} t={t} colors={colors} onPress={onViewDay} />
+      {group.trips.map((trip, i) => (
+        <View key={trip.id} style={i > 0 ? [styles.tripDivider, { borderTopColor: colors.border }] : undefined}>
+          <TripRow
+            trip={trip}
+            expanded={expandedId === trip.id}
+            onToggle={() => onToggle(trip.id)}
+            onDelete={onDelete}
+            onEditNote={onEditNote}
+          />
+        </View>
+      ))}
+    </View>
   );
 }
 
@@ -518,7 +553,7 @@ function TripRow({ trip, expanded, onToggle, onDelete, onEditNote }: {
   }, [points, distanceKm]);
 
   return (
-    <View style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+    <View style={styles.tripContent}>
       <TouchableOpacity onPress={onToggle} activeOpacity={0.7}>
         <View style={styles.rowHeader}>
           <View style={styles.rowLeft}>
@@ -671,9 +706,7 @@ function GpsPrimaryBanner() {
   );
 }
 
-type GpsHeaderItem = { kind: 'header'; key: string; label: string; dateLabel: string; dateKey: string; count: number; km: number };
-type GpsTripItem = { kind: 'trip'; key: string; trip: GpsTripRecord };
-type GpsListItem = GpsHeaderItem | GpsTripItem;
+type GpsDayGroup = { key: string; label: string; dateLabel: string; dateKey: string; count: number; km: number; trips: GpsTripRecord[] };
 
 export default function GpsTripsScreen({ embedded }: { embedded?: boolean } = {}) {
   const navigation = useNavigation<any>();
@@ -698,15 +731,15 @@ export default function GpsTripsScreen({ embedded }: { embedded?: boolean } = {}
   const { data, isLoading, refetch, isFetching } = useGpsTrips(vehicleId);
   const trips: GpsTripRecord[] = data?.data ?? [];
 
-  // Đồng bộ với web (Hành trình): nhóm danh sách theo NGÀY - mỗi chuyến vẫn là 1
-  // dòng riêng (khác tuyến đường/điểm đầu-cuối, không thể gộp như phiên OBD),
-  // chỉ thêm tiêu đề ngày + tổng km/số chuyến cho dễ đọc khi 1 ngày nhiều chuyến.
-  const listData = useMemo<GpsListItem[]>(() => {
+  // Đồng bộ với web (Hành trình): nhóm danh sách theo NGÀY - mỗi ngày 1 khối
+  // (DayGroupCard) chứa tiêu đề + toàn bộ chuyến hôm đó, thay vì mỗi chuyến 1
+  // "hộp" riêng rời rạc (góp ý 27/7: tách rời khó nhìn khi 1 ngày nhiều chuyến).
+  const listData = useMemo<GpsDayGroup[]>(() => {
     const today = dayjs().format('YYYY-MM-DD');
     const yesterday = dayjs().subtract(1, 'day').format('YYYY-MM-DD');
-    const items: GpsListItem[] = [];
+    const groups: GpsDayGroup[] = [];
     let currentKey = '';
-    let headerIndex = -1;
+    let currentGroup: GpsDayGroup | null = null;
     for (const trip of trips) {
       const d = dayjs(trip.started_at);
       const key = d.format('YYYY-MM-DD');
@@ -715,15 +748,14 @@ export default function GpsTripsScreen({ embedded }: { embedded?: boolean } = {}
         const label = key === today ? t('gps_trips.day_today')
           : key === yesterday ? t('gps_trips.day_yesterday')
           : d.format('dddd');
-        headerIndex = items.length;
-        items.push({ kind: 'header', key: `h-${key}`, label, dateLabel: d.format('DD/MM/YYYY'), dateKey: key, count: 0, km: 0 });
+        currentGroup = { key, label, dateLabel: d.format('DD/MM/YYYY'), dateKey: key, count: 0, km: 0, trips: [] };
+        groups.push(currentGroup);
       }
-      const header = items[headerIndex] as GpsHeaderItem;
-      header.count += 1;
-      header.km += Number(trip.distance_km ?? 0);
-      items.push({ kind: 'trip', key: String(trip.id), trip });
+      currentGroup!.count += 1;
+      currentGroup!.km += Number(trip.distance_km ?? 0);
+      currentGroup!.trips.push(trip);
     }
-    return items;
+    return groups;
   }, [trips, t]);
 
   const [expandedId, setExpandedId] = useState<number | null>(null);
@@ -824,21 +856,17 @@ export default function GpsTripsScreen({ embedded }: { embedded?: boolean } = {}
             </View>
           )
         }
-        renderItem={({ item }) =>
-          item.kind === 'header' ? (
-            <DayHeader item={item} t={t} colors={colors} onPress={() => setDayMapKey(item.dateKey)} />
-          ) : (
-            <TripRow
-              trip={item.trip}
-              expanded={expandedId === item.trip.id}
-              onToggle={() => setExpandedId((prev) => (prev === item.trip.id ? null : item.trip.id))}
-              onDelete={handleDelete}
-              onEditNote={openNote}
-            />
-          )
-        }
+        renderItem={({ item }) => (
+          <DayGroupCard
+            group={item}
+            expandedId={expandedId}
+            onToggle={(id) => setExpandedId((prev) => (prev === id ? null : id))}
+            onDelete={handleDelete}
+            onEditNote={openNote}
+            onViewDay={() => setDayMapKey(item.dateKey)}
+          />
+        )}
         contentContainerStyle={[styles.list, isLandscape && { maxWidth: 760, alignSelf: 'center', width: '100%' }]}
-        ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
       />
 
       {/* Modal sửa ghi chú hành trình */}
@@ -936,13 +964,18 @@ const styles = StyleSheet.create({
   backBtn: { padding: 4 },
   headerTitle: { fontSize: 17, fontWeight: '700' },
   headerSub: { fontSize: 12, marginTop: 1 },
-  list: { padding: 10, gap: 8, paddingBottom: 24 },
+  list: { padding: 10, gap: 12, paddingBottom: 24 },
+  // 1 khối/ngày (góp ý 27/7: header + từng chuyến từng là "hộp" riêng, rời rạc
+  // khó nhìn) - viền/bo góc/nền chỉ nằm ở khối ngoài cùng này, dayHeader +
+  // TripRow bên trong không còn viền/bo góc riêng nữa (xem DayGroupCard).
+  dayGroupCard: { borderRadius: 12, borderWidth: 1, overflow: 'hidden' },
   dayHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, marginTop: 4,
+    borderBottomWidth: 1, paddingHorizontal: 12, paddingVertical: 10,
   },
   dayHeaderLabel: { fontSize: 14, fontWeight: '700' },
   dayHeaderSummary: { fontSize: 12, fontWeight: '500' },
+  tripDivider: { borderTopWidth: StyleSheet.hairlineWidth },
   loader: { marginTop: 40 },
   empty: { alignItems: 'center', paddingTop: 60, gap: 10 },
   emptyTitle: { fontSize: 16, fontWeight: '600' },
@@ -994,6 +1027,9 @@ const styles = StyleSheet.create({
   hintText: { fontSize: 12, marginTop: 8 },
 
   row: { borderRadius: 10, borderWidth: 1, padding: 10 },
+  // Nội dung 1 chuyến bên trong DayGroupCard - không tự viền/bo góc/nền riêng
+  // nữa (khối ngoài cùng dayGroupCard đã lo phần đó), chỉ còn padding.
+  tripContent: { padding: 10 },
   rowHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   rowLeft: { marginBottom: 6 },
   rowDate: { fontSize: 12 },

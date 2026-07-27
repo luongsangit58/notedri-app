@@ -1,9 +1,8 @@
 import { Alert } from 'react-native';
 import { navigationRef } from '../../navigation/navigationRef';
-import { vehiclesApi } from '../../api/vehicles';
-import { queryClient } from '../../api/queryClient';
 import { useAuthStore } from '../../store/authStore';
 import { useI18nStore } from '../../i18n';
+import { resolveDefaultVehicle } from '../vehicles/resolveDefaultVehicle';
 
 // Đến từ thẻ NFC/App Link https://notedri.com/connect (KHÔNG mang vehicleId/deviceId
 // như notedri://autodrive - xem NfcService/handleAutoDriveLink). Dùng cho thẻ PHÁT
@@ -45,28 +44,4 @@ export async function handleConnectLink(): Promise<void> {
     vehicleId: vehicle.id,
     vehicleName: vehicle.ten,
   });
-}
-
-type VehicleLite = { id: number; ten: string; is_default?: boolean };
-
-function pickDefault(list: VehicleLite[]): VehicleLite | null {
-  if (list.length === 0) return null;
-  return list.find((v) => v.is_default) ?? list[0];
-}
-
-// Ưu tiên cache React Query (Home/Dashboard hầu như luôn đã fetch xong lúc app vừa
-// mở) - đỡ 1 round-trip mạng; chỉ gọi thẳng API khi cache trống (cold start rất sớm,
-// vd mở thẳng bằng cách chạm NFC lúc app chưa từng mở lần nào).
-async function resolveDefaultVehicle(): Promise<VehicleLite | null> {
-  const cached: any = queryClient.getQueryData(['vehicles']);
-  const cachedList: VehicleLite[] = Array.isArray(cached?.data) ? cached.data : Array.isArray(cached) ? cached : [];
-  if (cachedList.length > 0) return pickDefault(cachedList);
-
-  try {
-    const res = await vehiclesApi.list();
-    const list: VehicleLite[] = Array.isArray(res.data?.data) ? res.data.data : Array.isArray(res.data) ? res.data : [];
-    return pickDefault(list);
-  } catch {
-    return null;
-  }
 }

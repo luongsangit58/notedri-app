@@ -5,6 +5,7 @@ import NotedriBtPairing from '../../modules/notedri-bt-pairing/src/NotedriBtPair
 import { useAuthStore } from '../store/authStore';
 import { bleService } from '../services/obd/BleService';
 import { getAutoConnectPairing } from '../services/obd/pairedDevices';
+import { resolveDefaultVehicle } from '../services/vehicles/resolveDefaultVehicle';
 import { useObdConnection } from '../hooks/useObd';
 import { navigationRef } from '../navigation/navigationRef';
 
@@ -140,7 +141,11 @@ export default function ObdAutoConnect() {
     const routeName = navigationRef.isReady() ? navigationRef.getCurrentRoute()?.name : undefined;
     if (routeName && SKIP_ON_ROUTES.has(routeName)) return;
 
-    const pairing = await getAutoConnectPairing();
+    // Ưu tiên xe mặc định nếu >1 xe cùng bật auto-connect (xem comment
+    // getAutoConnectPairing() ở pairedDevices.ts) - đồng bộ với đường vào NFC/App
+    // Link (handleConnectLink.ts) để 2 đường không chọn ra 2 xe khác nhau.
+    const defaultVehicle = await resolveDefaultVehicle();
+    const pairing = await getAutoConnectPairing(defaultVehicle?.id);
     if (!pairing) return; // chưa xe nào bật auto-connect
 
     // Không tự xin quyền/bật hộ Bluetooth từ nền - chỉ chạy khi cả 2 đã sẵn
