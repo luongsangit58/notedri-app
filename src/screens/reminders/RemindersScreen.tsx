@@ -453,10 +453,6 @@ export default function RemindersScreen() {
   const seedReminders = useSeedReminders();
   const confirmAllReminders = useConfirmAllReminders();
 
-  const vehicles: any[] = vehicles0;
-  const vehicle = vehicles.find((v: any) => v.id === resolvedVehicleId);
-  const vehicleName = vehicle?.ten_xe ?? vehicle?.ten ?? vehicle?.name ?? t('home.vehicle_fallback', { id: resolvedVehicleId });
-
   // Backend trả mỗi item dạng { reminder: {...}, eval: {...} } (lồng nhau) -> gộp phẳng.
   // flattenReminders đã guard Array.isArray (chống crash khi API trả non-array).
   const reminders: Reminder[] = flattenReminders(remindersData);
@@ -490,10 +486,6 @@ export default function RemindersScreen() {
   const [doneCheDo, setDoneCheDo] = useState<Reminder['che_do']>('chu_ky');
   const [doneOdo, setDoneOdo] = useState('');
   const [doneDate, setDoneDate] = useState('');
-
-  React.useLayoutEffect(() => {
-    navigation.setOptions({ title: `${t('reminders.title')} - ${vehicleName}` });
-  }, [navigation, vehicleName]);
 
   const openDoneModal = (id: number, che_do: Reminder['che_do']) => {
     setDoneOdo('');
