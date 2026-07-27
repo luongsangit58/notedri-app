@@ -3,6 +3,8 @@ import { gpsTripsApi } from '../api/gpsTrips';
 import { odometerApi } from '../api/odometer';
 import { dashboardApi } from '../api/dashboard';
 import { remindersApi } from '../api/reminders';
+import { obdApi } from '../api/obd';
+import { refuelsApi } from '../api/refuels';
 
 /**
  * Lớp mỏng gọi lại src/api/*.ts hiện có (docs/nori-agent-plan.md mục 10.2) - KHÔNG viết API
@@ -62,5 +64,23 @@ export const NoteDriApi = {
   async getCurrentOdometer(vehicleId: number) {
     const res = await odometerApi.list(vehicleId, 1);
     return res.data;
+  },
+
+  /**
+   * `/obd2/sessions/history` (Premium - cả nhóm `obd2/*` đều gate `premium`) - dùng cho
+   * vehicle.getRecentIssues(), TÁI DÙNG đúng nguồn `noriSummary.ts` (Nori mascot ở Home)
+   * đang dùng, KHÔNG tự query raw DTC events rồi diễn giải lại (rà soát theo góp ý: đã có
+   * sẵn logic mood/so sánh tuần ở src/services/nori/, không nên xây lại).
+   */
+  async getSessionHistory(vehicleId: number, days = 30) {
+    const res = await obdApi.historySessions(vehicleId, days);
+    return res.data.data;
+  },
+
+  /** `/refuels/nearby-stations` (Premium, cờ `gas_finder`) - lat/lng lấy ở tool layer qua
+   * expo-location, KHÔNG bao giờ đi qua LLM (mục 4: không gửi GPS nguyên văn cho LLM). */
+  async findNearbyFuelStations(lat: number, lng: number) {
+    const res = await refuelsApi.nearbyStations(lat, lng);
+    return (res.data as any)?.stations ?? (res.data as any)?.data ?? [];
   },
 };
