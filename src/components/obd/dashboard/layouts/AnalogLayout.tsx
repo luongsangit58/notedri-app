@@ -7,6 +7,21 @@ import { CockpitLayoutProps, CockpitMetricValue } from '../types';
 import { pickFeaturedSecondary } from '../../../../constants/obdMetrics';
 import { useCountingNumber } from '../../../../hooks/useCountingNumber';
 
+// Rà soát 24/7 (góp ý user: cung tốc độ chỉ 1 màu cam nhìn đơn điệu, muốn dải
+// màu đổi theo tốc độ như đồng hồ đua - 0-20 xanh dương, 20-40 xanh lục, 40-60
+// vàng, 60-80 cam, trên 80 đỏ) - màu CỐ ĐỊNH theo ngữ nghĩa tốc độ (không ăn
+// theo theme sáng/tối như warn/crit của cockpitPalette, đúng kiểu đèn giao
+// thông không đổi màu theo theme). `pulse: false` ở các dải thấp - chỉ dải đỏ
+// (>80, gần giống mốc "crit" cũ) mới nhấp nháy để không rối mắt lúc chạy chậm.
+const SPEED_BANDS = [
+  { value: 0, color: '#3B82F6' },
+  { value: 20, color: '#22C55E' },
+  { value: 40, color: '#EAB308' },
+  { value: 60, color: '#F97316' },
+  { value: 80, color: '#EF4444' },
+];
+const SPEED_ZONES = SPEED_BANDS.map((b, i) => ({ min: b.value, color: b.color, pulse: i === SPEED_BANDS.length - 1 }));
+
 function MiniStat({ item, size, animate }: { item: CockpitMetricValue; size: number; animate?: boolean }) {
   const p = useCockpitPalette();
   const t = useT();
@@ -18,7 +33,17 @@ function MiniStat({ item, size, animate }: { item: CockpitMetricValue; size: num
   const valSize = Math.max(15, Math.min(26, size * 0.11));
   return (
     <View style={[styles.mini, { backgroundColor: p.surface, borderColor: p.border }]}>
-      <Text style={[styles.miniLabel, { color: p.textDim, fontSize: labelSize }]} numberOfLines={1}>{t(def.labelKey)}</Text>
+      {/* Rà soát (góp ý user: nhãn dài như "Nhiệt độ nước"/"Tải động cơ" bị cắt
+          thành "..." khi màn dọc chia 3 cột hẹp) - cho phép xuống 2 dòng thay
+          vì ép 1 dòng rồi cắt, co chữ thêm nếu 2 dòng vẫn chưa vừa. */}
+      <Text
+        style={[styles.miniLabel, { color: p.textDim, fontSize: labelSize }]}
+        numberOfLines={2}
+        adjustsFontSizeToFit
+        minimumFontScale={0.7}
+      >
+        {t(def.labelKey)}
+      </Text>
       <Text style={[styles.miniVal, { color: p.text, fontSize: valSize }]} numberOfLines={1}>
         {display ?? '-'}
         <Text style={{ fontSize: labelSize, fontWeight: '600', color: p.textDim }}> {def.unit}</Text>
@@ -47,8 +72,9 @@ export default function AnalogLayout({ metrics, size, isPortrait, animate }: Coc
 
   // Rà soát 24/7 (góp ý user: kim chỉ lên xuống đơn điệu, muốn "sinh động"
   // hơn khi qua 1 mốc nào đó) - mốc thuần hiệu ứng thị giác (KHÔNG phải cảnh
-  // báo redline thật của xe), dùng đúng cặp màu warn/crit sẵn có trong
-  // cockpitPalette - xem prop `zones` trong ArcGauge.tsx.
+  // báo redline thật của xe). Riêng tốc độ giờ dùng dải màu SPEED_ZONES/
+  // SPEED_BANDS cố định (xem comment đầu file) thay vì warn/crit theo theme;
+  // vòng tua vẫn giữ nguyên cặp warn/crit cũ.
 
   return (
     <View style={[styles.root, { backgroundColor: p.bg, borderColor: p.border }]}>
@@ -58,7 +84,8 @@ export default function AnalogLayout({ metrics, size, isPortrait, animate }: Coc
           label={t('obd.stat_speed')} unit="km/h"
           trackColor={p.surface2} fillColor={p.accent} needleColor={p.text} tickColor={p.textDim}
           valueColor={p.text} labelColor={p.textDim} animate={animate}
-          zones={[{ min: 80, color: p.warn }, { min: 100, color: p.crit }]}
+          zones={SPEED_ZONES}
+          colorStops={SPEED_BANDS}
         />
         <ArcGauge
           value={rpm?.value ?? null} min={0} max={8000} size={size}
@@ -83,6 +110,6 @@ const styles = StyleSheet.create({
   gaugesCol: { flexDirection: 'column' },
   sideStack: { flexDirection: 'row', gap: 10, width: '100%' },
   mini: { borderRadius: 10, borderWidth: 1, paddingVertical: 9, paddingHorizontal: 10, flex: 1, alignItems: 'center' },
-  miniLabel: { fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.4 },
+  miniLabel: { fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.4, textAlign: 'center' },
   miniVal: { fontSize: 15, fontWeight: '700', marginTop: 3 },
 });

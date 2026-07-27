@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, Easing } from 'react-native';
-import Svg, { Path, Polygon, Circle } from 'react-native-svg';
+import Svg, { Path, Polygon, Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
 import { useCountingNumber } from '../../../../hooks/useCountingNumber';
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
@@ -81,7 +81,17 @@ export interface ArcGaugeProps {
   // thuần tuý hiệu ứng thị giác cho cảm giác "tăng tốc". Mốc cao nhất mà giá
   // trị hiện tại đã vượt qua quyết định màu cung/kim/số + kích hoạt glow nhấp
   // nháy nhẹ (không đổi màu thì vẫn cho pulse để báo "đang ở mốc cao").
-  zones?: { min: number; color: string }[];
+  // `pulse: false` cho những mốc chỉ đổi màu KHÔNG nhấp nháy (vd dải màu tốc
+  // độ phủ toàn thang - chỉ mốc cao nhất mới cần "sinh động", còn lại đứng
+  // yên) - không set = mặc định pulse (giữ nguyên hành vi cũ cho warn/crit).
+  zones?: { min: number; color: string; pulse?: boolean }[];
+  // Rà soát 24/7 (góp ý user: cung tốc độ chỉ 1 màu cam trông đơn điệu, muốn
+  // dải màu chuyển dần theo tốc độ như đồng hồ đua thật, vd 0-20 xanh dương,
+  // 20-40 xanh lục...80+ đỏ) - danh sách mốc (value, color) dựng thành
+  // gradient tô cho cung, phần cung đã "quét" tới đâu lộ màu tới đó (đứng
+  // riêng với `zones` vì đây là gradient MƯỢT cho nét vẽ, còn zones là màu
+  // PHẲNG cho kim/số/glow).
+  colorStops?: { value: number; color: string }[];
   // false cho ảnh xem trước tĩnh trong DashboardStylePicker - không cần
   // animate lại mỗi lần list re-render.
   animate?: boolean;
@@ -91,8 +101,9 @@ export default function ArcGauge({
   value, min, max, size, label, unit,
   trackColor, fillColor, needleColor, tickColor, valueColor, labelColor, valueFontFamily,
   strokeWidth, quantizeStep = 1, glow = true, showNeedle = true, showTicks = true, showReadout = true,
-  zones, animate = true,
+  zones, colorStops, animate = true,
 }: ArcGaugeProps) {
+  const gradId = useRef(`arcGrad_${Math.random().toString(36).slice(2, 9)}`).current;
   // Rà soát 24/7 (góp ý user: cung quá dày trông thô, đồng hồ xe thật có nét
   // mảnh + nhiều chi tiết vạch/số hơn là 1 khối màu to) - giảm hẳn độ dày mặc
   // định, chi tiết chuyển sang vạch chia + số (xem ALL_TICKS ở trên).
@@ -109,13 +120,27 @@ export default function ArcGauge({
   const effectiveFillColor = activeZone?.color ?? fillColor;
   const effectiveNeedleColor = activeZone?.color ?? (needleColor ?? fillColor);
   const effectiveValueColor = activeZone?.color ?? (valueColor ?? fillColor);
+  // Mặc định pulse=true (giữ đúng hành vi cũ của warn/crit) - chỉ mốc khai báo
+  // rõ `pulse: false` mới đứng yên (dải màu tốc độ phủ toàn thang, không phải
+  // mốc nào cũng cần "sinh động").
+  const shouldPulse = !!activeZone && activeZone.pulse !== false;
+
+  // Gradient tô cung theo `colorStops` (nếu có) - offset % tính thẳng theo vị
+  // trí value trong khoảng [min,max], clamp về [0,100] phòng truyền lệch thang.
+  const gradientStops = colorStops?.length
+    ? [...colorStops].sort((a, b) => a.value - b.value).map((cs) => ({
+      offset: `${Math.max(0, Math.min(100, ((cs.value - min) / (max - min)) * 100))}%`,
+      color: cs.color,
+    }))
+    : null;
+  const arcStroke = gradientStops ? `url(#${gradId})` : effectiveFillColor;
 
   // Glow nhấp nháy nhẹ khi đang ở 1 mốc "sinh động" - dừng hẳn animation khi
   // rời mốc (đỡ hao pin/CPU khi không cần), khởi động lại khi vào mốc MỚI
   // (key theo màu, không theo object - object đổi identity mỗi lần render).
   const pulse = useRef(new Animated.Value(0)).current;
   useEffect(() => {
-    if (!activeZone) { pulse.stopAnimation(); pulse.setValue(0); return; }
+    if (!shouldPulse) { pulse.stopAnimation(); pulse.setValue(0); return; }
     const loop = Animated.loop(
       Animated.sequence([
         Animated.timing(pulse, { toValue: 1, duration: 650, easing: Easing.inOut(Easing.quad), useNativeDriver: false }),
@@ -125,7 +150,7 @@ export default function ArcGauge({
     loop.start();
     return () => loop.stop();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeZone?.color]);
+  }, [shouldPulse, activeZone?.color]);
   const pulseRadius = pulse.interpolate({ inputRange: [0, 1], outputRange: [10, 24] });
 
   const progress = useRef(new Animated.Value(frac)).current;
@@ -174,10 +199,28 @@ export default function ArcGauge({
   return (
     <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
       <Svg width={size} height={size} viewBox="0 0 100 100" style={StyleSheet.absoluteFillObject}>
-        <Path d={ARC_D} stroke={trackColor} strokeWidth={resolvedStrokeWidth} strokeLinecap="round" fill="none" />
+        {gradientStops && (
+          <Defs>
+            <LinearGradient id={gradId} x1="0" y1="0" x2="1" y2="0">
+              {gradientStops.map((s, i) => <Stop key={i} offset={s.offset} stopColor={s.color} />)}
+            </LinearGradient>
+          </Defs>
+        )}
+        {/* Rà soát (góp ý user: cung tốc độ 1 màu cam đơn điệu) - khi có
+            colorStops, track nền cũng tô sẵn dải màu (mờ) để luôn thấy trước
+            "quang phổ" đủ thang, phần đã quét (AnimatedPath bên dưới) tô ĐẬM
+            đúng dải màu đó, sáng rõ hơn hẳn phần chưa tới. */}
+        <Path
+          d={ARC_D}
+          stroke={gradientStops ? `url(#${gradId})` : trackColor}
+          strokeWidth={resolvedStrokeWidth}
+          strokeLinecap="round"
+          fill="none"
+          opacity={gradientStops ? 0.28 : 1}
+        />
         <AnimatedPath
           d={ARC_D}
-          stroke={effectiveFillColor}
+          stroke={arcStroke}
           strokeWidth={resolvedStrokeWidth}
           strokeLinecap="round"
           fill="none"
@@ -254,7 +297,7 @@ export default function ArcGauge({
               fontFamily: valueFontFamily,
               textShadowColor: activeZone ? activeZone.color : glow ? fillColor : 'transparent',
               textShadowOffset: { width: 0, height: 0 },
-              textShadowRadius: activeZone ? pulseRadius : glow ? 10 : 0,
+              textShadowRadius: shouldPulse ? pulseRadius : (activeZone || glow) ? 10 : 0,
             }}
           >
             {display ?? '-'}
