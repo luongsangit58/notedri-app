@@ -212,7 +212,7 @@ export default function NoriFloatingButton() {
           )}
         </Animated.View>
       )}
-      <NoriQuickPopover visible={showPopup} onClose={() => setShowPopup(false)} />
+      <NoriQuickPopover visible={showPopup} onClose={() => setShowPopup(false)} vehicleId={vehicleId} />
     </>
   );
 }
