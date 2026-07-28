@@ -1448,6 +1448,8 @@ const en = {
   "voice.error_audio": "Cannot access microphone",
   "voice.error_aborted": "Voice recognition cancelled",
   "voice.error_unknown": "Could not recognize speech",
+  "voice.error_not_available": "Speech recognition isn't available on this device (missing Google Speech Services or similar) - please type instead.",
+  "voice.error_language_not_supported": "Vietnamese speech recognition isn't supported on this device - please type instead.",
   "auth.login_failed": "Login failed",
   "auth.google_login_failed": "Google login failed",
   "obd.bluetooth_unavailable": "Bluetooth isn't ready, check it on your phone.",

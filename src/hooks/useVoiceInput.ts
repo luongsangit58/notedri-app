@@ -159,8 +159,19 @@ export function useVoiceInput(): UseVoiceInputResult {
       let viMsg: string;
       if (code === 'no-speech' || msg.includes('no speech') || msg.includes('no_speech')) {
         viMsg = t('voice.error_no_speech');
-      } else if (code === 'not-allowed' || code === 'service-not-allowed' || msg.includes('permission') || msg.includes('not_allowed')) {
+      } else if (code === 'not-allowed' || msg.includes('permission') || msg.includes('not_allowed')) {
         viMsg = t('voice.error_permission');
+      } else if (code === 'service-not-allowed') {
+        // Tách riêng khỏi 'not-allowed' (2026-07-28) - theo docs expo-speech-recognition, code
+        // này nghĩa là dịch vụ nhận diện giọng nói KHÔNG KHẢ DỤNG trên thiết bị (thiếu ROM/dịch
+        // vụ), KHÔNG PHẢI thiếu quyền - trước đây gộp chung "cần cấp quyền micro" là SAI bản
+        // chất, khiến user cấp quyền lại vô ích rồi vẫn không dùng được (đúng triệu chứng "box
+        // Android ô tô không bắt được giọng nói" user báo - dù preflight `isRecognitionAvailable()`
+        // ở `listen()` đã chặn phần lớn trường hợp này từ trước, giữ nhánh riêng ở đây phòng
+        // trường hợp khả dụng đổi giữa lúc check và lúc `start()` thật sự chạy).
+        viMsg = t('voice.error_not_available');
+      } else if (code === 'language-not-supported') {
+        viMsg = t('voice.error_language_not_supported');
       } else if (code === 'network' || msg.includes('network')) {
         viMsg = t('voice.error_network');
       } else if (code === 'audio-capture' || msg.includes('audio')) {
@@ -191,6 +202,25 @@ export function useVoiceInput(): UseVoiceInputResult {
   });
 
   const listen = useCallback(async (onResult: (value: string, raw: string) => void) => {
+    // Rà soát 2026-07-28 (user báo "trên box Android ô tô không bắt được giọng nói, dùng Kiki
+    // vẫn được"): `isRecognitionAvailable()` kiểm tra TRƯỚC xem thiết bị có dịch vụ nhận diện
+    // giọng nói nào không (Android: cần "Google Speech Services"/tương đương đăng ký làm
+    // SpeechRecognizer hệ thống) - nhiều box Android ô tô (đặc biệt ROM không có Google Mobile
+    // Services đầy đủ) KHÔNG có dịch vụ này, trong khi Kiki hoạt động được vì dùng ENGINE GIỌNG
+    // NÓI RIÊNG của hãng (không qua API chuẩn Android như app này), không phải cùng 1 cơ chế.
+    // Nếu không kiểm tra trước, `start()` vẫn gọi được nhưng KHÔNG BAO GIỜ bắn 'result' - trải
+    // nghiệm giống hệt "bấm mic, im lặng, không nghe được gì" mà user mô tả. Kiểm tra trước để
+    // báo lỗi CHÍNH XÁC ngay lập tức thay vì treo "Đang nghe..." vô ích rồi mới timeout.
+    if (!ExpoSpeechRecognitionModule.isRecognitionAvailable()) {
+      console.warn(
+        '[useVoiceInput] Nhận diện giọng nói KHÔNG khả dụng trên thiết bị này - dịch vụ hiện có:',
+        ExpoSpeechRecognitionModule.getSpeechRecognitionServices?.() ?? '(không lấy được danh sách)',
+      );
+      setStatus('error');
+      setError(t('voice.error_not_available'));
+      return;
+    }
+
     const { granted } = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
     if (!granted) {
       setStatus('error');

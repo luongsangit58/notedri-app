@@ -1448,6 +1448,8 @@ const vi = {
   "voice.error_audio": "Không thể truy cập micro",
   "voice.error_aborted": "Đã hủy nhận dạng giọng nói",
   "voice.error_unknown": "Không nhận dạng được giọng nói",
+  "voice.error_not_available": "Thiết bị này không hỗ trợ nhận diện giọng nói (thiếu dịch vụ Google Speech Services hoặc tương đương) - bạn gõ chữ thay vì nói giúp mình nhé.",
+  "voice.error_language_not_supported": "Thiết bị này chưa hỗ trợ nhận diện tiếng Việt - bạn gõ chữ thay vì nói giúp mình nhé.",
   "auth.login_failed": "Đăng nhập thất bại",
   "auth.google_login_failed": "Đăng nhập Google thất bại",
   "obd.bluetooth_unavailable": "Bluetooth chưa sẵn sàng, kiểm tra lại trên máy.",
