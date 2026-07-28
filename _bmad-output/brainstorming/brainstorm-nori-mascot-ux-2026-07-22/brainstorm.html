@@ -1,0 +1,719 @@
+<title>Nori — Tín hiệu, không phải nơi chứa nội dung</title>
+
+<style>
+  :root{
+    --bg:#F3F6F1;
+    --bg-elevated:#FFFFFF;
+    --bg-sunken:#E7EEE3;
+    --ink:#1B2430;
+    --muted:#5B6B62;
+    --border:rgba(27,36,48,0.13);
+    --accent:#B5731A;
+    --accent-glow:#FFC857;
+    --teal:#0F7A6C;
+    --sev-ok:#2F8F4E;
+    --sev-warn:#C2701D;
+    --sev-crit:#D2402C;
+    --shadow: 0 14px 34px rgba(30,40,25,0.09);
+    --font-display: ui-rounded, "SF Pro Rounded", "Segoe UI Rounded", Nunito, system-ui, -apple-system, sans-serif;
+    --font-body: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-mono: ui-monospace, "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#10162A;
+      --bg-elevated:#161F38;
+      --bg-sunken:#0B1022;
+      --ink:#EBEEF6;
+      --muted:#9AA3BE;
+      --border:rgba(255,255,255,0.13);
+      --accent:#FFC857;
+      --accent-glow:#FFDE9E;
+      --teal:#4FE7D2;
+      --sev-ok:#6EE7A0;
+      --sev-warn:#FDBA6B;
+      --sev-crit:#FF6E60;
+      --shadow: 0 18px 44px rgba(0,0,0,0.5);
+    }
+  }
+  :root[data-theme="light"]{
+    --bg:#F3F6F1; --bg-elevated:#FFFFFF; --bg-sunken:#E7EEE3; --ink:#1B2430; --muted:#5B6B62;
+    --border:rgba(27,36,48,0.13); --accent:#B5731A; --accent-glow:#FFC857; --teal:#0F7A6C;
+    --sev-ok:#2F8F4E; --sev-warn:#C2701D; --sev-crit:#D2402C; --shadow: 0 14px 34px rgba(30,40,25,0.09);
+  }
+  :root[data-theme="dark"]{
+    --bg:#10162A; --bg-elevated:#161F38; --bg-sunken:#0B1022; --ink:#EBEEF6; --muted:#9AA3BE;
+    --border:rgba(255,255,255,0.13); --accent:#FFC857; --accent-glow:#FFDE9E; --teal:#4FE7D2;
+    --sev-ok:#6EE7A0; --sev-warn:#FDBA6B; --sev-crit:#FF6E60; --shadow: 0 18px 44px rgba(0,0,0,0.5);
+  }
+
+  *,*::before,*::after{ box-sizing:border-box; }
+  body{ margin:0; }
+  .nori-page{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:var(--font-body);
+    line-height:1.7;
+    font-size:16px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .nori-page h1,.nori-page h2,.nori-page h3{
+    font-family:var(--font-display);
+    font-weight:800;
+    text-wrap:balance;
+    margin:0;
+  }
+  .nori-page h1{ font-size:clamp(1.9rem,1.2rem + 3vw,3rem); letter-spacing:-0.01em; }
+  .nori-page h2{ font-size:clamp(1.4rem,1.15rem + 1.3vw,2rem); letter-spacing:-0.005em; }
+  .nori-page h3{ font-size:clamp(1.05rem,0.98rem + 0.3vw,1.25rem); }
+  .nori-page p{ margin:0; }
+  .nori-page a{ color:var(--teal); }
+  .nori-page ::selection{ background:var(--accent-glow); color:#26210a; }
+
+  .wrap{ max-width:920px; margin:0 auto; padding:0 clamp(1.1rem,4vw,2rem); }
+  section{ padding:clamp(2.4rem,6vw,4.2rem) 0; }
+  section + section{ border-top:1px solid var(--border); }
+
+  .eyebrow{
+    font-family:var(--font-mono);
+    font-size:.72rem;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--muted);
+    display:inline-flex;
+    align-items:center;
+    gap:.5em;
+  }
+  .eyebrow::before{ content:""; width:.5em; height:.5em; border-radius:50%; background:var(--accent-glow); box-shadow:0 0 0 3px color-mix(in srgb, var(--accent-glow) 30%, transparent); }
+
+  /* ---------- HERO ---------- */
+  .hero{ position:relative; overflow:hidden; padding-top:clamp(2.6rem,7vw,4.6rem); }
+  .hero-fireflies{ position:absolute; inset:0; pointer-events:none; z-index:0; }
+  .firefly{
+    position:absolute; width:8px; height:8px; border-radius:50%;
+    background:radial-gradient(circle, var(--accent-glow), transparent 70%);
+    opacity:.5;
+  }
+  @media (prefers-reduced-motion: no-preference){
+    .firefly{ animation: fireflyFloat 7s ease-in-out infinite; }
+  }
+  @keyframes fireflyFloat{
+    0%,100%{ transform:translateY(0) scale(1); opacity:.35; }
+    50%{ transform:translateY(-14px) scale(1.4); opacity:.85; }
+  }
+
+  .hero-inner{ position:relative; z-index:1; display:flex; flex-direction:column; align-items:center; text-align:center; gap:1.4rem; }
+  .hero-inner h1{ max-width:18ch; }
+  .hero-sub{ max-width:56ch; color:var(--muted); font-size:1.05rem; }
+
+  .mascot-stage{ display:flex; flex-direction:column; align-items:center; gap:.6rem; margin:.6rem 0; }
+  .mascot{ position:relative; width:150px; height:132px; }
+  .mascot-glow{
+    position:absolute; inset:-20px; border-radius:50%;
+    background:radial-gradient(circle, var(--accent-glow), transparent 65%);
+    filter:blur(18px); opacity:.6; z-index:0;
+  }
+  @media (prefers-reduced-motion: no-preference){
+    .mascot-glow{ animation: glowPulse 3.6s ease-in-out infinite; }
+    .mascot-body{ animation: breathe 3.6s ease-in-out infinite; }
+  }
+  @keyframes glowPulse{ 0%,100%{ opacity:.45; filter:blur(16px);} 50%{ opacity:.85; filter:blur(24px);} }
+  @keyframes breathe{ 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.045); } }
+  .mascot-body{ position:relative; z-index:1; display:block; margin:0 auto; transform-origin:center bottom; }
+  .pupil{ transition:transform .12s ease-out; }
+  .eyelid{ transform:scaleY(0); transform-origin:center top; }
+  @media (prefers-reduced-motion: no-preference){
+    .eyelid{ animation: blink 5.2s ease-in-out infinite; }
+    .eyelid.right{ animation-delay:.04s; }
+  }
+  @keyframes blink{ 0%,90%,100%{ transform:scaleY(0); } 93%{ transform:scaleY(1); } 96%{ transform:scaleY(0); } }
+  .mascot-caption{ font-size:.82rem; color:var(--muted); max-width:32ch; }
+
+  .hero-meta{ display:flex; flex-wrap:wrap; gap:.5rem; justify-content:center; font-family:var(--font-mono); font-size:.78rem; }
+  .chip{
+    display:inline-flex; align-items:center; gap:.4em;
+    padding:.35em .8em; border-radius:999px;
+    background:var(--bg-elevated); border:1px solid var(--border);
+    color:var(--muted); font-variant-numeric:tabular-nums;
+  }
+
+  /* ---------- PROBLEMS ---------- */
+  .section-head{ display:flex; flex-direction:column; gap:.6rem; margin-bottom:1.8rem; max-width:62ch; }
+  .section-head p{ color:var(--muted); }
+
+  .problem-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:1rem; }
+  .problem-card{
+    background:var(--bg-elevated); border:1px solid var(--border); border-radius:1rem;
+    padding:1.25rem 1.3rem; box-shadow:var(--shadow); display:flex; flex-direction:column; gap:.6rem;
+  }
+  .problem-num{
+    font-family:var(--font-mono); font-size:.75rem; color:var(--accent);
+    display:inline-flex; align-items:center; justify-content:center;
+    width:1.9em; height:1.9em; border-radius:50%; border:1px solid var(--border);
+    background:var(--bg-sunken);
+  }
+  .problem-card p{ color:var(--muted); font-size:.95rem; }
+  .quote-bubble{
+    margin-top:.2rem; font-style:italic; font-size:.88rem; color:var(--ink);
+    background:var(--bg-sunken); border-radius:.7rem; padding:.55rem .75rem;
+    border:1px solid var(--border); position:relative;
+  }
+
+  /* ---------- SYNTHESIS (climax) ---------- */
+  .synthesis-wrap{ padding:clamp(2.6rem,6vw,4.4rem) 0; }
+  .synthesis-panel{
+    background: radial-gradient(120% 140% at 50% 0%, #1c2440 0%, #0c1122 62%, #080c1a 100%);
+    background-color:#0c1122;
+    color:#F3EFE4;
+    border-radius:1.5rem;
+    padding:clamp(2rem,6vw,3.4rem) clamp(1.3rem,5vw,3rem);
+    text-align:center;
+    position:relative;
+    overflow:hidden;
+    box-shadow:0 24px 60px rgba(0,0,0,.35);
+  }
+  .synthesis-panel::before{
+    content:""; position:absolute; inset:0;
+    background:radial-gradient(circle at 50% -10%, rgba(255,200,87,.28), transparent 55%);
+    pointer-events:none;
+  }
+  .synthesis-eyebrow{
+    font-family:var(--font-mono); font-size:.72rem; letter-spacing:.18em; text-transform:uppercase;
+    color:#FFC857; position:relative; z-index:1;
+  }
+  .synthesis-quote{
+    position:relative; z-index:1;
+    font-family:var(--font-display); font-weight:800;
+    font-size:clamp(1.5rem,1.1rem + 2.6vw,2.5rem);
+    line-height:1.3; max-width:22ch; margin:1rem auto 0; text-wrap:balance;
+  }
+  .synthesis-quote strong{ color:#FFC857; }
+  .synthesis-support{
+    position:relative; z-index:1; max-width:52ch; margin:1.1rem auto 0;
+    color:#C9CDE0; font-size:.95rem;
+  }
+  .cross-cutting{
+    position:relative; z-index:1;
+    display:flex; flex-wrap:wrap; gap:.5rem; justify-content:center; margin-top:1.6rem;
+  }
+  .cross-cutting .chip{ background:rgba(255,255,255,.06); border-color:rgba(255,255,255,.16); color:#DADEEE; }
+
+  /* ---------- DIRECTIONS ---------- */
+  .direction{
+    display:grid; gap:1rem; padding:1.5rem 0; border-top:1px dashed var(--border);
+  }
+  .direction:first-of-type{ border-top:none; }
+  .direction-head{ display:flex; align-items:center; gap:.8rem; flex-wrap:wrap; }
+  .direction-map{
+    font-family:var(--font-mono); font-size:.74rem; color:var(--muted);
+    display:inline-flex; align-items:center; gap:.4em;
+  }
+  .direction-map .from{ color:var(--sev-crit); }
+  .direction-map .to{ color:var(--sev-ok); }
+  .idea-list{ list-style:none; margin:0; padding:0; display:grid; gap:.55rem; }
+  .idea-list li{
+    display:flex; gap:.6rem; align-items:flex-start; font-size:.95rem; color:var(--ink);
+  }
+  .idea-list li::before{ content:"◆"; color:var(--accent); font-size:.6rem; margin-top:.5em; flex:none; }
+  .idea-list li .src{ color:var(--muted); font-size:.78rem; }
+
+  .demo-card{
+    background:var(--bg-elevated); border:1px solid var(--border); border-radius:1rem;
+    padding:1.1rem 1.2rem; box-shadow:var(--shadow);
+  }
+  .demo-label{ font-family:var(--font-mono); font-size:.72rem; color:var(--muted); margin-bottom:.7rem; letter-spacing:.04em; }
+
+  /* before/after mockup for direction 1 */
+  .ba-grid{ display:grid; grid-template-columns:1fr 1fr; gap:.9rem; }
+  @media (max-width:520px){ .ba-grid{ grid-template-columns:1fr; } }
+  .ba-panel{ border-radius:.8rem; padding:.85rem .9rem; border:1px solid var(--border); }
+  .ba-panel.before{ background:var(--bg-sunken); }
+  .ba-panel.after{ background:color-mix(in srgb, var(--sev-ok) 10%, var(--bg-elevated)); border-color:color-mix(in srgb, var(--sev-ok) 40%, var(--border)); }
+  .ba-tag{ font-family:var(--font-mono); font-size:.68rem; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); }
+  .skeleton-line{ height:.6rem; border-radius:.3rem; background:var(--border); margin-top:.5rem; }
+  .skeleton-line:nth-child(2){ width:92%; } .skeleton-line:nth-child(3){ width:75%; }
+  .skeleton-line:nth-child(4){ width:85%; } .skeleton-line:nth-child(5){ width:60%; }
+  .after-line{ font-weight:700; margin-top:.5rem; }
+  .after-link{ display:inline-flex; align-items:center; gap:.3em; margin-top:.6rem; font-size:.82rem; color:var(--teal); text-decoration:none; }
+
+  /* drag-to-dock demo for direction 2 */
+  .dock-demo{
+    position:relative; width:100%; max-width:280px; aspect-ratio:4/3; margin:0 auto;
+    background:var(--bg-sunken); border:1px solid var(--border); border-radius:1.1rem; overflow:hidden;
+  }
+  .dock-anchor{
+    position:absolute; width:14px; height:14px; margin:-7px 0 0 -7px;
+    border-radius:50%; border:1.5px dashed var(--border); pointer-events:none;
+  }
+  .dock-chip{
+    position:absolute; width:42px; height:42px; margin:-21px 0 0 -21px;
+    border-radius:50%; border:none; cursor:grab; touch-action:none;
+    background:radial-gradient(circle at 35% 30%, var(--accent-glow), var(--accent) 70%);
+    box-shadow:0 6px 16px rgba(0,0,0,.25);
+    transition:left .35s cubic-bezier(.2,.8,.2,1), top .35s cubic-bezier(.2,.8,.2,1), box-shadow .2s;
+    display:flex; align-items:center; justify-content:center; font-size:1.1rem;
+  }
+  .dock-chip.dragging{ transition:none; cursor:grabbing; box-shadow:0 2px 6px rgba(0,0,0,.3); }
+  .dock-chip.docked{ box-shadow:0 0 0 8px color-mix(in srgb, var(--accent-glow) 35%, transparent); }
+  .dock-hint{ text-align:center; font-size:.8rem; color:var(--muted); margin-top:.7rem; }
+
+  /* progressive-disclosure demo for direction 3 */
+  .nori-mock{
+    background:var(--bg-sunken); border:1px solid var(--border); border-radius:.9rem; padding:.9rem 1rem;
+  }
+  .nori-mock-top{ display:flex; align-items:center; gap:.6rem; }
+  .nori-mock-icon{ font-size:1.3rem; line-height:1; }
+  .nori-mock-title{ font-weight:700; flex:1; }
+  .sev-chip{ font-family:var(--font-mono); font-size:.68rem; padding:.2em .6em; border-radius:999px; background:color-mix(in srgb, var(--sev-ok) 18%, transparent); color:var(--sev-ok); border:1px solid color-mix(in srgb, var(--sev-ok) 45%, transparent); }
+  .nori-mock details{ margin-top:.6rem; }
+  .nori-mock summary{ cursor:pointer; font-size:.85rem; color:var(--teal); list-style:none; }
+  .nori-mock summary::-webkit-details-marker{ display:none; }
+  .nori-mock summary::after{ content:" ▾ Xem chi tiết"; }
+  .nori-mock details[open] summary::after{ content:" ▴ Thu gọn"; }
+  .nori-mock .detail-lines{ margin-top:.5rem; display:grid; gap:.4rem; font-size:.85rem; color:var(--muted); }
+
+  /* ---------- HIGHLIGHTS ---------- */
+  .bestiary{ display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:.8rem; }
+  .beast{
+    background:var(--bg-elevated); border:1px solid var(--border); border-radius:.9rem; padding:.9rem 1rem;
+    display:flex; flex-direction:column; gap:.35rem;
+  }
+  .beast-emoji{ font-size:1.4rem; }
+  .beast h3{ font-size:.95rem; }
+  .beast p{ font-size:.83rem; color:var(--muted); }
+
+  .split-card{ display:grid; grid-template-columns:1fr 1fr; gap:1px; background:var(--border); border-radius:1rem; overflow:hidden; border:1px solid var(--border); }
+  @media (max-width:520px){ .split-card{ grid-template-columns:1fr; } }
+  .split-half{ background:var(--bg-elevated); padding:1.1rem 1.2rem; }
+  .split-half h3{ display:flex; align-items:center; gap:.5rem; font-size:1rem; }
+  .split-half p{ margin-top:.5rem; font-size:.88rem; color:var(--muted); }
+
+  .risk-box{
+    border:1px solid color-mix(in srgb, var(--sev-crit) 45%, var(--border));
+    background:color-mix(in srgb, var(--sev-crit) 8%, var(--bg-elevated));
+    border-radius:1rem; padding:1.1rem 1.2rem;
+  }
+  .risk-box ul{ margin:.6rem 0 0; padding-left:1.1rem; display:grid; gap:.5rem; font-size:.9rem; }
+
+  .timeline{ display:grid; grid-template-columns:repeat(4,1fr); gap:.8rem; position:relative; }
+  @media (max-width:640px){ .timeline{ grid-template-columns:1fr 1fr; } }
+  .timeline-step{ position:relative; padding-top:1.4rem; }
+  .timeline-step::before{
+    content:""; position:absolute; top:0; left:50%; transform:translateX(-50%);
+    width:.65rem; height:.65rem; border-radius:50%; background:var(--accent); box-shadow:0 0 0 4px color-mix(in srgb, var(--accent-glow) 30%, transparent);
+  }
+  .timeline-step::after{
+    content:""; position:absolute; top:.32rem; left:calc(50% + .5rem); right:calc(-50% + .5rem); height:1px; background:var(--border);
+  }
+  .timeline-step:last-child::after{ display:none; }
+  .timeline-step h3{ font-size:.9rem; text-align:center; }
+  .timeline-step p{ font-size:.8rem; color:var(--muted); text-align:center; margin-top:.3rem; }
+
+  .quote-mini{
+    background:var(--bg-elevated); border:1px solid var(--border); border-left:3px solid var(--accent);
+    border-radius:.6rem; padding:.8rem 1rem; font-size:.9rem;
+  }
+  .quote-mini .resolve{ display:block; margin-top:.4rem; color:var(--muted); font-size:.82rem; }
+
+  .money-card{
+    background:linear-gradient(135deg, color-mix(in srgb, var(--accent-glow) 16%, var(--bg-elevated)), var(--bg-elevated));
+    border:1px solid var(--border); border-radius:1rem; padding:1.1rem 1.2rem;
+  }
+
+  /* ---------- FOOTER ---------- */
+  footer{ padding:2.2rem 0 3rem; }
+  .tech-tags{ display:flex; flex-wrap:wrap; gap:.4rem; margin-top:.8rem; }
+  .tech-tag{ font-family:var(--font-mono); font-size:.72rem; color:var(--muted); background:var(--bg-sunken); border:1px solid var(--border); border-radius:.4rem; padding:.25em .55em; }
+  footer .closing{ margin-top:1.2rem; color:var(--muted); font-size:.9rem; max-width:60ch; }
+
+  a:focus-visible, button:focus-visible, summary:focus-visible, [tabindex]:focus-visible{
+    outline:2px solid var(--accent); outline-offset:2px;
+  }
+  .overflow-x{ overflow-x:auto; }
+</style>
+
+<div class="nori-page">
+
+  <section class="hero">
+    <div class="hero-fireflies" aria-hidden="true">
+      <span class="firefly" style="left:8%;top:20%;animation-delay:0s;"></span>
+      <span class="firefly" style="left:88%;top:15%;animation-delay:1.2s;"></span>
+      <span class="firefly" style="left:15%;top:70%;animation-delay:2.4s;"></span>
+      <span class="firefly" style="left:80%;top:65%;animation-delay:.6s;"></span>
+      <span class="firefly" style="left:50%;top:10%;animation-delay:1.8s;"></span>
+    </div>
+    <div class="wrap hero-inner">
+      <span class="eyebrow">Brainstorm · 22/07/2026 · Nori Mascot UX</span>
+      <h1>Nori không phải một popup.<br>Nori là một tín hiệu sống.</h1>
+      <p class="hero-sub">Tổng hợp một phiên brainstorm 13 kỹ thuật, gần 100 ý tưởng — đi tìm câu trả lời cho 4 lời phàn nàn thẳng thắn nhất về trải nghiệm linh vật Nori trong NoteDri: trùng lặp nội dung, viền sáng lẫn nền, chữ quá nhiều, và thiếu sức sống.</p>
+
+      <div class="mascot-stage">
+        <div class="mascot" id="heroMascot" aria-hidden="true">
+          <div class="mascot-glow"></div>
+          <svg class="mascot-body" viewBox="0 0 200 170" width="150" height="128">
+            <defs>
+              <radialGradient id="bodyGrad" cx="35%" cy="30%" r="80%">
+                <stop offset="0%" stop-color="#FFDE9E"/>
+                <stop offset="55%" stop-color="#FFC857"/>
+                <stop offset="100%" stop-color="#E39B2A"/>
+              </radialGradient>
+            </defs>
+            <ellipse cx="100" cy="95" rx="86" ry="64" fill="url(#bodyGrad)"/>
+            <ellipse cx="100" cy="150" rx="46" ry="10" fill="#000" opacity=".08"/>
+            <circle cx="70" cy="88" r="19" fill="#1B2430"/>
+            <circle cx="130" cy="88" r="19" fill="#1B2430"/>
+            <circle class="pupil" cx="73" cy="88" r="7" fill="#fff"/>
+            <circle class="pupil" cx="133" cy="88" r="7" fill="#fff"/>
+            <rect class="eyelid" x="51" y="69" width="38" height="38" fill="#E39B2A"/>
+            <rect class="eyelid right" x="111" y="69" width="38" height="38" fill="#E39B2A"/>
+            <path d="M78 118 Q100 132 122 118" stroke="#1B2430" stroke-width="4" fill="none" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <p class="mascot-caption">Di chuột quanh trang — mắt Nori sẽ nhìn theo bạn. Nhịp sáng quanh thân là hiệu ứng “thở” kiểu đom đóm, thay cho viền sáng tĩnh hiện tại.</p>
+      </div>
+
+      <div class="hero-meta">
+        <span class="chip">13 kỹ thuật sáng tạo</span>
+        <span class="chip">~100 ý tưởng</span>
+        <span class="chip">Trạng thái: hoàn thành</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="problems">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">Điểm xuất phát</span>
+        <h2>4 vấn đề khởi nguồn phiên brainstorm</h2>
+        <p>Mọi kỹ thuật, mọi ý tưởng trong phiên này đều xoay quanh bốn lời phàn nàn cụ thể về Nori trong bản hiện tại của NoteDri.</p>
+      </div>
+      <div class="problem-grid">
+        <article class="problem-card">
+          <span class="problem-num">1</span>
+          <h3>Trùng lặp báo cáo</h3>
+          <p>Khi báo cáo hôm nay đã hiển thị sẵn nơi khác trên màn hình, bong bóng Nori vẫn lặp lại y nguyên toàn bộ nội dung đó.</p>
+          <div class="quote-bubble">"Lại hiện cái này nữa à" — phản ứng của user khi thấy nội dung lặp lại.</div>
+        </article>
+        <article class="problem-card">
+          <span class="problem-num">2</span>
+          <h3>Viền phát sáng lẫn nền, khó ẩn/hiện</h3>
+          <p>Hiệu ứng glow border quá mờ nhạt, gần như biến mất vào nền; đồng thời chưa có cách ẩn gọn để tiết kiệm diện tích và gọi lại khi cần.</p>
+          <div class="quote-bubble">"Chắc không có gì quan trọng" — user nghĩ vậy khi viền sáng mờ nhạt, mất luôn niềm tin vào tín hiệu cảnh báo.</div>
+        </article>
+        <article class="problem-card">
+          <span class="problem-num">3</span>
+          <h3>Quá nhiều chữ, không điểm nhấn</h3>
+          <p>Khi mở ra, Nori hiển thị một đoạn văn bản dài, không phân cấp — user không biết nên đọc gì trước.</p>
+          <div class="quote-bubble">User cảm thấy bối rối vì phải đọc một đoạn text dài mà không biết nên chú ý vào đâu trước.</div>
+        </article>
+        <article class="problem-card">
+          <span class="problem-num">4</span>
+          <h3>Thiếu sức sống</h3>
+          <p>Nori hiện tại giống một hộp thoại thông báo tĩnh hơn là một nhân vật đồng hành có cá tính, phản xạ và "sự sống".</p>
+          <div class="quote-bubble">"Nó có phải chỉ là popup thông báo không, sao gọi là linh vật?" — kỳ vọng một nhân vật có cá tính, nhận được một hộp thoại tĩnh.</div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="synthesis-wrap">
+    <div class="wrap">
+      <div class="synthesis-panel">
+        <span class="synthesis-eyebrow">Nguyên tắc cốt lõi của cả phiên</span>
+        <p class="synthesis-quote">Nori là <strong>TÍN HIỆU</strong> + <strong>BẠN ĐỒNG HÀNH CHỦ ĐỘNG</strong> — không phải nơi chứa nội dung.</p>
+        <p class="synthesis-support">Sau 13 kỹ thuật sáng tạo và gần 100 ý tưởng, toàn bộ phiên hội tụ về đúng một câu này. Mọi giải pháp bên dưới — dù là bỏ chữ, đổi hiệu ứng sáng, hay thêm chuyển động — đều bắt nguồn từ nguyên tắc đó.</p>
+        <div class="cross-cutting">
+          <span class="chip">An toàn khi lái xe</span>
+          <span class="chip">Hiệu năng &amp; pin</span>
+          <span class="chip">Độ tin cậy của cảnh báo</span>
+          <span class="chip">Vị trí ổn định, dễ tin tưởng</span>
+          <span class="chip">Tùy biến &amp; doanh thu</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="directions">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">Giải pháp</span>
+        <h2>4 hướng giải quyết, khớp đúng 4 vấn đề ban đầu</h2>
+        <p>Mỗi hướng dưới đây trả lời trực tiếp một trong bốn vấn đề ở trên, cùng các ý tưởng cụ thể được chắt lọc từ nhiều kỹ thuật khác nhau trong phiên.</p>
+      </div>
+
+      <div class="direction">
+        <div class="direction-head">
+          <h3>Hướng 1 — Bỏ trùng lặp, chỉ báo "có gì mới"</h3>
+        </div>
+        <div class="direction-map"><span class="from">Vấn đề 1: trùng lặp báo cáo</span> →<span class="to">giải quyết</span></div>
+        <ul class="idea-list">
+          <li>Nhiệm vụ thật của Nori: chỉ báo <strong>những gì mới/thay đổi</strong> so với lần xem trước, không lặp lại toàn bộ report. <span class="src">(Job to Be Done)</span></li>
+          <li>Nori là lối tắt (shortcut) dẫn vào màn hình chi tiết, không phải nơi hiển thị toàn bộ nội dung. <span class="src">(Job to Be Done)</span></li>
+          <li>Eliminate: bỏ hẳn báo cáo đầy đủ trùng lặp trong Nori — thay bằng 1 dòng điểm nhấn/thay đổi + link tới report đã hiển thị. <span class="src">(SCAMPER)</span></li>
+          <li>HMW: hiện 1 dòng tóm tắt/thay đổi + nút "Xem báo cáo đầy đủ" dẫn thẳng tới đúng vị trí báo cáo đã hiện trên màn hình. <span class="src">(How Might We)</span></li>
+          <li>Assumption reversal: báo cáo hôm nay là một màn hình/thành phần riêng — Nori chỉ là "người đưa tin" trỏ tới nó, không sở hữu nội dung. <span class="src">(Assumption Reversal)</span></li>
+        </ul>
+        <div class="demo-card">
+          <div class="demo-label">MOCKUP · TRƯỚC / SAU</div>
+          <div class="ba-grid">
+            <div class="ba-panel before">
+              <span class="ba-tag">Trước — trùng lặp</span>
+              <div class="skeleton-line" style="width:96%"></div>
+              <div class="skeleton-line"></div>
+              <div class="skeleton-line"></div>
+              <div class="skeleton-line"></div>
+              <div class="skeleton-line"></div>
+            </div>
+            <div class="ba-panel after">
+              <span class="ba-tag">Sau — chỉ điều mới</span>
+              <div class="after-line">Đã đổi: áp suất lốp sau -0.3 bar</div>
+              <a class="after-link" href="#" onclick="return false;">Xem báo cáo đầy đủ →</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="direction">
+        <div class="direction-head">
+          <h3>Hướng 2 — Glow thở như đom đóm, neo vào cạnh, thu gọn thành tab-mép</h3>
+        </div>
+        <div class="direction-map"><span class="from">Vấn đề 2: viền lẫn nền + khó ẩn/hiện</span> →<span class="to">giải quyết</span></div>
+        <ul class="idea-list">
+          <li>Đom đóm: nhịp sáng-tắt nhẹ nhàng (breathing pulse) thay viền sáng tĩnh liên tục — xem chính nhịp thở của Nori ở đầu trang. <span class="src">(Nature's Solutions)</span></li>
+          <li>Assumption reversal: hiệu ứng phát sáng là một quầng sáng phía sau (glow aura) tỏa ra từ nhân vật, thay vì viền cứng bao quanh khung — tự nhiên hơn, ít lẫn nền. <span class="src">(Assumption Reversal)</span></li>
+          <li>Tắc kè hoa: đổi màu theo nền sáng/tối để luôn hài hòa nhưng vẫn nổi bật nhờ viền tương phản tinh tế. <span class="src">(Nature's Solutions)</span></li>
+          <li>HMW: Nori luôn snap về 1 trong vài <strong>điểm neo cố định</strong> (4 góc + giữa 2 cạnh) — không thả tự do hoàn toàn, kèm nút "đưa Nori về vị trí mặc định". <span class="src">(How Might We)</span></li>
+          <li>HMW: khi ẩn, chỉ còn một dải mỏng nhô ra ở mép màn hình như tab kéo — chạm nhẹ là bung ra ngay, không cần tìm icon nhỏ. <span class="src">(How Might We)</span></li>
+          <li>Cử chỉ: vuốt trái/phải để đổi cạnh, vuốt xuống để thu về tab-mép, chạm giữ để mở menu nhanh (ẩn hẳn / đổi vị trí mặc định / tắt âm thanh). <span class="src">(Mind Mapping)</span></li>
+          <li>Cua ẩn sĩ, mèo, rùa: rút vào khi bị đe dọa hoặc không cần dùng tới, chủ động ra ngoài khi an toàn — nền tảng cảm giác cho cơ chế ẩn/hiện. <span class="src">(Nature's Solutions)</span></li>
+        </ul>
+        <div class="demo-card">
+          <div class="demo-label">THỬ KÉO NORI — TỰ NEO VÀO ĐIỂM GẦN NHẤT</div>
+          <div class="dock-demo" id="dockFrame">
+            <div class="dock-anchor" style="left:6%;top:6%"></div>
+            <div class="dock-anchor" style="left:94%;top:6%"></div>
+            <div class="dock-anchor" style="left:6%;top:94%"></div>
+            <div class="dock-anchor" style="left:94%;top:94%"></div>
+            <div class="dock-anchor" style="left:6%;top:50%"></div>
+            <div class="dock-anchor" style="left:94%;top:50%"></div>
+            <button class="dock-chip" id="dockChip" style="left:6%;top:6%" aria-label="Kéo thử Nori quanh khung này">🦎</button>
+          </div>
+          <p class="dock-hint">Kéo và thả — Nori tự neo vào 1 trong 6 điểm (4 góc + giữa 2 cạnh), giống hệt cơ chế được đề xuất ở trên.</p>
+        </div>
+      </div>
+
+      <div class="direction">
+        <div class="direction-head">
+          <h3>Hướng 3 — Phân tầng thông tin, một điểm nhấn duy nhất trước</h3>
+        </div>
+        <div class="direction-map"><span class="from">Vấn đề 3: quá nhiều chữ</span> →<span class="to">giải quyết</span></div>
+        <ul class="idea-list">
+          <li>Substitute: thay khối văn bản dài bằng icon + tiêu đề 1 dòng + chip màu mức độ nghiêm trọng. <span class="src">(SCAMPER)</span></li>
+          <li>Modify: in đậm/phóng to <strong>một</strong> kết luận quan trọng nhất (vd "Xe của bạn: Ổn"), phần còn lại làm phụ, mờ đi; mặc định chỉ 1 câu + 1 icon, mọi thứ khác ẩn sau một lần chạm. <span class="src">(SCAMPER)</span></li>
+          <li>Combine: gộp text với mini sparkline/gauge; gộp bong bóng thoại của Nori với chính widget đồng hồ OBD2 thay vì tách rời. <span class="src">(SCAMPER)</span></li>
+          <li>Adapt: học pattern chat bubble — nhắn từng đoạn ngắn, chạm để xem chi tiết; học progressive disclosure của notification — hiện tiêu đề trước, "Xem thêm" mới mở rộng. <span class="src">(SCAMPER)</span></li>
+          <li>Provocation "Nori cấm hiển thị chữ": phần lớn thông tin truyền tải qua màu sắc + icon + animation, chữ chỉ là lớp bổ sung cuối khi user chủ động muốn chi tiết. <span class="src">(Provocation)</span></li>
+        </ul>
+        <div class="demo-card">
+          <div class="demo-label">MOCKUP · BONG BÓNG NORI PHIÊN BẢN MỚI</div>
+          <div class="nori-mock">
+            <div class="nori-mock-top">
+              <span class="nori-mock-icon">✅</span>
+              <span class="nori-mock-title">Xe của bạn: Ổn</span>
+              <span class="sev-chip">Bình thường</span>
+            </div>
+            <details>
+              <summary>Chi tiết</summary>
+              <div class="detail-lines">
+                <span>🔋 Ắc quy: 12.6V — tốt</span>
+                <span>🌡️ Nhiệt độ động cơ: 89°C — bình thường</span>
+                <span>🛞 Áp suất lốp sau: giảm nhẹ 0.3 bar</span>
+              </div>
+            </details>
+          </div>
+        </div>
+      </div>
+
+      <div class="direction">
+        <div class="direction-head">
+          <h3>Hướng 4 — Sinh động như một sinh vật thật</h3>
+        </div>
+        <div class="direction-map"><span class="from">Vấn đề 4: thiếu sức sống</span> →<span class="to">giải quyết</span></div>
+        <ul class="idea-list">
+          <li>Micro-animation kiểu sinh vật: thở nhẹ và chớp mắt ngẫu nhiên lúc idle — dù nghỉ vẫn cần sống động, không "chết". <span class="src">(Worst Possible Idea, lật ngược)</span></li>
+          <li>Phản xạ tức thì khi chạm: chạm vào đồng hồ máy khiến Nori "giật mình" ở khoảnh khắc quan trọng, không phải mọi lúc. <span class="src">(Crank the Dial to 11)</span></li>
+          <li>Provocation "gương chiếu hậu": hướng ánh nhìn của Nori có thể "nhìn về" phía cảnh báo hoặc dữ liệu liên quan trên dashboard, tạo cảm giác nó thực sự đang chú ý đến xe. <span class="src">(Provocation)</span></li>
+          <li>Trait Transfer: streak kiểu Duolingo cho chuỗi ngày lái xe an toàn/chăm bảo dưỡng; giọng điệu nhắc nhở có cá tính nhẹ nhàng nhưng không ngắt luồng công việc — bài học từ thất bại của Clippy. <span class="src">(Trait Transfer)</span></li>
+          <li>Six Thinking Hats (xanh lá): thêm haptic feedback (rung nhẹ) khi Nori "chạm" cạnh màn hình lúc bị kéo, tăng cảm giác vật lý thật. <span class="src">(Six Thinking Hats)</span></li>
+          <li>HMW: tách 2 chế độ hiển thị — "đậu xe" (sinh động đầy đủ) và "đang lái" (im lặng, an toàn) — xem đầy đủ ở mục Điểm nhấn bất ngờ bên dưới. <span class="src">(How Might We)</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="highlights">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">Ngoài 4 hướng chính</span>
+        <h2>Điểm nhấn bất ngờ của phiên brainstorm</h2>
+        <p>Vài ý tưởng đáng nhớ nhất trong gần 100 ý tưởng — không nằm gọn trong một hướng nào, nhưng đáng để giữ lại.</p>
+      </div>
+
+      <div style="display:grid; gap:1.6rem;">
+
+        <div>
+          <h3 style="margin-bottom:.8rem;">Bộ sưu tập sinh vật đã truyền cảm hứng cho Nori</h3>
+          <div class="bestiary">
+            <div class="beast"><div class="beast-emoji">🐟</div><h3>Cá cần câu biển sâu</h3><p>Chỉ phát sáng khi có "mồi" — tức tin mới — để câu sự chú ý, còn lại tối/im.</p></div>
+            <div class="beast"><div class="beast-emoji">🦀</div><h3>Cua ẩn sĩ</h3><p>Rút vào vỏ khi bị đe dọa hoặc không cần dùng tới, chỉ ra ngoài khi an toàn.</p></div>
+            <div class="beast"><div class="beast-emoji">✨</div><h3>Đom đóm</h3><p>Nhịp sáng-tắt nhẹ nhàng thay viền sáng tĩnh liên tục — gốc của hiệu ứng "thở".</p></div>
+            <div class="beast"><div class="beast-emoji">🦎</div><h3>Tắc kè hoa</h3><p>Đổi màu theo nền sáng/tối để luôn hài hòa mà vẫn nổi bật tinh tế.</p></div>
+            <div class="beast"><div class="beast-emoji">🐙</div><h3>Bạch tuộc</h3><p>Phần lớn thời gian ngụy trang hòa nền, bùng màu đột ngột khi có việc khẩn thật sự.</p></div>
+            <div class="beast"><div class="beast-emoji">🐦</div><h3>Chim đậu trên dây điện</h3><p>Ẩn dụ cho việc Nori "đậu" ở mép màn hình — cảm giác vật lý cho việc dock sát cạnh.</p></div>
+            <div class="beast"><div class="beast-emoji">🐋</div><h3>Con hà bám cá voi</h3><p>Luôn bám gần "vật chủ" — Nori có thể tự định vị gần đồng hồ tốc độ/dữ liệu liên quan.</p></div>
+          </div>
+        </div>
+
+        <div class="split-card">
+          <div class="split-half">
+            <h3>🅿️ Chế độ đậu xe</h3>
+            <p>Sinh động đầy đủ: thở, chớp mắt, phản xạ tức thì khi chạm, mắt nhìn theo dữ liệu liên quan trên dashboard.</p>
+          </div>
+          <div class="split-half">
+            <h3>🚗 Chế độ đang lái</h3>
+            <p>Im lặng, chỉ đổi màu/icon, không chuyển động lớn — ưu tiên tuyệt đối cho an toàn, tránh xao nhãng.</p>
+          </div>
+        </div>
+
+        <div class="risk-box">
+          <h3>Rủi ro cần nhớ (Six Thinking Hats — mũ đen)</h3>
+          <ul>
+            <li>Animation quá nhiều có thể gây xao nhãng khi đang lái — bắt buộc phải có chế độ "đang lái" tự động giảm chuyển động, chỉ giữ tín hiệu tối giản.</li>
+            <li>Hiệu ứng phát sáng/animation liên tục có thể tốn pin và hiệu năng trên máy yếu — cần giới hạn frame-rate hoặc tự tắt khi pin yếu.</li>
+            <li>Nếu Nori quá "dễ thương" có thể bị xem là trẻ con với user nghiêm túc về xe cộ — nên cho phép chỉnh tông giọng (nghiêm túc/vui vẻ) theo hồ sơ người dùng.</li>
+          </ul>
+        </div>
+
+        <div>
+          <h3 style="margin-bottom:.8rem;">Vòng đời của Nori theo hành trình dùng app</h3>
+          <div class="timeline">
+            <div class="timeline-step"><h3>🥚 Trứng</h3><p>User mới — Nori xuất hiện lớn, dẫn dắt onboarding kỹ, giải thích nhiều.</p></div>
+            <div class="timeline-step"><h3>🐛 Ấu trùng</h3><p>User casual — Nori thu nhỏ dần, chỉ nhắc những gì thật cần thiết.</p></div>
+            <div class="timeline-step"><h3>🛡️ Nhộng</h3><p>User quen thuộc — mặc định im lặng, chỉ hiện khi có tin quan trọng.</p></div>
+            <div class="timeline-step"><h3>🦋 Trưởng thành</h3><p>Power user — icon trạng thái tối giản, có thể mở khóa tùy biến ngoại hình.</p></div>
+          </div>
+        </div>
+
+        <div class="money-card">
+          <h3>Tùy biến ngoại hình &amp; hướng doanh thu</h3>
+          <p style="margin-top:.5rem;color:var(--muted);font-size:.92rem;">Ở giai đoạn "Trưởng thành", user mở khóa quyền tùy biến trang phục, phụ kiện, thậm chí đổi tên gọi của Nori hoàn toàn. Hướng này khớp thẳng với kế hoạch bán các style tùy biến dashboard đã ghi nhận trước đó — mặc định 1-2 style miễn phí, phần còn lại là gói trả phí.</p>
+        </div>
+
+        <div style="display:grid; gap:.8rem; grid-template-columns:repeat(auto-fit,minmax(260px,1fr));">
+          <div class="quote-mini">"Nori sống trong gương chiếu hậu, luôn nhìn theo user."<span class="resolve">→ Hướng nhìn/mắt của Nori "nhìn về" phía cảnh báo hoặc dữ liệu liên quan, tạo cảm giác nó thật sự chú ý đến xe.</span></div>
+          <div class="quote-mini">"Nori cấm hiển thị chữ."<span class="resolve">→ Ưu tiên màu sắc + icon + animation; chữ chỉ là lớp bổ sung cuối cùng khi user chủ động muốn biết thêm.</span></div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="wrap">
+      <span class="eyebrow">Phiên brainstorm</span>
+      <p style="margin-top:.6rem; color:var(--muted); font-size:.9rem;">13 kỹ thuật sáng tạo đã dùng trong phiên:</p>
+      <div class="tech-tags">
+        <span class="tech-tag">Job to Be Done</span>
+        <span class="tech-tag">Nature's Solutions</span>
+        <span class="tech-tag">Crank the Dial to 11</span>
+        <span class="tech-tag">SCAMPER</span>
+        <span class="tech-tag">Empathy Map</span>
+        <span class="tech-tag">Trait Transfer</span>
+        <span class="tech-tag">Worst Possible Idea</span>
+        <span class="tech-tag">Metamorphosis Stages</span>
+        <span class="tech-tag">Six Thinking Hats</span>
+        <span class="tech-tag">How Might We</span>
+        <span class="tech-tag">Mind Mapping</span>
+        <span class="tech-tag">Provocation Technique</span>
+        <span class="tech-tag">Assumption Reversal</span>
+      </div>
+      <p class="closing">Bước tiếp theo tự nhiên: đưa 4 hướng giải quyết ở trên vào UX spec / story cụ thể cho "Nori 2.0" — bắt đầu từ Hướng 1 và 2, vì đó là hai điểm gây khó chịu trực tiếp nhất trong phản hồi ban đầu.</p>
+    </div>
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  var mascot = document.getElementById('heroMascot');
+  var pupils = document.querySelectorAll('.pupil');
+  if(mascot && pupils.length){
+    document.addEventListener('pointermove', function(e){
+      var rect = mascot.getBoundingClientRect();
+      var cx = rect.left + rect.width/2;
+      var cy = rect.top + rect.height/2;
+      var dx = e.clientX - cx;
+      var dy = e.clientY - cy;
+      var dist = Math.hypot(dx,dy) || 1;
+      var max = 3.2;
+      var ox = (dx/dist) * Math.min(max, dist/24);
+      var oy = (dy/dist) * Math.min(max, dist/24);
+      for(var i=0;i<pupils.length;i++){
+        pupils[i].style.transform = 'translate(' + ox.toFixed(1) + 'px,' + oy.toFixed(1) + 'px)';
+      }
+    }, { passive:true });
+  }
+
+  var frame = document.getElementById('dockFrame');
+  var chip = document.getElementById('dockChip');
+  if(frame && chip){
+    var anchors = [
+      {x:6,y:6},{x:94,y:6},{x:6,y:94},{x:94,y:94},{x:6,y:50},{x:94,y:50}
+    ];
+    var dragging = false;
+
+    function clamp(v,min,max){ return Math.min(max, Math.max(min, v)); }
+
+    function moveTo(clientX, clientY){
+      var rect = frame.getBoundingClientRect();
+      var x = clamp(((clientX - rect.left) / rect.width) * 100, 4, 96);
+      var y = clamp(((clientY - rect.top) / rect.height) * 100, 4, 96);
+      chip.style.left = x + '%';
+      chip.style.top = y + '%';
+    }
+
+    function snap(){
+      var cx = parseFloat(chip.style.left);
+      var cy = parseFloat(chip.style.top);
+      var best = anchors[0], bestD = Infinity;
+      anchors.forEach(function(a){
+        var d = Math.hypot(a.x - cx, a.y - cy);
+        if(d < bestD){ bestD = d; best = a; }
+      });
+      chip.style.left = best.x + '%';
+      chip.style.top = best.y + '%';
+      chip.classList.add('docked');
+      setTimeout(function(){ chip.classList.remove('docked'); }, 450);
+      if(navigator.vibrate){ try{ navigator.vibrate(10); }catch(err){} }
+    }
+
+    chip.addEventListener('pointerdown', function(e){
+      dragging = true;
+      chip.classList.add('dragging');
+      try{ chip.setPointerCapture(e.pointerId); }catch(err){}
+    });
+    chip.addEventListener('pointermove', function(e){
+      if(!dragging) return;
+      moveTo(e.clientX, e.clientY);
+    });
+    function endDrag(){
+      if(!dragging) return;
+      dragging = false;
+      chip.classList.remove('dragging');
+      snap();
+    }
+    chip.addEventListener('pointerup', endDrag);
+    chip.addEventListener('pointercancel', endDrag);
+  }
+})();
+</script>

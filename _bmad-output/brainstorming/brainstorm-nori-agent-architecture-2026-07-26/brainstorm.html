@@ -1,0 +1,752 @@
+<meta charset="UTF-8">
+<title>Nori: Agent Không Phải Chatbot — Nhật ký Brainstorm Kiến trúc</title>
+<style>
+  :root{
+    --void:#0A0E14;
+    --panel:#121820;
+    --panel-raised:#1A2230;
+    --panel-hi:#212B3B;
+    --line:#26313f;
+    --line-soft:#1c2532;
+    --ink:#EAF0F6;
+    --ink-dim:#93A3B6;
+    --ink-faint:#5C6B7E;
+    --teal:#3FE0C5;
+    --teal-dim:rgba(63,224,197,.13);
+    --amber:#FFB238;
+    --amber-dim:rgba(255,178,56,.13);
+    --violet:#9C8CFF;
+    --violet-dim:rgba(156,140,255,.14);
+    --red:#FF5C5C;
+    --red-dim:rgba(255,92,92,.13);
+    --font-body:"Segoe UI","Helvetica Neue",Arial,sans-serif;
+    --font-display:"Segoe UI Semibold","Segoe UI","Helvetica Neue",Arial,sans-serif;
+    --font-mono:"Cascadia Code","Cascadia Mono","SF Mono","JetBrains Mono",Consolas,"Roboto Mono",monospace;
+  }
+  *,*::before,*::after{box-sizing:border-box;}
+  html{background:var(--void);}
+  body{
+    margin:0;
+    background:
+      radial-gradient(ellipse 1200px 600px at 15% -10%, rgba(63,224,197,.06), transparent 60%),
+      radial-gradient(ellipse 900px 500px at 100% 10%, rgba(156,140,255,.05), transparent 55%),
+      var(--void);
+    color:var(--ink);
+    font-family:var(--font-body);
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--teal);color:#04110E;}
+  a{color:var(--teal);}
+  code{
+    font-family:var(--font-mono);
+    font-size:.92em;
+    background:rgba(63,224,197,.09);
+    color:#B9F3E7;
+    padding:.08em .38em;
+    border-radius:4px;
+    border:1px solid rgba(63,224,197,.18);
+    white-space:normal;
+  }
+  :focus-visible{outline:2px solid var(--teal);outline-offset:2px;}
+  h1,h2,h3{text-wrap:balance;font-family:var(--font-display);margin:0;}
+  p{margin:0;}
+  @media (prefers-reduced-motion:reduce){
+    *{scroll-behavior:auto !important;transition:none !important;animation:none !important;}
+  }
+
+  /* ---------- layout shell ---------- */
+  .page{max-width:1180px;margin:0 auto;padding:0 clamp(1rem,4vw,3rem) 4rem;}
+  section, .hero{scroll-margin-top:4.5rem;}
+
+  /* ---------- sticky HUD nav ---------- */
+  .hud-nav{
+    position:sticky;top:0;z-index:50;
+    background:rgba(10,14,20,.86);
+    backdrop-filter:blur(6px);
+    border-bottom:1px solid var(--line);
+  }
+  .hud-nav__fill{height:2px;background:linear-gradient(90deg,var(--teal),var(--violet));width:0%;transition:width .15s linear;}
+  .hud-nav__ticks{
+    list-style:none;margin:0;padding:.45rem clamp(1rem,4vw,3rem);
+    display:flex;gap:.35rem;overflow-x:auto;
+    max-width:1180px;margin:0 auto;
+  }
+  .hud-nav__ticks a{
+    display:block;
+    font-family:var(--font-mono);font-size:.68rem;letter-spacing:.04em;
+    color:var(--ink-faint);text-decoration:none;
+    border:1px solid var(--line);border-radius:5px;
+    padding:.28rem .5rem;white-space:nowrap;
+    transition:color .15s,border-color .15s,background .15s;
+  }
+  .hud-nav__ticks a:hover{color:var(--ink);border-color:var(--teal);}
+  .hud-nav__ticks a.is-active{color:var(--void);background:var(--teal);border-color:var(--teal);}
+  .hud-nav__ticks a.is-active.is-synth{background:var(--violet);border-color:var(--violet);}
+
+  /* ---------- hero ---------- */
+  .hero{position:relative;padding:3.2rem 0 2.6rem;border-bottom:1px solid var(--line);overflow:hidden;}
+  .hero__eyebrow{
+    font-family:var(--font-mono);font-size:.75rem;letter-spacing:.16em;
+    color:var(--teal);text-transform:uppercase;margin-bottom:.9rem;
+  }
+  .hero__title{font-size:clamp(2.2rem,6vw,3.6rem);font-weight:800;letter-spacing:-.01em;line-height:1.02;}
+  .hero__title .accent{color:var(--teal);}
+  .hero__sub{font-size:clamp(1.05rem,2.4vw,1.35rem);color:var(--ink-dim);font-weight:600;margin-top:.35rem;letter-spacing:.01em;}
+  .hero__dial{
+    position:absolute;right:clamp(-10px,2vw,20px);top:1.6rem;width:132px;height:132px;border-radius:50%;
+    background:conic-gradient(var(--teal) 0deg 228deg, var(--line) 228deg 360deg);
+    -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 15px),#000 calc(100% - 14px));
+    mask:radial-gradient(farthest-side,transparent calc(100% - 15px),#000 calc(100% - 14px));
+    opacity:.55;
+  }
+  @media (max-width:820px){.hero__dial{display:none;}}
+  .hero__readouts{display:grid;gap:.9rem;margin-top:1.9rem;max-width:760px;}
+  .readout__label{display:block;font-family:var(--font-mono);font-size:.68rem;letter-spacing:.14em;color:var(--ink-faint);margin-bottom:.28rem;}
+  .readout__value{font-size:.98rem;color:var(--ink-dim);}
+  .hero__stats{display:flex;flex-wrap:wrap;gap:.6rem;margin-top:2rem;}
+  .stat{
+    background:var(--panel);border:1px solid var(--line);border-radius:8px;
+    padding:.55rem .9rem;min-width:88px;
+  }
+  .stat__value{display:block;font-family:var(--font-mono);font-size:1.15rem;font-weight:700;font-variant-numeric:tabular-nums;color:var(--ink);}
+  .stat__label{font-family:var(--font-mono);font-size:.66rem;letter-spacing:.1em;color:var(--ink-faint);text-transform:uppercase;}
+  .stat--status .stat__value{color:var(--teal);}
+
+  /* ---------- bus / modules ---------- */
+  .bus{position:relative;padding-left:2.7rem;margin-top:2.6rem;}
+  .bus::before{
+    content:'';position:absolute;left:1.05rem;top:.4rem;bottom:0;width:2px;
+    background:linear-gradient(to bottom,var(--teal) 0%,var(--teal) 78%,var(--violet) 100%);
+    opacity:.45;
+  }
+  .module{position:relative;padding:2.6rem 0;border-bottom:1px solid var(--line-soft);}
+  .module:first-of-type{padding-top:.6rem;}
+  .module::before{
+    content:'';position:absolute;left:-1.98rem;top:.55rem;width:11px;height:11px;border-radius:50%;
+    background:var(--teal);box-shadow:0 0 10px rgba(63,224,197,.75);
+  }
+  .module--synth::before{background:var(--violet);box-shadow:0 0 12px rgba(156,140,255,.85);}
+
+  .module__header{position:relative;margin-bottom:1.6rem;padding:1.1rem 1.2rem;border:1px solid var(--line);border-radius:10px;background:var(--panel);overflow:hidden;}
+  .module__top{display:flex;align-items:baseline;gap:.7rem;flex-wrap:wrap;}
+  .module__index{font-family:var(--font-mono);font-size:.72rem;color:var(--ink-faint);letter-spacing:.08em;}
+  .module__code{
+    font-family:var(--font-mono);font-weight:700;font-size:.72rem;letter-spacing:.06em;
+    color:var(--teal);border:1px solid rgba(63,224,197,.4);background:var(--teal-dim);
+    padding:.1rem .45rem;border-radius:4px;
+  }
+  .module__title{font-size:clamp(1.25rem,2.6vw,1.6rem);margin-top:.4rem;}
+  .module__tagline{color:var(--ink-dim);margin-top:.4rem;max-width:62ch;font-size:.96rem;}
+  .module__pattern{position:absolute;inset:0;pointer-events:none;opacity:.5;}
+
+  /* pattern motifs per technique (decorative, behind header text) */
+  .pattern--strata{background:repeating-linear-gradient(180deg,transparent 0 14px, rgba(63,224,197,.05) 14px 15px);}
+  .pattern--matrix{background-image:radial-gradient(rgba(63,224,197,.22) 1px, transparent 1.4px);background-size:14px 14px;background-position:right 1rem top .8rem;}
+  .pattern--relay{background:repeating-linear-gradient(90deg, rgba(255,178,56,.05) 0 2px, transparent 2px 22px);}
+  .pattern--flip{background:linear-gradient(120deg, transparent 55%, rgba(156,140,255,.06) 55% 100%);}
+  .pattern--ladder{background:repeating-linear-gradient(90deg, rgba(63,224,197,.08) 0 2px, transparent 2px 40px);}
+  .pattern--fence{background:repeating-linear-gradient(90deg, rgba(255,92,92,.06) 0 3px, transparent 3px 26px);}
+  .pattern--lotus{background:radial-gradient(circle at 88% 30%, rgba(156,140,255,.14), transparent 55%);}
+  .pattern--nature{background:radial-gradient(ellipse at 10% 90%, rgba(63,224,197,.1), transparent 60%);}
+  .pattern--chaos{background:linear-gradient(115deg, transparent 48%, rgba(255,92,92,.08) 49% 51%, transparent 52%);}
+  .pattern--role{background:radial-gradient(circle at 90% 20%, rgba(255,178,56,.1), transparent 55%);}
+  .pattern--triz{background:linear-gradient(90deg, rgba(255,92,92,.05), transparent 45% 55%, rgba(63,224,197,.06));}
+
+  /* ---------- generic card grid ---------- */
+  .card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(255px,1fr));gap:.85rem;}
+  .card{
+    position:relative;background:var(--panel);border:1px solid var(--line);border-radius:9px;
+    padding:1rem 1.05rem 1.1rem;font-size:.94rem;color:var(--ink);
+  }
+  .card__ln{
+    position:absolute;top:.55rem;right:.65rem;font-family:var(--font-mono);font-size:.63rem;color:var(--ink-faint);
+    letter-spacing:.03em;opacity:.75;
+  }
+  .card__lead{display:block;font-weight:700;color:var(--teal);margin-bottom:.3rem;font-size:.93rem;}
+  .card p{color:var(--ink-dim);}
+  .card--strata{border-top:3px solid rgba(63,224,197,.5);}
+  .card--matrix::after{
+    content:'';position:absolute;left:.7rem;bottom:.6rem;width:34px;height:10px;
+    background-image:radial-gradient(rgba(63,224,197,.5) 1.1px, transparent 1.4px);
+    background-size:7px 7px;opacity:.7;
+  }
+
+  /* ---------- SCAMPER ---------- */
+  .scamper-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(255px,1fr));gap:.85rem;}
+  .scamper-card{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:1rem 1.05rem;position:relative;}
+  .scamper-card__row{display:flex;align-items:center;gap:.55rem;margin-bottom:.5rem;}
+  .scamper-badge{
+    font-family:var(--font-mono);font-weight:800;font-size:.85rem;color:var(--void);
+    background:var(--amber);width:1.7rem;height:1.7rem;border-radius:5px;
+    display:flex;align-items:center;justify-content:center;flex:none;
+    box-shadow:0 0 0 3px var(--amber-dim);
+  }
+  .scamper-card__verb{font-family:var(--font-mono);font-size:.72rem;letter-spacing:.08em;color:var(--ink-faint);text-transform:uppercase;}
+  .scamper-card p{color:var(--ink-dim);font-size:.94rem;}
+
+  /* ---------- Assumption Reversal ---------- */
+  .reversal-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:.85rem;}
+  .reversal-card{background:var(--panel);border:1px solid var(--line);border-radius:9px;overflow:hidden;position:relative;}
+  .reversal-card__old{padding:.85rem 1.05rem .6rem;color:var(--ink-faint);font-size:.85rem;text-decoration:line-through;text-decoration-color:rgba(255,92,92,.5);}
+  .reversal-card__old b{font-family:var(--font-mono);font-size:.65rem;letter-spacing:.08em;display:block;text-decoration:none;color:var(--red);margin-bottom:.25rem;text-transform:uppercase;}
+  .reversal-card__arrow{color:var(--ink-faint);padding:0 1.05rem;font-size:.85rem;}
+  .reversal-card__new{padding:.55rem 1.05rem 1rem;border-top:1px dashed var(--line);}
+  .reversal-card__new b{font-family:var(--font-mono);font-size:.65rem;letter-spacing:.08em;display:block;color:var(--teal);margin-bottom:.3rem;text-transform:uppercase;}
+  .reversal-card__new p{color:var(--ink);font-size:.94rem;}
+
+  /* ---------- Time Horizon Ladder ---------- */
+  .ladder{display:flex;gap:1.4rem;overflow-x:auto;padding-bottom:.6rem;position:relative;}
+  .ladder::before{content:'';position:absolute;top:1.55rem;left:0;right:0;height:2px;background:repeating-linear-gradient(90deg,var(--teal) 0 8px, transparent 8px 16px);opacity:.5;}
+  .rung{min-width:236px;flex:1 0 236px;position:relative;}
+  .rung__label{
+    font-family:var(--font-mono);font-size:.72rem;letter-spacing:.08em;color:var(--teal);
+    background:var(--void);display:inline-block;padding:.15rem .5rem 0;margin-bottom:1rem;text-transform:uppercase;
+  }
+  .rung__cards{display:flex;flex-direction:column;gap:.7rem;}
+  .rung .card{font-size:.9rem;}
+
+  /* ---------- Constraint Mapping ---------- */
+  .constraints{display:grid;grid-template-columns:1fr 1fr;gap:1.1rem;}
+  @media (max-width:760px){.constraints{grid-template-columns:1fr;}}
+  .constraints__col h3{font-family:var(--font-mono);font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.8rem;}
+  .constraints__col--real h3{color:var(--amber);}
+  .constraints__col--dropped h3{color:var(--ink-faint);}
+  .constraint-card{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:.85rem 1rem;margin-bottom:.7rem;font-size:.92rem;color:var(--ink-dim);position:relative;}
+  .constraints__col--real .constraint-card{border-left:3px solid var(--amber);}
+  .constraints__col--dropped .constraint-card{border-left:3px dashed var(--ink-faint);opacity:.8;}
+  .constraint-card__tag{display:block;font-family:var(--font-mono);font-size:.94rem;color:var(--ink);margin-bottom:.25rem;}
+
+  /* ---------- Lotus Blossom ---------- */
+  .lotus__grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.75rem;}
+  @media (max-width:640px){.lotus__grid{grid-template-columns:1fr;}}
+  .lotus__cell{background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:.9rem 1rem;font-size:.88rem;color:var(--ink-dim);position:relative;}
+  .lotus__cell b{display:block;color:var(--ink);font-family:var(--font-mono);font-size:.86rem;margin-bottom:.3rem;}
+  .lotus__center{
+    background:radial-gradient(circle at 50% 0%, rgba(156,140,255,.16), var(--panel-hi));
+    border:1px solid var(--violet);border-radius:9px;padding:1rem;text-align:center;
+    display:flex;flex-direction:column;justify-content:center;align-items:center;gap:.35rem;
+    box-shadow:0 0 22px rgba(156,140,255,.18);
+  }
+  .lotus__center b{font-family:var(--font-mono);color:var(--violet);font-size:.95rem;}
+  .lotus__center span{font-size:.78rem;color:var(--ink-dim);}
+  .lotus__expansion{margin-top:1rem;border:1px solid rgba(255,178,56,.35);background:var(--amber-dim);border-radius:9px;padding:1rem 1.1rem;}
+  .lotus__expansion h4{font-family:var(--font-mono);font-size:.75rem;letter-spacing:.06em;color:var(--amber);text-transform:uppercase;margin-bottom:.6rem;}
+  .lotus__sub-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:.6rem;margin-bottom:.7rem;}
+  .lotus__sub-chip{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:.5rem .65rem;font-size:.82rem;color:var(--ink-dim);}
+  .lotus__expansion p{color:var(--ink-dim);font-size:.92rem;}
+
+  /* ---------- Nature's Solutions ---------- */
+  .nature-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(255px,1fr));gap:.9rem;}
+  .nature-card{background:var(--panel);border:1px solid var(--line);border-radius:30px 9px 30px 9px;padding:1.1rem 1.2rem;position:relative;}
+  .nature-card:nth-child(even){border-radius:9px 30px 9px 30px;}
+  .nature-card__name{display:inline-block;font-family:var(--font-mono);font-size:.72rem;letter-spacing:.04em;color:var(--void);background:var(--teal);padding:.15rem .55rem;border-radius:20px;margin-bottom:.6rem;}
+  .nature-card p{color:var(--ink-dim);font-size:.93rem;}
+
+  /* ---------- Chaos Engineering ---------- */
+  .chaos-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1rem;}
+  .chaos-card{border-radius:9px;overflow:hidden;border:1px solid var(--line);}
+  .chaos-card__break{background:var(--red-dim);padding:.85rem 1.05rem .8rem;clip-path:polygon(0 0,100% 0,100% 88%,92% 100%,84% 88%,76% 100%,68% 88%,60% 100%,52% 88%,44% 100%,36% 88%,28% 100%,20% 88%,12% 100%,4% 88%,0 96%);}
+  .chaos-card__break b{display:block;font-family:var(--font-mono);font-size:.68rem;letter-spacing:.1em;color:var(--red);margin-bottom:.3rem;}
+  .chaos-card__break p{color:var(--ink);font-size:.9rem;}
+  .chaos-card__survive{background:var(--teal-dim);padding:1rem 1.05rem .9rem;}
+  .chaos-card__survive b{display:block;font-family:var(--font-mono);font-size:.68rem;letter-spacing:.1em;color:var(--teal);margin-bottom:.3rem;}
+  .chaos-card__survive p{color:var(--ink-dim);font-size:.9rem;}
+
+  /* ---------- Role Playing ---------- */
+  .role-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(255px,1fr));gap:.9rem;}
+  .role-card{background:var(--panel);border:1px solid var(--line);border-radius:9px;overflow:hidden;}
+  .role-card__badge{
+    background:var(--panel-raised);padding:.5rem .95rem;font-family:var(--font-mono);
+    font-size:.72rem;letter-spacing:.06em;color:var(--amber);text-transform:uppercase;border-bottom:1px solid var(--line);
+  }
+  .role-card__quote{padding:.9rem 1.05rem 1.05rem;border-left:3px solid var(--amber);margin:0;font-size:.93rem;color:var(--ink-dim);}
+
+  /* ---------- TRIZ ---------- */
+  .triz-grid{display:flex;flex-direction:column;gap:1rem;}
+  .triz-card{background:var(--panel);border:1px solid var(--line);border-radius:9px;overflow:hidden;}
+  .triz-card__poles{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;}
+  @media (max-width:640px){.triz-card__poles{grid-template-columns:1fr;}}
+  .triz-card__pole{padding:.9rem 1.05rem;font-size:.9rem;color:var(--ink-dim);}
+  .triz-card__pole.a{border-right:1px solid var(--line);}
+  @media (max-width:640px){.triz-card__pole.a{border-right:none;border-bottom:1px solid var(--line);}}
+  .triz-card__pole b{display:block;font-family:var(--font-mono);font-size:.65rem;letter-spacing:.08em;color:var(--red);margin-bottom:.3rem;text-transform:uppercase;}
+  .triz-card__pole.b b{color:var(--teal);}
+  .triz-card__vs{font-family:var(--font-mono);font-size:.72rem;color:var(--ink-faint);padding:0 .6rem;}
+  .triz-card__resolve{background:var(--violet-dim);border-top:1px solid rgba(156,140,255,.3);padding:.85rem 1.05rem;font-size:.9rem;}
+  .triz-card__resolve b{display:block;font-family:var(--font-mono);font-size:.65rem;letter-spacing:.08em;color:var(--violet);margin-bottom:.3rem;text-transform:uppercase;}
+  .triz-card__resolve p{color:var(--ink);}
+
+  /* ---------- recurring patterns ---------- */
+  .patterns__grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:.85rem;}
+  .pattern-card{background:var(--panel);border:1px solid rgba(156,140,255,.3);border-radius:9px;padding:.95rem 1.05rem;position:relative;}
+  .pattern-card::before{content:'';position:absolute;top:.9rem;right:.9rem;width:8px;height:8px;border-radius:50%;background:var(--violet);box-shadow:0 0 0 3px var(--violet-dim),0 0 0 6px transparent;}
+  .pattern-card p{color:var(--ink-dim);font-size:.92rem;padding-right:1rem;}
+
+  /* ---------- synthesis climax ---------- */
+  .synthesis{
+    position:relative;margin-top:2rem;padding:2.6rem clamp(1.2rem,4vw,2.6rem);border-radius:16px;
+    background:
+      radial-gradient(ellipse 700px 400px at 20% -10%, rgba(156,140,255,.16), transparent 60%),
+      radial-gradient(ellipse 700px 400px at 100% 110%, rgba(255,178,56,.08), transparent 55%),
+      var(--panel-hi);
+    border:1px solid rgba(156,140,255,.4);
+    box-shadow:0 0 60px rgba(156,140,255,.08);
+  }
+  .synthesis__eyebrow{font-family:var(--font-mono);font-size:.75rem;letter-spacing:.18em;color:var(--violet);text-transform:uppercase;margin-bottom:.6rem;}
+  .synthesis__title{font-size:clamp(1.5rem,3.4vw,2.1rem);margin-bottom:.6rem;}
+  .synthesis__lead{color:var(--ink-dim);max-width:70ch;margin-bottom:1.8rem;font-size:1rem;}
+  .synthesis__points{display:grid;gap:.8rem;margin-bottom:2rem;}
+  .synthesis__point{
+    display:grid;grid-template-columns:2.4rem 1fr;gap:.9rem;background:rgba(10,14,20,.4);
+    border:1px solid var(--line);border-radius:10px;padding:.9rem 1.1rem;
+  }
+  .synthesis__point .num{font-family:var(--font-mono);font-size:1.2rem;font-weight:800;color:var(--violet);}
+  .synthesis__point p{color:var(--ink);font-size:.96rem;}
+  .synthesis__crosslinks{margin-bottom:2.2rem;}
+  .synthesis__crosslinks h3{font-family:var(--font-mono);font-size:.75rem;letter-spacing:.1em;color:var(--ink-faint);text-transform:uppercase;margin-bottom:.7rem;}
+  .crosslink{
+    font-size:.9rem;color:var(--ink-dim);padding:.55rem 0;border-top:1px dashed var(--line);
+  }
+  .crosslink b{color:var(--ink);font-weight:600;}
+  .synthesis__direction{border-top:1px solid rgba(156,140,255,.3);padding-top:1.8rem;}
+  .direction__title{font-family:var(--font-mono);font-size:.85rem;letter-spacing:.1em;color:var(--ink);text-transform:uppercase;margin-bottom:1rem;}
+  .direction__grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1rem;}
+  .direction__col{border-radius:10px;padding:1.05rem 1.15rem;border:1px solid var(--line);}
+  .direction__col h4{font-family:var(--font-mono);font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;margin-bottom:.55rem;}
+  .direction__col p{font-size:.92rem;color:var(--ink-dim);}
+  .direction__col--now{background:var(--teal-dim);border-color:rgba(63,224,197,.4);}
+  .direction__col--now h4{color:var(--teal);}
+  .direction__col--seam{background:var(--amber-dim);border-color:rgba(255,178,56,.4);}
+  .direction__col--seam h4{color:var(--amber);}
+  .direction__col--later{background:rgba(255,255,255,.02);border-color:var(--line);}
+  .direction__col--later h4{color:var(--ink-faint);}
+
+  /* ---------- footer ---------- */
+  .colophon{margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--line);display:flex;justify-content:space-between;flex-wrap:wrap;gap:.8rem;font-family:var(--font-mono);font-size:.72rem;color:var(--ink-faint);}
+  .signal-bars{display:inline-flex;align-items:flex-end;gap:2px;height:12px;vertical-align:middle;margin-right:.4rem;}
+  .signal-bars span{width:3px;background:var(--teal);display:inline-block;}
+  .signal-bars span:nth-child(1){height:30%;}
+  .signal-bars span:nth-child(2){height:55%;}
+  .signal-bars span:nth-child(3){height:78%;}
+  .signal-bars span:nth-child(4){height:100%;}
+</style>
+
+<nav class="hud-nav" id="hudNav" aria-label="Điều hướng phiên brainstorm">
+  <div class="hud-nav__fill" id="hudNavFill"></div>
+  <ol class="hud-nav__ticks" id="hudNavTicks">
+    <li><a href="#t01" data-idx="0">FP</a></li>
+    <li><a href="#t02" data-idx="1">MA</a></li>
+    <li><a href="#t03" data-idx="2">SC</a></li>
+    <li><a href="#t04" data-idx="3">AR</a></li>
+    <li><a href="#t05" data-idx="4">TH</a></li>
+    <li><a href="#t06" data-idx="5">CM</a></li>
+    <li><a href="#t07" data-idx="6">LB</a></li>
+    <li><a href="#t08" data-idx="7">NS</a></li>
+    <li><a href="#t09" data-idx="8">CE</a></li>
+    <li><a href="#t10" data-idx="9">RP</a></li>
+    <li><a href="#t11" data-idx="10">TC</a></li>
+    <li><a href="#synthesis" data-idx="11" class="synth-link">SYN</a></li>
+  </ol>
+</nav>
+
+<div class="page">
+
+  <header class="hero" id="top">
+    <div class="hero__dial" aria-hidden="true"></div>
+    <p class="hero__eyebrow">Nhật ký brainstorm · phiên kiến trúc phần mềm</p>
+    <h1 class="hero__title">NORI<br><span class="accent">AGENT</span>, KHÔNG PHẢI CHATBOT</h1>
+    <p class="hero__sub">11 kỹ thuật · 85 ý tưởng · 1 tổng hợp, đi tới một hướng kiến trúc</p>
+    <div class="hero__readouts">
+      <div class="readout">
+        <span class="readout__label">CHỦ ĐỀ</span>
+        <span class="readout__value">Kiến trúc Nori là AI Agent (không phải chatbot) cho NoteDri.</span>
+      </div>
+      <div class="readout">
+        <span class="readout__label">MỤC TIÊU</span>
+        <span class="readout__value">Đào sâu và mở rộng bản thiết kế Nori Agent (<code>ToolRegistry</code>, <code>VehicleCache</code>, <code>OBDManager</code>), tách LLM khỏi business logic, và làm nó tái sử dụng được trên nhiều nền tảng phần cứng tương lai — trước khi dùng làm prompt để sinh code.</span>
+      </div>
+    </div>
+    <div class="hero__stats">
+      <div class="stat"><span class="stat__value">11</span><span class="stat__label">kỹ thuật</span></div>
+      <div class="stat"><span class="stat__value">85</span><span class="stat__label">ý tưởng</span></div>
+      <div class="stat"><span class="stat__value">1</span><span class="stat__label">tổng hợp</span></div>
+      <div class="stat"><span class="stat__value">AUTONOMOUS</span><span class="stat__label">chế độ</span></div>
+      <div class="stat stat--status"><span class="stat__value">● COMPLETE</span><span class="stat__label">trạng thái</span></div>
+      <div class="stat"><span class="stat__value">21:34</span><span class="stat__label">2026-07-26</span></div>
+    </div>
+  </header>
+
+  <main class="bus">
+
+    <!-- 01 First Principles Thinking -->
+    <section class="module" id="t01">
+      <div class="module__header">
+        <div class="module__pattern pattern--strata" aria-hidden="true"></div>
+        <div class="module__top"><span class="module__index">01 / 11</span><span class="module__code">FIRST PRINCIPLES</span></div>
+        <h2 class="module__title">Về lại nền móng</h2>
+        <p class="module__tagline">Bóc hết lớp vỏ "chatbot" để tìm sự thật gốc: cái gì thật sự làm Nori là một Agent?</p>
+      </div>
+      <div class="card-grid">
+        <div class="card card--strata"><span class="card__ln">L10</span><span class="card__lead">Bản sắc = hợp đồng bám dữ liệu</span><p>Mọi phát biểu của Nori phải truy được về một nguồn dữ liệu (BLE/API/Knowledge Engine) — Nori là "agent" vì có data-grounding contract, không phải vì "không có giao diện chat".</p></div>
+        <div class="card card--strata"><span class="card__ln">L11</span><span class="card__lead">Ép buộc ở tầng schema</span><p>Đầu ra của LLM chỉ được ở 2 dạng: (a) một <code>tool_call</code>, hoặc (b) lời văn bọc quanh một kết quả tool đã hoàn tất — thực thi qua function-calling schema, không chỉ là chỉ dẫn trong prompt.</p></div>
+        <div class="card card--strata"><span class="card__ln">L12</span><span class="card__lead">Transcript tool là sự thật</span><p><code>ConversationManager</code> lưu transcript các lệnh gọi tool như nguồn sự thật; lịch sử chat văn bản tự do chỉ là hệ quả hiển thị, không bao giờ là bản ghi chính thức.</p></div>
+        <div class="card card--strata"><span class="card__ln">L13</span><span class="card__lead">Vòng lặp lõi = state machine</span><p>Mô hình hoá vòng lặp của <code>NoriAgent</code> như một state machine tường minh (Listening → Understanding → Executing → Responding), phản chiếu trực tiếp trong code, không phải một vòng lặp chat chung chung.</p></div>
+        <div class="card card--strata"><span class="card__ln">L14</span><span class="card__lead">Mọi giá trị đều có tuổi</span><p>Mọi giá trị trong <code>VehicleCache</code>/tool đều có "tuổi" — gắn timestamp/staleness vào mọi phản hồi tool để Nori nói kiểu "đang chạy 68km/h (2 giây trước)".</p></div>
+        <div class="card card--strata"><span class="card__ln">L15</span><span class="card__lead">Giọng nói vốn lossy</span><p>STT có lỗi — thêm hẳn một lớp confidence/fallback trước bước Intent Detection, thay vì mặc định transcript đã sạch.</p></div>
+        <div class="card card--strata"><span class="card__ln">L16</span><span class="card__lead">Đừng lặp lại business logic</span><p>Logic nghiệp vụ fuel/maintenance đã nằm ở backend Laravel — các entry <code>ToolRegistry</code> cho chúng nên là lớp bọc HTTP mỏng, không lặp validation ở client.</p></div>
+        <div class="card card--strata"><span class="card__ln">L17</span><span class="card__lead">Có cần tách hai giai đoạn?</span><p>Đặt câu hỏi liệu Intent Detection và Tool Selection có cần tách biệt, hay một bước function-calling của LLM đã gộp được cả hai để đơn giản hoá kiến trúc.</p></div>
+        <div class="card card--strata"><span class="card__ln">L18</span><span class="card__lead">Viết invariant chính thức</span><p>Cần một tài liệu invariant định nghĩa "Agent" cho codebase này: bộ thực thi có giới hạn (bounded executor) của năng lực đã đăng ký, có context memory — không bao giờ là bộ sinh văn bản tự do.</p></div>
+        <div class="card card--strata"><span class="card__ln">L19</span><span class="card__lead">Đặt tên nguyên lý sâu hơn</span><p>Nguyên lý đằng sau "Agent không phải chatbot": một Tool-grounded response contract được ép buộc bằng schema, mọi output đều phải trích dẫn một <code>tool_result_id</code>.</p></div>
+      </div>
+    </section>
+
+    <!-- 02 Morphological Analysis -->
+    <section class="module" id="t02">
+      <div class="module__header">
+        <div class="module__pattern pattern--matrix" aria-hidden="true"></div>
+        <div class="module__top"><span class="module__index">02 / 11</span><span class="module__code">MORPHOLOGICAL ANALYSIS</span></div>
+        <h2 class="module__title">Tách thông số, ráp lại module</h2>
+        <p class="module__tagline">Bẻ kiến trúc thành các trục độc lập (I/O, thực thi, đồng bộ...) rồi lắp ghép lại thành các module cụ thể.</p>
+      </div>
+      <div class="card-grid">
+        <div class="card card--matrix"><span class="card__ln">L21</span><span class="card__lead">maxToolHops theo intent</span><p>Hỗ trợ 2 chiến lược gọi LLM qua cấu hình <code>maxToolHops</code>: một lượt function-call cho câu hỏi đơn giản, chuỗi ReAct nhiều tool cho câu hỏi ghép (vd: <code>readDTC</code> rồi <code>knowledge.explainDTC</code>).</p></div>
+        <div class="card card--matrix"><span class="card__ln">L22</span><span class="card__lead">Đồng bộ theo sự kiện</span><p><code>OBDManager</code> phát diff qua EventEmitter/RxJS; Nori chỉ subscribe khi có phiên voice đang hoạt động, tiết kiệm pin lúc rảnh — thay vì poll thuần tuý.</p></div>
+        <div class="card card--matrix"><span class="card__ln">L23</span><span class="card__lead">PlatformAdapter = hợp đồng I/O</span><p><code>PlatformAdapter</code> là hợp đồng I/O thuần khiết (<code>IVoiceIO.listen/speak</code>, <code>IVehicleIO.subscribe</code>) — adapter cho ESP32/XiaoZhi chỉ cần cài 2 interface nhỏ và tái dùng toàn bộ logic lõi.</p></div>
+        <div class="card card--matrix"><span class="card__ln">L24</span><span class="card__lead">ToolExecutor tách biệt vận chuyển</span><p>Một abstraction <code>ToolExecutor</code> để mỗi tool không cần quan tâm mình chạy như REST call thuần JS hay cầu nối JS-to-native qua BLE.</p></div>
+        <div class="card card--matrix"><span class="card__ln">L25</span><span class="card__lead">Lỗi BLE là dữ liệu, không phải exception</span><p>Khi tool BLE thất bại (xe tắt máy, ngoài tầm), trả về <code>{status:'unavailable', reason:'ble_disconnected'}</code> thay vì throw — cho lớp format một câu tự nhiên: "xe hiện không kết nối, bạn bật OBD chưa?".</p></div>
+        <div class="card card--matrix"><span class="card__ln">L26</span><span class="card__lead">Pipeline giọng nói lai</span><p>Wake-word + STT trên thiết bị cho lệnh đơn giản (độ trễ thấp, không phụ thuộc mạng, an toàn khi lái); STT trên cloud cho hội thoại phức tạp.</p></div>
+        <div class="card card--matrix"><span class="card__ln">L27</span><span class="card__lead">Metadata cấp độ quyền hạn</span><p>Thêm metadata "authority" cho tool (read-only / mutating / destructive); tool kiểu <code>clearDTC</code> gắn <code>requiresConfirmation:true</code>, thực thi chung ở <code>ConversationManager</code>, không ad hoc từng tool.</p></div>
+        <div class="card card--matrix"><span class="card__ln">L28</span><span class="card__lead">Slot-filling tổng quát hoá</span><p>Mô hình hoá điền slot nhiều lượt (<code>fuel.create</code> cần amount + fuelType + isFullTank) như "Tool Schema có required slots" — một vòng lặp slot-filling tái dùng cho mọi tool, không phải cây hội thoại hardcode riêng.</p></div>
+        <div class="card card--matrix"><span class="card__ln">L29</span><span class="card__lead">VehicleCache sống ở native</span><p>Cân nhắc <code>VehicleCache</code> sống ở native Android (Kotlin) như foreground service bền vững, phơi một JSON-RPC/bridge nhỏ cho JS — poll BLE sống sót qua reload/crash của JS thread trong RN.</p></div>
+        <div class="card card--matrix"><span class="card__ln">L30</span><span class="card__lead">Knowledge Engine cũng chỉ là tool</span><p>Coi Knowledge Engine chỉ như một tool khác (<code>knowledge.explainDTC(code)</code>) thay vì đường đi đặc cách — mọi thứ đều là một lệnh gọi tool, kể cả lời giải thích.</p></div>
+      </div>
+    </section>
+
+    <!-- 03 SCAMPER -->
+    <section class="module" id="t03">
+      <div class="module__header">
+        <div class="module__pattern pattern--relay" aria-hidden="true"></div>
+        <div class="module__top"><span class="module__index">03 / 11</span><span class="module__code">SCAMPER</span></div>
+        <h2 class="module__title">Bảy công tắc chỉnh kiến trúc</h2>
+        <p class="module__tagline">Substitute · Combine · Adapt · Modify · Put to another use · Eliminate · Reverse — vặn từng công tắc một trên cùng bản thiết kế.</p>
+      </div>
+      <div class="scamper-grid">
+        <div class="scamper-card"><span class="card__ln">L32</span><div class="scamper-card__row"><span class="scamper-badge">S</span><span class="scamper-card__verb">Substitute</span></div><p>Thay <code>IntentManager</code> tập trung bằng các tool tự đăng ký (self-registering), tự khai báo trigger phrase/embeddings riêng — thêm tool mới không cần đụng bộ phân loại trung tâm.</p></div>
+        <div class="scamper-card"><span class="card__ln">L33</span><div class="scamper-card__row"><span class="scamper-badge">C</span><span class="scamper-card__verb">Combine</span></div><p>Gộp <code>ToolRegistry</code> và <code>KnowledgeClient</code> thành một interface Capability Provider duy nhất — action-tool và knowledge-tool dùng chung một cơ chế đăng ký/khám phá.</p></div>
+        <div class="scamper-card"><span class="card__ln">L34</span><div class="scamper-card__row"><span class="scamper-badge">A</span><span class="scamper-card__verb">Adapt</span></div><p>Mượn mô hình plugin-manifest kiểu extension của VSCode: mỗi module tính năng (fuel, maintenance, insurance) mang tool manifest riêng, <code>ToolRegistry</code> quét/nạp lúc khởi động.</p></div>
+        <div class="scamper-card"><span class="card__ln">L35</span><div class="scamper-card__row"><span class="scamper-badge">M</span><span class="scamper-card__verb">Modify</span></div><p>Sửa <code>VehicleCache</code> để giữ thêm tín hiệu suy ra sẵn (<code>engineWarm</code>, <code>isIdling</code>) bên cạnh giá trị OBD thô — tool/LLM không phải tính lại cùng một business rule nhiều lần.</p></div>
+        <div class="scamper-card"><span class="card__ln">L36</span><div class="scamper-card__row"><span class="scamper-badge">P</span><span class="scamper-card__verb">Put to other use</span></div><p>Vì tool là hàm JSON-in/JSON-out thuần tuý, tự sinh một bộ fuzz-test chạy qua mọi tool mà không cần voice hay LLM.</p></div>
+        <div class="scamper-card"><span class="card__ln">L37</span><div class="scamper-card__row"><span class="scamper-badge">E</span><span class="scamper-card__verb">Eliminate</span></div><p>Bỏ hẳn giai đoạn <code>IntentManager</code> riêng với LLM có function-calling gốc — để tool-choice của chính model làm luôn việc phát hiện ý định, loại bỏ một tầng kiến trúc.</p></div>
+        <div class="scamper-card"><span class="card__ln">L38</span><div class="scamper-card__row"><span class="scamper-badge">R</span><span class="scamper-card__verb">Reverse</span></div><p>Đảo chiều luồng cho kịch bản chủ động: để <code>VehicleCache</code>/<code>OBDManager</code> tự kích Nori lên tiếng (khi có DTC mới) như luồng hạng nhất, không chỉ do người dùng khởi xướng.</p></div>
+      </div>
+    </section>
+
+    <!-- 04 Assumption Reversal -->
+    <section class="module" id="t04">
+      <div class="module__header">
+        <div class="module__pattern pattern--flip" aria-hidden="true"></div>
+        <div class="module__top"><span class="module__index">04 / 11</span><span class="module__code">ASSUMPTION REVERSAL</span></div>
+        <h2 class="module__title">Lật ngược từng giả định</h2>
+        <p class="module__tagline">Lấy một niềm tin mặc định của kiến trúc, gạch bỏ nó, rồi xem đảo ngược lại thì mở ra thiết kế gì.</p>
+      </div>
+      <div class="reversal-grid">
+        <div class="reversal-card"><span class="card__ln">L40</span><div class="reversal-card__old"><b>Giả định cũ</b>Poll cố định 1 giây</div><div class="reversal-card__new"><b>Đảo ngược</b><p><code>VehicleCache</code> poll thích ứng — nhanh khi đang lái/RPM đổi, chậm khi đỗ/idle — qua một state machine nhỏ, tiết kiệm pin và băng thông BLE.</p></div></div>
+        <div class="reversal-card"><span class="card__ln">L41</span><div class="reversal-card__old"><b>Giả định cũ</b>LLM không bao giờ đụng business logic</div><div class="reversal-card__new"><b>Đảo ngược có kiểm soát</b><p>LLM được phép chọn/ưu tiên 2-3 số liệu đã fetch sẵn để nhắc tới, nhưng không bao giờ tự tính toán hay bịa số — ranh giới này phải viết tường minh.</p></div></div>
+        <div class="reversal-card"><span class="card__ln">L42</span><div class="reversal-card__old"><b>Giả định cũ</b>Giọng nói là kênh chính</div><div class="reversal-card__new"><b>Đảo ngược</b><p>Coi văn bản gõ tay chỉ là một <code>PlatformAdapter</code> khác dùng chung agent core — hữu ích cho chế độ im lặng trong xe hoặc accessibility, không lặp code.</p></div></div>
+        <div class="reversal-card"><span class="card__ln">L43</span><div class="reversal-card__old"><b>Giả định cũ</b>Một agent chỉ gắn với một xe</div><div class="reversal-card__new"><b>Đảo ngược</b><p>Thiết kế sẵn tool <code>vehicle.switchTo(vehicleId)</code> và context <code>activeVehicleId</code> từ ngày đầu, đón trước tài khoản hộ gia đình hoặc đội xe (fleet).</p></div></div>
+        <div class="reversal-card"><span class="card__ln">L44</span><div class="reversal-card__old"><b>Giả định cũ</b>Kết quả tool luôn sạch</div><div class="reversal-card__new"><b>Đảo ngược</b><p>Thêm trường confidence/partial vào phản hồi <code>ToolRegistry</code> để Nori nói "có vẻ ~1800 vòng/phút, tín hiệu hơi chập chờn" thay vì trình bày dữ liệu nhiễu như sự thật tuyệt đối.</p></div></div>
+        <div class="reversal-card"><span class="card__ln">L45</span><div class="reversal-card__old"><b>Giả định cũ</b>Nori chỉ trả lời về xe</div><div class="reversal-card__new"><b>Đảo ngược</b><p>Thêm hẳn phản hồi tool <code>system.outOfScope()</code> cho câu hỏi ngoài phạm vi, thay vì để LLM tự do trả lời — giữ vững cam kết "không bao giờ bịa dữ liệu".</p></div></div>
+        <div class="reversal-card"><span class="card__ln">L46</span><div class="reversal-card__old"><b>Giả định cũ</b>Trạng thái hội thoại là tạm thời</div><div class="reversal-card__new"><b>Đảo ngược</b><p>Lưu bền một hội thoại chuyến đi (rolling trip conversation) gắn với <code>VehicleContext.tripId</code>, để slot-filling dở dang (vd: giữa chừng <code>fuel.create</code>) sống sót qua khởi động lại app.</p></div></div>
+        <div class="reversal-card"><span class="card__ln">L47</span><div class="reversal-card__old"><b>Giả định roadmap</b>Wake word phải có ở v1</div><div class="reversal-card__new"><b>Đảo ngược</b><p>v1 chỉ cần push-to-talk, đủ để kiểm chứng Tool Registry và Agent core mà chưa phải giải bài toán khó nhất ngay từ đầu.</p></div></div>
+      </div>
+    </section>
+
+    <!-- 05 Time Horizon Ladder -->
+    <section class="module" id="t05">
+      <div class="module__header">
+        <div class="module__pattern pattern--ladder" aria-hidden="true"></div>
+        <div class="module__top"><span class="module__index">05 / 11</span><span class="module__code">TIME HORIZON LADDER</span></div>
+        <h2 class="module__title">Leo thang thời gian</h2>
+        <p class="module__tagline">Cùng một quyết định kiến trúc, nhìn qua ống kính 1 năm, 10 năm rồi 100 năm.</p>
+      </div>
+      <div class="ladder">
+        <div class="rung"><span class="rung__label">1 năm</span><div class="rung__cards">
+          <div class="card"><span class="card__ln">L49</span><p>Dù hiện chỉ có một <code>PlatformAdapter</code> cho React Native, vẫn định nghĩa interface adapter nghiêm túc ngay bây giờ, để ranh giới này không chỉ là ý tưởng suông và khỏi refactor đau đớn sau này.</p></div>
+          <div class="card"><span class="card__ln">L50</span><p>Đánh version cho mọi entry trong <code>ToolRegistry</code> (<code>toolName@version</code>) vì rủi ro gần nhất là backend API đổi hình dạng (<code>fuel.create</code>, <code>maintenance.create</code>) — sớm hơn nhiều so với chuyện đa nền tảng.</p></div>
+        </div></div>
+        <div class="rung"><span class="rung__label">10 năm</span><div class="rung__cards">
+          <div class="card"><span class="card__ln">L51</span><p>Head-unit Android nghĩa là kết quả tool cần thêm <code>renderHint</code> tuỳ chọn (line chart cho <code>getTripToday</code>, gauge cho <code>getSpeed</code>) để adapter có màn hình hiển thị được, không chỉ đọc lên.</p></div>
+          <div class="card"><span class="card__ln">L52</span><p>Ca dùng fleet/B2B (cho thuê xe, taxi) nghĩa là <code>VehicleContext</code> nên là dependency có thể hoán đổi (swappable), giống <code>auth</code>, chứ không phải singleton toàn cục.</p></div>
+          <div class="card"><span class="card__ln">L55</span><p>ESP32/XiaoZhi không có runtime JS lớn hay lưu trữ bền, nên trạng thái slot-filling của <code>ConversationManager</code> nên là một blob serializable nhỏ gọn ngay từ bây giờ, không phải object graph JS nặng.</p></div>
+        </div></div>
+        <div class="rung"><span class="rung__label">100 năm</span><div class="rung__cards">
+          <div class="card"><span class="card__ln">L53</span><p>Xe tự lái dịch chuyển giá trị từ trả lời câu hỏi tài xế sang việc chiếc xe chủ động tường thuật quyết định của chính nó — nền móng <code>ToolRegistry</code> + <code>VehicleCache</code> + cơ chế kích hoạt chủ động đã đón đầu điều này nếu xây đúng từ sớm.</p></div>
+        </div></div>
+        <div class="rung"><span class="rung__label">Xuyên các nấc</span><div class="rung__cards">
+          <div class="card"><span class="card__ln">L54</span><p>Cùng một abstraction <code>PlatformAdapter</code> mở đường cho cổng ESP32 tương lai cũng cho phép có ngay một <code>MockVehicleAdapter</code> hôm nay để CI/dev không cần phần cứng BLE thật — thắng lợi gần mà vẫn xuyên suốt các mốc.</p></div>
+        </div></div>
+      </div>
+    </section>
+
+    <!-- 06 Constraint Mapping -->
+    <section class="module" id="t06">
+      <div class="module__header">
+        <div class="module__pattern pattern--fence" aria-hidden="true"></div>
+        <div class="module__top"><span class="module__index">06 / 11</span><span class="module__code">CONSTRAINT MAPPING</span></div>
+        <h2 class="module__title">Ràng buộc nào thật, ràng buộc nào tưởng tượng</h2>
+        <p class="module__tagline">Tách rào chắn thật (phải thiết kế quanh nó) khỏi rào chắn tưởng tượng (có thể gỡ bỏ ngay).</p>
+      </div>
+      <div class="constraints">
+        <div class="constraints__col constraints__col--real">
+          <h3>Ràng buộc thật</h3>
+          <div class="constraint-card"><span class="card__ln">L57</span><span class="constraint-card__tag">Android Doze &amp; pin</span>Doze/tối ưu pin có thể giết poll BLE nền — bắt buộc Foreground Service đàng hoàng kèm notification bền vững, cộng WorkManager dự phòng, như một MUST kiến trúc.</div>
+          <div class="constraint-card"><span class="card__ln">L58</span><span class="constraint-card__tag">Độ trễ LLM khi lái</span>Độ trễ cloud LLM giữa lúc lái là không chấp nhận được cho câu hỏi đơn giản — route intent tất định phổ biến (<code>getSpeed</code>, <code>getRPM</code>) qua matcher nhẹ trên thiết bị, bỏ qua LLM cho 80% trường hợp.</div>
+          <div class="constraint-card"><span class="card__ln">L59</span><span class="constraint-card__tag">Cabin ồn &amp; STT</span>Cabin ồn giảm độ chính xác STT — bắt buộc một bước xác nhận nhẹ (giọng nói + tín hiệu thị giác/haptic) trước khi thực thi tool phá huỷ, không bao giờ chỉ dựa vào STT.</div>
+          <div class="constraint-card"><span class="card__ln">L60</span><span class="constraint-card__tag">An toàn khi lái</span>Luật về mất tập trung khi lái — định nghĩa <code>DrivingSafetyPolicy</code> chính thức quyết định tool nào được mời dùng khi <code>speed &gt; 0</code> (vd: chặn <code>ocr.scanReceipt</code> khi đang lái).</div>
+          <div class="constraint-card"><span class="card__ln">L63</span><span class="constraint-card__tag">Riêng tư vị trí</span>Dữ liệu vị trí/hành trình chảy liên tục qua nhà cung cấp LLM là rủi ro riêng tư/tuân thủ — lược GPS chính xác/PII khỏi payload gửi LLM, chỉ gửi trường đã suy ra trừ khi tool cần geocoding tường minh.</div>
+          <div class="constraint-card"><span class="card__ln">L64</span><span class="constraint-card__tag">Chi phí API</span>Chi phí API LLM theo lượt voice ở quy mô lớn — cắt ngắn câu hỏi lặp lại trong một phiên ngay ở tầng <code>ToolRegistry</code>, cân nhắc model nhỏ/rẻ hơn chỉ để format JSON thành văn nói.</div>
+        </div>
+        <div class="constraints__col constraints__col--dropped">
+          <h3>Ràng buộc ảo — đã loại bỏ</h3>
+          <div class="constraint-card"><span class="card__ln">L61</span><span class="constraint-card__tag">"Wake word phải có ở v1"</span>Xếp lại thành cột mốc sau, giải phóng scope v1 để tập trung vào tính đúng đắn của Tool Registry.</div>
+          <div class="constraint-card"><span class="card__ln">L62</span><span class="constraint-card__tag">"Phải hỗ trợ mọi DTC ngay lúc ra mắt"</span>Cho Knowledge Engine một fallback theo mức độ nghiêm trọng (severity-level) cho mã lạ, thay vì chặn cả việc ra mắt.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 07 Lotus Blossom -->
+    <section class="module" id="t07">
+      <div class="module__header">
+        <div class="module__pattern pattern--lotus" aria-hidden="true"></div>
+        <div class="module__top"><span class="module__index">07 / 11</span><span class="module__code">LOTUS BLOSSOM</span></div>
+        <h2 class="module__title">Toả ra từ lõi NoriAgent</h2>
+        <p class="module__tagline">Mỗi cánh hoa là một module vệ tinh xoay quanh lõi <code>NoriAgent</code> / <code>ToolRegistry</code>.</p>
+      </div>
+      <div class="lotus__grid">
+        <div class="lotus__cell"><span class="card__ln">L66</span><b>SafetyPolicy</b>Gác cổng duy nhất quyết định tool nào được thực thi/mời dùng theo trạng thái lái xe hiện tại, tách biệt khỏi chính <code>ToolRegistry</code>.</div>
+        <div class="lotus__cell"><span class="card__ln">L67</span><b>Observability / Telemetry</b>Ghi log mọi lệnh gọi tool, độ trễ, và mọi lần LLM cố trả lời ngoài phạm vi, để kiểm toán cam kết "không bao giờ bịa dữ liệu" trong production.</div>
+        <div class="lotus__cell"><span class="card__ln">L68</span><b>PermissionManager</b>Quản lý toggle cấp người dùng (vd: tự động ghi vs luôn xác nhận khi log nhiên liệu), tách biệt với SafetyPolicy dựa trên trạng thái lái xe.</div>
+        <div class="lotus__cell"><span class="card__ln">L69</span><b>PromptTemplateStore</b>Đưa system prompt của LLM và template format-tool ra ngoài như config có version, tinh chỉnh giọng tiếng Việt của Nori mà không cần release app.</div>
+        <div class="lotus__center"><b>NoriAgent</b><span><code>ToolRegistry</code> là lõi điều phối</span></div>
+        <div class="lotus__cell"><span class="card__ln">L70</span><b>ProactiveTriggerEngine</b>Quyết định khi nào Nori lên tiếng không cần hỏi (DTC mới, cột mốc, nhắc nhở đến hạn), tách biệt khỏi <code>ConversationManager</code> mang tính phản ứng.</div>
+        <div class="lotus__cell"><span class="card__ln">L71</span><b>OfflineQueue</b>Lệnh gọi tool mang tính ghi (<code>fuel.create</code>) thực hiện khi không có sóng (cây xăng vùng xa) được xếp hàng và thử lại, thay vì âm thầm mất.</div>
+        <div class="lotus__cell"><span class="card__ln">L72</span><b>MultiVehicleContext</b>Nâng thành một module riêng thay vì một cờ (flag), đón đầu khả năng pivot sang fleet/B2B.</div>
+        <div class="lotus__cell"><span class="card__ln">L73</span><b>TestHarness / MockAdapter</b>Công cụ dev hạng nhất: <code>NoriAgent.runWithMock(scenarioScript)</code> để QA kịch bản voice có kịch bản mà không cần xe thật.</div>
+      </div>
+      <div class="lotus__expansion">
+        <h4>Mở rộng cánh hoa — SafetyPolicy thành lưới 3×3 riêng</h4>
+        <div class="lotus__sub-row">
+          <div class="lotus__sub-chip"><span class="card__ln">L74</span>Chặn tool theo tốc độ xe</div>
+          <div class="lotus__sub-chip"><span class="card__ln">L74</span>Ngưỡng tin cậy theo độ ồn cabin</div>
+          <div class="lotus__sub-chip"><span class="card__ln">L74</span>Phát hiện hành khách-vs-tài-xế (tương lai) để nới lỏng hạn chế cho hành khách</div>
+        </div>
+        <p><span class="card__ln" style="position:static;">L75</span> Ý tưởng con: một "chế độ im lặng" vẫn thực thi tool/ghi dữ liệu qua adapter chạm/gõ nhưng tắt TTS trong lúc gọi điện hoặc nghe nhạc, phối hợp với <code>AudioFocus</code> của Android.</p>
+      </div>
+    </section>
+
+    <!-- 08 Nature's Solutions -->
+    <section class="module" id="t08">
+      <div class="module__header">
+        <div class="module__pattern pattern--nature" aria-hidden="true"></div>
+        <div class="module__top"><span class="module__index">08 / 11</span><span class="module__code">NATURE'S SOLUTIONS</span></div>
+        <h2 class="module__title">Mượn giải pháp của tự nhiên</h2>
+        <p class="module__tagline">Sinh vật đã giải các bài toán về nhịp điệu, cộng sinh, phản xạ, ngủ đông và trí nhớ từ rất lâu trước khi có phần mềm.</p>
+      </div>
+      <div class="nature-grid">
+        <div class="nature-card"><span class="card__ln">L77</span><span class="nature-card__name">Nhịp tim / máy tạo nhịp</span><p><code>VehicleCache</code> poll theo nhịp nền cố định, được "kích hoạt cảm thông" (người dùng nói, RPM tăng vọt) tăng tốc tạm thời rồi suy giảm dần — một chiến lược poll thích ứng có tên, tái dùng được.</p></div>
+        <div class="nature-card"><span class="card__ln">L78</span><span class="nature-card__name">Cộng sinh san hô</span><p><code>ToolRegistry</code> cung cấp dữ liệu thô, Knowledge Engine cung cấp ý nghĩa — củng cố việc coi Knowledge Engine là năng lực hạng nhất, không phải trường hợp đặc cách gắn thêm.</p></div>
+        <div class="nature-card"><span class="card__ln">L79</span><span class="nature-card__name">Mạng nơ-ron bạch tuộc</span><p>Cho các module như <code>OBDManager</code> "phản xạ" cục bộ (tự kết nối lại BLE) mà không cần đi qua vòng lặp agent trung tâm cho mọi quyết định nhỏ, giảm độ trễ/nghẽn cổ chai.</p></div>
+        <div class="nature-card"><span class="card__ln">L80</span><span class="nature-card__name">Ngủ đông</span><p>Khi xe tắt máy/đỗ lâu dài, <code>NoriAgent</code> và <code>VehicleCache</code> vào trạng thái ngủ thật sự (dừng quét BLE, huỷ đăng ký listener), chỉ thức khi có tín hiệu đề máy/quảng bá.</p></div>
+        <div class="nature-card"><span class="card__ln">L81</span><span class="nature-card__name">Trí nhớ miễn dịch</span><p>Cache lời giải thích DTC ở local sau lần tra đầu tiên, để mã lặp lại/tương tự phản hồi tức thì mà không cần hỏi lại Knowledge Engine.</p></div>
+      </div>
+    </section>
+
+    <!-- 09 Chaos Engineering -->
+    <section class="module" id="t09">
+      <div class="module__header">
+        <div class="module__pattern pattern--chaos" aria-hidden="true"></div>
+        <div class="module__top"><span class="module__index">09 / 11</span><span class="module__code">CHAOS ENGINEERING</span></div>
+        <h2 class="module__title">Đập thử để tìm chỗ gãy</h2>
+        <p class="module__tagline">Với mỗi kịch bản phá hoại, kiến trúc chỉ sống sót nếu một điều kiện cụ thể được xây sẵn.</p>
+      </div>
+      <div class="chaos-grid">
+        <div class="chaos-card"><div class="chaos-card__break"><b>BREAK · L83</b><p>BLE mất kết nối giữa chừng lúc đang điền slot cho <code>fuel.create</code>.</p></div><div class="chaos-card__survive"><b>SỐNG SÓT NẾU</b><p>Trạng thái slot-filling của <code>ConversationManager</code> tách biệt hoàn toàn khỏi trạng thái kết nối OBD — vì ghi nhận tài chính không nên phụ thuộc việc xe có kết nối hay không.</p></div></div>
+        <div class="chaos-card"><div class="chaos-card__break"><b>BREAK · L84</b><p>Nhà cung cấp LLM sập / bị rate-limited.</p></div><div class="chaos-card__survive"><b>SỐNG SÓT NẾU</b><p>Có fallback tất định (local NLU → gọi tool trực tiếp → phản hồi theo template) xử lý được các intent phổ biến nhất mà không phụ thuộc LLM.</p></div></div>
+        <div class="chaos-card"><div class="chaos-card__break"><b>BREAK · L85</b><p>Người dùng hỏi hai việc trong một câu.</p></div><div class="chaos-card__survive"><b>SỐNG SÓT NẾU</b><p><code>ToolRegistry</code>/<code>IntentManager</code> hỗ trợ gọi nhiều tool song song trong một lượt, không giả định chỉ có một tool.</p></div></div>
+        <div class="chaos-card"><div class="chaos-card__break"><b>BREAK · L86</b><p>JS thread của React Native crash/reload giữa phiên BLE.</p></div><div class="chaos-card__survive"><b>SỐNG SÓT NẾU</b><p><code>OBDManager</code> thực sự sống ở tầng native/foreground-service, để kết nối với xe không chết theo JS thread.</p></div></div>
+        <div class="chaos-card"><div class="chaos-card__break"><b>BREAK · L87</b><p>Transcript STT rác/không hiểu được đến <code>IntentManager</code>.</p></div><div class="chaos-card__survive"><b>SỐNG SÓT NẾU</b><p>Có đường đi tường minh khi "không đủ tin cậy" để hỏi lại làm rõ, thay vì để LLM đoán bừa một <code>tool_call</code>.</p></div></div>
+        <div class="chaos-card"><div class="chaos-card__break"><b>BREAK · L88</b><p>Hai tool đua nhau: voice gọi <code>clearDTC</code> đúng lúc auto-poll vừa ghi một DTC mới.</p></div><div class="chaos-card__survive"><b>SỐNG SÓT NẾU</b><p><code>ToolRegistry</code> ép khoá/xếp hàng thực thi theo từng resource (execution locks/queueing) cho tool mang tính ghi.</p></div></div>
+        <div class="chaos-card"><div class="chaos-card__break"><b>BREAK · L89</b><p>Hợp đồng Tool API ở backend đổi hình dạng sau một bản cập nhật app.</p></div><div class="chaos-card__survive"><b>SỐNG SÓT NẾU</b><p>Có version cho tool cộng một bước validate schema thời gian chạy giữa kết quả tool và lớp format-cho-LLM — báo lỗi to ở dev, xử lý êm ở production.</p></div></div>
+      </div>
+    </section>
+
+    <!-- 10 Role Playing -->
+    <section class="module" id="t10">
+      <div class="module__header">
+        <div class="module__pattern pattern--role" aria-hidden="true"></div>
+        <div class="module__top"><span class="module__index">10 / 11</span><span class="module__code">ROLE PLAYING</span></div>
+        <h2 class="module__title">Tám ghế ngồi, tám góc nhìn</h2>
+        <p class="module__tagline">Từng bên liên quan lên tiếng: tài xế, thợ máy, dev, người tích hợp phần cứng, product owner, người làm pháp lý, phụ huynh, đối tác bảo hiểm.</p>
+      </div>
+      <div class="role-grid">
+        <div class="role-card"><div class="role-card__badge">Tài xế · L91</div><p class="role-card__quote">Ngữ cảnh phiên nên sống sót qua vài giây sau một lần BLE tái kết nối thoáng qua, thay vì phải bắt đầu lại toàn bộ hội thoại.</p></div>
+        <div class="role-card"><div class="role-card__badge">Thợ máy / đối tác dịch vụ · L92</div><p class="role-card__quote">Lịch sử DTC cộng lời giải thích từ Knowledge Engine nên đủ cấu trúc để xuất thành báo cáo/PDF thật cho khách hàng, không chỉ để đọc lên.</p></div>
+        <div class="role-card"><div class="role-card__badge">Dev backend · L93</div><p class="role-card__quote">Thêm tool mới không nên phải đụng lõi <code>NoriAgent</code> — định nghĩa hẳn một Tool SDK/manifest schema chính thức kèm CLI validate, để tool khai báo được (declarative) và review như một hợp đồng API.</p></div>
+        <div class="role-card"><div class="role-card__badge">Người tích hợp ESP32 tương lai · L94</div><p class="role-card__quote">Đặc tả vòng lặp lõi intent → tool → format của <code>NoriAgent</code> như một protocol/spec document, không chỉ một thư viện JS, để viết lại bằng C/MicroPython dựa trên cùng hợp đồng Tool JSON.</p></div>
+        <div class="role-card"><div class="role-card__badge">Product owner · L95</div><p class="role-card__quote">Module Observability nên phơi ra số liệu sử dụng theo từng tool ở mức tổng hợp, an toàn về riêng tư, để ưu tiên roadmap — không phải transcript hội thoại thô.</p></div>
+        <div class="role-card"><div class="role-card__badge">Người phụ trách riêng tư / pháp lý · L96</div><p class="role-card__quote">Viết tường minh chính sách lưu trữ dữ liệu theo từng loại: audio thô xoá sau khi STT xong, transcript giữ N ngày, vị trí không bao giờ gửi nguyên văn cho LLM bên thứ ba.</p></div>
+        <div class="role-card"><div class="role-card__badge">Phụ huynh quan tâm an toàn · L97</div><p class="role-card__quote">Ngưỡng cảnh báo chủ động (<code>ProactiveTriggerEngine</code>) nên là cài đặt độ nhạy do người dùng cấu hình, không hardcode cứng.</p></div>
+        <div class="role-card"><div class="role-card__badge">Đối tác bảo hiểm · L98</div><p class="role-card__quote">Một tool giả định <code>insurance.shareDrivingScore()</code> đóng gói điểm hành vi lái xe suy ra sẵn từ <code>VehicleCache</code> — một hook kiếm tiền tái dùng đúng luồng dữ liệu đã có.</p></div>
+      </div>
+    </section>
+
+    <!-- 11 TRIZ -->
+    <section class="module" id="t11">
+      <div class="module__header">
+        <div class="module__pattern pattern--triz" aria-hidden="true"></div>
+        <div class="module__top"><span class="module__index">11 / 11</span><span class="module__code">TRIZ CONTRADICTION</span></div>
+        <h2 class="module__title">Không đánh đổi — giải mâu thuẫn</h2>
+        <p class="module__tagline">Mỗi cặp lực đối chọi được giữ nguyên cả hai vế, và giải quyết bằng một cơ chế thứ ba thay vì thoả hiệp.</p>
+      </div>
+      <div class="triz-grid">
+        <div class="triz-card"><div class="triz-card__poles">
+          <div class="triz-card__pole a"><b>Vế A</b>Sự linh hoạt của LLM</div>
+          <span class="triz-card__vs">L100 ⇄</span>
+          <div class="triz-card__pole b"><b>Vế B</b>An toàn tất định</div>
+        </div><div class="triz-card__resolve"><b>Giải quyết</b><p>Schema JSON function-calling nghiêm ngặt cộng một grounding validator từ chối mọi output chứa token giống-số mà không truy được về một kết quả tool.</p></div></div>
+
+        <div class="triz-card"><div class="triz-card__poles">
+          <div class="triz-card__pole a"><b>Vế A</b>Phản hồi tức thì khi đang lái</div>
+          <span class="triz-card__vs">L101 ⇄</span>
+          <div class="triz-card__pole b"><b>Vế B</b>Độ chính xác cần round-trip</div>
+        </div><div class="triz-card__resolve"><b>Giải quyết</b><p>Phản hồi hai pha: một lời xác nhận đệm tức thì tại chỗ, rồi câu trả lời thật khi tool đã có kết quả.</p></div></div>
+
+        <div class="triz-card"><div class="triz-card__poles">
+          <div class="triz-card__pole a"><b>Vế A</b>Một lõi tái dùng chung mọi nền tảng</div>
+          <span class="triz-card__vs">L102 ⇄</span>
+          <div class="triz-card__pole b"><b>Vế B</b>Sự phong phú đặc thù từng nền tảng</div>
+        </div><div class="triz-card__resolve"><b>Giải quyết</b><p>JSON tool phi nền tảng (platform-agnostic) cộng một object <code>hints</code> tuỳ chọn mà mỗi adapter chỉ tôn trọng đến mức nó render được.</p></div></div>
+
+        <div class="triz-card"><div class="triz-card__poles">
+          <div class="triz-card__pole a"><b>Vế A</b>Kiểm soát tập trung của Tool Registry</div>
+          <span class="triz-card__vs">L103 ⇄</span>
+          <div class="triz-card__pole b"><b>Vế B</b>Mở rộng phi tập trung từ bên thứ ba</div>
+        </div><div class="triz-card__resolve"><b>Giải quyết</b><p>Registry hai tầng: tool lõi đã review, cộng tool mở rộng chạy sandbox với quyền hạn giảm.</p></div></div>
+
+        <div class="triz-card"><div class="triz-card__poles">
+          <div class="triz-card__pole a"><b>Vế A</b>Nhận biết xe liên tục</div>
+          <span class="triz-card__vs">L104 ⇄</span>
+          <div class="triz-card__pole b"><b>Vế B</b>Kỳ vọng riêng tư / pin</div>
+        </div><div class="triz-card__resolve"><b>Giải quyết</b><p>Đặt invariant: <code>VehicleCache</code> mặc định chỉ tồn tại local, không gì rời khỏi thiết bị trừ khi một lệnh gọi tool được kích hoạt tường minh.</p></div></div>
+      </div>
+    </section>
+
+    <!-- Recurring patterns -->
+    <section class="module" id="patterns">
+      <div class="module__header">
+        <div class="module__pattern pattern--lotus" aria-hidden="true"></div>
+        <div class="module__top"><span class="module__index">Radar</span><span class="module__code" style="color:var(--violet);border-color:rgba(156,140,255,.4);background:var(--violet-dim);">TÍN HIỆU LẶP LẠI</span></div>
+        <h2 class="module__title">Bốn tín hiệu lặp lại trên mọi radar</h2>
+        <p class="module__tagline">Trước khi tổng hợp, đây là các mẫu hình mà nhiều kỹ thuật khác nhau, độc lập, cùng hội tụ về.</p>
+      </div>
+      <div class="patterns__grid">
+        <div class="pattern-card"><span class="card__ln">L105</span><p>Các tool mang tính ghi/phá huỷ (<code>clearDTC</code>, <code>fuel.create</code>) liên tục đòi hỏi một hợp đồng xác nhận + khoá (confirmation+locking) riêng, gắn thẳng vào metadata của Tool Registry, không phải code ứng biến riêng từng tool.</p></div>
+        <div class="pattern-card"><span class="card__ln">L106</span><p>Ranh giới <code>PlatformAdapter</code> trả lợi tức gần như ngay lập tức qua mock testing và chế độ chat-văn-bản, không chỉ ở tương lai đa phần cứng 10 năm sau — một thắng lợi QA gần hạn, ngang một cược dài hạn.</p></div>
+        <div class="pattern-card"><span class="card__ln">L107</span><p>Khả năng chống chịu pin/kết nối (Doze mode, rớt BLE, JS-thread crash) liên tục nổi lên như rủi ro kỹ thuật gần hạn thật sự — có thể còn lớn hơn cả tầng AI/LLM.</p></div>
+        <div class="pattern-card"><span class="card__ln">L108</span><p>Gần như mọi kỹ thuật đều hội tụ về cùng một quy tắc: coi MỌI THỨ (kể cả lời giải thích của Knowledge Engine và cảnh báo chủ động) như một lệnh gọi tool đồng nhất — giữ mô hình điều phối đơn giản và có thể kiểm toán.</p></div>
+      </div>
+    </section>
+
+    <!-- SYNTHESIS -->
+    <section class="module module--synth synthesis" id="synthesis">
+      <p class="synthesis__eyebrow">L109 · Insight tổng hợp</p>
+      <h2 class="synthesis__title">Tổng hợp: từ khung "Agent không phải chatbot" đến một hướng kiến trúc</h2>
+      <p class="synthesis__lead">Toàn bộ phiên brainstorm — qua 11 kỹ thuật khác nhau — hội tụ về 5 điểm cốt lõi sau đây.</p>
+
+      <div class="synthesis__points">
+        <div class="synthesis__point"><span class="num">1</span><p>Grounding phải trở thành một hợp đồng ở tầng cấu trúc/schema (grounding validator + trích dẫn <code>tool_result_id</code>), không phải một chỉ dẫn trong prompt — đây chính là kết quả cụ thể của khung "Agent không phải chatbot".</p></div>
+        <div class="synthesis__point"><span class="num">2</span><p>Rủi ro gần hạn thật sự nằm ở tầng hạ tầng (plumbing), không phải LLM: <code>OBDManager</code>/<code>VehicleCache</code> cần sống ở tầng native foreground-service, tách khỏi JS thread của React Native — cùng một kết luận được Constraint Mapping, Chaos Engineering, Nature's Solutions và Time Horizon Ladder độc lập chỉ ra.</p></div>
+        <div class="synthesis__point"><span class="num">3</span><p><code>PlatformAdapter</code> trả lợi tức ngay lập tức qua <code>MockAdapter</code> testing và chế độ chat-văn-bản — không chỉ ở cổng ESP32 tương lai.</p></div>
+        <div class="synthesis__point"><span class="num">4</span><p>Tool mang tính ghi/phá huỷ cần một tầng Tool Execution Policy dùng chung (xác nhận, khoá, hàng đợi offline, chặn theo an toàn) thay vì logic riêng lẻ từng tool.</p></div>
+        <div class="synthesis__point"><span class="num">5</span><p>Mọi thứ nên được mô hình hoá như một lệnh gọi tool — Knowledge Engine, cảnh báo chủ động, kể cả đường đi khi không khớp — giữ mô hình điều phối đồng nhất và có thể kiểm toán.</p></div>
+      </div>
+
+      <div class="synthesis__crosslinks">
+        <h3>Liên kết chéo giữa các kỹ thuật</h3>
+        <div class="crosslink"><b>Heartbeat (Nature)</b> = <b>adaptive polling (Assumption Reversal)</b> = <b>hibernation (Constraint Mapping)</b> — cùng một mẫu hình, được ba kỹ thuật gọi bằng ba cái tên khác nhau.</div>
+        <div class="crosslink"><b>Tool SDK/manifest (Role Playing)</b> = <b>self-registering tools + plugin manifest (SCAMPER)</b> — cùng một ý tưởng, ba góc nhìn.</div>
+        <div class="crosslink"><b>insurance.shareDrivingScore() (Role Playing)</b> âm thầm phụ thuộc vào <b>trường health-score suy ra sẵn (SCAMPER · Modify)</b>.</div>
+        <div class="crosslink">Phản hồi hai pha của <b>TRIZ</b> giải quyết đúng căng thẳng giữa "điện thoại hôm nay" và "màn hình head-unit luôn bật ngày mai" từ <b>Time Horizon Ladder</b>.</div>
+      </div>
+
+      <div class="synthesis__direction">
+        <p class="direction__title">Hướng đi đã chọn</p>
+        <div class="direction__grid">
+          <div class="direction__col direction__col--now">
+            <h4>Ưu tiên ngay</h4>
+            <p>Làm cứng hợp đồng grounding và khả năng chống chịu ở tầng native trước tiên — rủi ro thấp nếu làm sớm, rủi ro cao nếu bỏ qua (near-term, low-risk-of-regret).</p>
+          </div>
+          <div class="direction__col direction__col--seam">
+            <h4>Xây hạ tầng trước, thu lợi sau</h4>
+            <p><code>PlatformAdapter</code>, Tool manifest và tính đa phần cứng được coi là hạ tầng "xây trước, trả sau" — build-the-seam-now-pay-later.</p>
+          </div>
+          <div class="direction__col direction__col--later">
+            <h4>Hoãn lại — v2+</h4>
+            <p>Wake word, phủ đầy đủ mọi mã DTC, và các hướng kiếm tiền từ fleet/bảo hiểm được xếp rõ vào phạm vi v2 trở đi.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="colophon">
+    <span><span class="signal-bars" aria-hidden="true"><span></span><span></span><span></span><span></span></span>brainstorm-nori-agent-architecture-2026-07-26 · .memlog.md · 109 dòng</span>
+    <span>Chế độ autonomous · Trạng thái complete · Cập nhật 2026-07-26T21:34</span>
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var fill = document.getElementById('hudNavFill');
+  function updateFill(){
+    var doc = document.documentElement;
+    var scrollTop = doc.scrollTop || document.body.scrollTop;
+    var height = (doc.scrollHeight || document.body.scrollHeight) - doc.clientHeight;
+    var pct = height > 0 ? Math.min(100, Math.max(0, (scrollTop / height) * 100)) : 0;
+    fill.style.width = pct + '%';
+  }
+  window.addEventListener('scroll', updateFill, {passive:true});
+  updateFill();
+
+  var links = Array.prototype.slice.call(document.querySelectorAll('.hud-nav__ticks a'));
+  var sections = links.map(function(a){ return document.querySelector(a.getAttribute('href')); });
+
+  if('IntersectionObserver' in window){
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(entry){
+        var idx = sections.indexOf(entry.target);
+        if(idx === -1) return;
+        if(entry.isIntersecting){
+          links.forEach(function(l){ l.classList.remove('is-active','is-synth'); });
+          links[idx].classList.add('is-active');
+          if(links[idx].classList.contains('synth-link')) links[idx].classList.add('is-synth');
+        }
+      });
+    }, {rootMargin:'-45% 0px -50% 0px', threshold:0});
+    sections.forEach(function(s){ if(s) io.observe(s); });
+  }
+
+  links.forEach(function(a){
+    a.addEventListener('click', function(e){
+      var target = document.querySelector(a.getAttribute('href'));
+      if(!target) return;
+      e.preventDefault();
+      target.scrollIntoView({behavior: reduce ? 'auto' : 'smooth', block:'start'});
+    });
+  });
+})();
+</script>
