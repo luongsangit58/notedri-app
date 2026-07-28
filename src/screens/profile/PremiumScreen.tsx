@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, RefreshControl, Alert, ActivityIndicator,
-  TextInput, Modal, Image, useWindowDimensions,
+  TextInput,
 } from 'react-native';
 import { contentWide } from '../../utils/layout';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -15,12 +15,10 @@ import { useAuthStore } from '../../store/authStore';
 import { useColors } from '../../utils/theme';
 import { useT } from '../../i18n';
 import AppBgPattern from '../../components/AppBgPattern';
-import { formatVND } from '../../utils/format';
-import dayjs from 'dayjs';
 
 const AMBER = '#F59E0B';
 
-// Đồng bộ lại authStore.user sau khi kích hoạt Premium (redeem/thanh toán) để các
+// Đồng bộ lại authStore.user sau khi kích hoạt Premium (redeem/dùng thử) để các
 // gate đọc thẳng user?.is_premium (OBD, thành tích, chi tiết xe) mở khoá NGAY, không
 // phải mở lại app.
 async function refreshAuthUser() {
@@ -31,32 +29,6 @@ async function refreshAuthUser() {
   } catch { /* bỏ qua - initialize() lần mở app sau sẽ tự đồng bộ */ }
 }
 
-const PLAN_MONTHS: (1 | 3 | 6 | 12)[] = [1, 3, 6, 12];
-
-interface OrderData {
-  order_id: number;
-  amount: number;
-  plan_months: number;
-  invoice_number: string;
-  bank_code: string;
-  bank_account: string;
-  bank_holder: string;
-  qr_url: string;
-  expires_at: string;
-}
-
-function InfoRow({ label, value, amber, bold }: { label: string; value: string; amber?: boolean; bold?: boolean }) {
-  const colors = useColors();
-  return (
-    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-      <Text style={{ color: colors.textSecondary, fontSize: 13 }}>{label}</Text>
-      <Text style={{ color: amber ? AMBER : colors.text, fontWeight: bold ? '700' : '400', fontSize: 13, flex: 1, textAlign: 'right' }} numberOfLines={1} adjustsFontSizeToFit>
-        {value}
-      </Text>
-    </View>
-  );
-}
-
 export default function PremiumScreen() {
   const colors = useColors();
   const t = useT();
@@ -64,13 +36,6 @@ export default function PremiumScreen() {
   const navigation = useNavigation<any>();
 
   const [redeemCode, setRedeemCode] = useState('');
-  const [selectedPlan, setSelectedPlan] = useState<1 | 3 | 6 | 12>(3);
-  const [payOrder, setPayOrder] = useState<OrderData | null>(null);
-  const [payModalVisible, setPayModalVisible] = useState(false);
-  // useWindowDimensions (không dùng Dimensions.get tĩnh) để QR modal co lại đúng
-  // khi màn hình đang ở landscape thấp (head-unit ô tô), tránh tràn/clip.
-  const { height: winHeight } = useWindowDimensions();
-  const qrSize = winHeight < 500 ? 140 : 200;
 
   const FREE_FEATURES = [
     t('premium.free_feature_2_vehicles'),
@@ -120,39 +85,6 @@ export default function PremiumScreen() {
       Alert.alert(t('common.error'), err?.response?.data?.message ?? t('common.error_generic'));
     },
   });
-
-  const { mutate: checkoutMutate, isPending: isCheckingOut } = useMutation({
-    mutationFn: () => client.post('/payment/checkout', { plan_months: selectedPlan }),
-    onSuccess: (res: any) => {
-      const order: OrderData = res?.data?.data;
-      if (order) {
-        setPayOrder(order);
-        setPayModalVisible(true);
-      }
-    },
-    onError: (err: any) => {
-      Alert.alert(t('common.error'), err?.response?.data?.message ?? t('common.error_generic'));
-    },
-  });
-
-  const { data: statusData } = useQuery({
-    queryKey: ['order-status', payOrder?.order_id],
-    queryFn: () =>
-      client.get(`/payment/orders/${payOrder!.order_id}/status`).then(r => r.data?.data ?? r.data),
-    enabled: !!payOrder?.order_id && payModalVisible,
-    refetchInterval: payModalVisible ? 8000 : false,
-    staleTime: 0,
-  });
-
-  useEffect(() => {
-    if (statusData?.is_premium) {
-      setPayModalVisible(false);
-      setPayOrder(null);
-      qc.invalidateQueries({ queryKey: ['premium-status'] });
-      refreshAuthUser();
-      Alert.alert(t('premium.notification_title'), t('premium.payment_success_msg'));
-    }
-  }, [statusData?.is_premium]);
 
   const isPremium: boolean = data?.is_premium ?? false;
   const onTrial: boolean = data?.on_trial ?? false;
@@ -345,58 +277,6 @@ export default function PremiumScreen() {
           </View>
         )}
 
-        {/* Buy Premium - plan picker + checkout */}
-        {!isPremium && (
-          <View style={{ backgroundColor: colors.surface, borderRadius: 14, padding: 16, marginBottom: 24 }}>
-            <Text style={{ color: colors.text, fontWeight: '800', fontSize: 15, marginBottom: 12 }}>
-              {t('premium.buy_title')}
-            </Text>
-            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14 }}>
-              {PLAN_MONTHS.map(months => (
-                <TouchableOpacity
-                  key={months}
-                  onPress={() => setSelectedPlan(months)}
-                  style={{
-                    flex: 1,
-                    backgroundColor: selectedPlan === months ? AMBER : colors.card,
-                    borderRadius: 10,
-                    paddingVertical: 10,
-                    alignItems: 'center',
-                    borderWidth: selectedPlan === months ? 0 : 1,
-                    borderColor: colors.border,
-                  }}>
-                  <Text style={{
-                    color: selectedPlan === months ? '#fff' : colors.textSecondary,
-                    fontWeight: '700',
-                    fontSize: 13,
-                  }}>
-                    {t('premium.plan_months', { months })}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            <TouchableOpacity
-              onPress={() => checkoutMutate()}
-              disabled={isCheckingOut}
-              style={{ borderRadius: 12, overflow: 'hidden', opacity: isCheckingOut ? 0.7 : 1 }}>
-              <LinearGradient colors={['#fbbf24', '#d97706']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                style={{ paddingVertical: 14, alignItems: 'center' }}>
-                {isCheckingOut
-                  ? <ActivityIndicator color="#fff" />
-                  : (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                      <FontAwesome5 name="qrcode" size={16} color="#fff" />
-                      <Text style={{ color: '#fff', fontWeight: '800', fontSize: 16 }}>{t('premium.checkout_btn')}</Text>
-                    </View>
-                  )}
-              </LinearGradient>
-            </TouchableOpacity>
-            <Text style={{ color: colors.textSecondary, fontSize: 11, textAlign: 'center', marginTop: 8 }}>
-              {t('premium.checkout_note')}
-            </Text>
-          </View>
-        )}
-
         {/* Lịch sử thanh toán */}
         <TouchableOpacity
           onPress={() => navigation.navigate('PaymentHistory')}
@@ -414,57 +294,6 @@ export default function PremiumScreen() {
           {t('premium.pricing_note')}
         </Text>
       </ScrollView>
-
-      {/* Payment QR Modal */}
-      <Modal visible={payModalVisible} animationType="slide" transparent onRequestClose={() => setPayModalVisible(false)}>
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' }}>
-          {/* maxHeight + ScrollView bên trong: trước đây nội dung cố định không cuộn được,
-              có thể tràn/bị cắt trên màn landscape thấp (head-unit ô tô). */}
-          <View style={{
-            backgroundColor: colors.background,
-            borderTopLeftRadius: 20, borderTopRightRadius: 20,
-            maxHeight: '90%',
-          }}>
-            <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                <Text style={{ color: colors.text, fontSize: 18, fontWeight: '800' }}>{t('premium.payment_title')}</Text>
-                <TouchableOpacity onPress={() => setPayModalVisible(false)} style={{ padding: 4 }}>
-                  <FontAwesome5 name="times" size={18} color={colors.textSecondary} />
-                </TouchableOpacity>
-              </View>
-
-              {payOrder && (
-                <>
-                  <Image
-                    source={{ uri: payOrder.qr_url }}
-                    style={{ width: qrSize, height: qrSize, alignSelf: 'center', marginBottom: 16, borderRadius: 12 }}
-                    resizeMode="contain"
-                  />
-                  <View style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 14, gap: 10, marginBottom: 10 }}>
-                    <InfoRow label={t('premium.payment_bank')}    value={payOrder.bank_code} />
-                    <InfoRow label={t('premium.payment_account')} value={payOrder.bank_account} />
-                    <InfoRow label={t('premium.payment_holder')}  value={payOrder.bank_holder} />
-                    <InfoRow label={t('premium.payment_amount')}  value={formatVND(payOrder.amount)} amber bold />
-                    <InfoRow label={t('premium.payment_ref')}     value={payOrder.invoice_number} bold />
-                  </View>
-                  <Text style={{ color: colors.textSecondary, fontSize: 11, textAlign: 'center', marginBottom: 8 }}>
-                    {t('premium.payment_expires', { time: dayjs(payOrder.expires_at).format('HH:mm DD/MM/YYYY') })}
-                  </Text>
-                  {statusData?.status === 'paid' || statusData?.is_premium ? (
-                    <View style={{ backgroundColor: '#059669' + '22', borderRadius: 10, padding: 12, alignItems: 'center' }}>
-                      <Text style={{ color: '#059669', fontWeight: '700' }}>{t('premium.payment_success_msg')}</Text>
-                    </View>
-                  ) : (
-                    <Text style={{ color: colors.textSecondary, fontSize: 12, textAlign: 'center' }}>
-                      {t('premium.payment_auto_check')}
-                    </Text>
-                  )}
-                </>
-              )}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 }

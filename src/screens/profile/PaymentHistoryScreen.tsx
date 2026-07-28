@@ -1,14 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
-  View, Text, FlatList, TouchableOpacity, RefreshControl, Alert, ActivityIndicator, Modal, Image,
-  ScrollView, useWindowDimensions,
+  View, Text, FlatList, TouchableOpacity, RefreshControl, Alert, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { paymentApi } from '../../api/payment';
-import { authApi } from '../../api/auth';
-import { useAuthStore } from '../../store/authStore';
 import { useColors } from '../../utils/theme';
 import { useT } from '../../i18n';
 import AppBgPattern from '../../components/AppBgPattern';
@@ -16,16 +13,6 @@ import { formatVND } from '../../utils/format';
 import dayjs from 'dayjs';
 
 const AMBER = '#F59E0B';
-
-// Đồng bộ lại authStore.user sau khi thanh toán thành công để gate đọc user?.is_premium
-// (OBD, thành tích, chi tiết xe) mở khoá NGAY, không phải mở lại app.
-async function refreshAuthUser() {
-  try {
-    const res = await authApi.me();
-    const fresh = res.data?.data ?? res.data;
-    if (fresh) useAuthStore.getState().setUser(fresh);
-  } catch { /* bỏ qua - initialize() lần mở app sau sẽ tự đồng bộ */ }
-}
 
 interface OrderItem {
   order_id: number;
@@ -38,14 +25,6 @@ interface OrderItem {
   created_at?: string | null;
 }
 
-interface OrderDetail extends OrderItem {
-  payable: boolean;
-  bank_code?: string;
-  bank_account?: string;
-  bank_holder?: string;
-  qr_url?: string;
-}
-
 interface CodeUsage {
   id: number;
   code?: string | null;
@@ -53,30 +32,10 @@ interface CodeUsage {
   redeemed_at?: string | null;
 }
 
-function InfoRow({ label, value, amber, bold }: { label: string; value: string; amber?: boolean; bold?: boolean }) {
-  const colors = useColors();
-  return (
-    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-      <Text style={{ color: colors.textSecondary, fontSize: 13 }}>{label}</Text>
-      <Text style={{ color: amber ? AMBER : colors.text, fontWeight: bold ? '700' : '400', fontSize: 13, flex: 1, textAlign: 'right' }} numberOfLines={1} adjustsFontSizeToFit>
-        {value}
-      </Text>
-    </View>
-  );
-}
-
 export default function PaymentHistoryScreen() {
   const colors = useColors();
   const t = useT();
   const qc = useQueryClient();
-  // useWindowDimensions (không dùng Dimensions.get tĩnh) để cập nhật khi xoay - QR modal
-  // dưới đây co lại ở landscape thấp (head-unit ô tô) tránh tràn/clip.
-  const { height: winHeight } = useWindowDimensions();
-  const qrSize = winHeight < 500 ? 140 : 200;
-
-  const [payOrder, setPayOrder] = useState<OrderDetail | null>(null);
-  const [payModalVisible, setPayModalVisible] = useState(false);
-  const [loadingOrderId, setLoadingOrderId] = useState<number | null>(null);
 
   const { data, isLoading, refetch, isFetching } = useQuery({
     queryKey: ['payment-orders'],
@@ -92,45 +51,6 @@ export default function PaymentHistoryScreen() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['payment-orders'] }),
     onError: (err: any) => Alert.alert(t('common.error'), err?.response?.data?.message ?? t('common.error_generic')),
   });
-
-  // Poll trạng thái đơn đang mở QR -> tự đóng khi đã thanh toán.
-  const { data: statusData } = useQuery({
-    queryKey: ['order-status', payOrder?.order_id],
-    queryFn: () => paymentApi.status(payOrder!.order_id).then(r => r.data?.data ?? r.data),
-    enabled: !!payOrder?.order_id && payModalVisible,
-    refetchInterval: payModalVisible ? 8000 : false,
-    staleTime: 0,
-  });
-
-  useEffect(() => {
-    if (statusData?.is_premium || statusData?.status === 'completed' || statusData?.status === 'paid') {
-      setPayModalVisible(false);
-      setPayOrder(null);
-      qc.invalidateQueries({ queryKey: ['payment-orders'] });
-      qc.invalidateQueries({ queryKey: ['premium-status'] });
-      refreshAuthUser();
-      Alert.alert(t('premium.notification_title'), t('premium.payment_success_msg'));
-    }
-  }, [statusData?.is_premium, statusData?.status]);
-
-  const openPay = async (id: number) => {
-    setLoadingOrderId(id);
-    try {
-      const res: any = await paymentApi.order(id);
-      const detail: OrderDetail = res?.data?.data ?? res?.data;
-      if (detail?.payable && detail.qr_url) {
-        setPayOrder(detail);
-        setPayModalVisible(true);
-      } else {
-        Alert.alert(t('payment.notice_title'), t('payment.not_payable'));
-        refetch();
-      }
-    } catch (err: any) {
-      Alert.alert(t('common.error'), err?.response?.data?.message ?? t('common.error_generic'));
-    } finally {
-      setLoadingOrderId(null);
-    }
-  };
 
   const confirmCancel = (id: number) => {
     Alert.alert(t('payment.cancel_confirm_title'), t('payment.cancel_confirm_msg'), [
@@ -173,15 +93,6 @@ export default function PaymentHistoryScreen() {
 
         {isPending && (
           <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
-            <TouchableOpacity
-              onPress={() => openPay(item.order_id)}
-              disabled={loadingOrderId === item.order_id}
-              style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: AMBER, borderRadius: 8, paddingVertical: 9 }}>
-              {loadingOrderId === item.order_id
-                ? <ActivityIndicator size="small" color="#fff" />
-                : <FontAwesome5 name="qrcode" size={13} color="#fff" solid />}
-              <Text style={{ color: '#fff', fontSize: 13, fontWeight: '700' }}>{t('payment.continue_pay')}</Text>
-            </TouchableOpacity>
             <TouchableOpacity
               onPress={() => confirmCancel(item.order_id)}
               disabled={cancelMut.isPending}
@@ -240,44 +151,6 @@ export default function PaymentHistoryScreen() {
           ) : null
         }
       />
-
-      {/* Payment QR Modal (tiếp tục thanh toán đơn còn chờ) */}
-      <Modal visible={payModalVisible} animationType="slide" transparent onRequestClose={() => setPayModalVisible(false)}>
-        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' }}>
-          {/* maxHeight + ScrollView bên trong: bottom sheet cố định trước đây có thể tràn/bị
-              cắt trên màn landscape thấp (head-unit ô tô) vì nội dung (QR + info + text) không cuộn được. */}
-          <View style={{ backgroundColor: colors.background, borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: '90%' }}>
-            <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                <Text style={{ color: colors.text, fontSize: 18, fontWeight: '800' }}>{t('premium.payment_title')}</Text>
-                <TouchableOpacity onPress={() => setPayModalVisible(false)} style={{ padding: 4 }}>
-                  <FontAwesome5 name="times" size={18} color={colors.textSecondary} />
-                </TouchableOpacity>
-              </View>
-              {payOrder && payOrder.qr_url && (
-                <>
-                  <Image source={{ uri: payOrder.qr_url }} style={{ width: qrSize, height: qrSize, alignSelf: 'center', marginBottom: 16, borderRadius: 12 }} resizeMode="contain" />
-                  <View style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 14, gap: 10, marginBottom: 10 }}>
-                    <InfoRow label={t('premium.payment_bank')}    value={payOrder.bank_code ?? '-'} />
-                    <InfoRow label={t('premium.payment_account')} value={payOrder.bank_account ?? '-'} />
-                    <InfoRow label={t('premium.payment_holder')}  value={payOrder.bank_holder ?? '-'} />
-                    <InfoRow label={t('premium.payment_amount')}  value={formatVND(payOrder.amount)} amber bold />
-                    <InfoRow label={t('premium.payment_ref')}     value={payOrder.invoice_number ?? '-'} bold />
-                  </View>
-                  {payOrder.expires_at ? (
-                    <Text style={{ color: colors.textSecondary, fontSize: 11, textAlign: 'center', marginBottom: 8 }}>
-                      {t('premium.payment_expires', { time: dayjs(payOrder.expires_at).format('HH:mm DD/MM/YYYY') })}
-                    </Text>
-                  ) : null}
-                  <Text style={{ color: colors.textSecondary, fontSize: 12, textAlign: 'center' }}>
-                    {t('premium.payment_auto_check')}
-                  </Text>
-                </>
-              )}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 }
