@@ -63,7 +63,7 @@ const vi = {
   // Dashboard
   "dashboard.title": "Tổng quan",
   "dashboard.add_refuel": "Đổ xăng",
-  "dashboard.add_odo": "Cập nhật công-tơ-mét (ODO)",
+  "dashboard.add_odo": "Cập nhật công-tơ-mét",
   "dashboard.health": "Sức khỏe xe",
   "dashboard.no_vehicle": "Chưa có xe nào. Vào tab Xe để thêm.",
   "dashboard.fuel_cost_month": "Chi xăng tháng này",
@@ -191,12 +191,12 @@ const vi = {
 
   // Odometer
   "odometer.title": "Lịch sử công-tơ-mét (ODO)",
-  "odometer.add_title": "Cập nhật công-tơ-mét (ODO)",
-  "odometer.edit_title": "Sửa công-tơ-mét (ODO)",
+  "odometer.add_title": "Cập nhật công-tơ-mét",
+  "odometer.edit_title": "Sửa công-tơ-mét",
   "odometer.empty": "Chưa có mốc công-tơ-mét (ODO) nào",
-  "odometer.current": "Công-tơ-mét (ODO) hiện tại",
+  "odometer.current": "Công-tơ-mét hiện tại",
   "odometer.tracked_km": "Km đã ghi nhận",
-  "odometer.save_button": "Lưu công-tơ-mét (ODO)",
+  "odometer.save_button": "Lưu công-tơ-mét",
   "odometer.tracking_warn_title": "Đang ghi hành trình",
   "odometer.tracking_warn_body": "Bạn đang ghi 1 hành trình GPS. Nhập công-tơ-mét (ODO) lúc này có thể bị cộng trùng quãng đường khi hành trình kết thúc. Nên lưu/tắt hành trình trước rồi hãy nhập.",
   "odometer.tracking_warn_continue": "Vẫn nhập",
@@ -360,7 +360,7 @@ const vi = {
 
   // Quick Add
   "quick_add.refuel": "Đổ xăng",
-  "quick_add.odo": "Cập nhật công-tơ-mét (ODO)",
+  "quick_add.odo": "Cập nhật công-tơ-mét",
   "quick_add.service": "Bảo dưỡng mới",
   "quick_add.reminder": "Thêm nhắc nhở",
   "quick_add.cancel": "Huỷ",
@@ -442,7 +442,7 @@ const vi = {
   "health.add_reminder_arrow": "→ Thêm lời nhắc",
   "health.cta_add_service": "+ Ghi bảo dưỡng",
   "health.cta_add_reminder": "+ Thêm nhắc nhở",
-  "health.cta_update_odo": "+ Cập nhật công-tơ-mét (ODO)",
+  "health.cta_update_odo": "+ Cập nhật công-tơ-mét",
   "health.cta_handle": "→ Xử lý",
   "health.current_label": "hiện tại",
   "health.confidence_medium": "Độ tin cậy TB",
@@ -852,7 +852,7 @@ const vi = {
   "vehicle_detail.confidence_very_low": "Độ tin cậy: Rất thấp - cần thêm dữ liệu",
   "vehicle_detail.health_card_title": "Sức khỏe xe",
   "vehicle_detail.warn_count": "{{n}} cần chú ý",
-  "vehicle_detail.update_odo": "Cập nhật công-tơ-mét (ODO)",
+  "vehicle_detail.update_odo": "Cập nhật công-tơ-mét",
   "vehicle_detail.add_refuel": "Đổ xăng",
 
   // Reports (new)
@@ -1228,7 +1228,7 @@ const vi = {
   "route_map.loading": "Đang tải bản đồ...",
   "tab_bar.quick_add": "Thêm nhanh",
   "tab_bar.add_refuel": "Đổ xăng",
-  "tab_bar.update_odo": "Cập nhật công-tơ-mét (ODO)",
+  "tab_bar.update_odo": "Cập nhật công-tơ-mét",
   "tab_bar.gps_trip": "Hành trình GPS",
   "tab_bar.add_service": "Bảo dưỡng mới",
   "tab_bar.add_reminder": "Thêm nhắc nhở",
