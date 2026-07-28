@@ -11,8 +11,15 @@ import { useCountingNumber } from '../../../../hooks/useCountingNumber';
 // màu đổi theo tốc độ như đồng hồ đua - 0-20 xanh dương, 20-40 xanh lục, 40-60
 // vàng, 60-80 cam, trên 80 đỏ) - màu CỐ ĐỊNH theo ngữ nghĩa tốc độ (không ăn
 // theo theme sáng/tối như warn/crit của cockpitPalette, đúng kiểu đèn giao
-// thông không đổi màu theo theme). `pulse: false` ở các dải thấp - chỉ dải đỏ
-// (>80, gần giống mốc "crit" cũ) mới nhấp nháy để không rối mắt lúc chạy chậm.
+// thông không đổi màu theo theme).
+//
+// Rà soát 27/7 (góp ý user, so ảnh đồng hồ cơ thật): CHỈ cung (colorStops)
+// đổi màu theo tốc độ/vòng tua - kim và số liệu LUÔN giữ màu trắng/màu chữ
+// mặc định (p.text), không ăn theo dải màu nữa. Trước đây `zones` (danh sách
+// mốc phẳng) tô CẢ kim/số/glow theo đúng màu dải hiện tại - đúng ý ban đầu
+// "sinh động" nhưng user thấy rối, muốn thanh thoát hơn giống đồng hồ cơ thật
+// (chỉ vạch chia + số trắng, không đổi màu kim/số theo tốc độ). Bỏ hẳn
+// `zones` ở cả 2 đồng hồ dưới, chỉ giữ `colorStops` cho cung.
 const SPEED_BANDS = [
   { value: 0, color: '#3B82F6' },
   { value: 20, color: '#22C55E' },
@@ -20,7 +27,14 @@ const SPEED_BANDS = [
   { value: 60, color: '#F97316' },
   { value: 80, color: '#EF4444' },
 ];
-const SPEED_ZONES = SPEED_BANDS.map((b, i) => ({ min: b.value, color: b.color, pulse: i === SPEED_BANDS.length - 1 }));
+// Vòng tua: xanh lục (bình thường) -> vàng (~3/4 thang, tương đương mốc warn
+// cũ) -> đỏ (gần kịch kim, tương đương mốc crit cũ) - cùng logic màu với
+// SPEED_BANDS, chỉ đổi mốc cho hợp thang 0-8000v/ph.
+const RPM_BANDS = [
+  { value: 0, color: '#22C55E' },
+  { value: 3000, color: '#EAB308' },
+  { value: 4000, color: '#EF4444' },
+];
 
 function MiniStat({ item, size, animate }: { item: CockpitMetricValue; size: number; animate?: boolean }) {
   const p = useCockpitPalette();
@@ -84,7 +98,6 @@ export default function AnalogLayout({ metrics, size, isPortrait, animate }: Coc
           label={t('obd.stat_speed')} unit="km/h"
           trackColor={p.surface2} fillColor={p.accent} needleColor={p.text} tickColor={p.textDim}
           valueColor={p.text} labelColor={p.textDim} animate={animate}
-          zones={SPEED_ZONES}
           colorStops={SPEED_BANDS}
         />
         <ArcGauge
@@ -92,7 +105,7 @@ export default function AnalogLayout({ metrics, size, isPortrait, animate }: Coc
           label={t('obd.stat_rpm')} unit="v/ph" quantizeStep={rpm?.def.quantizeStep}
           trackColor={p.surface2} fillColor={p.accent2} needleColor={p.text} tickColor={p.textDim}
           valueColor={p.text} labelColor={p.textDim} animate={animate}
-          zones={[{ min: 3000, color: p.warn }, { min: 4000, color: p.crit }]}
+          colorStops={RPM_BANDS}
         />
       </View>
       {featured.length > 0 && (

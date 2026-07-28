@@ -107,7 +107,12 @@ export default function ArcGauge({
   // Rà soát 24/7 (góp ý user: cung quá dày trông thô, đồng hồ xe thật có nét
   // mảnh + nhiều chi tiết vạch/số hơn là 1 khối màu to) - giảm hẳn độ dày mặc
   // định, chi tiết chuyển sang vạch chia + số (xem ALL_TICKS ở trên).
-  const resolvedStrokeWidth = strokeWidth ?? Math.max(3, Math.min(8, size * 0.026));
+  // Rà soát 27/7 (góp ý user, so ảnh đồng hồ thật: dải màu "bo tròn cục mịch" -
+  // strokeLinecap="round" trước đây bo tròn CẢ 2 đầu cung thành khối tròn to ở
+  // đầu 0, cộng lớp track mờ phía dưới chồng lên tạo cảm giác 1 khối màu dày.
+  // Đổi sang "butt" (đầu vuông/thẳng, không bo) + giảm thêm độ dày -> nét mảnh
+  // hơn, thanh thoát hơn, gần đúng cảm giác đồng hồ cơ thật (ảnh tham khảo).
+  const resolvedStrokeWidth = strokeWidth ?? Math.max(2, Math.min(5, size * 0.018));
   const clamped = Math.max(min, Math.min(max, value ?? min));
   const frac = max > min ? (clamped - min) / (max - min) : 0;
   const ticks = showTicks ? buildTicks(min, max) : [];
@@ -214,7 +219,7 @@ export default function ArcGauge({
           d={ARC_D}
           stroke={gradientStops ? `url(#${gradId})` : trackColor}
           strokeWidth={resolvedStrokeWidth}
-          strokeLinecap="round"
+          strokeLinecap="butt"
           fill="none"
           opacity={gradientStops ? 0.28 : 1}
         />
@@ -222,7 +227,7 @@ export default function ArcGauge({
           d={ARC_D}
           stroke={arcStroke}
           strokeWidth={resolvedStrokeWidth}
-          strokeLinecap="round"
+          strokeLinecap="butt"
           fill="none"
           strokeDasharray="100"
           strokeDashoffset={dashOffset as unknown as number}
