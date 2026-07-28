@@ -158,6 +158,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         const { bleService } = await import('../services/obd/BleService');
         if (bleService.isConnected()) await bleService.disconnect();
       } catch { /* non-critical */ }
+      // Rà soát 2026-07-28 (rà soát Nori Agent, cùng lớp lỗi rò rỉ chéo tài khoản như GPS/BLE ở
+      // trên): `noriAgentStore` KHÔNG BAO GIỜ tự dispose() theo logout() - agent + toàn bộ
+      // uiMessages (lịch sử hội thoại thật, có thể chứa số liệu xe/chi phí nhạy cảm) sống mãi
+      // trong bộ nhớ tới khi tắt hẳn app, vì `init()` no-op nếu đã có agent. Trên máy dùng
+      // chung, user B đăng nhập sau user A trên CÙNG app session sẽ thấy nguyên lịch sử chat
+      // của user A. Import động (không import thẳng ở đầu file) vì `noriAgentStore.ts` đã
+      // import ngược lại `authStore.ts` - import thẳng 2 chiều sẽ vòng lặp.
+      try {
+        const { useNoriAgentStore } = await import('./noriAgentStore');
+        useNoriAgentStore.getState().dispose();
+      } catch { /* non-critical */ }
       await storage.deleteToken();
       await storage.deleteUser();
       queryClient.clear(); // xoá toàn bộ cache React Query khi đăng xuất

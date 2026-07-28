@@ -59,6 +59,16 @@ let nextId = 0;
 // await tuần tự từng tool), nên không cần hàng đợi nhiều resolver.
 let pendingResolve: ((approved: boolean) => void) | null = null;
 
+// Bug thật bắt được lúc rà soát 2026-07-28: agent.onStateChange()/agent.onProgress() (init() bên
+// dưới) trước đây KHÔNG BAO GIỜ được huỷ đăng ký - nếu dispose() (vd logout) xảy ra trong lúc 1
+// lượt hỏi đang bay (isThinking=true, request mạng chưa xong), rồi user đăng nhập lại NGAY LẬP
+// TỨC (init() tạo agent MỚI, có thể đã bắt đầu lượt hỏi riêng), request CŨ khi cuối cùng cũng
+// resolve xong (finally trong NoriAgent.sendMessage()) vẫn gọi listener CŨ này - âm thầm ghi đè
+// isThinking/progressStage của phiên MỚI bằng trạng thái của agent đã bị dispose từ lâu. Lưu lại
+// hàm huỷ đăng ký để dispose() gọi, cắt đứt hẳn liên lạc với agent cũ.
+let unsubscribeStateChange: (() => void) | null = null;
+let unsubscribeProgress: (() => void) | null = null;
+
 export const useNoriAgentStore = create<NoriAgentState>((set, get) => ({
   agent: null,
   vehicleContext: null,
@@ -78,8 +88,10 @@ export const useNoriAgentStore = create<NoriAgentState>((set, get) => ({
     const agent = new NoriAgent(vehicleContext, getVehicleId, confirmAction);
     // Reset progressStage về null khi kết thúc lượt (idle) - không để câu đệm CŨ của lượt
     // trước đó hiện lại nhầm ở đầu lượt sau, trước khi ConversationManager kịp báo stage mới.
-    agent.onStateChange((s) => set({ isThinking: s === 'thinking', ...(s === 'idle' ? { progressStage: null } : {}) }));
-    agent.onProgress((stage) => set({ progressStage: stage }));
+    // Lưu lại hàm huỷ đăng ký (xem chú thích unsubscribeStateChange/unsubscribeProgress ở trên) -
+    // dispose() phải cắt đứt liên lạc với agent này trước khi tạo agent mới.
+    unsubscribeStateChange = agent.onStateChange((s) => set({ isThinking: s === 'thinking', ...(s === 'idle' ? { progressStage: null } : {}) }));
+    unsubscribeProgress = agent.onProgress((stage) => set({ progressStage: stage }));
     // Lời chào tĩnh, KHÔNG gọi LLM (miễn phí, tức thời) - chỉ hiển thị 1 lần khi tạo agent
     // (không lặp lại nếu rời màn rồi quay lại trong cùng phiên app, vì init() no-op sau lần
     // đầu). Đây chỉ là UI, KHÔNG đưa vào transcript thật của ConversationManager - LLM không
@@ -152,7 +164,14 @@ export const useNoriAgentStore = create<NoriAgentState>((set, get) => ({
 
   dispose: () => {
     get().vehicleContext?.dispose();
+    unsubscribeStateChange?.();
+    unsubscribeProgress?.();
+    unsubscribeStateChange = null;
+    unsubscribeProgress = null;
     pendingResolve = null;
-    set({ agent: null, vehicleContext: null, uiMessages: [], isThinking: false, pendingConfirmation: null });
+    set({
+      agent: null, vehicleContext: null, uiMessages: [], isThinking: false, progressStage: null,
+      pendingConfirmation: null,
+    });
   },
 }));

@@ -68,7 +68,14 @@ export default function NoriQuickPopover({ visible, onClose, vehicleId }: NoriQu
   const [isSpeaking, setIsSpeaking] = useState(false);
   const { listen, stop: stopListening, status: voiceStatus, error: voiceError, volume: voiceVolume } = useVoiceInput();
   const prevMessageCountRef = useRef(uiMessages.length);
-  const lastMessage = uiMessages[uiMessages.length - 1];
+  const rawLastMessage = uiMessages[uiMessages.length - 1];
+  // Rà soát 2026-07-28: CHỈ coi là "câu trả lời để hiện" khi lượt cuối là của Nori (assistant) -
+  // trước đây lấy nguyên lastMessage bất kể vai trò, nên ngay sau khi user gửi câu hỏi (tin
+  // nhắn USER vừa được đẩy vào uiMessages) nhưng TRƯỚC KHI isThinking kịp bật lên true, ô giữa
+  // có thể thoáng hiện chính câu hỏi của user như thể là câu trả lời của Nori. Bug nhẹ (thường
+  // gộp cùng 1 frame nhờ React batch nhiều set() liên tiếp nên khó thấy bằng mắt), nhưng lọc
+  // đúng vai trò vẫn đúng-về-mặt-logic hơn hẳn, không tốn thêm chi phí gì.
+  const lastMessage = rawLastMessage?.role === 'assistant' ? rawLastMessage : undefined;
 
   // Chuyển động mượt hơn giữa các trạng thái (cải thiện UX 2026-07-28, góp ý user: trước đây
   // đổi trạng thái - đang nghe/đang nghĩ/trả lời - là ĐỔI CHỮ TỨC THÌ, cảm giác "giật", không
