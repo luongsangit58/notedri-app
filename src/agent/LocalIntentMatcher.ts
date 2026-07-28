@@ -70,6 +70,8 @@ const RULES: Rule[] = [
   {
     toolName: 'fuel.findNearbyStations',
     phrases: ['cay xang gan day', 'tim cay xang', 'cay xang gan nhat', 'tram xang gan day'],
+    // "cây xăng ở đâu" (thêm 2026-07-28) - ngắn gọn hơn, không nhắc "gần đây" trực tiếp.
+    allOfGroups: [['cay xang', 'o dau'], ['tram xang', 'o dau']],
   },
   {
     // Đứng TRƯỚC expense.summary - "tiền bảo dưỡng"/"tiền sửa xe" phải không rơi nhầm vào
@@ -79,7 +81,10 @@ const RULES: Rule[] = [
   },
   {
     toolName: 'expense.summary',
-    phrases: ['ton bao nhieu tien xang', 'chi phi xang', 'tien xang thang', 'het bao nhieu tien xang'],
+    phrases: [
+      'ton bao nhieu tien xang', 'chi phi xang', 'tien xang thang', 'het bao nhieu tien xang',
+      'do xang het bao nhieu',
+    ],
     // Bug thật bắt được qua ảnh chụp user gửi 2026-07-28: "tháng trước so với tháng này thế
     // nào" KHÔNG khớp phrases ở trên (không nhắc "tiền"/"xăng"/"chi phí" trực tiếp) nên rơi về
     // LLM dù đây là câu hỏi rất tự nhiên cho đúng tool này (tool DUY NHẤT trong app so sánh
@@ -89,7 +94,7 @@ const RULES: Rule[] = [
   {
     toolName: 'maintenance.getUpcoming',
     phrases: [
-      'sap den han', 'con han khong', 'bao hiem xe', 'dang kiem xe',
+      'sap den han', 'sap het han', 'con han khong', 'bao hiem xe', 'dang kiem xe',
       'nhac nho bao duong',
     ],
     // "đến hạn khi nào" hay bị đảo thứ tự thành "khi nào đến hạn" tuỳ câu - bug thật bắt được
@@ -105,38 +110,57 @@ const RULES: Rule[] = [
     // 2 từ khoá cùng xuất hiện (không quan trọng thứ tự/khoảng cách) là đủ tin cậy ở đây.
     // Cố tình KHÔNG thêm nhóm ['hom nay', 'km'] đơn thuần - quá lỏng, dễ khớp nhầm câu hỏi
     // khác có nhắc "hôm nay" và "km" nhưng không hỏi về quãng đường (vd hỏi đổ xăng).
-    allOfGroups: [['hom nay', 'chay'], ['hom nay', 'di duoc']],
+    allOfGroups: [['hom nay', 'chay'], ['hom nay', 'di duoc'], ['hom nay', 'quang duong']],
   },
   {
     toolName: 'vehicle.getCurrentODO',
-    phrases: ['cong to met', 'so km hien tai', 'odo hien tai', 'so odo'],
+    phrases: [
+      'cong to met', 'so km hien tai', 'odo hien tai', 'so odo',
+      // Thêm 2026-07-28 (mở rộng độ phủ theo yêu cầu user): hỏi TỔNG số km đã đi (không chỉ
+      // "hiện tại") - khác `vehicle.getTripToday` (CHỈ hôm nay, rule đó yêu cầu có "hom nay").
+      'da di duoc bao nhieu km', 'tong so km da di',
+    ],
+  },
+  {
+    // Thêm 2026-07-28 (tool đọc DUY NHẤT chưa có mẫu local, theo yêu cầu user mở rộng độ phủ) -
+    // "toàn bộ"/"hết"/"tất cả" thông số PHẢI đi kèm "hiện tại" hoặc tự nó đã đủ rõ ("toàn bộ
+    // thông số") để không lẫn với câu hỏi THÔNG SỐ KỸ THUẬT tĩnh (dung tích bình, công suất...).
+    toolName: 'vehicle.getLiveData',
+    phrases: ['toan bo thong so', 'het thong so xe', 'tat ca thong so xe'],
+    allOfGroups: [['thong so', 'hien tai']],
   },
   {
     toolName: 'vehicle.readDTC',
-    phrases: ['co ma loi gi khong', 'doc ma loi', 'quet ma loi'],
+    phrases: ['co ma loi gi khong', 'doc ma loi', 'quet ma loi', 'kiem tra ma loi'],
   },
   {
     toolName: 'vehicle.getSpeed',
-    phrases: ['toc do hien tai', 'dang chay bao nhieu km/h', 'dang chay bao nhieu km h', 'toc do bao nhieu km'],
+    phrases: [
+      'toc do hien tai', 'dang chay bao nhieu km/h', 'dang chay bao nhieu km h', 'toc do bao nhieu km',
+      'van toc hien tai', 'toc do xe la bao nhieu',
+    ],
   },
   {
     toolName: 'vehicle.getRPM',
-    phrases: ['rpm hien tai'],
+    phrases: ['rpm hien tai', 'rpm bao nhieu'],
     // "vong tua hien tai" (liền mạch) bị trượt khi câu thật chêm "máy" ở giữa: "vòng tua MÁY
     // hiện tại" - phát hiện lúc rà soát lại theo yêu cầu user mở rộng độ phủ local 2026-07-28.
     allOfGroups: [['vong tua', 'hien tai'], ['vong tua', 'bao nhieu']],
   },
   {
     toolName: 'vehicle.getCoolant',
-    phrases: ['nhiet do nuoc lam mat', 'nhiet do dong co hien tai'],
+    phrases: ['nhiet do nuoc lam mat', 'nhiet do dong co hien tai', 'may co nong khong', 'nhiet do may hien tai'],
   },
   {
     toolName: 'vehicle.getFuelLevel',
-    phrases: ['muc xang con bao nhieu', 'con bao nhieu % xang', 'muc nhien lieu hien tai'],
+    phrases: [
+      'muc xang con bao nhieu', 'con bao nhieu % xang', 'muc nhien lieu hien tai',
+      'binh xang con bao nhieu', 'xang con bao nhieu phan tram',
+    ],
   },
   {
     toolName: 'vehicle.getBatteryVoltage',
-    phrases: ['dien ap ac quy', 'dien ap ac-quy', 'ac quy con tot khong'],
+    phrases: ['dien ap ac quy', 'dien ap ac-quy', 'ac quy con tot khong', 'binh dien co yeu khong', 'ac quy the nao'],
   },
 ];
 

@@ -88,6 +88,20 @@ export function buildLocalReply(toolName: string, result: any, userText: string)
     case 'vehicle.getBatteryVoltage':
       return `Điện áp ắc-quy: ${result.battery_voltage}V${ageSuffix(result.age_seconds)}.`;
 
+    // Thêm 2026-07-28 (theo yêu cầu user mở rộng độ phủ Local) - tool đọc DUY NHẤT trước đây
+    // chưa có mẫu local (câu "cho xem hết thông số" ít cố định phrasing hơn 5 tool đơn lẻ ở
+    // trên, nhưng vẫn đủ rõ để thêm mẫu an toàn, xem LocalIntentMatcher.ts).
+    case 'vehicle.getLiveData': {
+      const parts: string[] = [];
+      if (result.speed_kmh != null) parts.push(`tốc độ ${result.speed_kmh} km/h`);
+      if (result.rpm != null) parts.push(`vòng tua ${result.rpm} RPM`);
+      if (result.coolant_temp_c != null) parts.push(`nước làm mát ${result.coolant_temp_c}°C`);
+      if (result.fuel_level_pct != null) parts.push(`nhiên liệu ${result.fuel_level_pct}%`);
+      if (result.battery_voltage != null) parts.push(`ắc-quy ${result.battery_voltage}V`);
+      if (parts.length === 0) return 'Xe đã kết nối nhưng chưa đọc được thông số nào, bạn đợi thêm chút giúp mình nhé.';
+      return `Thông số xe hiện tại: ${parts.join(', ')}${ageSuffix(result.age_seconds)}.`;
+    }
+
     case 'vehicle.readDTC': {
       const codes = result.codes ?? [];
       if (codes.length === 0) return 'Không có mã lỗi nào đang hiện trên xe.';

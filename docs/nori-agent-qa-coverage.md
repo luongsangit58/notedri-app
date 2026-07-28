@@ -26,7 +26,7 @@
 | "Nhiệt độ nước làm mát?" | 🟡 | ⚡ Local | `vehicle.getCoolant` | Như trên. |
 | "Mức xăng còn bao nhiêu %?" | 🟡 | ⚡ Local | `vehicle.getFuelLevel` | Như trên. |
 | "Điện áp ắc-quy ổn không?" | 🟡 | ⚡ Local | `vehicle.getBatteryVoltage` | Như trên. |
-| "Cho xem toàn bộ thông số xe" | 🟡 | 🧠 LLM | `vehicle.getLiveData` | Gộp cả 5 chỉ số trên trong 1 lần gọi. Tool DUY NHẤT chưa có mẫu local (câu hỏi kiểu "cho xem hết" ít cố định phrasing hơn, chưa đáng thêm rule). |
+| "Cho xem toàn bộ thông số xe" | 🟡 | ⚡ Local | `vehicle.getLiveData` | **Thêm mẫu local 2026-07-28** (theo yêu cầu user mở rộng độ phủ) - gộp cả 5 chỉ số trên trong 1 lần gọi + 1 câu trả lời tổng hợp mới trong `LocalReplyTemplates.ts`. |
 | "Xe tôi có mã lỗi gì không?" (đọc thô) | 🟡 | ⚡ Local | `vehicle.readDTC` | Cần BLE đang kết nối. |
 
 ## Mã lỗi & chẩn đoán (không cần BLE)
@@ -118,12 +118,18 @@ request/response tương ứng — `request_id` dạng `local-<timestamp>-<count
 - **17 tool đã xây** (15 tool đọc + 2 tool ghi mới `odometer.create`/`fuel.create`, Phase 2) —
   phủ hầu hết câu hỏi "hỏi đáp thường ngày" trừ vài câu chi phí tổng/trạm sạc/garage, cộng 2
   hành động ghi dữ liệu cơ bản nhất (ODO, đổ xăng).
-- **14/15 tool ĐỌC có mẫu Local Intent Matcher** (chỉ `vehicle.getLiveData` chưa có, vì câu hỏi
-  "cho xem hết thông số" ít cố định phrasing hơn để viết mẫu tin cậy) — phần lớn câu hỏi phổ
-  biến giờ KHÔNG cần gọi LLM nữa. *(Sửa lại so với lần báo cáo trước: đã nói nhầm "9/13" — con
-  số đúng sau khi đếm lại kỹ code là 14/15.)* 2 tool GHI mới cố tình luôn đi qua LLM, không có
-  mẫu Local (mục 15 `nori-agent-plan.md`: số liệu ghi vào là dữ liệu thật, cần LLM linh hoạt
-  parse câu tự nhiên + có bước xác nhận UI, không tin tưởng regex trích số tự động ghi thẳng).
+- **15/15 tool ĐỌC có mẫu Local Intent Matcher** (đủ cả `vehicle.getLiveData` từ 2026-07-28) —
+  phần lớn câu hỏi phổ biến giờ KHÔNG cần gọi LLM nữa. 2 tool GHI mới cố tình luôn đi qua LLM,
+  không có mẫu Local (mục 15 `nori-agent-plan.md`: số liệu ghi vào là dữ liệu thật, cần LLM linh
+  hoạt parse câu tự nhiên + có bước xác nhận UI, không tin tưởng regex trích số tự động ghi
+  thẳng) - và bất kỳ câu nào có động từ "ghi"/"cập nhật"/"vừa đổ" đều bị chặn khỏi TOÀN BỘ local
+  matcher (kể cả 15 tool đọc) ngay từ đầu, để không bị rule đọc khớp nhầm ý định ghi (bug thật
+  bắt được 2026-07-28, xem mục 15 `nori-agent-plan.md`).
+- **Rà soát mở rộng độ phủ 2026-07-28** (theo yêu cầu user): thêm biến thể phrasing tự nhiên cho
+  hầu hết tool đọc (vận tốc/RPM/nước làm mát/mức xăng/ắc-quy/tìm cây xăng/chi phí xăng/nhắc
+  bảo dưỡng/quãng đường hôm nay/tổng số km) - verify bằng test thật (`npx tsx` gọi thẳng
+  `matchLocalIntent()`), không suy đoán. 45/45 case test (cả cũ lẫn mới) pass, không có case nào
+  bị lệch/trùng lặp.
 - **Khoảng trống lớn nhất hiện tại**: tổng chi phí trọn đời (xăng + bảo dưỡng), tìm trạm sạc điện,
   tìm garage gần đây — đều là mở rộng nhỏ, không phải thiết kế lại.
 - **Mọi câu hỏi "sống" (tốc độ/vòng tua lúc đang lái)** đã xây nhưng giá trị thực tế thấp theo
