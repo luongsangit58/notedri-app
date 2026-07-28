@@ -1,6 +1,8 @@
 import { create } from 'zustand';
+import * as Haptics from 'expo-haptics';
 import { NoriAgent } from '../agent/NoriAgent';
 import { VehicleContext } from '../agent/VehicleContext';
+import { ProgressStage } from '../agent/ConversationManager';
 import { noriApi, NoriFeedbackRating } from '../api/nori';
 import { useAuthStore } from './authStore';
 
@@ -37,6 +39,10 @@ type NoriAgentState = {
   vehicleContext: VehicleContext | null;
   uiMessages: UiMessage[];
   isThinking: boolean;
+  /** Câu đệm 2 pha (cải thiện UX 2026-07-28) - null khi chưa có giai đoạn nào (vd đang ở đường
+   * Local Matcher, hoặc chưa bắt đầu lượt hỏi nào) - UI tự dùng câu mặc định qua
+   * `describeProgressStage(null)` trong lúc đó. */
+  progressStage: ProgressStage | null;
   pendingConfirmation: PendingConfirmation | null;
   init: (getVehicleId: () => number | null, userName?: string | null) => void;
   sendMessage: (text: string) => Promise<void>;
@@ -58,6 +64,7 @@ export const useNoriAgentStore = create<NoriAgentState>((set, get) => ({
   vehicleContext: null,
   uiMessages: [],
   isThinking: false,
+  progressStage: null,
   pendingConfirmation: null,
 
   init: (getVehicleId, userName) => {
@@ -69,7 +76,10 @@ export const useNoriAgentStore = create<NoriAgentState>((set, get) => ({
         set({ pendingConfirmation: { toolName, summary } });
       });
     const agent = new NoriAgent(vehicleContext, getVehicleId, confirmAction);
-    agent.onStateChange((s) => set({ isThinking: s === 'thinking' }));
+    // Reset progressStage về null khi kết thúc lượt (idle) - không để câu đệm CŨ của lượt
+    // trước đó hiện lại nhầm ở đầu lượt sau, trước khi ConversationManager kịp báo stage mới.
+    agent.onStateChange((s) => set({ isThinking: s === 'thinking', ...(s === 'idle' ? { progressStage: null } : {}) }));
+    agent.onProgress((stage) => set({ progressStage: stage }));
     // Lời chào tĩnh, KHÔNG gọi LLM (miễn phí, tức thời) - chỉ hiển thị 1 lần khi tạo agent
     // (không lặp lại nếu rời màn rồi quay lại trong cùng phiên app, vì init() no-op sau lần
     // đầu). Đây chỉ là UI, KHÔNG đưa vào transcript thật của ConversationManager - LLM không
@@ -98,6 +108,7 @@ export const useNoriAgentStore = create<NoriAgentState>((set, get) => ({
     // user Free vẫn "lách" được vào Nori miễn phí qua các câu hỏi khớp mẫu local. Chặn TRƯỚC
     // khi gọi agent.sendMessage() để chắn CẢ 2 đường (local lẫn LLM) cho user Free.
     if (!useAuthStore.getState().user?.is_premium) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       set((state) => ({
         uiMessages: [...state.uiMessages, { id: String(nextId++), role: 'assistant', text: PREMIUM_REQUIRED_TEXT }],
       }));
@@ -105,6 +116,11 @@ export const useNoriAgentStore = create<NoriAgentState>((set, get) => ({
     }
 
     const reply = await agent.sendMessage(text);
+
+    // Rung nhẹ báo "đã có câu trả lời" (cải thiện UX 2026-07-28) - đặt Ở ĐÂY (1 chỗ chung cho
+    // cả NoriChatScreen lẫn NoriQuickPopover, thay vì lặp lại ở từng màn hình) vì mọi câu trả
+    // lời (kể cả lỗi/yêu cầu nâng cấp Premium) đều đi qua đúng điểm này.
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
 
     set((state) => ({
       uiMessages: [

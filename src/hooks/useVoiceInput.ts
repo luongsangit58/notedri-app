@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { ExpoSpeechRecognitionModule, useSpeechRecognitionEvent } from 'expo-speech-recognition';
+import * as Haptics from 'expo-haptics';
 import { useT } from '../i18n';
 
 type Status = 'idle' | 'listening' | 'done' | 'error';
@@ -182,6 +183,9 @@ export function useVoiceInput(): UseVoiceInputResult {
         viMsg = t('voice.error_unknown');
       }
       setError(viMsg);
+      // Rung báo lỗi (cải thiện UX 2026-07-28, góp ý user: cần tín hiệu không chỉ dựa vào mắt -
+      // quan trọng hơn hẳn lúc đang lái xe, không tiện nhìn màn hình để đọc dòng lỗi nhỏ).
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
       return 'error';
     });
   });
@@ -233,6 +237,10 @@ export function useVoiceInput(): UseVoiceInputResult {
     setError(null);
     setVolume(0);
     setStatus('listening');
+    // Rung nhẹ báo "bắt đầu nghe được rồi" (cải thiện UX 2026-07-28, góp ý user: kiểu Siri/Google
+    // Assistant - trước đây không có tín hiệu nào ngoài đổi UI, dễ nói hụt vài giây đầu vì
+    // không chắc mic đã bật thật chưa, nhất là ở popup tự động nghe ngay khi mở).
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     ExpoSpeechRecognitionModule.start({
       lang: 'vi-VN',
       interimResults: false,

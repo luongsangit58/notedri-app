@@ -6,6 +6,7 @@ import * as Speech from 'expo-speech';
 import { useColors } from '../../utils/theme';
 import { useNoriAgentStore, PREMIUM_REQUIRED_TEXT } from '../../store/noriAgentStore';
 import { useInitNoriAgent } from '../../agent/useInitNoriAgent';
+import { describeProgressStage } from '../../agent/progressText';
 import { useVoiceInput } from '../../hooks/useVoiceInput';
 import { useNoriSummary } from '../../services/nori/noriSummary';
 import VoiceWaveform from './VoiceWaveform';
@@ -53,7 +54,7 @@ export default function NoriQuickPopover({ visible, onClose, vehicleId }: NoriQu
   // hook đó ném "Couldn't find a 'navigation' object..." ngay khi render. Dùng navigationRef
   // (đã gắn vào <NavigationContainer ref={navigationRef}> ở App.tsx) thay thế.
   useInitNoriAgent();
-  const { uiMessages, isThinking, sendMessage, pendingConfirmation } = useNoriAgentStore();
+  const { uiMessages, isThinking, progressStage, sendMessage, pendingConfirmation } = useNoriAgentStore();
   // Cùng nguồn mood với icon nổi vừa bấm (NoriFloatingButton) - avatar trong popup đổi màu
   // NHẤT QUÁN với icon đã bấm, không phải 2 chỉ báo tình trạng xe lệch nhau.
   const { mood } = useNoriSummary(vehicleId);
@@ -193,7 +194,7 @@ export default function NoriQuickPopover({ visible, onClose, vehicleId }: NoriQu
               ) : isThinking ? (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                   <ActivityIndicator size="small" color={colors.primary} />
-                  <Text style={{ color: colors.textSecondary, fontSize: 15 }}>Nori đang kiểm tra...</Text>
+                  <Text style={{ color: colors.textSecondary, fontSize: 15 }}>{describeProgressStage(progressStage)}</Text>
                 </View>
               ) : voiceStatus === 'listening' ? (
                 // Waveform sống theo âm lượng thay icon mic tĩnh - popup này đã tự nghe ngay khi

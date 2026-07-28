@@ -22,6 +22,16 @@ export type NoriReply = {
   source: 'local' | 'llm';
 };
 
+/**
+ * Trạng thái CHI TIẾT hơn "thinking" (mục cải thiện UX 2026-07-28, góp ý user: 1 dòng "đang
+ * kiểm tra..." tĩnh suốt cả lượt hỏi cảm giác như treo, nhất là lúc lái xe/dùng giọng nói) -
+ * "phản hồi 2 pha": phân biệt lúc LLM đang suy nghĩ/chọn tool (`thinking`) với lúc app đang thật
+ * sự đọc dữ liệu xe/gọi API (`calling_tool`, kèm tên tool để UI đoán được câu đệm phù hợp, xem
+ * `progressText.ts`). KHÔNG áp dụng cho đường Local Matcher (trả lời tức thời, không có giai
+ * đoạn nào đáng báo).
+ */
+export type ProgressStage = { phase: 'thinking' } | { phase: 'calling_tool'; toolNames: string[] };
+
 let localRequestCounter = 0;
 
 /**
@@ -53,6 +63,9 @@ export class ConversationManager {
      * kịch bản tool-calling xác định mà không cần mạng/API key. Production (`NoriAgent`) không
      * truyền tham số này nên hành vi không đổi. */
     private chatFn: ChatFn = noriApi.chat,
+    /** Chỉ dùng để cập nhật UI (câu đệm 2 pha) - không ảnh hưởng logic hội thoại, an toàn để
+     * bỏ trống (vd trong `TestHarness.ts`). */
+    private onProgress?: (stage: ProgressStage) => void,
   ) {}
 
   getMessages(): NoriMessage[] {
@@ -90,6 +103,7 @@ export class ConversationManager {
     const tools = this.registry.getSchemas();
 
     for (let iteration = 0; iteration < MAX_TOOL_LOOP_ITERATIONS; iteration++) {
+      this.onProgress?.({ phase: 'thinking' });
       let response;
       try {
         response = await this.chatFn(this.messages, tools);
@@ -142,6 +156,8 @@ export class ConversationManager {
       const toolCalls = content.filter(
         (b): b is Extract<NoriContentBlock, { type: 'tool_use' }> => b.type === 'tool_use',
       );
+
+      this.onProgress?.({ phase: 'calling_tool', toolNames: toolCalls.map((c) => c.name) });
 
       const toolResultBlocks: NoriContentBlock[] = [];
       for (const block of toolCalls) {

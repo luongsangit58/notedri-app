@@ -1,4 +1,4 @@
-import { ChatFn, ConversationManager, NoriReply } from './ConversationManager';
+import { ChatFn, ConversationManager, NoriReply, ProgressStage } from './ConversationManager';
 import { ConfirmActionFn, ToolExecutor } from './ToolExecutor';
 import { ToolRegistry } from './ToolRegistry';
 import { SafetyPolicy } from './safety/SafetyPolicy';
@@ -25,6 +25,8 @@ export class NoriAgent {
   private conversation: ConversationManager;
   private state: NoriAgentState = 'idle';
   private stateListeners = new Set<(s: NoriAgentState) => void>();
+  /** Câu đệm 2 pha (cải thiện UX 2026-07-28) - xem docblock `ProgressStage`. */
+  private progressListeners = new Set<(p: ProgressStage) => void>();
 
   constructor(
     private vehicleIO: IVehicleIO,
@@ -43,6 +45,7 @@ export class NoriAgent {
       this.executor,
       () => ({ vehicleId: getVehicleId() }),
       chatFn, // undefined -> ConversationManager tự dùng default noriApi.chat
+      (p) => this.progressListeners.forEach((fn) => fn(p)),
     );
 
     buildVehicleTools(vehicleIO).forEach((t) => this.registry.register(t));
@@ -58,6 +61,11 @@ export class NoriAgent {
   onStateChange(cb: (s: NoriAgentState) => void): () => void {
     this.stateListeners.add(cb);
     return () => this.stateListeners.delete(cb);
+  }
+
+  onProgress(cb: (p: ProgressStage) => void): () => void {
+    this.progressListeners.add(cb);
+    return () => this.progressListeners.delete(cb);
   }
 
   getMessages() {

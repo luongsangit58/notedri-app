@@ -10,6 +10,7 @@ import { useColors } from '../../utils/theme';
 import { useNoriAgentStore } from '../../store/noriAgentStore';
 import { useInitNoriAgent } from '../../agent/useInitNoriAgent';
 import { useVoiceInput } from '../../hooks/useVoiceInput';
+import { describeProgressStage } from '../../agent/progressText';
 import VoiceWaveform from '../../components/nori/VoiceWaveform';
 import { NoriFeedbackRating } from '../../api/nori';
 
@@ -64,7 +65,7 @@ const SUGGESTED_QUESTIONS = [
 export default function NoriChatScreen() {
   const colors = useColors();
   const {
-    uiMessages, isThinking, sendMessage, submitFeedback, pendingConfirmation, resolveConfirmation,
+    uiMessages, isThinking, progressStage, sendMessage, submitFeedback, pendingConfirmation, resolveConfirmation,
   } = useNoriAgentStore();
   useInitNoriAgent();
   const [input, setInput] = useState('');
@@ -159,25 +160,38 @@ export default function NoriChatScreen() {
             </Text>
           }
           renderItem={({ item }) => (
-            <TouchableOpacity
-              activeOpacity={item.role === 'assistant' && item.requestId ? 0.7 : 1}
-              onLongPress={item.role === 'assistant' ? () => openFeedback(item.requestId) : undefined}
-              style={{
-                alignSelf: item.role === 'user' ? 'flex-end' : 'flex-start',
-                backgroundColor: item.role === 'user' ? colors.primary : colors.surface,
-                borderRadius: 14,
-                paddingVertical: 10,
-                paddingHorizontal: 14,
-                maxWidth: '85%',
-              }}
-            >
-              <Text style={{ color: item.role === 'user' ? '#fff' : colors.text }}>{item.text}</Text>
-              {item.feedbackRating && (
-                <Text style={{ marginTop: 4, fontSize: 12 }}>
-                  {RATING_OPTIONS.find((r) => r.value === item.feedbackRating)?.emoji} Đã chấm điểm
-                </Text>
+            <View style={{ alignSelf: item.role === 'user' ? 'flex-end' : 'flex-start', maxWidth: '85%' }}>
+              <View
+                style={{
+                  backgroundColor: item.role === 'user' ? colors.primary : colors.surface,
+                  borderRadius: 14,
+                  paddingVertical: 10,
+                  paddingHorizontal: 14,
+                }}
+              >
+                <Text style={{ color: item.role === 'user' ? '#fff' : colors.text }}>{item.text}</Text>
+              </View>
+              {/* Chấm điểm hiện RÕ bằng 2 icon (cải thiện UX 2026-07-28, góp ý user: trước đây
+                  phải nhấn giữ - 1 thao tác ẩn gần như không ai tự tìm ra). 👍 chấm ngay "đúng"
+                  không cần thêm bước; 👎 mở modal chi tiết (chọn sai/1 phần đúng + ghi chú) vì
+                  câu trả lời sai đáng để hỏi thêm lý do hơn câu đúng. */}
+              {item.role === 'assistant' && item.requestId && (
+                item.feedbackRating ? (
+                  <Text style={{ marginTop: 4, marginLeft: 4, fontSize: 12, color: colors.textSecondary }}>
+                    {RATING_OPTIONS.find((r) => r.value === item.feedbackRating)?.emoji} Đã chấm điểm
+                  </Text>
+                ) : (
+                  <View style={{ flexDirection: 'row', gap: 14, marginTop: 4, marginLeft: 4 }}>
+                    <TouchableOpacity onPress={() => submitFeedback(item.requestId!, 'good')} hitSlop={8}>
+                      <FontAwesome5 name="thumbs-up" size={13} color={colors.textSecondary} />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => openFeedback(item.requestId)} hitSlop={8}>
+                      <FontAwesome5 name="thumbs-down" size={13} color={colors.textSecondary} />
+                    </TouchableOpacity>
+                  </View>
+                )
               )}
-            </TouchableOpacity>
+            </View>
           )}
         />
 
@@ -214,7 +228,7 @@ export default function NoriChatScreen() {
         {isThinking && (
           <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 6, gap: 8 }}>
             <ActivityIndicator size="small" color={colors.primary} />
-            <Text style={{ color: colors.textSecondary }}>Nori đang kiểm tra...</Text>
+            <Text style={{ color: colors.textSecondary }}>{describeProgressStage(progressStage)}</Text>
           </View>
         )}
 
@@ -344,10 +358,16 @@ export default function NoriChatScreen() {
 
       {/* Xác nhận trước khi ghi dữ liệu (Phase 2, mục 7: odometer.create/fuel.create là tool
           mutating) - ConversationManager đang await confirmAction() nên chỉ tiếp tục vòng lặp
-          tool-call sau khi user bấm 1 trong 2 nút này. */}
-      <Modal visible={!!pendingConfirmation} transparent animationType="fade" onRequestClose={() => resolveConfirmation(false)}>
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.5)', padding: 24 }}>
-          <View style={{ backgroundColor: colors.surface, borderRadius: 16, padding: 20, width: '100%' }}>
+          tool-call sau khi user bấm 1 trong 2 nút này.
+          Đổi sang bottom sheet (cải thiện UX 2026-07-28, góp ý user) - đây là dialog CĂN GIỮA
+          DUY NHẤT còn sót lại trong Nori, lệch hẳn ngôn ngữ bottom-sheet đã dùng ở feedback
+          modal ngay phía trên và NoriQuickPopover - đổi cho đồng bộ toàn bộ trải nghiệm Nori. */}
+      <Modal visible={!!pendingConfirmation} transparent animationType="slide" onRequestClose={() => resolveConfirmation(false)}>
+        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24 }}>
+            <View style={{ alignItems: 'center', marginBottom: 12 }}>
+              <View style={{ width: 36, height: 4, borderRadius: 2, backgroundColor: colors.border }} />
+            </View>
             <Text style={{ color: colors.text, fontSize: 17, fontWeight: '700', marginBottom: 10 }}>
               Nori muốn ghi dữ liệu
             </Text>
