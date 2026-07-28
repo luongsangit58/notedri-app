@@ -122,7 +122,16 @@ export function buildLocalReply(toolName: string, result: any, userText: string)
 
     case 'vehicle.getHealthScore': {
       const total = result?.score?.total ?? result?.health_score;
-      return total != null ? `Điểm sức khoẻ xe hiện tại: ${total}/100.` : 'Chưa đủ dữ liệu để tính điểm sức khoẻ xe.';
+      if (total == null) return 'Chưa đủ dữ liệu để tính điểm sức khoẻ xe.';
+      // Thêm chút "cá tính" ấm áp (cải thiện UX 2026-07-28, góp ý user) - CHỈ đổi CÂU KHEN/ĐỘNG
+      // VIÊN thêm vào SAU con số thật, không đổi/thêm bất kỳ số liệu nào - an toàn với grounding
+      // validator (chỉ áp dụng đường LLM, đường Local vốn đã grounded 100% từ tool_result).
+      const warmth = total >= 85
+        ? ' Xe bạn đang rất khoẻ, cứ yên tâm cầm lái nhé!'
+        : total < 50
+          ? ' Có vài điều cần lưu ý, nhưng đừng lo, mình sẽ đồng hành cùng bạn theo dõi tiếp.'
+          : '';
+      return `Điểm sức khoẻ xe hiện tại: ${total}/100.${warmth}`;
     }
 
     case 'vehicle.getRecentIssues': {
@@ -132,7 +141,18 @@ export function buildLocalReply(toolName: string, result: any, userText: string)
         urgent: 'đang có vấn đề cần xử lý sớm',
         unknown: 'chưa đủ dữ liệu để đánh giá',
       };
-      let text = `Xe bạn ${moodText[result.mood] ?? 'chưa rõ tình trạng'}.`;
+      // Câu mở đầu ấm áp hơn tuỳ mood (cùng đợt cải thiện UX ở trên) - chỉ đổi TÔNG GIỌNG, phần
+      // dữ liệu thật (top_issue/week_comparison) giữ nguyên logic cũ, không đổi số liệu gì.
+      const moodOpener: Record<string, string> = {
+        happy: 'Tin vui nè,',
+        warn: 'Nói bạn nghe,',
+        urgent: 'Mình hơi lo một chút -',
+        unknown: '',
+      };
+      const opener = moodOpener[result.mood] ?? '';
+      let text = opener
+        ? `${opener} xe bạn ${moodText[result.mood] ?? 'chưa rõ tình trạng'}.`
+        : `Xe bạn ${moodText[result.mood] ?? 'chưa rõ tình trạng'}.`;
       if (result.top_issue) text += ` Đáng chú ý nhất: ${result.top_issue.label}.`;
       if (result.week_comparison) {
         const d = result.week_comparison.drivingScoreDelta;

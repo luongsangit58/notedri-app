@@ -1,5 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Dimensions, PanResponder, StyleSheet, View } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Animated, Dimensions, PanResponder, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { FontAwesome5 } from '@expo/vector-icons';
 import Svg, { Defs, RadialGradient, Stop, Circle } from 'react-native-svg';
 import { navigationRef } from '../../navigation/navigationRef';
 import { useAuthStore } from '../../store/authStore';
@@ -40,6 +42,9 @@ const DOCK_PEEK = 16; // số px còn lộ ra khi đã gạt vào sát cạnh m�
 const TAP_MOVE_THRESHOLD = 6; // dx/dy dưới ngưỡng này -> coi là bấm, không phải kéo
 const EDGE_MARGIN = 12;
 const DEFAULT_BOTTOM_OFFSET = 140; // tránh đè lên pill kết nối OBD2 (ObdSessionBanner, bottom:96)
+// Cải thiện UX 2026-07-28 (góp ý user): chỉ hiện 1 LẦN DUY NHẤT cho người dùng mới, chỉ dẫn
+// "đây là Nori, bấm vào để hỏi đáp" - AsyncStorage để nhớ đã xem qua lần cài app sau.
+const COACHMARK_KEY = 'nori_floating_coachmark_seen';
 
 export default function NoriFloatingButton() {
   const colors = useColors();
@@ -87,6 +92,64 @@ export default function NoriFloatingButton() {
   const [dockUi, setDockUi] = useState<{ docked: boolean; side: 'left' | 'right' }>({ docked: false, side: 'right' });
   // Chỉ tính mood khi CÓ vehicleId để tránh gọi API thừa lúc chưa đăng nhập/chưa có xe.
   const { mood } = useNoriSummary(token && vehicleId ? vehicleId : undefined);
+  // panResponder (bên dưới) được tạo 1 LẦN DUY NHẤT qua useRef().current - đọc `mood` trực tiếp
+  // trong closure của nó sẽ mãi mãi thấy giá trị của LẦN RENDER ĐẦU TIÊN (cùng lớp bug stale
+  // closure mà `dockedRef`/`posValue` đã né ở trên) - dùng ref để closure luôn đọc được giá trị
+  // MỚI NHẤT.
+  const moodRef = useRef(mood);
+  moodRef.current = mood;
+
+  // Huy hiệu nhấp nháy khi Nori có điều đáng chú ý CHƯA XEM (cải thiện UX 2026-07-28, góp ý
+  // user) - `seenMoodRef` chỉ sống trong bộ nhớ (KHÔNG lưu AsyncStorage, mất khi tắt app - chấp
+  // nhận được vì "đã xem" chỉ có ý nghĩa trong 1 phiên dùng app, không cần nhớ qua nhiều ngày).
+  // Đánh dấu "đã xem" NGAY khi mở popup - không cần đợi thêm render nào vì set trước
+  // setShowPopup(true) trong CÙNG 1 lần bấm, React gộp cả 2 vào 1 lần render.
+  const seenMoodRef = useRef<string | null>(null);
+  const showAlertBadge = (mood === 'urgent' || mood === 'warn') && seenMoodRef.current !== mood;
+  const badgePulse = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    if (!showAlertBadge) return;
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(badgePulse, { toValue: 1.4, duration: 600, useNativeDriver: true }),
+        Animated.timing(badgePulse, { toValue: 1, duration: 600, useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [showAlertBadge, badgePulse]);
+
+  // Coachmark 1 lần cho người dùng MỚI (cải thiện UX 2026-07-28, góp ý user) - chỉ dẫn "đây là
+  // Nori, bấm vào để hỏi đáp" vì icon nổi không có gì tự giải thích công dụng cho người chưa
+  // từng thấy. Tự ẩn sau 6s nếu không ai bấm, và ẩn NGAY khi user tương tác với icon (chạm/kéo -
+  // xem panResponder bên dưới) vì lúc đó coi như đã "phát hiện" ra icon rồi.
+  const [showCoachmark, setShowCoachmark] = useState(false);
+  const coachmarkTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dismissCoachmark = useCallback(() => {
+    if (coachmarkTimerRef.current) {
+      clearTimeout(coachmarkTimerRef.current);
+      coachmarkTimerRef.current = null;
+    }
+    setShowCoachmark(false);
+    AsyncStorage.setItem(COACHMARK_KEY, '1').catch(() => {});
+  }, []);
+  useEffect(() => {
+    if (!token || !vehicleId) return;
+    let cancelled = false;
+    AsyncStorage.getItem(COACHMARK_KEY)
+      .then((seen) => {
+        if (cancelled || seen) return;
+        setShowCoachmark(true);
+        coachmarkTimerRef.current = setTimeout(dismissCoachmark, 6000);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [token, vehicleId, dismissCoachmark]);
+  useEffect(() => () => {
+    if (coachmarkTimerRef.current) clearTimeout(coachmarkTimerRef.current);
+  }, []);
 
   const boxSize = SIZE + BACKDROP_PAD * 2;
   const initialScreen = Dimensions.get('window');
@@ -126,6 +189,11 @@ export default function NoriFloatingButton() {
       onPanResponderGrant: () => {
         pos.setOffset(posValue.current);
         pos.setValue({ x: 0, y: 0 });
+        // Bất kỳ chạm nào (bấm hay kéo) đều coi như user đã "phát hiện" ra icon - ẩn coachmark
+        // và đánh dấu mood hiện tại là "đã xem" (tắt huy hiệu nhấp nháy) ngay từ đây, không đợi
+        // đến khi popup thực sự mở (đỡ phải lặp lại cùng logic ở cả nhánh tap lẫn nhánh kéo).
+        dismissCoachmark();
+        seenMoodRef.current = moodRef.current;
       },
       onPanResponderMove: Animated.event([null, { dx: pos.x, dy: pos.y }], { useNativeDriver: false }),
       onPanResponderRelease: (_e, gesture) => {
@@ -208,10 +276,68 @@ export default function NoriFloatingButton() {
               <View style={{ margin: BACKDROP_PAD }}>
                 <NoriAvatar mood={mood} size={SIZE} />
               </View>
+              {/* Huy hiệu nhấp nháy khi có điều đáng chú ý CHƯA XEM (cải thiện UX 2026-07-28) -
+                  chỉ hiện ở dạng đầy đủ (không hiện ở "tay cầm" lúc đã gạt vào cạnh, đủ nhỏ để
+                  không đáng thêm 1 lớp phức tạp cho trạng thái đã thu gọn). */}
+              {showAlertBadge && (
+                <Animated.View
+                  style={{
+                    position: 'absolute',
+                    top: 2,
+                    right: 2,
+                    width: 14,
+                    height: 14,
+                    borderRadius: 7,
+                    backgroundColor: NORI_MOOD_COLOR[mood],
+                    borderWidth: 2,
+                    borderColor: colors.background,
+                    transform: [{ scale: badgePulse }],
+                  }}
+                />
+              )}
             </>
           )}
         </Animated.View>
       )}
+
+      {/* Coachmark 1 lần cho người dùng mới (cải thiện UX 2026-07-28) - chỉ hiện ở dạng đầy đủ,
+          cùng điều kiện hiển thị với icon chính, cộng chưa từng bị gạt vào cạnh (trạng thái
+          "tay cầm" chỉ xảy ra SAU khi user đã tương tác - lúc đó coachmark đã tự ẩn từ lâu). */}
+      {showCoachmark && !dockUi.docked && activeRouteName !== 'NoriChat' && !showPopup && (
+        <Animated.View style={{ position: 'absolute', transform: pos.getTranslateTransform() }}>
+          <View
+            style={{
+              position: 'absolute',
+              left: boxSize + 8,
+              top: boxSize / 2 - 22,
+              width: 190,
+              backgroundColor: colors.surface,
+              borderRadius: 12,
+              padding: 12,
+              shadowColor: '#000',
+              shadowOpacity: 0.25,
+              shadowRadius: 8,
+              elevation: 8,
+            }}
+          >
+            <Text style={{ color: colors.text, fontSize: 13, lineHeight: 18 }}>
+              Bấm vào đây để hỏi Nori bất cứ lúc nào!
+            </Text>
+            <TouchableOpacity
+              onPress={dismissCoachmark}
+              hitSlop={10}
+              style={{
+                position: 'absolute', top: -8, right: -8, width: 22, height: 22, borderRadius: 11,
+                backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center',
+                shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 3, elevation: 4,
+              }}
+            >
+              <FontAwesome5 name="times" size={10} color={colors.textSecondary} />
+            </TouchableOpacity>
+          </View>
+        </Animated.View>
+      )}
+
       <NoriQuickPopover visible={showPopup} onClose={() => setShowPopup(false)} vehicleId={vehicleId} />
     </>
   );

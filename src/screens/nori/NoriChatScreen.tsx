@@ -71,6 +71,12 @@ export default function NoriChatScreen() {
   const [input, setInput] = useState('');
   const [feedbackRequestId, setFeedbackRequestId] = useState<string | null>(null);
   const [feedbackNote, setFeedbackNote] = useState('');
+  // Cải thiện UX 2026-07-28 (góp ý user): chip gợi ý trước đây CHỈ hiện đúng 1 lần lúc mới mở
+  // màn hình (uiMessages.length<=1) rồi biến mất vĩnh viễn - sau khi Nori có thêm tool mới
+  // (lifetime cost, trạm sạc điện...) không còn cách nào để biết mà hỏi. Mặc định vẫn hiện lúc
+  // mới mở (giữ hành vi cũ), nhưng giờ user có thể tự mở lại/đóng bất kỳ lúc nào qua nút gợi ý
+  // ở thanh soạn tin (xem showSuggestions bên dưới).
+  const [showSuggestions, setShowSuggestions] = useState(uiMessages.length <= 1);
   const listRef = useRef<FlatList>(null);
 
   const { listen, stop: stopListening, status: voiceStatus, error: voiceError, volume: voiceVolume } = useVoiceInput();
@@ -195,7 +201,7 @@ export default function NoriChatScreen() {
           )}
         />
 
-        {uiMessages.length <= 1 && !isThinking && (
+        {showSuggestions && !isThinking && (
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -211,7 +217,12 @@ export default function NoriChatScreen() {
             {SUGGESTED_QUESTIONS.map((q) => (
               <TouchableOpacity
                 key={q}
-                onPress={() => handleSend(q)}
+                onPress={() => {
+                  // Đóng gợi ý lại sau khi dùng - user vừa "dùng xong" 1 gợi ý, không cần chiếm
+                  // chỗ nữa, nhưng vẫn mở lại được bất kỳ lúc nào qua nút bóng đèn ở thanh soạn.
+                  setShowSuggestions(false);
+                  handleSend(q);
+                }}
                 style={{
                   paddingVertical: 8, paddingHorizontal: 14, borderRadius: 16,
                   backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
@@ -268,6 +279,19 @@ export default function NoriChatScreen() {
             backgroundColor: colors.surface,
           }}
         >
+          {/* Mở lại chip gợi ý bất kỳ lúc nào (cải thiện UX 2026-07-28) - trước đây gợi ý chỉ
+              hiện đúng 1 lần lúc mới mở màn hình rồi biến mất vĩnh viễn, không còn cách nào để
+              khám phá tool mới thêm sau này (vd tổng chi phí trọn đời, trạm sạc điện...). */}
+          <TouchableOpacity
+            onPress={() => setShowSuggestions((s) => !s)}
+            style={{
+              width: 40, height: 40, borderRadius: 20,
+              backgroundColor: showSuggestions ? colors.primary : colors.background,
+              alignItems: 'center', justifyContent: 'center',
+            }}
+          >
+            <FontAwesome5 name="lightbulb" size={16} color={showSuggestions ? '#fff' : colors.textSecondary} solid={showSuggestions} />
+          </TouchableOpacity>
           <TextInput
             value={input}
             onChangeText={setInput}

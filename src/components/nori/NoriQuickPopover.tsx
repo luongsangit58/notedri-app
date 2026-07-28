@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Modal, View, Text, TextInput, TouchableOpacity, ActivityIndicator, Pressable } from 'react-native';
+import { Animated, Modal, View, Text, TextInput, TouchableOpacity, ActivityIndicator, Pressable } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { FontAwesome5 } from '@expo/vector-icons';
 import * as Speech from 'expo-speech';
@@ -69,6 +69,27 @@ export default function NoriQuickPopover({ visible, onClose, vehicleId }: NoriQu
   const { listen, stop: stopListening, status: voiceStatus, error: voiceError, volume: voiceVolume } = useVoiceInput();
   const prevMessageCountRef = useRef(uiMessages.length);
   const lastMessage = uiMessages[uiMessages.length - 1];
+
+  // Chuyển động mượt hơn giữa các trạng thái (cải thiện UX 2026-07-28, góp ý user: trước đây
+  // đổi trạng thái - đang nghe/đang nghĩ/trả lời - là ĐỔI CHỮ TỨC THÌ, cảm giác "giật", không
+  // giống 1 trợ lý đang "sống". `displayKey` đại diện đúng 1 khối nội dung đang hiện trong ô
+  // giữa (mục dưới) - đổi key -> fade nhẹ, KHÔNG đổi key (vd nghe xong tự set lại status khác
+  // nhưng vẫn cùng khối hiển thị) -> không animate lại, tránh nháy vô ích.
+  const contentOpacity = useRef(new Animated.Value(1)).current;
+  const displayKey = !isPremium
+    ? 'premium'
+    : isThinking ? 'thinking'
+    : voiceStatus === 'listening' ? 'listening'
+    : lastMessage ? `message-${lastMessage.id}`
+    : 'empty';
+  const prevDisplayKeyRef = useRef(displayKey);
+  useEffect(() => {
+    if (prevDisplayKeyRef.current !== displayKey) {
+      prevDisplayKeyRef.current = displayKey;
+      contentOpacity.setValue(0);
+      Animated.timing(contentOpacity, { toValue: 1, duration: 200, useNativeDriver: true }).start();
+    }
+  }, [displayKey, contentOpacity]);
 
   const handleSend = (textOverride?: string) => {
     const text = (textOverride ?? input).trim();
@@ -188,7 +209,7 @@ export default function NoriQuickPopover({ visible, onClose, vehicleId }: NoriQu
               </TouchableOpacity>
             </View>
 
-            <View style={{ minHeight: 64, justifyContent: 'center' }}>
+            <Animated.View style={{ minHeight: 64, justifyContent: 'center', opacity: contentOpacity }}>
               {!isPremium ? (
                 <Text style={{ color: colors.textSecondary, fontSize: 14, lineHeight: 20 }}>{PREMIUM_REQUIRED_TEXT}</Text>
               ) : isThinking ? (
@@ -209,7 +230,7 @@ export default function NoriQuickPopover({ visible, onClose, vehicleId }: NoriQu
               ) : (
                 <Text style={{ color: colors.textSecondary, fontSize: 15 }}>Bạn muốn hỏi Nori điều gì?</Text>
               )}
-            </View>
+            </Animated.View>
 
             {voiceError && voiceStatus === 'error' && (
               <Text style={{ color: colors.error, fontSize: 12, marginTop: -8 }}>{voiceError}</Text>
