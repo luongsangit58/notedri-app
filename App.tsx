@@ -5,6 +5,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './src/api/queryClient';
 import { NavigationContainer } from '@react-navigation/native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import RootNavigator from './src/navigation/RootNavigator';
 import { navigationRef } from './src/navigation/navigationRef';
@@ -145,18 +146,28 @@ function AppLoader({ children }: { children: React.ReactNode }) {
 export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider>
-        <QueryClientProvider client={queryClient}>
-          <AppLoader>
-            <NavigationContainer ref={navigationRef}>
-              <RootNavigator />
-              <ObdSessionBanner />
-              <ObdAutoConnect />
-              <NoriFloatingButton />
-            </NavigationContainer>
-          </AppLoader>
-        </QueryClientProvider>
-      </SafeAreaProvider>
+      {/* Rà soát 2026-07-28 (bàn phím vẫn che input NoriChatScreen dù đã dựa vào
+          android:windowSoftInputMode="adjustResize" - user báo "vẫn lỗi" sau khi test thật):
+          adjustResize + KeyboardAvoidingView thuần react-native không đủ tin cậy trên nhiều
+          ROM/Android version (đặc biệt với edge-to-edge ngày càng phổ biến, xem
+          docs/nori-agent-plan.md) - chuyển sang `react-native-keyboard-controller` (thư viện
+          hiện tại Expo khuyến nghị cho đúng use-case này, xem AGENTS.md + tài liệu Expo bản app
+          đang dùng). `KeyboardProvider` PHẢI bọc ở gốc app để mọi component con (KeyboardStickyView
+          ở NoriChatScreen, và bất kỳ màn hình nào dùng sau này) hoạt động được. */}
+      <KeyboardProvider>
+        <SafeAreaProvider>
+          <QueryClientProvider client={queryClient}>
+            <AppLoader>
+              <NavigationContainer ref={navigationRef}>
+                <RootNavigator />
+                <ObdSessionBanner />
+                <ObdAutoConnect />
+                <NoriFloatingButton />
+              </NavigationContainer>
+            </AppLoader>
+          </QueryClientProvider>
+        </SafeAreaProvider>
+      </KeyboardProvider>
     </GestureHandlerRootView>
   );
 }

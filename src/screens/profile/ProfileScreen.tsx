@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Alert, ScrollView, Modal, TextInput, ActivityIndicator, Image, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, Alert, ScrollView, Modal, TextInput, ActivityIndicator, Image } from 'react-native';
+import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AppBgPattern from '../../components/AppBgPattern';
 import { FontAwesome5 } from '@expo/vector-icons';
@@ -400,8 +401,12 @@ export default function ProfileScreen() {
 
       {/* Delete account confirmation modal */}
       <Modal visible={deleteModalVisible} transparent animationType="slide" onRequestClose={() => setDeleteModalVisible(false)}>
+        {/* Rà soát 2026-07-28: sheet ghim đáy giống pattern từng lỗi ở NoriChatScreen - trước
+            đây Android dùng 'height' (tổ hợp không đáng tin với adjustResize, xem
+            NoriChatScreen) - đổi sang KeyboardAvoidingView của react-native-keyboard-controller,
+            behavior="padding" cho cả 2 nền tảng. */}
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          behavior="padding"
           style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.7)' }}>
           <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24 }}>
             <Text style={{ color: colors.error, fontSize: 17, fontWeight: '700', marginBottom: 8 }}>

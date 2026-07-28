@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity, FlatList, KeyboardAvoidingView, Platform, ActivityIndicator, Modal, ScrollView,
+  View, Text, TextInput, TouchableOpacity, FlatList, ActivityIndicator, Modal, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { KeyboardStickyView, KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { FontAwesome5 } from '@expo/vector-icons';
 import * as Speech from 'expo-speech';
 import { useColors } from '../../utils/theme';
@@ -136,26 +137,15 @@ export default function NoriChatScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom']}>
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        // Rà soát lại 2026-07-27 (user báo "height" vẫn chưa "triệt để"): AndroidManifest.xml
-        // của app đã khai `android:windowSoftInputMode="adjustResize"` - nghĩa là HỆ ĐIỀU HÀNH
-        // tự co nhỏ cửa sổ app khi bàn phím mở, KHÔNG cần KeyboardAvoidingView làm việc đó lại
-        // trên Android. Trước đây dùng `behavior="height"` CÙNG LÚC với `adjustResize` là tổ
-        // hợp hay gây lỗi (RN tính lại height dựa theo sự kiện bàn phím, CHỒNG lên phần OS đã
-        // tự co - dễ ra kết quả co 2 lần hoặc giật/lệch tuỳ loại bàn phím). Giờ FlatList bên
-        // dưới đã có `style={{flex:1}}` (fix cùng đợt trước, xem mục layout chip gợi ý) - khi
-        // OS co cửa sổ, FlatList tự co theo (flex:1 hấp thụ hết phần hụt), thanh nhập (không có
-        // flex, đứng NGAY SAU FlatList) tự động trồi lên sát mép trên bàn phím mà KHÔNG cần
-        // logic JS nào thêm - để Android tự lo trọn vẹn qua `adjustResize`, KHÔNG chồng thêm
-        // `KeyboardAvoidingView` (behavior=undefined). iOS KHÔNG có cơ chế tương đương
-        // `adjustResize` nên vẫn cần `padding` như cũ.
-        // Lưu ý: đây là suy luận đúng theo tài liệu RN/Android (adjustResize + KeyboardAvoidingView
-        // trên Android là tổ hợp không nên dùng chung) - CẦN test lại trên thiết bị thật để xác
-        // nhận hết hẳn, môi trường này không có device/simulator để tự kiểm chứng bằng mắt.
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-      >
+      {/* Rà soát 2026-07-28 (user báo bàn phím VẪN che input dù đã dựa vào `adjustResize` -
+          fix trước KHÔNG đủ triệt để trên thiết bị thật): thay hẳn bằng
+          `react-native-keyboard-controller` (thư viện Expo hiện khuyến nghị cho đúng use-case
+          "danh sách + thanh nhập ghim đáy") thay vì tiếp tục vá `KeyboardAvoidingView` thuần
+          react-native (đã thử cả `height` lẫn dựa vào `adjustResize`, cả 2 đều không triệt để
+          trên thực tế thiết bị). `KeyboardStickyView` (bọc composer bên dưới) tự trồi lên đúng
+          sát mép bàn phím bằng animation native, không cần tính toán height thủ công - FlatList
+          ở NGOÀI, không cần bọc gì thêm, chỉ cần `flex:1` như cũ. */}
+      <View style={{ flex: 1 }}>
         <FlatList
           ref={listRef}
           data={uiMessages}
@@ -218,7 +208,9 @@ export default function NoriChatScreen() {
             ))}
           </ScrollView>
         )}
+      </View>
 
+      <KeyboardStickyView>
         {isThinking && (
           <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 6, gap: 8 }}>
             <ActivityIndicator size="small" color={colors.primary} />
@@ -302,11 +294,14 @@ export default function NoriChatScreen() {
             <FontAwesome5 name="paper-plane" size={16} color="#fff" />
           </TouchableOpacity>
         </View>
-      </KeyboardAvoidingView>
+      </KeyboardStickyView>
 
       <Modal visible={!!feedbackRequestId} transparent animationType="slide" onRequestClose={() => setFeedbackRequestId(null)}>
+        {/* Cùng đợt rà soát 2026-07-28 (sheet ghim đáy, behavior 'height' trên Android - cùng
+            tổ hợp không đáng tin đã sửa cho khối chat chính phía trên) - đổi sang
+            KeyboardAvoidingView của react-native-keyboard-controller, "padding" cho cả 2 nền. */}
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          behavior="padding"
           style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' }}
         >
           <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24 }}>
