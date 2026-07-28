@@ -289,10 +289,15 @@ Nhóm theo hướng đã chọn ở tổng hợp brainstorm: **Ưu tiên ngay** 
 ## 12. Câu hỏi còn mở / cần quyết định tiếp
 
 - [x] ~~Xác nhận tên chính xác của endpoint backend cho `expense.summary()`, `insurance.getStatus()`, `inspection.getReminder()`~~ — Đã xong 2026-07-27, xem mục 6 + mục 15.
-- [ ] Giải pháp TTS cho Phase 3: dùng `expo-speech` (offline, đơn giản) hay TTS cloud (chất lượng giọng tiếng Việt tốt hơn nhưng tốn phí + cần mạng)?
-- [ ] Giới hạn rate-limit/chi phí Haiku 4.5 theo user — có cần gắn vào gói Premium hiện có không, hay free cho mọi user?
+- [x] ~~Giải pháp TTS cho Phase 3: dùng `expo-speech` (offline, đơn giản) hay TTS cloud~~ — Đã chốt + triển khai 2026-07-27: `expo-speech` (offline, không phí, không cần mạng riêng cho TTS) - xem mục 15.
+- [x] ~~Giới hạn rate-limit/chi phí Haiku 4.5 theo user~~ — Đã chốt 2026-07-27: Nori Agent là tính năng Premium (`config/plans.php` + gate cả backend lẫn app-side), cộng `throttle:20,1` ở route - xem mục 15.
 - [ ] Wake word (Phase 4) dùng giải pháp nào trên Android — cần nghiên cứu riêng, chưa có hướng.
-- [ ] Chính sách lưu trữ dữ liệu theo từng loại cần viết tường minh trước khi ra mắt voice: audio thô xoá sau khi STT xong? transcript giữ bao nhiêu ngày? vị trí có bao giờ gửi nguyên văn cho LLM không (mặc định: không)?
+- [x] ~~Chính sách lưu trữ dữ liệu theo từng loại~~ — **Chốt 2026-07-28** (đề xuất theo yêu cầu user, dựa trên rà soát thật code hiện có, không phải chính sách mới cần xây):
+  - **Audio thô**: KHÔNG lưu, không cần code gì thêm - đã đúng mặc định từ trước. App không có bất kỳ chỗ nào ghi file audio (`useVoiceInput.ts` không dùng `expo-av`/`FileSystem` để lưu) - `expo-speech-recognition` chuyển giọng nói thành chữ ngay trên hệ điều hành (Android SpeechRecognizer/Google Speech Services), app chỉ nhận lại TEXT. Quyết định: giữ nguyên, không thêm tính năng ghi âm cho bất kỳ mục đích nào (kể cả debug) trừ khi có yêu cầu rõ ràng + màn hình xin phép riêng.
+  - **Transcript câu hỏi**: 2 nơi lưu, xử lý khác nhau:
+    - App (`noriAgentStore`, `uiMessages`): chỉ ở RAM (zustand không có `persist` middleware) - tự mất khi tắt app, không cần thêm gì.
+    - Backend (`storage/logs/nori.log`, `AiNoriController::chat()`/`feedback()`): ghi 200 ký tự đầu câu hỏi thật của user + rating/note phản hồi, kèm `request_id`. Trước đây `driver: 'single'` = **1 file, KHÔNG BAO GIỜ tự xoá** - tích luỹ vô thời hạn, rủi ro thật (không phải giả định) vì đây thực chất là log câu hỏi người dùng. **Đã sửa** (`notedri` commit tiếp theo): đổi sang `driver: 'daily'`, giữ **30 ngày** (`LOG_NORI_DAYS`, mặc định 30) - đủ dài để soát lỗi/chấm điểm QA trong giai đoạn test hiện tại, có hạn rõ ràng thay vì vô thời hạn. Có thể rút ngắn khi hết giai đoạn test nặng (mục 15 đã ghi chú "xoá channel này khi không cần debug mức này nữa").
+  - **Vị trí (GPS)**: xác nhận (không phải quyết định mới) - `fuel.findNearbyStations`/`ev.findNearbyChargingStations` lấy toạ độ TẠI tool layer (`expo-location`), chỉ danh sách trạm (tên/địa chỉ) mới vào `tool_result` gửi LLM - toạ độ thô KHÔNG BAO GIỜ đi qua LLM, đúng như mục 4 đã chốt từ đầu.
 - [ ] Matcher tất định trên thiết bị cho các câu hỏi phổ biến (mục 4) — cần thiết kế/luật cụ thể cho tiếng Việt (regex? danh sách mẫu câu? nhỏ hơn cả 1 model on-device?) trước khi implement Phase 1, hay chấp nhận độ trễ LLM ở Phase 1 và tối ưu sau?
 - [ ] Có cần Tool SDK/manifest schema chính thức + CLI validate ngay từ Phase 1 (để mỗi tool mới không phải đụng lõi `NoriAgent`), hay để Phase 2 khi số lượng tool tăng lên mới đáng đầu tư?
 
