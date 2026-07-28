@@ -478,7 +478,7 @@ export default function AddRefuelScreen() {
                 backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
               }}>
               <FontAwesome5 name="tachometer-alt" size={12} color={colors.primary} solid />
-              <Text style={{ color: colors.primary, fontSize: 11.5, fontWeight: '700' }}>ODO</Text>
+              <Text style={{ color: colors.primary, fontSize: 11.5, fontWeight: '700' }}>{t('refuels.odo_scan_btn')}</Text>
             </TouchableOpacity>
           </View>
           {odoPrefilled && (

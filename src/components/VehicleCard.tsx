@@ -61,7 +61,7 @@ export default function VehicleCard({ vehicle, onPress, score, compact }: Props)
   const row3Parts: string[] = [];
   if (vehicle.tank_capacity_l)  row3Parts.push(`${vehicle.tank_capacity_l}L`);
   if (vehicle.odo_hien_tai != null) {
-    row3Parts.push(`ODO: ${Number(vehicle.odo_hien_tai).toLocaleString('vi-VN')}km`);
+    row3Parts.push(`${t('vehicle_card.odo_label')}: ${Number(vehicle.odo_hien_tai).toLocaleString('vi-VN')}km`);
   }
   const row3 = row3Parts.join(' · ');
 

@@ -389,7 +389,7 @@ export default function DossierScreen() {
           </View>
           <View style={{ flexDirection: 'row', gap: 8, flex: 1 }}>
             <StatCard
-              label="ODO"
+              label={t('dossier.odo_label')}
               value={odo >= 1000 ? `${(odo / 1000).toFixed(0)}k km` : `${odo} km`}
               accent={colors.primary}
             />
