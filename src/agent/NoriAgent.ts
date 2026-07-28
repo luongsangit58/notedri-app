@@ -1,4 +1,4 @@
-import { ConversationManager, NoriReply } from './ConversationManager';
+import { ChatFn, ConversationManager, NoriReply } from './ConversationManager';
 import { ConfirmActionFn, ToolExecutor } from './ToolExecutor';
 import { ToolRegistry } from './ToolRegistry';
 import { SafetyPolicy } from './safety/SafetyPolicy';
@@ -33,12 +33,17 @@ export class NoriAgent {
      * fuel.create). Không truyền -> ToolExecutor tự từ chối mọi tool cần xác nhận (an toàn hơn
      * là âm thầm ghi dữ liệu không qua xác nhận). */
     confirmAction?: ConfirmActionFn,
+    /** Chỉ dùng trong `TestHarness.ts` - xem docblock `ConversationManager.ChatFn`. */
+    chatFn?: ChatFn,
   ) {
     this.safetyPolicy = new SafetyPolicy(vehicleIO);
     this.executor = new ToolExecutor(this.registry, this.safetyPolicy, confirmAction);
-    this.conversation = new ConversationManager(this.registry, this.executor, () => ({
-      vehicleId: getVehicleId(),
-    }));
+    this.conversation = new ConversationManager(
+      this.registry,
+      this.executor,
+      () => ({ vehicleId: getVehicleId() }),
+      chatFn, // undefined -> ConversationManager tự dùng default noriApi.chat
+    );
 
     buildVehicleTools(vehicleIO).forEach((t) => this.registry.register(t));
     buildKnowledgeTools().forEach((t) => this.registry.register(t));

@@ -1,11 +1,18 @@
-import { noriApi } from '../api/nori';
+import { noriApi, NoriChatResponse } from '../api/nori';
 import { ToolExecutor } from './ToolExecutor';
 import { ToolRegistry } from './ToolRegistry';
-import { NoriContentBlock, NoriMessage, NoriToolCall, ToolContext } from './types';
+import { AnthropicToolSchema, NoriContentBlock, NoriMessage, NoriToolCall, ToolContext } from './types';
 import { matchLocalIntent } from './LocalIntentMatcher';
 import { buildLocalReply } from './LocalReplyTemplates';
 
 const MAX_TOOL_LOOP_ITERATIONS = 6;
+
+/** Chữ ký `noriApi.chat` - tách riêng để `TestHarness.ts` bơm được 1 hàm giả (kịch bản LLM dựng
+ * sẵn) thay vì gọi HTTP thật, không cần network/API key để test vòng lặp tool-calling. */
+export type ChatFn = (
+  messages: NoriMessage[],
+  tools: AnthropicToolSchema[],
+) => Promise<{ data: NoriChatResponse }>;
 
 export type NoriReply = {
   text: string;
@@ -42,6 +49,10 @@ export class ConversationManager {
     private registry: ToolRegistry,
     private executor: ToolExecutor,
     private getContext: () => ToolContext,
+    /** Mặc định gọi HTTP thật (`noriApi.chat`) - chỉ override trong `TestHarness.ts` để chạy
+     * kịch bản tool-calling xác định mà không cần mạng/API key. Production (`NoriAgent`) không
+     * truyền tham số này nên hành vi không đổi. */
+    private chatFn: ChatFn = noriApi.chat,
   ) {}
 
   getMessages(): NoriMessage[] {
@@ -81,7 +92,7 @@ export class ConversationManager {
     for (let iteration = 0; iteration < MAX_TOOL_LOOP_ITERATIONS; iteration++) {
       let response;
       try {
-        response = await noriApi.chat(this.messages, tools);
+        response = await this.chatFn(this.messages, tools);
       } catch (err) {
         // Lỗi mạng/API (backend 502 khi provider lỗi, mất mạng, timeout...) - trước đây không
         // bắt ở đây sẽ làm cả sendMessage() reject, kéo lên tới noriAgentStore mà không nơi
