@@ -74,6 +74,26 @@ const RULES: Rule[] = [
     allOfGroups: [['cay xang', 'o dau'], ['tram xang', 'o dau']],
   },
   {
+    // Thêm 2026-07-28 (tool mới `ev.findNearbyChargingStations`) - "trạm SẠC" khác hẳn "trạm
+    // XĂNG" (từ khoá "sac" không xuất hiện ở rule fuel.findNearbyStations phía trên) nên không
+    // có rủi ro nhầm lẫn, không cần quan tâm thứ tự trước/sau rule đó.
+    toolName: 'ev.findNearbyChargingStations',
+    phrases: ['tram sac gan day', 'tim tram sac', 'tram sac gan nhat'],
+    allOfGroups: [['tram sac', 'o dau'], ['sac dien', 'gan day']],
+  },
+  {
+    // Thêm 2026-07-28 (tool mới `vehicle.getLifetimeCost`) - PHẢI đứng TRƯỚC
+    // maintenance.expenseSummary/expense.summary: câu hỏi "tổng chi phí xe tôi TỪ TRƯỚC TỚI GIỜ"
+    // vẫn có thể chứa "tiền"/"chi phí" chung chung, nhưng cụm "từ trước tới giờ"/"từ lúc mua"
+    // là tín hiệu ĐẶC TRƯNG riêng cho câu hỏi lifetime (không tháng/30-ngày) - ưu tiên khớp
+    // trước để không bị 2 rule chi phí theo-kỳ hạn phía dưới "cướp" mất.
+    toolName: 'vehicle.getLifetimeCost',
+    allOfGroups: [
+      ['tu truoc toi gio', 'tien'], ['tu luc mua', 'tien'], ['tu luc mua', 'chi phi'],
+      ['tong chi phi', 'tu truoc'], ['tong cong', 'het bao nhieu tien'],
+    ],
+  },
+  {
     // Đứng TRƯỚC expense.summary - "tiền bảo dưỡng"/"tiền sửa xe" phải không rơi nhầm vào
     // rule chi phí xăng (thứ tự mảng RULES quyết định rule nào được xét trước).
     toolName: 'maintenance.expenseSummary',
@@ -150,6 +170,27 @@ const RULES: Rule[] = [
   {
     toolName: 'vehicle.getCoolant',
     phrases: ['nhiet do nuoc lam mat', 'nhiet do dong co hien tai', 'may co nong khong', 'nhiet do may hien tai'],
+  },
+  {
+    // Thêm 2026-07-28 (tool mới `fuel.predictNextRefuel`) - PHẢI đứng TRƯỚC
+    // vehicle.getFuelLevel: cả 2 đều nhắc "xăng", nhưng đây hỏi DỰ ĐOÁN tương lai ("bao giờ
+    // phải đổ tiếp"/"còn bao xa thì hết xăng"), khác hẳn mức % HIỆN TẠI của getFuelLevel.
+    toolName: 'fuel.predictNextRefuel',
+    phrases: ['do xang lan toi', 'do xang tiep theo', 'du doan do xang'],
+    allOfGroups: [
+      ['bao gio', 'do xang'], ['khi nao', 'do xang'], ['con bao xa', 'het xang'],
+      ['con bao lau', 'het xang'],
+    ],
+  },
+  {
+    // Thêm 2026-07-28 (tool mới `vehicle.getFuelConsumptionHealth`) - hỏi TIÊU HAO (lít/100km,
+    // so với mức bình thường của chính xe/hãng công bố), khác hẳn expense.summary (SỐ TIỀN đã
+    // chi) và getFuelLevel (mức % hiện tại).
+    toolName: 'vehicle.getFuelConsumptionHealth',
+    phrases: ['tieu hao nhien lieu', 'tieu thu nhien lieu'],
+    allOfGroups: [
+      ['ton xang', 'binh thuong'], ['an xang', 'nhieu khong'], ['hao xang', 'binh thuong'],
+    ],
   },
   {
     toolName: 'vehicle.getFuelLevel',

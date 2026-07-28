@@ -30,6 +30,11 @@ export const vehiclesApi = {
   health: (id: number) => client.get(`/vehicles/${id}/health`),
   costSummary: (id: number, days = 30) =>
     client.get<{ data: { fuel: number; service: number; total: number } }>(`/vehicles/${id}/cost-summary`, { params: { days } }),
+  costSummaryLifetime: (id: number) =>
+    client.get<{ data: { fuel: number; service: number; total: number; km: number; per_km: number | null } }>(
+      `/vehicles/${id}/cost-summary`,
+      { params: { scope: 'lifetime' } },
+    ),
   reminders: (id: number) => client.get(`/vehicles/${id}/reminders`),
   setDefault: (id: number) => client.post(`/vehicles/${id}/default`),
   toggleRest: (id: number) => client.post(`/vehicles/${id}/rest`),

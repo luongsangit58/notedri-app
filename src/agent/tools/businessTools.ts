@@ -157,5 +157,72 @@ export function buildBusinessTools(): ToolDefinition[] {
         }
       },
     },
+    {
+      name: 'ev.findNearbyChargingStations',
+      description: 'Tìm trạm sạc xe điện gần vị trí hiện tại của người dùng - dùng cho câu hỏi kiểu "tìm trạm sạc gần đây". Chỉ có ý nghĩa với xe điện. Đây là tính năng Premium.',
+      authority: 'read-only',
+      inputSchema: NO_INPUT_SCHEMA,
+      async execute() {
+        // Cùng quy tắc GPS như fuel.findNearbyStations (mục 4 kế hoạch): toạ độ lấy TẠI ĐÂY,
+        // không bao giờ đi qua LLM.
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') {
+          return { status: 'unavailable', reason: 'location_permission_denied' };
+        }
+
+        try {
+          const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+          const stations = await NoteDriApi.findNearbyChargingStations(loc.coords.latitude, loc.coords.longitude);
+          return { status: 'ok', stations, age_seconds: 0 };
+        } catch (err) {
+          if (isPremiumRequiredError(err)) {
+            return { status: 'unavailable', reason: 'premium_required' };
+          }
+          return { status: 'unavailable', reason: 'location_or_network_error' };
+        }
+      },
+    },
+    {
+      name: 'vehicle.getLifetimeCost',
+      description: 'Lấy TỔNG chi phí xăng + bảo dưỡng từ trước đến giờ (toàn bộ vòng đời xe, không giới hạn theo ngày/tháng) và chi phí trung bình mỗi km - dùng cho câu hỏi kiểu "tổng cộng xe tôi tốn bao nhiêu tiền từ trước tới giờ". Khác với expense.summary (chỉ xăng, theo tháng) và maintenance.expenseSummary (30 ngày gần nhất).',
+      authority: 'read-only',
+      inputSchema: NO_INPUT_SCHEMA,
+      async execute(_input, ctx) {
+        if (!ctx.vehicleId) return { status: 'unavailable', reason: 'no_active_vehicle' };
+        const data = await NoteDriApi.getLifetimeCost(ctx.vehicleId);
+        return { status: 'ok', ...data, age_seconds: 0 };
+      },
+    },
+    {
+      name: 'fuel.predictNextRefuel',
+      description: 'Dự đoán khi nào cần đổ xăng/sạc điện lần tiếp theo (còn bao nhiêu km/ngày, mốc ODO dự kiến, chi phí ước tính) dựa trên lịch sử đổ gần đây - dùng cho câu hỏi kiểu "bao giờ tôi phải đổ xăng tiếp", "còn bao xa thì hết xăng". Cần ít nhất 2 lần đổ có ghi ODO mới dự đoán được.',
+      authority: 'read-only',
+      inputSchema: NO_INPUT_SCHEMA,
+      async execute(_input, ctx) {
+        const prediction = await NoteDriApi.getFuelPrediction(ctx.vehicleId ?? undefined);
+        if (!prediction) return { status: 'unavailable', reason: 'not_enough_refuel_history' };
+        return { status: 'ok', ...prediction, age_seconds: 0 };
+      },
+    },
+    {
+      name: 'vehicle.getFuelConsumptionHealth',
+      description: 'Xe có đang tốn xăng/nhiên liệu bất thường so với mức bình thường của chính xe này (hoặc mức hãng công bố) không - dùng cho câu hỏi kiểu "xe tôi có tốn xăng hơn bình thường không", "tiêu hao nhiên liệu có ổn không". Không áp dụng cho xe điện.',
+      authority: 'read-only',
+      inputSchema: NO_INPUT_SCHEMA,
+      async execute(_input, ctx) {
+        if (!ctx.vehicleId) return { status: 'unavailable', reason: 'no_active_vehicle' };
+        const organ = await NoteDriApi.getFuelConsumptionOrgan(ctx.vehicleId);
+        if (!organ) return { status: 'unavailable', reason: 'not_enough_data' };
+        if (organ.status === 'na') return { status: 'unavailable', reason: 'not_applicable_ev' };
+        return {
+          status: 'ok',
+          verdict: organ.verdict,
+          detail: organ.detail,
+          note: organ.note,
+          health_status: organ.status,
+          age_seconds: 0,
+        };
+      },
+    },
   ];
 }

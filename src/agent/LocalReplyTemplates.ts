@@ -66,6 +66,12 @@ function unavailableText(reason: string | undefined): string {
       return 'Tính năng này chỉ dành cho tài khoản Premium.';
     case 'location_permission_denied':
       return 'Mình cần quyền vị trí để tìm giúp bạn - bạn cấp quyền vị trí cho app rồi hỏi lại nhé.';
+    case 'not_enough_refuel_history':
+      return 'Xe cần thêm vài lần đổ xăng có ghi ODO thì mình mới dự đoán được, hiện chưa đủ dữ liệu.';
+    case 'not_enough_data':
+      return 'Xe cần thêm dữ liệu (vài lần đổ đầy bình có ghi ODO) thì mình mới đánh giá được mức tiêu hao.';
+    case 'not_applicable_ev':
+      return 'Xe điện chưa hỗ trợ chấm điểm tiêu hao nhiên liệu kiểu này.';
     default:
       return 'Mình chưa lấy được thông tin này lúc này, bạn thử lại sau giúp mình nhé.';
   }
@@ -181,6 +187,35 @@ export function buildLocalReply(toolName: string, result: any, userText: string)
       const names = stations.slice(0, 3).map((s: any) => s.name ?? s.ten ?? 'Cây xăng').join(', ');
       return `Tìm thấy ${stations.length} cây xăng gần bạn, gần nhất: ${names}.`;
     }
+
+    // Thêm 2026-07-28 (mở rộng độ phủ theo rà soát docs/nori-agent-qa-coverage.md, 3 câu hỏi
+    // "chưa có tool"): mirror đúng format fuel.findNearbyStations, chỉ đổi từ "cây xăng" -> "trạm sạc".
+    case 'ev.findNearbyChargingStations': {
+      const stations = result.stations ?? [];
+      if (stations.length === 0) return 'Không tìm thấy trạm sạc nào gần vị trí của bạn.';
+      const names = stations.slice(0, 3).map((s: any) => s.name ?? s.ten ?? 'Trạm sạc').join(', ');
+      return `Tìm thấy ${stations.length} trạm sạc gần bạn, gần nhất: ${names}.`;
+    }
+
+    case 'vehicle.getLifetimeCost': {
+      const total = result.total ?? 0;
+      const perKm = result.per_km;
+      let text = `Từ trước tới giờ xe bạn đã tốn tổng cộng ${total.toLocaleString('vi-VN')}đ (xăng ${(result.fuel ?? 0).toLocaleString('vi-VN')}đ, bảo dưỡng ${(result.service ?? 0).toLocaleString('vi-VN')}đ)`;
+      if (perKm != null) text += `, trung bình ${perKm.toLocaleString('vi-VN')}đ/km`;
+      return `${text}.`;
+    }
+
+    case 'fuel.predictNextRefuel': {
+      const parts: string[] = [];
+      if (result.days_left != null) parts.push(`còn khoảng ${result.days_left} ngày`);
+      if (result.next_odo != null) parts.push(`mốc ODO khoảng ${result.next_odo} km`);
+      if (result.cost != null) parts.push(`tốn khoảng ${result.cost.toLocaleString('vi-VN')}đ`);
+      if (parts.length === 0) return 'Mình chưa đủ dữ liệu để dự đoán lần đổ xăng tiếp theo.';
+      return `Dự đoán lần đổ xăng tiếp theo: ${parts.join(', ')}.`;
+    }
+
+    case 'vehicle.getFuelConsumptionHealth':
+      return result.detail || result.verdict || 'Mình chưa có nhận định rõ về mức tiêu hao nhiên liệu của xe.';
 
     default:
       return 'Mình đã có thông tin nhưng chưa biết diễn đạt sao cho gọn - bạn hỏi lại chi tiết hơn giúp mình nhé.';

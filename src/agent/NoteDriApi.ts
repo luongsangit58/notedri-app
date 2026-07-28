@@ -21,6 +21,21 @@ export const NoteDriApi = {
   },
 
   /**
+   * Rút riêng organ 'tieu_thu' (tiêu thụ nhiên liệu so với baseline/mức hãng công bố) từ
+   * `/vehicles/{id}/health` (VehicleHealthService::consumptionOrgan) - MỚI (2026-07-28) cho
+   * tool `vehicle.getFuelConsumptionHealth`, đóng câu hỏi "xe tôi có tốn xăng hơn bình thường
+   * không". Dữ liệu này ĐÃ có sẵn trong payload health (dùng chung nguồn với
+   * vehicle.getHealthScore/getRecentIssues), chỉ trích ra 1 organ cụ thể thay vì bắt LLM tự mò
+   * trong object health_score/organs chung chung.
+   */
+  async getFuelConsumptionOrgan(vehicleId: number) {
+    const res = await vehiclesApi.health(vehicleId);
+    const h: any = res.data?.data ?? res.data ?? {};
+    const organs: any[] = Array.isArray(h?.organs) ? h.organs : [];
+    return organs.find((o) => o.key === 'tieu_thu') ?? null;
+  },
+
+  /**
    * `/dashboard` (DashboardController@index) KHÔNG có endpoint expense riêng - trả toàn bộ
    * payload trang chủ (vehicles, health_report, suggestions...). Chỉ lấy 3 field chi phí
    * NHIÊN LIỆU (FuelCalculator::fuelSummary: tong_tien/tong_lit/so_lan) - KHÔNG gộp chi phí
@@ -37,6 +52,18 @@ export const NoteDriApi = {
       last_month: d.last_month ?? null,
       all_time: d.all_time ?? null,
     };
+  },
+
+  /**
+   * `/dashboard` đã trả sẵn `prediction` (FuelCalculator::predictNextRefuel) nhưng trước đây
+   * chỉ NoteDriApi.getFuelExpenseSummary() gọi endpoint này và loại bỏ field này - MỚI
+   * (2026-07-28) tách riêng thành tool `fuel.predictNextRefuel` theo gap đã ghi nhận trong
+   * docs/nori-agent-qa-coverage.md. `prediction` là `null` khi xe chưa đủ >= 2 lần đổ xăng có
+   * ODO - giữ nguyên `null` để tool trả `status: unavailable` thay vì bịa số.
+   */
+  async getFuelPrediction(vehicleId?: number) {
+    const res = await dashboardApi.get(vehicleId);
+    return res.data?.data?.prediction ?? null;
   },
 
   async getUpcomingReminders(vehicleId: number) {
@@ -84,6 +111,15 @@ export const NoteDriApi = {
     return (res.data as any)?.stations ?? (res.data as any)?.data ?? [];
   },
 
+  /** `/refuels/nearby-charging` (Premium, cùng cờ `gas_finder`) - MỚI (2026-07-28), đã có sẵn
+   * cả route backend (`RefuelController@nearbyCharging`) và hàm client `refuelsApi.nearbyCharging`
+   * từ trước, chỉ chưa được bọc thành tool cho Nori. Cùng quy tắc GPS: lấy TẠI tool layer,
+   * không đi qua LLM. */
+  async findNearbyChargingStations(lat: number, lng: number) {
+    const res = await refuelsApi.nearbyCharging(lat, lng);
+    return (res.data as any)?.stations ?? [];
+  },
+
   /**
    * `/vehicles/{id}/cost-summary` - MỚI (2026-07-27), thêm sau khi user test thật hỏi "tổng
    * tiền bảo dưỡng tháng trước" và KHÔNG có tool nào trả lời được (grounding validator đã chặn
@@ -92,6 +128,18 @@ export const NoteDriApi = {
    */
   async getCostSummary(vehicleId: number, days = 30) {
     const res = await vehiclesApi.costSummary(vehicleId, days);
+    return res.data.data;
+  },
+
+  /**
+   * `/vehicles/{id}/cost-summary?scope=lifetime` (VehicleController@costSummary) - MỚI
+   * (2026-07-28) cho `vehicle.getLifetimeCost`, đóng gap "tổng chi phí xe từ trước tới giờ"
+   * nêu trong docs/nori-agent-qa-coverage.md. Backend chỉ thêm 1 nhánh param lên
+   * CostSummary::lifetime() đã được 3 nơi khác dùng production từ trước (không phải code mới
+   * chưa kiểm chứng).
+   */
+  async getLifetimeCost(vehicleId: number) {
+    const res = await vehiclesApi.costSummaryLifetime(vehicleId);
     return res.data.data;
   },
 
