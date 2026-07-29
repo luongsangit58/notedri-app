@@ -4,6 +4,7 @@ import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { FontAwesome5 } from '@expo/vector-icons';
 import * as Speech from 'expo-speech';
 import { useColors } from '../../utils/theme';
+import { prepareTextForSpeech } from '../../utils/text';
 import { useNoriAgentStore, PREMIUM_REQUIRED_TEXT } from '../../store/noriAgentStore';
 import { useInitNoriAgent } from '../../agent/useInitNoriAgent';
 import { describeProgressStage } from '../../agent/progressText';
@@ -66,7 +67,9 @@ export default function NoriQuickPopover({ visible, onClose, vehicleId }: NoriQu
   const isPremium = useAuthStore((s) => !!s.user?.is_premium);
   const [input, setInput] = useState('');
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const { listen, stop: stopListening, status: voiceStatus, error: voiceError, volume: voiceVolume } = useVoiceInput();
+  const {
+    listen, stop: stopListening, status: voiceStatus, error: voiceError, volume: voiceVolume, interimTranscript,
+  } = useVoiceInput();
   const prevMessageCountRef = useRef(uiMessages.length);
   const rawLastMessage = uiMessages[uiMessages.length - 1];
   // Rà soát 2026-07-28: CHỈ coi là "câu trả lời để hiện" khi lượt cuối là của Nori (assistant) -
@@ -127,7 +130,7 @@ export default function NoriQuickPopover({ visible, onClose, vehicleId }: NoriQu
     const hasNewMessage = uiMessages.length > prevMessageCountRef.current;
     prevMessageCountRef.current = uiMessages.length;
     if (visible && hasNewMessage && lastMessage?.role === 'assistant') {
-      Speech.speak(lastMessage.text, {
+      Speech.speak(prepareTextForSpeech(lastMessage.text), {
         language: 'vi-VN',
         onStart: () => setIsSpeaking(true),
         onDone: () => setIsSpeaking(false),
@@ -230,7 +233,11 @@ export default function NoriQuickPopover({ visible, onClose, vehicleId }: NoriQu
                 // dừng+gửi khi bạn ngừng nói.
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                   <VoiceWaveform volume={voiceVolume} color={colors.error} />
-                  <Text style={{ color: colors.error, fontSize: 15 }}>Đang nghe...</Text>
+                  {/* Chữ hiện dần như đang chat (góp ý user, đồng bộ với NoriChatScreen.tsx) -
+                      xem useVoiceInput.ts: chỉ để hiển thị, không phải nguồn dữ liệu gửi đi. */}
+                  <Text style={{ color: colors.error, fontSize: 15, flex: 1 }} numberOfLines={2}>
+                    {interimTranscript || 'Đang nghe...'}
+                  </Text>
                 </View>
               ) : lastMessage ? (
                 <Text style={{ color: colors.text, fontSize: 16, lineHeight: 22 }}>{lastMessage.text}</Text>

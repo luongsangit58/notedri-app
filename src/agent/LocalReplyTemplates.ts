@@ -72,6 +72,8 @@ function unavailableText(reason: string | undefined): string {
       return 'Xe cần thêm dữ liệu (vài lần đổ đầy bình có ghi ODO) thì mình mới đánh giá được mức tiêu hao.';
     case 'not_applicable_ev':
       return 'Xe điện chưa hỗ trợ chấm điểm tiêu hao nhiên liệu kiểu này.';
+    case 'weather_no_data':
+      return 'Mình chưa lấy được dữ liệu thời tiết tại vị trí của bạn lúc này, bạn thử lại sau giúp mình nhé.';
     default:
       return 'Mình chưa lấy được thông tin này lúc này, bạn thử lại sau giúp mình nhé.';
   }
@@ -236,6 +238,15 @@ export function buildLocalReply(toolName: string, result: any, userText: string)
 
     case 'vehicle.getFuelConsumptionHealth':
       return result.detail || result.verdict || 'Mình chưa có nhận định rõ về mức tiêu hao nhiên liệu của xe.';
+
+    case 'weather.getCurrent': {
+      const label = result.condition?.label ?? result.condition?.text ?? result.condition?.description;
+      let text = `Thời tiết hiện tại chỗ bạn khoảng ${result.temp}°C`;
+      if (label) text += `, ${String(label).toLowerCase()}`;
+      text += '.';
+      if (result.aqi?.value != null) text += ` Chất lượng không khí (AQI) khoảng ${result.aqi.value}.`;
+      return text;
+    }
 
     default:
       return 'Mình đã có thông tin nhưng chưa biết diễn đạt sao cho gọn - bạn hỏi lại chi tiết hơn giúp mình nhé.';

@@ -1,6 +1,7 @@
 import * as Location from 'expo-location';
 import { ToolDefinition } from '../types';
 import { NoteDriApi } from '../NoteDriApi';
+import { PermissionManager } from '../../services/permissions/PermissionManager';
 import { groupSessionsByDay, compareWeeks } from '../../services/obd/sessionTrend';
 import { noriMoodFromScore } from '../../services/nori/nori';
 
@@ -140,8 +141,8 @@ export function buildBusinessTools(): ToolDefinition[] {
         // Toạ độ GPS lấy TẠI ĐÂY, không bao giờ đi qua LLM (mục 4 kế hoạch: không gửi vị trí
         // chính xác cho nhà cung cấp LLM bên thứ ba) - chỉ danh sách trạm (tên/địa chỉ) mới
         // được đưa vào tool_result để LLM diễn đạt lại.
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== 'granted') {
+        const { granted } = await PermissionManager.requestLocationForeground();
+        if (!granted) {
           return { status: 'unavailable', reason: 'location_permission_denied' };
         }
 
@@ -165,8 +166,8 @@ export function buildBusinessTools(): ToolDefinition[] {
       async execute() {
         // Cùng quy tắc GPS như fuel.findNearbyStations (mục 4 kế hoạch): toạ độ lấy TẠI ĐÂY,
         // không bao giờ đi qua LLM.
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== 'granted') {
+        const { granted } = await PermissionManager.requestLocationForeground();
+        if (!granted) {
           return { status: 'unavailable', reason: 'location_permission_denied' };
         }
 
@@ -202,6 +203,33 @@ export function buildBusinessTools(): ToolDefinition[] {
         const prediction = await NoteDriApi.getFuelPrediction(ctx.vehicleId ?? undefined);
         if (!prediction) return { status: 'unavailable', reason: 'not_enough_refuel_history' };
         return { status: 'ok', ...prediction, age_seconds: 0 };
+      },
+    },
+    {
+      // MỚI: câu hỏi thời tiết trước đây rơi hẳn vào LLM (không có dữ liệu thời tiết thật để
+      // tra) dù app đã có sẵn endpoint `/weather` thật (đang dùng ở widget Trang chủ/Cockpit) -
+      // bọc thành tool đọc-thẳng qua LocalIntentMatcher, KHÔNG cần LLM (mục 4 kế hoạch: câu hỏi
+      // khớp mẫu rõ ràng trả lời thẳng từ tool_result, rẻ hơn + không có chỗ để bịa số).
+      name: 'weather.getCurrent',
+      description: 'Lấy thời tiết hiện tại (nhiệt độ, chất lượng không khí) tại vị trí GPS hiện tại của người dùng - dùng cho câu hỏi kiểu "thời tiết hôm nay thế nào", "ngoài trời có mưa không", "nhiệt độ ngoài trời bao nhiêu".',
+      authority: 'read-only',
+      inputSchema: NO_INPUT_SCHEMA,
+      async execute() {
+        // Cùng quy tắc GPS như fuel.findNearbyStations (mục 4 kế hoạch): toạ độ lấy TẠI ĐÂY,
+        // không bao giờ đi qua LLM.
+        const { granted } = await PermissionManager.requestLocationForeground();
+        if (!granted) {
+          return { status: 'unavailable', reason: 'location_permission_denied' };
+        }
+
+        try {
+          const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+          const data = await NoteDriApi.getWeather(loc.coords.latitude, loc.coords.longitude);
+          if (!data || data.temp == null) return { status: 'unavailable', reason: 'weather_no_data' };
+          return { status: 'ok', ...data, age_seconds: 0 };
+        } catch {
+          return { status: 'unavailable', reason: 'location_or_network_error' };
+        }
       },
     },
     {

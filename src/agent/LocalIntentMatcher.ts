@@ -203,6 +203,16 @@ const RULES: Rule[] = [
     toolName: 'vehicle.getBatteryVoltage',
     phrases: ['dien ap ac quy', 'dien ap ac-quy', 'ac quy con tot khong', 'binh dien co yeu khong', 'ac quy the nao'],
   },
+  {
+    // MỚI: hỏi thời tiết KHÔNG cần LLM - endpoint `/weather` thật đã có sẵn (xem
+    // weather.getCurrent ở businessTools.ts), trả lời tất định từ dữ liệu thật luôn nhanh + đáng
+    // tin hơn để LLM tự bịa hoặc từ chối vì "không có dữ liệu thời tiết".
+    toolName: 'weather.getCurrent',
+    phrases: [
+      'thoi tiet', 'du bao thoi tiet', 'troi co mua khong', 'troi mua khong', 'troi nang khong',
+      'nhiet do ngoai troi', 'nhiet do ben ngoai', 'ngoai troi the nao', 'chat luong khong khi', 'chi so aqi',
+    ],
+  },
 ];
 
 const DTC_CODE_PATTERN = /\b([pbcu]\s?0?\d{3,4})\b/i;

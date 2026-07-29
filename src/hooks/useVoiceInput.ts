@@ -2,6 +2,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { ExpoSpeechRecognitionModule, useSpeechRecognitionEvent } from 'expo-speech-recognition';
 import * as Haptics from 'expo-haptics';
 import { useT } from '../i18n';
+import { PermissionManager } from '../services/permissions/PermissionManager';
 
 type Status = 'idle' | 'listening' | 'done' | 'error';
 
@@ -15,6 +16,13 @@ interface UseVoiceInputResult {
    * giọng nói thật (native trả về qua sự kiện `volumechange` của expo-speech-recognition, range
    * gốc -2..10 - xem ExpoSpeechRecognitionModule.types.d.ts). 0 khi không nghe. */
   volume: number;
+  /** MỚI (góp ý user: đang nghe muốn thấy chữ hiện dần như đang chat, để biết Nori có nghe đúng
+   * hay không, thay vì chỉ có waveform + dòng chữ tĩnh "Đang nghe..."). Transcript SỐNG cập nhật
+   * theo từng sự kiện 'result' (kể cả kết quả tạm/interim) - CHỈ dùng để HIỂN THỊ, không phải
+   * nguồn dữ liệu gửi đi (đường gửi đi vẫn qua callback `onResult` ở `finishListening`, giữ
+   * NGUYÊN fix cũ 2026-07-27 "chỉ gọi callback 1 lần lúc 'end'" - không đụng tới logic đó). Rỗng
+   * khi không nghe. */
+  interimTranscript: string;
 }
 
 // Bộ số nhân tiếng Việt thường xuất hiện trong Google STT transcript.
@@ -72,6 +80,7 @@ export function useVoiceInput(): UseVoiceInputResult {
   const [status, setStatus] = useState<Status>('idle');
   const [error, setError] = useState<string | null>(null);
   const [volume, setVolume] = useState(0);
+  const [interimTranscript, setInterimTranscript] = useState('');
   // Bug fix: use ref instead of state so event handlers always see the latest callback
   // (state captured in useSpeechRecognitionEvent closure would be stale after first render)
   const callbackRef = useRef<((value: string, raw: string) => void) | null>(null);
@@ -111,6 +120,7 @@ export function useVoiceInput(): UseVoiceInputResult {
     clearMaxListenTimer();
     clearStopFallbackTimer();
     setVolume(0);
+    setInterimTranscript('');
     setStatus((s) => {
       if (s !== 'listening') return s;
       const result = latestResultRef.current;
@@ -125,6 +135,10 @@ export function useVoiceInput(): UseVoiceInputResult {
     const raw = event.results[0]?.transcript ?? '';
     const parsed = parseNumberFromSpeech(raw);
     latestResultRef.current = { parsed, raw };
+    // Cập nhật CHỈ để hiển thị (góp ý user: đang nói muốn thấy chữ hiện dần như đang chat, để
+    // biết Nori có nghe đúng không) - KHÔNG đụng tới đường gửi callback, vẫn CHỈ gọi 1 lần lúc
+    // 'end' qua finishListening() như cũ, giữ nguyên fix bug trùng tin nhắn 2026-07-27.
+    setInterimTranscript(raw);
   });
 
   // Rà soát 2026-07-27 (bug thật bắt qua feedback user: bấm mic lần 2 để "dừng" xong không thấy
@@ -154,6 +168,7 @@ export function useVoiceInput(): UseVoiceInputResult {
       clearMaxListenTimer();
       clearStopFallbackTimer();
       setVolume(0);
+      setInterimTranscript('');
 
       const code = ((event as any).error ?? '').toLowerCase();
       const msg = (event.message ?? '').toLowerCase();
@@ -225,7 +240,7 @@ export function useVoiceInput(): UseVoiceInputResult {
       return;
     }
 
-    const { granted } = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+    const { granted } = await PermissionManager.requestMicrophone();
     if (!granted) {
       setStatus('error');
       setError(t('voice.error_permission'));
@@ -236,14 +251,21 @@ export function useVoiceInput(): UseVoiceInputResult {
     clearStopFallbackTimer();
     setError(null);
     setVolume(0);
+    setInterimTranscript('');
     setStatus('listening');
     // Rung nhẹ báo "bắt đầu nghe được rồi" (cải thiện UX 2026-07-28, góp ý user: kiểu Siri/Google
     // Assistant - trước đây không có tín hiệu nào ngoài đổi UI, dễ nói hụt vài giây đầu vì
     // không chắc mic đã bật thật chưa, nhất là ở popup tự động nghe ngay khi mở).
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    // interimResults: true (MỚI, trước đây false) - CHỈ để bắn sự kiện 'result' tạm liên tục cho
+    // hiệu ứng chữ hiện dần lúc đang nói (interimTranscript ở trên) - KHÔNG liên quan tới bug
+    // trùng tin nhắn đã fix 2026-07-27 (bug đó do gọi callback NGAY tại mỗi 'result', đã fix tận
+    // gốc bằng cách dời callback sang CHỈ gọi 1 lần lúc 'end' - xem finishListening - không phải
+    // do cờ này, comment cũ ở finishListening có ghi rõ "dù đã đặt interimResults: false" vẫn bị
+    // trùng, tức cờ này chưa từng là nguyên nhân).
     ExpoSpeechRecognitionModule.start({
       lang: 'vi-VN',
-      interimResults: false,
+      interimResults: true,
       maxAlternatives: 1,
       volumeChangeEventOptions: { enabled: true, intervalMillis: 100 },
     });
@@ -286,5 +308,5 @@ export function useVoiceInput(): UseVoiceInputResult {
     clearStopFallbackTimer();
   }, []);
 
-  return { listen, stop, status, error, volume };
+  return { listen, stop, status, error, volume, interimTranscript };
 }

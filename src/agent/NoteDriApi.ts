@@ -5,6 +5,7 @@ import { dashboardApi } from '../api/dashboard';
 import { remindersApi } from '../api/reminders';
 import { obdApi } from '../api/obd';
 import { refuelsApi } from '../api/refuels';
+import client from '../api/client';
 
 /**
  * Lớp mỏng gọi lại src/api/*.ts hiện có (docs/nori-agent-plan.md mục 10.2) - KHÔNG viết API
@@ -152,6 +153,15 @@ export const NoteDriApi = {
   async createOdometerReading(vehicleId: number, data: { odometer: number; ngay?: string; ghi_chu?: string }) {
     const res = await odometerApi.create(vehicleId, data);
     return res.data;
+  },
+
+  /** `/weather` (đã dùng ở HomeScreen.tsx/CockpitWeather.tsx qua axios `client` trực tiếp, chưa
+   * có wrapper NoteDriApi) - MỚI cho tool `weather.getCurrent`: endpoint thời tiết thật đã có sẵn
+   * từ trước, chỉ chưa được bọc thành tool cho Nori nên câu hỏi thời tiết trước đây rơi vào LLM
+   * (không có dữ liệu thật, chỉ bịa hoặc từ chối trả lời) - dữ liệu thật thì không cần LLM. */
+  async getWeather(lat: number, lng: number) {
+    const res = await client.get('/weather', { params: { lat, lng } });
+    return (res.data as any)?.data ?? null;
   },
 
   /**

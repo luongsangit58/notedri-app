@@ -3,10 +3,11 @@ import {
   View, Text, TextInput, TouchableOpacity, FlatList, ActivityIndicator, Modal, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { KeyboardStickyView, KeyboardAvoidingView } from 'react-native-keyboard-controller';
+import { KeyboardStickyView, KeyboardAvoidingView, useKeyboardState } from 'react-native-keyboard-controller';
 import { FontAwesome5 } from '@expo/vector-icons';
 import * as Speech from 'expo-speech';
 import { useColors } from '../../utils/theme';
+import { prepareTextForSpeech } from '../../utils/text';
 import { useNoriAgentStore } from '../../store/noriAgentStore';
 import { useInitNoriAgent } from '../../agent/useInitNoriAgent';
 import { useVoiceInput } from '../../hooks/useVoiceInput';
@@ -79,12 +80,29 @@ export default function NoriChatScreen() {
   const [showSuggestions, setShowSuggestions] = useState(uiMessages.length <= 1);
   const listRef = useRef<FlatList>(null);
 
-  const { listen, stop: stopListening, status: voiceStatus, error: voiceError, volume: voiceVolume } = useVoiceInput();
+  const {
+    listen, stop: stopListening, status: voiceStatus, error: voiceError, volume: voiceVolume, interimTranscript,
+  } = useVoiceInput();
   const [isSpeaking, setIsSpeaking] = useState(false);
   // true nếu lượt hỏi VỪA RỒI là bằng giọng nói - chỉ đọc to trả lời trong trường hợp đó
   // (gõ chữ thì Nori không tự đọc, tránh gây phiền/ồn không mong muốn).
   const lastInputWasVoiceRef = useRef(false);
   const prevMessageCountRef = useRef(uiMessages.length);
+
+  // Bàn phím mở che mất tin nhắn cuối (bug thật user báo): `KeyboardStickyView` bọc thanh nhập
+  // chỉ TRANSLATE lên trên bàn phím bằng animation (transform), không đẩy layout - FlatList phía
+  // trên vẫn giữ nguyên chiều cao cũ nên vùng bàn phím vừa che lên ĐÚNG phần cuối danh sách chat.
+  // Dành thêm khoảng trống bằng đúng chiều cao bàn phím ở đáy FlatList để nội dung không bao giờ
+  // bị che, và cuộn lại xuống cuối mỗi khi bàn phím đổi trạng thái hoặc các dòng chỉ báo
+  // (đang nghĩ/đang nghe/đang nói) xuất hiện/biến mất - những thay đổi này KHÔNG đổi số lượng tin
+  // nhắn nên `onContentSizeChange` (dựa vào kích thước NỘI DUNG) không tự bắt được.
+  const keyboardHeight = useKeyboardState((s) => s.height);
+  useEffect(() => {
+    listRef.current?.scrollToEnd({ animated: true });
+    // KHÔNG thêm `interimTranscript` vào deps dù dòng chữ sống này cũng nằm trong
+    // KeyboardStickyView - nó đổi liên tục (gần như mỗi 100ms lúc đang nói), cuộn lại mỗi lần sẽ
+    // giật/phiền hơn là hữu ích. `voiceStatus` đã đủ để cuộn đúng lúc dòng này xuất hiện/biến mất.
+  }, [keyboardHeight, isThinking, voiceStatus, isSpeaking, voiceError]);
 
   useEffect(() => {
     const newMessage = uiMessages[uiMessages.length - 1];
@@ -93,7 +111,7 @@ export default function NoriChatScreen() {
 
     if (hasNewMessage && newMessage?.role === 'assistant' && lastInputWasVoiceRef.current) {
       lastInputWasVoiceRef.current = false;
-      Speech.speak(newMessage.text, {
+      Speech.speak(prepareTextForSpeech(newMessage.text), {
         language: 'vi-VN',
         onStart: () => setIsSpeaking(true),
         onDone: () => setIsSpeaking(false),
@@ -158,7 +176,7 @@ export default function NoriChatScreen() {
           data={uiMessages}
           keyExtractor={(item) => item.id}
           style={{ flex: 1 }}
-          contentContainerStyle={{ padding: 16, gap: 10 }}
+          contentContainerStyle={{ padding: 16, paddingBottom: 16 + keyboardHeight, gap: 10 }}
           onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
           ListEmptyComponent={
             <Text style={{ color: colors.textSecondary, textAlign: 'center', marginTop: 40 }}>
@@ -250,7 +268,14 @@ export default function NoriChatScreen() {
           // useVoiceInput.ts) rồi tự gửi câu hỏi, không cần bấm nút gửi.
           <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 6, gap: 10 }}>
             <VoiceWaveform volume={voiceVolume} color={colors.error} />
-            <Text style={{ color: colors.error, fontSize: 13 }}>Đang nghe... (tự gửi khi bạn dừng nói)</Text>
+            {/* Chữ hiện dần như đang chat (góp ý user: đang nói muốn biết Nori có nghe đúng
+                không thay vì chỉ có waveform + dòng chữ tĩnh) - `interimTranscript` cập nhật
+                sống theo từng kết quả tạm, KHÔNG phải nguồn dữ liệu gửi đi (xem useVoiceInput.ts:
+                đường gửi vẫn chỉ chốt 1 lần lúc dừng nghe). Chưa có chữ nào -> vẫn hiện dòng gợi
+                ý cũ, tránh khoảng trắng trống lúc vừa bấm mic. */}
+            <Text style={{ color: colors.error, fontSize: 13, flex: 1 }} numberOfLines={2}>
+              {interimTranscript || 'Đang nghe... (tự gửi khi bạn dừng nói)'}
+            </Text>
           </View>
         )}
 
