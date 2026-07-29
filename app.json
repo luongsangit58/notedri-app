@@ -148,7 +148,8 @@
       "./withNfcIntentFilter.js",
       "./withPictureInPicture.js",
       "./withAndroidReleaseSigning.js",
-      "expo-background-task"
+      "expo-background-task",
+      "expo-audio"
     ]
   }
 }

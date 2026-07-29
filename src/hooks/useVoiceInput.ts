@@ -3,6 +3,7 @@ import { ExpoSpeechRecognitionModule, useSpeechRecognitionEvent } from 'expo-spe
 import * as Haptics from 'expo-haptics';
 import { useT } from '../i18n';
 import { PermissionManager } from '../services/permissions/PermissionManager';
+import { playListenStartCue, playListenEndCue } from '../services/nori/voiceCues';
 
 type Status = 'idle' | 'listening' | 'done' | 'error';
 
@@ -125,6 +126,10 @@ export function useVoiceInput(): UseVoiceInputResult {
       if (s !== 'listening') return s;
       const result = latestResultRef.current;
       latestResultRef.current = null;
+      // Tiếng bíp báo Nori ĐÃ NGỪNG nghe (góp ý user: trước đây chỉ có tín hiệu lúc BẮT ĐẦU
+      // nghe qua Haptics - trên điện thoại thật chỉ rung, không phát ra tiếng, nên user không rõ
+      // Nori đã dừng nghe hay chưa dù màn hình đã đổi trạng thái) - xem voiceCues.ts.
+      playListenEndCue();
       // Luôn gọi callback dù parsed rỗng — để parent hiển thị lỗi thay vì im lặng.
       if (callbackRef.current && result) callbackRef.current(result.parsed, result.raw);
       return 'done';
@@ -257,6 +262,10 @@ export function useVoiceInput(): UseVoiceInputResult {
     // Assistant - trước đây không có tín hiệu nào ngoài đổi UI, dễ nói hụt vài giây đầu vì
     // không chắc mic đã bật thật chưa, nhất là ở popup tự động nghe ngay khi mở).
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    // Thêm tiếng bíp THẬT bên cạnh rung (góp ý user: trên đầu Android ô tô nghe được tiếng lúc
+    // bắt đầu nghe vì ROM đó thay rung bằng tiếng "cạch" hệ thống, nhưng điện thoại thật chỉ
+    // rung - không phát ra âm thanh, nên không nhất quán giữa các thiết bị) - xem voiceCues.ts.
+    playListenStartCue();
     // interimResults: true (MỚI, trước đây false) - CHỈ để bắn sự kiện 'result' tạm liên tục cho
     // hiệu ứng chữ hiện dần lúc đang nói (interimTranscript ở trên) - KHÔNG liên quan tới bug
     // trùng tin nhắn đã fix 2026-07-27 (bug đó do gọi callback NGAY tại mỗi 'result', đã fix tận

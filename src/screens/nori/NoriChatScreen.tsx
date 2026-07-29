@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, FlatList, ActivityIndicator, Modal, ScrollView,
+  InteractionManager,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { KeyboardStickyView, KeyboardAvoidingView, useKeyboardState } from 'react-native-keyboard-controller';
@@ -111,12 +112,28 @@ export default function NoriChatScreen() {
 
     if (hasNewMessage && newMessage?.role === 'assistant' && lastInputWasVoiceRef.current) {
       lastInputWasVoiceRef.current = false;
-      Speech.speak(prepareTextForSpeech(newMessage.text), {
-        language: 'vi-VN',
-        onStart: () => setIsSpeaking(true),
-        onDone: () => setIsSpeaking(false),
-        onStopped: () => setIsSpeaking(false),
-        onError: () => setIsSpeaking(false),
+      const text = prepareTextForSpeech(newMessage.text);
+      // Rà soát (user báo trên đầu Android ô tô: đôi lúc câu trả lời đã in ra chat nhưng Nori
+      // không đọc) - gọi Speech.speak() NGAY trong effect chạy liền sau set() render lại (câu trả
+      // lời vừa in ra + isThinking vừa tắt) đụng đúng cùng 1 lớp bug đã gặp ở nơi khác trong app:
+      // "chạm native bridge lúc app đang bận" bị vài ROM đầu Android ô tô âm thầm rớt lệnh thay vì
+      // báo lỗi (xem lý do tương tự ở authStore.ts login() trước khi xin quyền thông báo). Đợi
+      // hết đợt tương tác/animation hiện tại bằng runAfterInteractions() trước khi gọi, cùng cách
+      // đã áp dụng ở đó. Cũng chủ động Speech.stop() trước - phòng 1 utterance cũ coi như "đã
+      // xong" phía JS nhưng engine TTS native còn chưa nhả xong, khiến utterance mới bị nuốt im
+      // lặng trên vài engine TTS OEM.
+      InteractionManager.runAfterInteractions(async () => {
+        await Speech.stop().catch(() => {});
+        Speech.speak(text, {
+          language: 'vi-VN',
+          onStart: () => setIsSpeaking(true),
+          onDone: () => setIsSpeaking(false),
+          onStopped: () => setIsSpeaking(false),
+          onError: (error) => {
+            console.warn('[NoriAgent] Speech.speak() lỗi, Nori không đọc được câu trả lời:', error);
+            setIsSpeaking(false);
+          },
+        });
       });
     }
   }, [uiMessages]);

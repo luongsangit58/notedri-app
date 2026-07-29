@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Modal, View, Text, TextInput, TouchableOpacity, ActivityIndicator, Pressable } from 'react-native';
+import { Animated, Modal, View, Text, TextInput, TouchableOpacity, ActivityIndicator, Pressable, InteractionManager } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { FontAwesome5 } from '@expo/vector-icons';
 import * as Speech from 'expo-speech';
@@ -130,12 +130,22 @@ export default function NoriQuickPopover({ visible, onClose, vehicleId }: NoriQu
     const hasNewMessage = uiMessages.length > prevMessageCountRef.current;
     prevMessageCountRef.current = uiMessages.length;
     if (visible && hasNewMessage && lastMessage?.role === 'assistant') {
-      Speech.speak(prepareTextForSpeech(lastMessage.text), {
-        language: 'vi-VN',
-        onStart: () => setIsSpeaking(true),
-        onDone: () => setIsSpeaking(false),
-        onStopped: () => setIsSpeaking(false),
-        onError: () => setIsSpeaking(false),
+      const text = prepareTextForSpeech(lastMessage.text);
+      // Cùng fix với NoriChatScreen.tsx (user báo trên đầu Android ô tô: đôi lúc câu trả lời đã
+      // in ra nhưng Nori không đọc) - đợi hết đợt tương tác/animation hiện tại + chủ động dừng
+      // utterance cũ trước khi đọc utterance mới, tránh vài ROM/engine TTS âm thầm nuốt lệnh.
+      InteractionManager.runAfterInteractions(async () => {
+        await Speech.stop().catch(() => {});
+        Speech.speak(text, {
+          language: 'vi-VN',
+          onStart: () => setIsSpeaking(true),
+          onDone: () => setIsSpeaking(false),
+          onStopped: () => setIsSpeaking(false),
+          onError: (error) => {
+            console.warn('[NoriAgent] Speech.speak() lỗi, Nori không đọc được câu trả lời:', error);
+            setIsSpeaking(false);
+          },
+        });
       });
     }
   }, [uiMessages, visible, lastMessage]);
