@@ -16,7 +16,11 @@ import ArcGauge from '../primitives/ArcGauge';
 // phản với nền đen cao hơn hẳn đỏ thuần (mắt người nhạy với vàng-cam hơn đỏ
 // ở điều kiện thiếu sáng) - dễ đọc số hơn mà không mất tinh thần "buồng lái
 // ban đêm" ban đầu.
-const PALETTE = { bg: '#000000', red: '#FFB300', redDim: '#8A6100' };
+// Rà soát 29/7 (góp ý user, ảnh thật màn Đồng hồ đầu Android ô tô: nền đen
+// tuyệt đối + KHÔNG viền -> hoà lẫn vào nền đen chung quanh, mất luôn ranh
+// giới khung đồng hồ) - thêm viền hổ phách mờ, đủ tách khung khỏi nền đen mà
+// không phá nguyên lý "buồng lái ban đêm" (vẫn tông ấm, rất mờ).
+const PALETTE = { bg: '#000000', red: '#FFB300', redDim: '#8A6100', border: '#FFB30026' };
 
 function MiniStat({ label, value, unit, textSize, valSize, animate }: {
   label: string;
@@ -50,7 +54,7 @@ export default function NightLayout({ metrics, size, heroSize, isPortrait, anima
   const miniValSize = Math.max(15, Math.min(24, size * 0.08));
 
   return (
-    <View style={[styles.root, { backgroundColor: PALETTE.bg }, isPortrait && { paddingVertical: 28 }]}>
+    <View style={[styles.root, { backgroundColor: PALETTE.bg, borderColor: PALETTE.border }, isPortrait && { paddingVertical: 28 }]}>
       <ArcGauge
         value={speed?.value ?? null} min={0} max={220} size={heroSize}
         label={t('obd.stat_speed')} unit="km/h" valueFontFamily={monoFontFamily}
@@ -73,7 +77,7 @@ export default function NightLayout({ metrics, size, heroSize, isPortrait, anima
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, borderRadius: 18, width: '100%', minHeight: 220, alignItems: 'center', justifyContent: 'center', paddingVertical: 20, gap: 2 },
+  root: { flex: 1, borderRadius: 18, borderWidth: 1, width: '100%', minHeight: 220, alignItems: 'center', justifyContent: 'center', paddingVertical: 20, gap: 2 },
   secondaryRow: { flexDirection: 'row', gap: 10, flexWrap: 'wrap', justifyContent: 'center', marginTop: 22 },
   mini: { alignItems: 'center' },
   miniLabel: { fontSize: 9, letterSpacing: 0.6, textTransform: 'uppercase' },

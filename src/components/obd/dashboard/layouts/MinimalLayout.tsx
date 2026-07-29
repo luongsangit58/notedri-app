@@ -14,8 +14,13 @@ import ArcGauge from '../primitives/ArcGauge';
 // đồng hồ đo có kim/cung, không được chỉ hiện số như đồng hồ điện tử - thanh
 // ngang trước đây (dù không phải số thuần) vẫn không phải "đồng hồ", đổi hẳn
 // sang ArcGauge như 2 style Analog/Retro.
-const LIGHT_PALETTE = { bg: '#F4F4F2', text: '#111111', textDim: '#6B7280', track: '#11111116' };
-const DARK_PALETTE = { bg: '#111112', text: '#F4F4F2', textDim: '#9AA0AC', track: '#F4F4F216' };
+// Rà soát 29/7 (góp ý user, ảnh thật màn Đồng hồ đầu Android ô tô: nền theme
+// gần đen tuyệt đối, KHÔNG viền -> hoà lẫn hoàn toàn vào nền đen của màn
+// Đồng hồ/vỏ máy quanh nó, không còn phân biệt được khung đồng hồ với nền) -
+// thêm `border` mờ (tách 1 nấc khỏi bg, không phá tinh thần đơn sắc tối giản)
+// cho viền root, áp dụng luôn cho NightLayout (cùng lỗi, xem file đó).
+const LIGHT_PALETTE = { bg: '#F4F4F2', text: '#111111', textDim: '#6B7280', track: '#11111116', border: '#00000022' };
+const DARK_PALETTE = { bg: '#111112', text: '#F4F4F2', textDim: '#9AA0AC', track: '#F4F4F216', border: '#FFFFFF26' };
 
 function MiniStat({ label, value, unit, palette, textSize, valSize, animate }: {
   label: string;
@@ -47,7 +52,7 @@ export default function MinimalLayout({ metrics, size, heroSize, isPortrait, ani
   const featured = pickFeaturedSecondary(secondary);
 
   return (
-    <View style={[styles.root, { backgroundColor: PALETTE.bg }, isPortrait && { paddingVertical: 28 }]}>
+    <View style={[styles.root, { backgroundColor: PALETTE.bg, borderColor: PALETTE.border }, isPortrait && { paddingVertical: 28 }]}>
       <ArcGauge
         value={speed?.value ?? null} min={0} max={220} size={heroSize}
         label={t('obd.stat_speed')} unit="km/h"
@@ -74,7 +79,7 @@ export default function MinimalLayout({ metrics, size, heroSize, isPortrait, ani
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, borderRadius: 18, width: '100%', minHeight: 220, alignItems: 'center', justifyContent: 'center', paddingVertical: 20 },
+  root: { flex: 1, borderRadius: 18, borderWidth: 1, width: '100%', minHeight: 220, alignItems: 'center', justifyContent: 'center', paddingVertical: 20 },
   secondaryRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 22, flexWrap: 'wrap', justifyContent: 'center' },
   secondaryText: { fontSize: 11, letterSpacing: 0.2 },
   dot: { width: 3, height: 3, borderRadius: 1.5 },

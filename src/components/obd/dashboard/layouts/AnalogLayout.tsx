@@ -20,12 +20,18 @@ import { useCountingNumber } from '../../../../hooks/useCountingNumber';
 // "sinh động" nhưng user thấy rối, muốn thanh thoát hơn giống đồng hồ cơ thật
 // (chỉ vạch chia + số trắng, không đổi màu kim/số theo tốc độ). Bỏ hẳn
 // `zones` ở cả 2 đồng hồ dưới, chỉ giữ `colorStops` cho cung.
+//
+// Rà soát 29/7 (góp ý user: dải màu "quá nhiều gradient, chưa hài hoà") - 5
+// mốc cũ nhồi hết vào 0-80km/h trong khi cung chạy tới 220km/h, khiến 3/4
+// cung còn lại chỉ 1 màu đỏ phẳng và đoạn đầu đổi màu dồn dập, loè loẹt. Giãn
+// còn 4 mốc trải ĐỀU trên toàn thang 0-220 (đúng nhịp cung thật), giữ đúng thứ
+// tự ngữ nghĩa xanh dương (êm) -> xanh lục (ổn định) -> vàng cam (nhanh) -> đỏ
+// (rất nhanh) nhưng chuyển tiếp thong thả hơn.
 const SPEED_BANDS = [
   { value: 0, color: '#3B82F6' },
-  { value: 20, color: '#22C55E' },
-  { value: 40, color: '#EAB308' },
-  { value: 60, color: '#F97316' },
-  { value: 80, color: '#EF4444' },
+  { value: 80, color: '#22C55E' },
+  { value: 140, color: '#F59E0B' },
+  { value: 180, color: '#EF4444' },
 ];
 // Vòng tua: xanh lục (bình thường) -> vàng (~3/4 thang, tương đương mốc warn
 // cũ) -> đỏ (gần kịch kim, tương đương mốc crit cũ) - cùng logic màu với

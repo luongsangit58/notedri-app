@@ -168,10 +168,17 @@ export default function OBDDashboardScreen() {
   // ở đây - hàm đó thu nhỏ app NGAY LẬP TỨC, sai ý "chỉ thu nhỏ khi user RỜI
   // app"). setPipParams() chỉ đăng ký, hệ thống tự quyết định lúc nào chuyển
   // (đúng lúc bấm Home, Android 12+) - xem NotedriPipModule.kt.
+  // Rà soát 29/7 (user báo: bấm nút PiP thủ công thu nhỏ được, nhưng bấm Home
+  // thiết bị để thoát thì KHÔNG tự thu nhỏ) - trước đây chỉ đăng ký
+  // setPipParams() khi isConnected === true. BLE hay có khoảng "reconnecting"
+  // thoáng qua (mất sóng, xe rung lắc...) - đúng lúc đó nếu user bấm Home thì
+  // cờ auto-enter (API 31+) chưa từng được đăng ký -> Android không tự vào
+  // PiP. Nút bấm thủ công (handlePressPip) không hề kiểm tra isConnected, nên
+  // đường tự động cũng không nên khắt khe hơn - chỉ cần đang ở màn Đồng hồ.
   useEffect(() => {
-    if (Platform.OS !== 'android' || viewMode !== 'gauge' || !isConnected) return;
+    if (Platform.OS !== 'android' || viewMode !== 'gauge') return;
     NotedriPip.setPipParams().catch(() => {});
-  }, [viewMode, isConnected]);
+  }, [viewMode]);
 
   // Đổi qua PipCompactView khi Android vừa thu nhỏ Activity vào khung PiP -
   // nội dung khung PiP CHÍNH LÀ UI Activity lúc đó (không phải 1 view riêng),

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, Pressable, Animated } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { useCockpitThemeStore } from '../../store/cockpitThemeStore';
@@ -28,6 +29,27 @@ import CockpitWeather from './CockpitWeather';
 // riêng back/brand/nút chức năng bên trái-phải ẩn mặc định, chạm màn hình để
 // hiện lại (tự ẩn sau 4s không thao tác) - đúng tinh thần "full hoàn toàn".
 const AUTO_HIDE_MS = 4000;
+// Toolbar chặn trần inset ở mức vừa đủ che thanh điều hướng/status bar của
+// đầu Android ô tô (rà soát 24/7: ROM custom có thể báo inset vài trăm dp) -
+// cùng ngưỡng MAX_SAFE_INSET đã dùng ở OBDDashboardScreen.tsx.
+const MAX_TOOLBAR_INSET = 64;
+
+// Rà soát 29/7 (góp ý user: toolbar/giờ-thời tiết của theme "Tối giản EV" gần
+// như biến mất - previewColor của theme này là #111111, gần đen, dùng làm
+// viền/nền trong suốt trên nền tối thì không còn tương phản) - đẩy màu quá
+// tối lên đủ sáng CHỈ cho viền/icon/chữ của toolbar nổi (không đụng
+// previewColor gốc dùng làm swatch nhận diện style trong picker).
+function ensureVisibleAccent(hex: string): string {
+  const m = /^#([0-9a-fA-F]{6})$/.exec(hex);
+  if (!m) return hex;
+  const r = parseInt(m[1].slice(0, 2), 16);
+  const g = parseInt(m[1].slice(2, 4), 16);
+  const b = parseInt(m[1].slice(4, 6), 16);
+  const luma = 0.299 * r + 0.587 * g + 0.114 * b;
+  if (luma >= 90) return hex;
+  const lift = (c: number) => Math.round(c + (255 - c) * 0.6);
+  return `#${lift(r).toString(16).padStart(2, '0')}${lift(g).toString(16).padStart(2, '0')}${lift(b).toString(16).padStart(2, '0')}`;
+}
 
 export default function GaugeCluster({
   vehicleId, vehicleName, snapshot, fastSnapshot, capability, isConnected, onBack, onDisconnect,
@@ -51,6 +73,15 @@ export default function GaugeCluster({
   const layout = useCockpitLayout();
   const cockpitMode = useCockpitThemeStore((s) => s.mode);
   const toggleCockpitMode = useCockpitThemeStore((s) => s.toggle);
+  // Rà soát 29/7 (ảnh thật đầu Android ô tô: nút chọn theme/sáng-tối/quay lại
+  // bị thanh điều hướng hệ thống che mất) - toolbar nổi trước đây "top: 8" cố
+  // định, không cộng safe-area top (OBDDashboardScreen cố tình bỏ top/bottom
+  // inset ở chế độ Đồng hồ để nền full màn, nhưng toolbar/giờ NỔI phía trên
+  // nền đó vẫn cần né vùng hệ thống). Đọc riêng insets ở đây, chỉ áp cho vị
+  // trí toolbar/giờ - nền ScrollView bên dưới vẫn full-bleed như cũ.
+  const rawInsets = useSafeAreaInsets();
+  const toolbarInsetTop = Math.min(rawInsets.top, MAX_TOOLBAR_INSET);
+  const toolbarInsetSide = Math.min(Math.max(rawInsets.left, rawInsets.right), MAX_TOOLBAR_INSET);
 
   // Nút PiP thủ công (rà soát 24/7: user báo PiP tự động vẫn chưa thấy hoạt
   // động trên đầu Android ô tô cụ thể của họ) - không thể chẩn đoán từ xa liệu
@@ -140,6 +171,10 @@ export default function GaugeCluster({
 
   const Layout = style.Layout;
   const accent = style.previewColor;
+  // Toolbar/giờ-thời tiết dùng bản màu đã đảm bảo tương phản (xem
+  // ensureVisibleAccent) - previewColor gốc (accent) vẫn giữ nguyên cho nơi
+  // khác (vd swatch trong DashboardStylePicker).
+  const toolbarAccent = ensureVisibleAccent(accent);
   // Rà soát 24/7 (góp ý user: giờ/thời tiết vẫn nhỏ trên màn đầu xe to, chưa
   // "ăn nhập" màu theme đang chọn) - cỡ chữ tỉ lệ theo heroGaugeSize (đã tính
   // theo cạnh ngắn hơn màn hình thật), và tô theo accent của theme thay vì
@@ -172,22 +207,31 @@ export default function GaugeCluster({
       {/* Giờ + thời tiết (góp ý user: màn Đồng hồ ẩn StatusBar hệ thống nên mất
           luôn đồng hồ giờ của máy) - LUÔN hiện, không theo chạm-màn-hình như
           nút chức năng (đúng mục đích ban đầu: liếc giờ không cần thao tác). */}
-      <View pointerEvents="none" style={[styles.clockPill, { backgroundColor: accent + '33', borderColor: accent + '77' }]}>
-        <CockpitClock color={accent} fontSize={clockFontSize} />
-        <CockpitWeather color={accent} fontSize={clockFontSize} />
+      <View
+        pointerEvents="none"
+        style={[
+          styles.clockPill,
+          { top: 8 + toolbarInsetTop, backgroundColor: toolbarAccent + '33', borderColor: toolbarAccent + '77' },
+        ]}
+      >
+        <CockpitClock color={toolbarAccent} fontSize={clockFontSize} />
+        <CockpitWeather color={toolbarAccent} fontSize={clockFontSize} />
       </View>
 
       {/* Nút chức năng - ẩn mặc định (full màn thật), chạm màn hình để hiện,
           tự ẩn lại sau 4s không thao tác. */}
       <Animated.View
         pointerEvents={controlsVisible ? 'box-none' : 'none'}
-        style={[styles.toolbar, { opacity: controlsOpacity }]}
+        style={[
+          styles.toolbar,
+          { top: 8 + toolbarInsetTop, left: 12 + toolbarInsetSide, right: 12 + toolbarInsetSide, opacity: controlsOpacity },
+        ]}
       >
-        <View style={[styles.chip, { backgroundColor: accent + '33', borderColor: accent + '77' }]}>
+        <View style={[styles.chip, { backgroundColor: toolbarAccent + '33', borderColor: toolbarAccent + '77' }]}>
           <TouchableOpacity onPress={onBack} style={styles.iconBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
             <FontAwesome5 name="arrow-left" size={19} color="#FFFFFF" />
           </TouchableOpacity>
-          <FontAwesome5 name="tachometer-alt" size={17} color={accent} solid />
+          <FontAwesome5 name="tachometer-alt" size={17} color={toolbarAccent} solid />
           <Text style={styles.brandText}>NoteDri</Text>
         </View>
 
@@ -195,22 +239,22 @@ export default function GaugeCluster({
           {pipSupported && (
             <TouchableOpacity
               onPress={handlePressPip}
-              style={[styles.styleBtn, { backgroundColor: accent + '33', borderColor: accent + '77' }]}
+              style={[styles.styleBtn, { backgroundColor: toolbarAccent + '33', borderColor: toolbarAccent + '77' }]}
             >
-              <FontAwesome5 name="compress" size={18} color={accent} solid />
+              <FontAwesome5 name="compress" size={18} color={toolbarAccent} solid />
             </TouchableOpacity>
           )}
           <TouchableOpacity
             onPress={toggleCockpitMode}
-            style={[styles.styleBtn, { backgroundColor: accent + '33', borderColor: accent + '77' }]}
+            style={[styles.styleBtn, { backgroundColor: toolbarAccent + '33', borderColor: toolbarAccent + '77' }]}
           >
-            <FontAwesome5 name={cockpitMode === 'dark' ? 'sun' : 'moon'} size={18} color={accent} solid />
+            <FontAwesome5 name={cockpitMode === 'dark' ? 'sun' : 'moon'} size={18} color={toolbarAccent} solid />
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => setPickerVisible(true)}
-            style={[styles.styleBtn, { backgroundColor: accent + '33', borderColor: accent + '77' }]}
+            style={[styles.styleBtn, { backgroundColor: toolbarAccent + '33', borderColor: toolbarAccent + '77' }]}
           >
-            <FontAwesome5 name="palette" size={18} color={accent} solid />
+            <FontAwesome5 name="palette" size={18} color={toolbarAccent} solid />
           </TouchableOpacity>
           <TouchableOpacity
             onPress={onDisconnect}
@@ -238,12 +282,12 @@ export default function GaugeCluster({
 const styles = StyleSheet.create({
   root: { flexGrow: 1, padding: 8 },
   clockPill: {
-    position: 'absolute', top: 8, alignSelf: 'center',
+    position: 'absolute', alignSelf: 'center',
     flexDirection: 'row', alignItems: 'center', gap: 10,
     borderRadius: 20, borderWidth: 1, paddingHorizontal: 16, paddingVertical: 8,
   },
   toolbar: {
-    position: 'absolute', top: 8, left: 12, right: 12,
+    position: 'absolute',
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
   },
   chip: {
