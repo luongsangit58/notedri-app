@@ -524,7 +524,20 @@ async function autoShutdown(vehicleId: number | null): Promise<void> {
   } catch { /* notifications non-critical */ }
 }
 
-export async function requestPermissionsAndStart(vehicleId: number): Promise<StartResult> {
+/**
+ * `skipDisclosure` (rà soát 29/7: user báo popup xin quyền dồn dập, phần 2 -
+ * nhắc "Chưa ghi hành trình tự động" ở OBDDashboardScreen đã tự giải thích rõ
+ * lý do cần vị trí nền trước khi gọi hàm này, hiện thêm dialog "disclosure"
+ * bên dưới nữa là lặp lại đúng nội dung lần 2 cho cùng 1 quyền) - CHỈ true khi
+ * caller đã tự hiện 1 Alert giải thích đủ chuẩn "công bố nổi bật" ngay trước
+ * đó. Mặc định false để giữ nguyên hành vi cho các lối gọi khác (vd
+ * useGpsTrip.ts từ nút "Bật ghi hành trình" - không có Alert giải thích nào
+ * trước, vẫn cần disclosure ở đây).
+ */
+export async function requestPermissionsAndStart(
+  vehicleId: number,
+  options?: { skipDisclosure?: boolean },
+): Promise<StartResult> {
   // 0) Kiểm tra lock: chỉ 1 thiết bị/xe cùng lúc.
   //    Nếu mạng lỗi -> offline-first: cho phép bật, tránh chặn oan.
   try {
@@ -561,10 +574,12 @@ export async function requestPermissionsAndStart(vehicleId: number): Promise<Sta
   //    start, and only surface a settings prompt if the start actually fails.
   let backgroundGranted = false;
   try {
-    const bg = await PermissionManager.requestLocationBackground({
-      titleKey: 'gps_trips.disclosure_title',
-      bodyKey: 'gps_trips.disclosure_body',
-    });
+    const bg = options?.skipDisclosure
+      ? await PermissionManager.requestLocationBackgroundAlreadyDisclosed()
+      : await PermissionManager.requestLocationBackground({
+          titleKey: 'gps_trips.disclosure_title',
+          bodyKey: 'gps_trips.disclosure_body',
+        });
     backgroundGranted = bg.granted;
   } catch { backgroundGranted = false; }
 
@@ -784,6 +799,41 @@ export async function autoArmIfReady(vehicleId: number): Promise<AutoArmResult> 
     return result.ok ? { armed: true } : { armed: false, reason: 'error' };
   } catch {
     return { armed: false, reason: 'error' };
+  }
+}
+
+const GPS_TRIP_NUDGE_PENDING_KEY = 'obd_gps_trip_nudge_pending';
+
+/**
+ * Rà soát 29/7 (cùng vấn đề đã sửa cho obdKeepAliveService.recordSessionGap/
+ * consumeSessionGapFlag): nhắc "Chưa ghi hành trình tự động" ở OBDDashboardScreen
+ * trước đây hiện NGAY ở lần kết nối OBD2 đầu tiên chỉ vì thiếu quyền vị trí
+ * nền, kể cả khi user chưa từng thực sự lái xe (không có chuyến nào bị bỏ
+ * lỡ) - cảm giác bị xin quyền vô cớ giống hệt luồng keep-alive trước khi sửa.
+ * Đặt cờ ở đây khi phiên OBD VỪA kết thúc có drivingSeconds>0 (xe thực sự đã
+ * chạy) mà vẫn thiếu quyền nền - OBDDashboardScreen chỉ hiện nhắc ở lần kết
+ * nối KẾ TIẾP nếu cờ này được đặt, tức là đã có ít nhất 1 chuyến thực tế có
+ * nguy cơ chưa được ghi.
+ */
+export async function recordDrivingWithoutTripPermission(drivingSeconds: number): Promise<void> {
+  if (Platform.OS !== 'android' || drivingSeconds <= 0) return;
+  try {
+    const { background } = await getPermissionStatus();
+    if (background) return;
+    await AsyncStorage.setItem(GPS_TRIP_NUDGE_PENDING_KEY, '1');
+  } catch {
+    // Best-effort - không được để lỗi ở đây làm gãy luồng ngắt kết nối OBD chính.
+  }
+}
+
+/** Đọc-rồi-xoá cờ ở trên - gọi từ OBDDashboardScreen khi quyết định có hiện nudge hay không. */
+export async function consumeGpsTripNudgeFlag(): Promise<boolean> {
+  try {
+    const had = (await AsyncStorage.getItem(GPS_TRIP_NUDGE_PENDING_KEY)) === '1';
+    if (had) await AsyncStorage.removeItem(GPS_TRIP_NUDGE_PENDING_KEY);
+    return had;
+  } catch {
+    return false;
   }
 }
 

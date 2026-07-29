@@ -131,6 +131,24 @@ async function requestLocationBackground(disclosure: { titleKey: string; bodyKey
   return fromExpoResponse(await Location.requestBackgroundPermissionsAsync());
 }
 
+/**
+ * Biến thể KHÔNG tự hiện dialog "prominent disclosure" (rà soát 29/7: user báo 2 hộp
+ * thoại custom liên tiếp cho CÙNG 1 quyền - nudge rồi tới disclosure - đọc như đang xin
+ * lặp lại). Dùng khi CALLER đã tự hiện 1 màn giải thích đủ chuẩn "công bố nổi bật" TRƯỚC
+ * đó rồi (vd obdKeepAliveService: nudge Alert đã giải thích lý do trước khi gọi hàm này) -
+ * gọi thẳng luồng xin quyền hệ thống, không lặp lại nội dung giải thích lần 2.
+ */
+async function requestLocationBackgroundAlreadyDisclosed(): Promise<PermissionResult> {
+  const existing = await Location.getBackgroundPermissionsAsync().catch(() => null);
+  const existingResult = existing ? fromExpoResponse(existing) : null;
+  if (existingResult?.granted) return existingResult;
+
+  const fg = await requestLocationForeground();
+  if (!fg.granted) return { granted: false, canAskAgain: fg.canAskAgain };
+
+  return fromExpoResponse(await Location.requestBackgroundPermissionsAsync());
+}
+
 // ---------------------------------------------------------------------------
 // Camera (OCR hoá đơn/ODO)
 // ---------------------------------------------------------------------------
@@ -186,6 +204,7 @@ export const PermissionManager = {
   requestLocationForeground,
   getLocationBackgroundStatus,
   requestLocationBackground,
+  requestLocationBackgroundAlreadyDisclosed,
   getCameraStatus,
   requestCamera,
   requestMediaLibrary,

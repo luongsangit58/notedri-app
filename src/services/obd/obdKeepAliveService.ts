@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useI18nStore } from '../../i18n';
 import { PermissionManager } from '../permissions/PermissionManager';
 
@@ -96,17 +97,59 @@ export async function startObdKeepAlive(platformOS: string = Platform.OS): Promi
  * luồng xin quyền vị trí nền -> startObdKeepAlive() ở trên luôn 'skipped_no_
  * permission' âm thầm, khoá màn hình lúc lái là mất dữ liệu nhiều phút. Hàm
  * này xin quyền RIÊNG cho luồng OBD (không đụng tới GPS_TASK_NAME/trip state
- * của GpsTripTracker) - có màn hình "disclosure" giải thích trước khi xin
- * quyền nền, đúng yêu cầu Google Play cho background location.
+ * của GpsTripTracker).
+ *
+ * Rà soát 29/7 (user báo 4 popup liên tiếp ngay sau lần kết nối OBD2 đầu
+ * tiên - nudge, disclosure, popup hệ thống vị trí, rồi popup hệ thống miễn
+ * trừ pin - cảm thấy quá phiền): bỏ hẳn màn "disclosure" custom riêng
+ * (trước gọi PermissionManager.requestLocationBackground với title/body
+ * keepalive_disclosure_*) - nội dung nhắc obd.keepalive_nudge_* mà
+ * OBDDashboardScreen đã hiện TRƯỚC khi gọi hàm này đã đủ chuẩn "công bố nổi
+ * bật" theo yêu cầu Google Play, không cần lặp lại lần 2 cho cùng 1 quyền.
+ * Gọi thẳng requestLocationBackgroundAlreadyDisclosed() -> chỉ còn 1 popup
+ * hệ thống (xin quyền vị trí "Luôn cho phép") sau nudge, thay vì 2 dialog
+ * custom liên tiếp trước popup hệ thống đó.
  */
 export async function requestKeepAlivePermissions(platformOS: string = Platform.OS): Promise<boolean> {
   if (platformOS !== 'android') return true;
 
-  const bg = await PermissionManager.requestLocationBackground({
-    titleKey: 'obd.keepalive_disclosure_title',
-    bodyKey: 'obd.keepalive_disclosure_body',
-  }).catch(() => ({ granted: false, canAskAgain: true }));
+  const bg = await PermissionManager.requestLocationBackgroundAlreadyDisclosed()
+    .catch(() => ({ granted: false, canAskAgain: true }));
   return bg.granted;
+}
+
+const GAP_DETECTED_KEY = 'obd_keepalive_gap_detected';
+
+/**
+ * Rà soát 29/7: thay vì nhắc bật chạy nền NGAY sau lần kết nối OBD2 đầu tiên
+ * (user chưa từng gặp vấn đề gì, thấy như bị xin quyền vô cớ), chỉ đặt cờ ở
+ * đây khi phiên VỪA kết thúc thực sự có khoảng trống dữ liệu do khoá màn
+ * hình/app bị đưa xuống nền (background_gap_count > 0, xem obdLiveMonitor.ts)
+ * MÀ quyền vị trí nền vẫn chưa có. Cờ này được OBDDashboardScreen đọc ở lần
+ * kết nối KẾ TIẾP để quyết định có hiện nudge hay không - nhắc đúng lúc user
+ * đã thực sự "đau" (mất dữ liệu) thay vì đoán trước, tỷ lệ đồng ý cao hơn và
+ * bớt cảm giác bị làm phiền vô cớ ngay lần đầu dùng.
+ */
+export async function recordSessionGap(backgroundGapCount: number, platformOS: string = Platform.OS): Promise<void> {
+  if (platformOS !== 'android' || backgroundGapCount <= 0) return;
+  try {
+    const perm = await PermissionManager.getLocationBackgroundStatus();
+    if (perm.granted) return;
+    await AsyncStorage.setItem(GAP_DETECTED_KEY, '1');
+  } catch {
+    // Best-effort - không được để lỗi ở đây làm gãy luồng ngắt kết nối chính.
+  }
+}
+
+/** Đọc-rồi-xoá cờ ở trên - gọi từ OBDDashboardScreen khi quyết định có hiện nudge hay không. */
+export async function consumeSessionGapFlag(): Promise<boolean> {
+  try {
+    const had = (await AsyncStorage.getItem(GAP_DETECTED_KEY)) === '1';
+    if (had) await AsyncStorage.removeItem(GAP_DETECTED_KEY);
+    return had;
+  } catch {
+    return false;
+  }
 }
 
 /** Gọi khi obdLiveMonitor dừng (BLE disconnect). Chỉ dừng task DO CHÍNH nó khởi. */

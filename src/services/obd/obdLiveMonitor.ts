@@ -24,7 +24,8 @@ import { evaluate, Finding } from './diagnosticEngine';
 import { getActiveRules, refreshRulesFromServer } from './diagnosticRulesStore';
 import { detectDrivingEvents, scoreFromCounts, SpeedSample } from '../drivingScore/drivingScoreEngine';
 import { useObdSessionStore } from '../../store/obdSessionStore';
-import { startObdKeepAlive, stopObdKeepAlive } from './obdKeepAliveService';
+import { startObdKeepAlive, stopObdKeepAlive, recordSessionGap } from './obdKeepAliveService';
+import { recordDrivingWithoutTripPermission } from '../gps/GpsTripTracker';
 import { syncDtcNotifications } from './dtcNotificationStore';
 import { ewmaStep } from '../../utils/ewma';
 import { getSessionVin, VehicleCapability } from './capabilityService';
@@ -761,6 +762,8 @@ bleService.addDisconnectListener(() => {
           ts: Date.now(),
         },
       });
+      recordSessionGap((summary.background_gap_count as number) ?? 0).catch(() => {});
+      recordDrivingWithoutTripPermission((summary.driving_seconds as number) ?? 0).catch(() => {});
     }
 
     // E2: enqueue local TRƯỚC rồi mới thử gửi - rút cáp lúc mất mạng không còn mất

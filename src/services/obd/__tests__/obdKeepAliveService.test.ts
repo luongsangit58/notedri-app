@@ -11,6 +11,8 @@ import {
   startObdKeepAlive,
   stopObdKeepAlive,
   requestKeepAlivePermissions,
+  recordSessionGap,
+  consumeSessionGapFlag,
   OBD_KEEPALIVE_TASK_NAME,
 } from '../obdKeepAliveService';
 
@@ -87,54 +89,74 @@ describe('obdKeepAliveService', () => {
   });
 });
 
+// Rà soát 29/7: requestKeepAlivePermissions() không còn tự hiện dialog
+// "disclosure" custom nữa (caller - OBDDashboardScreen - đã hiện nudge Alert
+// TRƯỚC đó, đủ vai trò công bố nổi bật) - hàm này giờ gọi thẳng luồng xin
+// quyền hệ thống foreground -> background, không còn Alert.alert() nào ở đây.
 describe('requestKeepAlivePermissions', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     jest.spyOn(Alert, 'alert');
   });
 
-  it('không làm gì trên iOS - trả về true ngay, không hiện disclosure', async () => {
+  it('không làm gì trên iOS - trả về true ngay, không xin quyền gì', async () => {
     const granted = await requestKeepAlivePermissions('ios');
     expect(granted).toBe(true);
     expect(Alert.alert).not.toHaveBeenCalled();
   });
 
-  it('đã có quyền nền sẵn (vd cấp qua GPS trip) - trả về true ngay, không hiện lại disclosure', async () => {
+  it('đã có quyền nền sẵn (vd cấp qua GPS trip) - trả về true ngay, không xin lại', async () => {
     (Location.getBackgroundPermissionsAsync as jest.Mock).mockResolvedValue({ status: 'granted' });
     const granted = await requestKeepAlivePermissions('android');
     expect(granted).toBe(true);
     expect(Alert.alert).not.toHaveBeenCalled();
-  });
-
-  it('user bấm "Không, cảm ơn" ở disclosure - không xin permission, trả về false', async () => {
-    (Location.getBackgroundPermissionsAsync as jest.Mock).mockResolvedValue({ status: 'denied' });
-    (Alert.alert as jest.Mock).mockImplementation((_t, _b, buttons) => {
-      buttons.find((b: any) => b.style === 'cancel').onPress();
-    });
-    const granted = await requestKeepAlivePermissions('android');
-    expect(granted).toBe(false);
     expect(Location.requestForegroundPermissionsAsync).not.toHaveBeenCalled();
   });
 
-  it('user đồng ý disclosure nhưng từ chối quyền foreground - trả về false, không xin quyền nền', async () => {
+  it('chưa có quyền nền, từ chối quyền foreground - trả về false, không xin quyền nền', async () => {
     (Location.getBackgroundPermissionsAsync as jest.Mock).mockResolvedValue({ status: 'denied' });
-    (Alert.alert as jest.Mock).mockImplementation((_t, _b, buttons) => {
-      buttons.find((b: any) => b.style !== 'cancel').onPress();
-    });
     (Location.requestForegroundPermissionsAsync as jest.Mock).mockResolvedValue({ status: 'denied' });
     const granted = await requestKeepAlivePermissions('android');
     expect(granted).toBe(false);
+    expect(Alert.alert).not.toHaveBeenCalled();
     expect(Location.requestBackgroundPermissionsAsync).not.toHaveBeenCalled();
   });
 
-  it('user đồng ý disclosure + cấp cả foreground lẫn nền - trả về true', async () => {
+  it('chưa có quyền nền, cấp cả foreground lẫn nền - trả về true, không hiện Alert nào', async () => {
     (Location.getBackgroundPermissionsAsync as jest.Mock).mockResolvedValue({ status: 'denied' });
-    (Alert.alert as jest.Mock).mockImplementation((_t, _b, buttons) => {
-      buttons.find((b: any) => b.style !== 'cancel').onPress();
-    });
     (Location.requestForegroundPermissionsAsync as jest.Mock).mockResolvedValue({ status: 'granted' });
     (Location.requestBackgroundPermissionsAsync as jest.Mock).mockResolvedValue({ status: 'granted' });
     const granted = await requestKeepAlivePermissions('android');
     expect(granted).toBe(true);
+    expect(Alert.alert).not.toHaveBeenCalled();
+  });
+});
+
+describe('recordSessionGap / consumeSessionGapFlag', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (Location.getBackgroundPermissionsAsync as jest.Mock).mockResolvedValue({ status: 'denied' });
+  });
+
+  it('không đặt cờ nếu không có gap nào trong phiên', async () => {
+    await recordSessionGap(0, 'android');
+    expect(await consumeSessionGapFlag()).toBe(false);
+  });
+
+  it('không đặt cờ trên iOS dù có gap', async () => {
+    await recordSessionGap(3, 'ios');
+    expect(await consumeSessionGapFlag()).toBe(false);
+  });
+
+  it('không đặt cờ nếu quyền vị trí nền đã được cấp (nudge không còn cần thiết)', async () => {
+    (Location.getBackgroundPermissionsAsync as jest.Mock).mockResolvedValue({ status: 'granted' });
+    await recordSessionGap(3, 'android');
+    expect(await consumeSessionGapFlag()).toBe(false);
+  });
+
+  it('đặt cờ khi Android + có gap thật + chưa có quyền nền, đọc xong tự xoá', async () => {
+    await recordSessionGap(2, 'android');
+    expect(await consumeSessionGapFlag()).toBe(true);
+    expect(await consumeSessionGapFlag()).toBe(false);
   });
 });

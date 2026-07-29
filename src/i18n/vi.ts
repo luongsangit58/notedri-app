@@ -609,8 +609,6 @@ const vi = {
   "obd.gps_trip_nudge_title": "Chưa ghi hành trình tự động",
   "obd.gps_trip_nudge_body": "Kết nối OBD2 chỉ hiển thị số liệu xe - hành trình vẫn được ghi tự động qua GPS, nhưng thiết bị chưa cấp quyền vị trí nền nên chuyến vừa rồi có thể chưa được ghi. Cho phép để bật ghi hành trình tự động.",
   "obd.gps_trip_nudge_cta": "Bật ghi hành trình tự động",
-  "obd.keepalive_disclosure_title": "Giữ kết nối OBD2 khi khoá màn hình",
-  "obd.keepalive_disclosure_body": "Để tiếp tục đọc dữ liệu OBD2 ngay cả khi bạn tắt màn hình hoặc chuyển sang ứng dụng khác lúc đang lái, NoteDri cần quyền truy cập vị trí \"Luôn cho phép\" (ở chế độ nền) - đây là cách Android cho phép ứng dụng chạy nền. Vị trí không được dùng cho mục đích nào khác ở đây. Sau bước này, hệ thống sẽ hỏi thêm 1 lần nữa để loại NoteDri khỏi tối ưu hoá pin - cũng để tránh gián đoạn khi khoá màn hình. Ở màn hình tiếp theo, hãy chọn \"Luôn cho phép\".",
   "home.obd_quick_setup": "Kết nối adapter OBD2 cho xe của bạn",
   "home.obd_quick_upsell": "Tính năng Premium - chẩn đoán lỗi xe qua Bluetooth",
   "vehicle_detail.vin_prefill_title": "Đã đọc được số khung xe (VIN) qua OBD",
