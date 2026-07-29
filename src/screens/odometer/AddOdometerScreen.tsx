@@ -8,6 +8,7 @@ import AppBgPattern from '../../components/AppBgPattern';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import dayjs from 'dayjs';
+import { maybeShowInterstitialAfterSave } from '../../services/ads/admob';
 import { useVehicles } from '../../hooks/useVehicles';
 import { useSelectedVehicleStore } from '../../store/selectedVehicleStore';
 import { useCreateOdometer } from '../../hooks/useOdometer';
@@ -96,6 +97,7 @@ export default function AddOdometerScreen() {
         vehicleId,
         data: { odometer: parseInt(odo), ngay, ghi_chu: ghiChu.trim() || undefined },
       });
+      void maybeShowInterstitialAfterSave();
       const warning = (res as any)?.meta?.warning;
       if (warning) {
         Alert.alert(t('common.warning'), warning, [{ text: 'OK', onPress: () => navigation.goBack() }]);

@@ -1,11 +1,13 @@
 import React from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import { BannerAd, BannerAdSize, TestIds } from 'react-native-google-mobile-ads';
-import { getAdMobBannerAdUnitId } from '../services/ads/admob';
+import { getAdMobBannerAdUnitId, ADS_FREE_FOR_PREMIUM } from '../services/ads/admob';
+import { useAuthStore } from '../store/authStore';
 
 export default function AdMobBanner() {
+  const isPremium = useAuthStore((s) => s.user?.is_premium ?? false);
   const adUnitId = __DEV__ ? TestIds.BANNER : getAdMobBannerAdUnitId();
-  if (Platform.OS === 'web' || !adUnitId) return null;
+  if ((ADS_FREE_FOR_PREMIUM && isPremium) || Platform.OS === 'web' || !adUnitId) return null;
 
   return (
     <View style={styles.container}>

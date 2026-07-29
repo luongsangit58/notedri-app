@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AppBgPattern from '../../components/AppBgPattern';
+import AdMobBanner from '../../components/AdMobBanner';
 import DatePickerField from '../../components/DatePickerField';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
@@ -584,7 +585,8 @@ export default function RemindersScreen() {
               </View>
         }
         ListFooterComponent={
-          suggestions.length > 0 ? (
+          <>
+          {suggestions.length > 0 ? (
             <View style={{ paddingTop: 8, paddingBottom: 8 }}>
               <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 }}>
                 {t('reminders.suggest_more')}
@@ -629,7 +631,9 @@ export default function RemindersScreen() {
                 </TouchableOpacity>
               ))}
             </View>
-          ) : null
+          ) : null}
+          <AdMobBanner />
+          </>
         }
       />
 

@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AppBgPattern from '../../components/AppBgPattern';
+import AdMobBanner from '../../components/AdMobBanner';
 import { useNavigation } from '@react-navigation/native';
 import { useTimeline } from '../../hooks/useTimeline';
 import { useVehicles } from '../../hooks/useVehicles';
@@ -183,9 +184,10 @@ export default function TimelineScreen() {
               </View>
         }
         ListFooterComponent={
-          isFetchingNextPage ? (
-            <ActivityIndicator color={colors.primary} style={{ marginVertical: 16 }} />
-          ) : null
+          <>
+            {isFetchingNextPage && <ActivityIndicator color={colors.primary} style={{ marginVertical: 16 }} />}
+            <AdMobBanner />
+          </>
         }
       />
     </SafeAreaView>

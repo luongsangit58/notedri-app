@@ -2,6 +2,7 @@ import React from 'react';
 import { FlatList, View, Text, TouchableOpacity, RefreshControl, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AppBgPattern from '../../components/AppBgPattern';
+import AdMobBanner from '../../components/AdMobBanner';
 import { useNavigation } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useVehicles, useSetDefaultVehicle } from '../../hooks/useVehicles';
@@ -70,6 +71,7 @@ export default function VehiclesScreen() {
             <Text style={{ color: colors.textSecondary, fontSize: 13 }}>{t('vehicles.empty_subtitle')}</Text>
           </View>
         }
+        ListFooterComponent={<AdMobBanner />}
       />
 
       {!canAddVehicle && vehicleLimit != null && (

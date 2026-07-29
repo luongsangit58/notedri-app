@@ -5,6 +5,7 @@ import {
 import { FontAwesome5 } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AppBgPattern from '../../components/AppBgPattern';
+import AdMobBanner from '../../components/AdMobBanner';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useQueries } from '@tanstack/react-query';
 import { useVehicles } from '../../hooks/useVehicles';
@@ -568,6 +569,7 @@ export default function HealthScreen() {
             />
           );
         })}
+        <AdMobBanner />
       </ScrollView>
     </SafeAreaView>
   );

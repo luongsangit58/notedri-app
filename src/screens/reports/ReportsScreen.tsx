@@ -4,6 +4,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AppBgPattern from '../../components/AppBgPattern';
+import AdMobBanner from '../../components/AdMobBanner';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigation } from '@react-navigation/native';
@@ -729,6 +730,8 @@ function ReportContent({
           </Text>
         </View>
       )}
+
+      <AdMobBanner />
 
     </ScrollView>
   );

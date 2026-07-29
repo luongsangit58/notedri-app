@@ -14,6 +14,7 @@ import DashboardStylePicker from '../../components/obd/DashboardStylePicker';
 import LoadingView from '../../components/LoadingView';
 import ErrorView from '../../components/ErrorView';
 import AppBgPattern from '../../components/AppBgPattern';
+import AdMobBanner from '../../components/AdMobBanner';
 import { useColors } from '../../utils/theme';
 import { contentWide } from '../../utils/layout';
 import { flattenReminders } from '../../utils/reminders';
@@ -774,6 +775,7 @@ export default function VehicleDetailScreen() {
             <Text style={{ color: colors.textSecondary, fontSize: 13, flex: 1 }}>{t('vehicles.mark_sold_hint')}</Text>
           </View>
         )}
+        <AdMobBanner />
       </ScrollView>
     </SafeAreaView>
   );

@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import AppBgPattern from '../../components/AppBgPattern';
 import { useNavigation } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
+import { maybeShowInterstitialAfterSave } from '../../services/ads/admob';
 import dayjs from 'dayjs';
 import { useVehicles } from '../../hooks/useVehicles';
 import { useCreateService, useRecentGarages } from '../../hooks/useServices';
@@ -189,6 +190,7 @@ export default function AddServiceScreen() {
         },
         photo: photo ?? undefined,
       });
+      void maybeShowInterstitialAfterSave();
       navigation.goBack();
     } catch (err: any) {
       const msg = err.response?.data?.message ?? t('common.save_failed');

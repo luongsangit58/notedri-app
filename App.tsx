@@ -11,6 +11,7 @@ import RootNavigator from './src/navigation/RootNavigator';
 import { navigationRef } from './src/navigation/navigationRef';
 import ObdSessionBanner from './src/components/ObdSessionBanner';
 import ObdAutoConnect from './src/components/ObdAutoConnect';
+import AppOpenAdManager from './src/components/AppOpenAdManager';
 import NoriFloatingButton from './src/components/nori/NoriFloatingButton';
 import { useThemeStore } from './src/utils/theme';
 import { useCockpitThemeStore } from './src/store/cockpitThemeStore';
@@ -162,6 +163,7 @@ export default function App() {
                 <RootNavigator />
                 <ObdSessionBanner />
                 <ObdAutoConnect />
+                <AppOpenAdManager />
                 <NoriFloatingButton />
               </NavigationContainer>
             </AppLoader>
