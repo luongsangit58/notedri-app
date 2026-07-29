@@ -4,6 +4,8 @@ import {
   getPairingForVehicle,
   getAutoConnectPairing,
   setAutoConnect,
+  removePairingForVehicle,
+  clearPairings,
 } from '../pairedDevices';
 
 describe('pairedDevices - autoConnect (25/7)', () => {
@@ -51,6 +53,15 @@ describe('pairedDevices - autoConnect (25/7)', () => {
     expect(pairing?.autoConnect).toBe(true);
   });
 
+  it('savePairing thay thế bản ghép cũ khi cùng một xe đổi sang thiết bị mới', async () => {
+    await savePairing({ bleDeviceId: 'AA:BB', vehicleId: 1, vehicleName: 'Xe 1', autoConnect: true });
+    await savePairing({ bleDeviceId: 'CC:DD', vehicleId: 1, vehicleName: 'Xe 1' });
+
+    const pairing = await getPairingForVehicle(1);
+    expect(pairing?.bleDeviceId).toBe('CC:DD');
+    expect(pairing?.autoConnect).toBe(true);
+  });
+
   it('setAutoConnect(false) tắt được lựa chọn đã bật', async () => {
     await savePairing({ bleDeviceId: 'AA:BB', vehicleId: 1, vehicleName: 'Xe 1' });
     await setAutoConnect(1, true);
@@ -61,6 +72,27 @@ describe('pairedDevices - autoConnect (25/7)', () => {
 
   it('setAutoConnect bỏ qua im lặng nếu xe chưa từng ghép thiết bị nào', async () => {
     await expect(setAutoConnect(999, true)).resolves.toBeUndefined();
+    expect(await getAutoConnectPairing()).toBeNull();
+  });
+
+  it('removePairingForVehicle xoá đúng xe khỏi bộ nhớ pairing', async () => {
+    await savePairing({ bleDeviceId: 'AA:BB', vehicleId: 1, vehicleName: 'Xe 1' });
+    await savePairing({ bleDeviceId: 'CC:DD', vehicleId: 2, vehicleName: 'Xe 2' });
+
+    await removePairingForVehicle(1);
+
+    expect(await getPairingForVehicle(1)).toBeNull();
+    expect(await getPairingForVehicle(2)).not.toBeNull();
+  });
+
+  it('clearPairings xoá sạch toàn bộ pairing local', async () => {
+    await savePairing({ bleDeviceId: 'AA:BB', vehicleId: 1, vehicleName: 'Xe 1' });
+    await savePairing({ bleDeviceId: 'CC:DD', vehicleId: 2, vehicleName: 'Xe 2' });
+
+    await clearPairings();
+
+    expect(await getPairingForVehicle(1)).toBeNull();
+    expect(await getPairingForVehicle(2)).toBeNull();
     expect(await getAutoConnectPairing()).toBeNull();
   });
 });

@@ -14,6 +14,12 @@ import { useAuthStore } from '../store/authStore';
 import { useObdSessionStore } from '../store/obdSessionStore';
 import { useI18nStore } from '../i18n';
 import { cleanNativeErrorMessage } from '../utils/nativeError';
+import { getDeviceId } from '../utils/deviceId';
+
+// Heartbeat khoá mềm vehicle_id (29/7) - giữ ngắn hơn hẳn GPS (3 phút) vì phiên
+// OBD thường ngắn hơn 1 chuyến GPS; server nên tự coi lock hết hạn nếu quá 2
+// lần renew liên tiếp không tới (mất kết nối đột ngột, không kịp release()).
+const DEVICE_LOCK_RENEW_INTERVAL_MS = 90_000;
 
 export type ObdWarning = { type: 'no_data'; rawResponse?: string } | null;
 
@@ -242,10 +248,24 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
   // BleService - init ELM327, dò capability, khởi động live monitor, lưu
   // pairing... KHÔNG liên quan gì tới BLE/Classic cụ thể, nên connect() và
   // connectClassic() dùng chung, chỉ khác bước connect ban đầu ở trên.
-  const finishConnect = useCallback(async (pairingId: string, transport: 'ble' | 'classic'): Promise<boolean> => {
+  const finishConnect = useCallback(async (
+    pairingId: string,
+    transport: 'ble' | 'classic',
+    shouldAbort?: () => boolean,
+  ): Promise<boolean> => {
+    const isAborted = () => shouldAbort?.() ?? false;
+    if (isAborted()) {
+      await bleService.disconnect().catch(() => {});
+      return false;
+    }
+
     obdSessionStateMachine.setConnected();
     const result = await initializeElm327();
     if (!result.ok) throw new Error('Khong the khoi tao ELM327');
+    if (isAborted()) {
+      await bleService.disconnect().catch(() => {});
+      return false;
+    }
     obdSessionStateMachine.setElmReady();
 
     setConnectionState('connected');
@@ -258,12 +278,24 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
     // Dò capability TRƯỚC snapshot đầu tiên để whitelist kịp áp dụng
     // (chỉ dò khi xe đang trả dữ liệu - xe tắt máy thì bitmap cũng NO DATA)
     await loadCapability(result.dataAvailable);
+    if (isAborted()) {
+      await bleService.disconnect().catch(() => {});
+      return false;
+    }
 
     // Trạng thái toàn cục (C5): thẻ Home/chi tiết xe + banner biết đang nối xe nào
     useObdSessionStore.getState().patch({ vehicleId, vehicleName: vehicleName ?? null });
+    if (isAborted()) {
+      await bleService.disconnect().catch(() => {});
+      return false;
+    }
 
     // Live monitor sống theo phiên kết nối (thay trip manager)
     obdLiveMonitor.start(vehicleId);
+    if (isAborted()) {
+      await bleService.disconnect().catch(() => {});
+      return false;
+    }
 
     // Cắm OBD2 = tín hiệu đáng tin "sắp/đang lái" (24/7): re-arm ngay task GPS
     // nếu nó đã tự tắt do rảnh 20 phút hoặc chưa bật lần này, để không phải chờ
@@ -279,6 +311,10 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
     flushPendingObdSessions().catch(() => {});
 
     const snap = await readSnapshot();
+    if (isAborted()) {
+      await bleService.disconnect().catch(() => {});
+      return false;
+    }
     setLiveSnapshot(snap);
 
     // Ghi nhớ thiết bị này thuộc xe nào (+ transport, 22/7) - để BLE restore
@@ -286,6 +322,23 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
     // auto-reconnect Classic sau này tự nhận diện đúng xe/đúng đường kết nối
     // mà không cần user chọn lại.
     savePairing({ bleDeviceId: pairingId, vehicleId, vehicleName: vehicleName ?? '', transport }).catch(() => {});
+
+    // Khoá MỀM theo vehicle_id (29/7) - CHỈ để cảnh báo (obdApi.deviceLock),
+    // không chặn kết nối này dù xe đang được máy khác giữ. Dùng vehicle_id
+    // (đã có sẵn, luôn đáng tin) thay vì VIN - VIN qua PID 0902 không phải
+    // ECU nào cũng trả lời, không đủ chắc để làm điều kiện ràng buộc chính.
+    const lockDeviceName = useObdSessionStore.getState().deviceName ?? vehicleName ?? 'OBD2';
+    getDeviceId().then((appDeviceId) =>
+      obdApi.deviceLock.claim(vehicleId, appDeviceId, lockDeviceName)
+        .then(({ data }) => {
+          useObdSessionStore.getState().patch({
+            sharedByOtherDevice: data.locked_by_other
+              ? { deviceName: data.held_by_device_name ?? lockDeviceName, since: data.held_since ?? null }
+              : null,
+          });
+        })
+        .catch(() => {}), // BE chưa triển khai / mất mạng: im lặng, không chặn gì cả
+    );
     return true;
   }, [vehicleId, vehicleName, loadCapability]);
 
@@ -312,7 +365,10 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
 
   // Trả về true/false để caller CHỈ điều hướng khi kết nối thật sự thành công -
   // trước đây Setup nhảy vào Dashboard kể cả khi init lỗi (fixture #1).
-  const connect = useCallback(async (deviceId: string): Promise<boolean> => {
+  const connect = useCallback(async (
+    deviceId: string,
+    opts?: { shouldAbort?: () => boolean },
+  ): Promise<boolean> => {
     stopScan();
     setVinMismatch(null); // xoá cảnh báo VIN của phiên trước
     setConnectionState('connecting');
@@ -323,7 +379,11 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
     // ở trên (đa-listener C5 tầng 2) - không còn gán callback đơn ở đây.
     try {
       await bleService.connect(deviceId);
-      return await finishConnect(deviceId, 'ble');
+      if (opts?.shouldAbort?.()) {
+        await bleService.disconnect().catch(() => {});
+        return false;
+      }
+      return await finishConnect(deviceId, 'ble', opts?.shouldAbort);
     } catch (e: any) {
       // "Thua" trong 1 cặp double-tap (BleService.connect() phát hiện đã có
       // luồng khác đang connecting/connected): KHÔNG được disconnect() - phiên
@@ -339,7 +399,11 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
   // kết nối BLE được (xem BT_UNSUPPORTED). address PHẢI là thiết bị đã ghép nối
   // qua Cài đặt Bluetooth hệ thống trước (xem discoverDevices() ở
   // NotedriBtPairingModule.kt) - hook này không tự quét/ghép nối mới.
-  const connectClassic = useCallback(async (address: string, name: string): Promise<boolean> => {
+  const connectClassic = useCallback(async (
+    address: string,
+    name: string,
+    opts?: { shouldAbort?: () => boolean },
+  ): Promise<boolean> => {
     stopScan();
     setVinMismatch(null);
     setConnectionState('connecting');
@@ -348,7 +412,11 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
 
     try {
       await bleService.connectClassic(address, name);
-      return await finishConnect(address, 'classic');
+      if (opts?.shouldAbort?.()) {
+        await bleService.disconnect().catch(() => {});
+        return false;
+      }
+      return await finishConnect(address, 'classic', opts?.shouldAbort);
     } catch (e: any) {
       handleConnectError(e);
       return false;
@@ -359,7 +427,24 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
     await bleService.disconnect();
     setConnectionState('disconnected');
     setLiveSnapshot(null);
-  }, []);
+    useObdSessionStore.getState().patch({ sharedByOtherDevice: null });
+    getDeviceId().then((appDeviceId) => obdApi.deviceLock.release(vehicleId, appDeviceId).catch(() => {}));
+  }, [vehicleId]);
+
+  // Heartbeat khoá mềm (29/7): renew định kỳ trong lúc còn kết nối, để BE biết
+  // máy này vẫn đang giữ xe - mất kết nối đột ngột (rớt sóng, rút app) không
+  // gọi release() kịp, BE tự hết hạn lock sau vài lần renew thiếu (xem hằng số
+  // DEVICE_LOCK_RENEW_INTERVAL_MS). Không renew khi 'connecting'/'error' - chỉ
+  // khi đã thực sự ELM_READY.
+  useEffect(() => {
+    if (connectionState !== 'connected') return;
+    const timer = setInterval(() => {
+      getDeviceId().then((appDeviceId) =>
+        obdApi.deviceLock.renew(vehicleId, appDeviceId).catch(() => {}),
+      );
+    }, DEVICE_LOCK_RENEW_INTERVAL_MS);
+    return () => clearInterval(timer);
+  }, [connectionState, vehicleId]);
 
   // --- Trip ---
 

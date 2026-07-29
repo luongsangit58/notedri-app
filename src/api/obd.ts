@@ -125,4 +125,24 @@ export const obdApi = {
   // Telemetry retention: 1 dòng mỗi phiên kết nối đã kết thúc. Gọi qua
   // ObdSessionSyncQueue (enqueue + flush) - đừng gọi thẳng, mất phiên khi offline.
   reportSession: (payload: ObdSessionPayload) => client.post('/obd2/sessions', payload),
+
+  // Khoá MỀM theo vehicle_id (29/7, rà soát "2 máy cùng account, cùng xe, cùng
+  // lúc kết nối OBD"): dùng vehicle_id (đã có sẵn trong DB, luôn đáng tin) thay
+  // vì VIN - VIN đọc qua PID 0902 không phải ECU nào cũng trả (một số xe không
+  // hỗ trợ), nên không thể làm điều kiện chặn/cảnh báo chính. Khác hẳn
+  // gpsTripsApi.trackingLock (khoá CỨNG, claim() throw 409): claim() ở đây
+  // KHÔNG BAO GIỜ chặn kết nối - server chỉ trả về ai đang giữ (nếu có) để FE
+  // tự hiện banner "xe này đang được máy khác dùng", user tự quyết định.
+  // Server (ngoài repo FE) cần response 200 luôn (không 409) với shape:
+  //   { locked_by_other: boolean, held_by_device_name?: string, held_since?: string }
+  deviceLock: {
+    claim: (vehicleId: number, deviceId: string, deviceName: string) =>
+      client.post<{ locked_by_other: boolean; held_by_device_name?: string; held_since?: string }>(
+        '/obd2/device-lock', { vehicle_id: vehicleId, device_id: deviceId, device_name: deviceName },
+      ),
+    renew: (vehicleId: number, deviceId: string) =>
+      client.put('/obd2/device-lock', { vehicle_id: vehicleId, device_id: deviceId }),
+    release: (vehicleId: number, deviceId: string) =>
+      client.delete('/obd2/device-lock', { data: { vehicle_id: vehicleId, device_id: deviceId } }),
+  },
 };

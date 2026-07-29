@@ -1,29 +1,30 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { AppState, AppStateStatus } from 'react-native';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  AppState,
+  AppStateStatus,
+  BackHandler,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { State as BleAdapterState } from 'react-native-ble-plx';
-import NotedriBtPairing from '../../modules/notedri-bt-pairing/src/NotedriBtPairingModule';
+import { FontAwesome5 } from '@expo/vector-icons';
+import NotedriBtPairing, { ClassicBtDevice } from '../../modules/notedri-bt-pairing/src/NotedriBtPairingModule';
 import { useAuthStore } from '../store/authStore';
 import { bleService } from '../services/obd/BleService';
-import { getAutoConnectPairing } from '../services/obd/pairedDevices';
+import { getAutoConnectPairing, setAutoConnect } from '../services/obd/pairedDevices';
 import { resolveDefaultVehicle } from '../services/vehicles/resolveDefaultVehicle';
 import { useObdConnection } from '../hooks/useObd';
 import { navigationRef } from '../navigation/navigationRef';
+import { useT } from '../i18n';
 
-// Không thử lại liên tục mỗi lần app chuyển nền/tiền cảnh nhanh (vd kéo thanh
-// thông báo rồi đóng lại) - tốn pin/radio Bluetooth vô ích cho 1 thao tác vài
-// giây không có ý định mở lại app thật sự.
 const COOLDOWN_MS = 60_000;
-// Đợi vài giây sau khi app mở/quay lại foreground rồi mới bật Bluetooth quét
-// (góp ý 25/7) - KHÔNG liên quan gì tới việc có tự chuyển màn hình hay không,
-// chỉ để nhường tài nguyên cho app xong việc load Home/token trước, tránh
-// tranh chấp ngay lúc khởi động.
 const INITIAL_ATTEMPT_DELAY_MS = 5000;
-// Trùng mốc auto-stop 15s của startScan() (useObd.ts) + chút dư cho vòng
-// render cuối, không tự đặt mốc riêng dễ lệch nếu bên kia đổi.
 const BLE_ATTEMPT_TIMEOUT_MS = 16_000;
+const AUTO_CONNECT_COUNTDOWN_SECONDS = 5;
 
-// Đang tự tay thao tác ở đúng 2 màn này - không tự quét/connect chồng lên,
-// tránh 2 luồng cùng gọi scanForDevices()/connect() gây xung đột adapter.
 const SKIP_ON_ROUTES = new Set(['OBDSetup', 'OBDDashboard']);
 
 type AttemptTarget = {
@@ -33,29 +34,61 @@ type AttemptTarget = {
   transport: 'ble' | 'classic';
 };
 
-/**
- * Thực thi 1 lần thử auto-connect headless - mount ra là chạy, unmount là dừng
- * hẳn (không còn gì sống lại phía sau nếu thất bại). Dùng LẠI đúng hook
- * useObdConnection() màn OBDSetupScreen dùng (không viết lại logic connect
- * riêng) để mọi side-effect (obdSessionStore, obdLiveMonitor, savePairing...)
- * xảy ra giống hệt 1 lần kết nối thủ công bình thường.
- */
-function AutoConnectAttempt({ target, onDone }: { target: AttemptTarget; onDone: () => void }) {
-  const { connectionState, foundDevices, startScan, connect, connectClassic } =
-    useObdConnection(target.vehicleId, target.vehicleName);
-  const settledRef = useRef(false);
+type AutoConnectEndReason = 'completed' | 'completed-silent' | 'dismissed' | 'failed';
+type AutoConnectNotice = {
+  kind: 'paused' | 'connected';
+  vehicleId: number;
+  vehicleName: string;
+  deviceName: string;
+};
 
-  function settle() {
+function AutoConnectPrompt({
+  target,
+  onEnd,
+}: {
+  target: AttemptTarget;
+  onEnd: (reason: AutoConnectEndReason, target: AttemptTarget, deviceName: string) => void;
+}) {
+  const t = useT();
+  const { connectionState, foundDevices, startScan, stopScan, connect, connectClassic } =
+    useObdConnection(target.vehicleId, target.vehicleName);
+  const [phase, setPhase] = useState<'countdown' | 'connecting' | 'canceling' | null>(null);
+  const [secondsLeft, setSecondsLeft] = useState(AUTO_CONNECT_COUNTDOWN_SECONDS);
+  const countdownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const finishTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const bleMatchRef = useRef<{ id: string; name: string } | null>(null);
+  const classicMatchRef = useRef<ClassicBtDevice | null>(null);
+  const settledRef = useRef(false);
+  const connectingRef = useRef(false);
+  const abortRequestedRef = useRef(false);
+
+  const clearCountdown = useCallback(() => {
+    if (countdownTimerRef.current) {
+      clearInterval(countdownTimerRef.current);
+      countdownTimerRef.current = null;
+    }
+  }, []);
+
+  const clearFinishTimer = useCallback(() => {
+    if (finishTimerRef.current) {
+      clearTimeout(finishTimerRef.current);
+      finishTimerRef.current = null;
+    }
+  }, []);
+
+  const finish = useCallback((reason: AutoConnectEndReason) => {
     if (settledRef.current) return;
     settledRef.current = true;
-    onDone();
-  }
+    clearCountdown();
+    clearFinishTimer();
+    stopScan();
+    setPhase(null);
+    const deviceName =
+      bleMatchRef.current?.name ?? classicMatchRef.current?.name ?? (target.vehicleName || 'OBD2');
+    onEnd(reason, target, deviceName);
+  }, [clearCountdown, clearFinishTimer, onEnd, stopScan, target]);
 
-  // Đây là tính năng OPT-IN (user tự bật switch) - khác banner/toast thụ động
-  // của luồng kết nối thủ công, tự chuyển thẳng vào OBD2 Live khi thành công
-  // đúng là điều user đã chủ động chọn khi bật switch, không còn là hành vi
-  // "tự tiện" nữa (góp ý 25/7).
-  function goToDashboard(deviceName: string) {
+  const goToDashboard = useCallback((deviceName: string) => {
     if (!navigationRef.isReady()) return;
     navigationRef.navigate('OBDDashboard', {
       vehicleId: target.vehicleId,
@@ -63,94 +96,386 @@ function AutoConnectAttempt({ target, onDone }: { target: AttemptTarget; onDone:
       deviceName,
       consumptionOfficial: null,
     });
-  }
+  }, [target.vehicleId, target.vehicleName]);
 
-  useEffect(() => {
-    let cancelled = false;
-    if (target.transport === 'classic') {
-      // Danh sách đã ghép nạp gần như tức thì (không phải quét sống) - không
-      // cần vòng lặp theo dõi như BLE bên dưới.
-      NotedriBtPairing.discoverDevices()
-        .then(async (found) => {
-          if (cancelled || settledRef.current) return;
-          const match = found.find((d) => d.address === target.deviceId);
-          if (!match) { settle(); return; }
-          const ok = await connectClassic(match.address, match.name);
-          if (ok && !cancelled) goToDashboard(match.name);
-        })
-        .catch(() => {})
-        .finally(() => { if (!cancelled) settle(); });
-      return () => { cancelled = true; };
+  const requestCancel = useCallback(() => {
+    if (settledRef.current) return;
+    abortRequestedRef.current = true;
+    clearCountdown();
+    stopScan();
+
+    if (phase === 'connecting') {
+      setPhase('canceling');
+      void bleService.disconnect().catch(() => {});
+      clearFinishTimer();
+      finishTimerRef.current = setTimeout(() => finish('dismissed'), 900);
+      return;
     }
 
-    // BLE: quyền + trạng thái Bluetooth ĐÃ được kiểm tra trước khi mount
-    // component này (xem ObdAutoConnect bên dưới) - startScan() ở đây chỉ nên
-    // chạy khi các điều kiện đó đã sẵn sàng, không tự xin gì thêm.
-    startScan(false);
-    const timeout = setTimeout(settle, BLE_ATTEMPT_TIMEOUT_MS);
-    return () => { cancelled = true; clearTimeout(timeout); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    finish('dismissed');
+  }, [clearCountdown, clearFinishTimer, finish, phase, stopScan]);
+
+  const connectNow = useCallback(async (manual: boolean) => {
+    if (settledRef.current || connectingRef.current) return;
+
+    const deviceName =
+      bleMatchRef.current?.name ??
+      classicMatchRef.current?.name ??
+      (target.vehicleName || 'OBD2');
+
+    connectingRef.current = true;
+    setPhase('connecting');
+    clearCountdown();
+
+    try {
+      const ok =
+        target.transport === 'classic'
+          ? classicMatchRef.current
+            ? await connectClassic(
+                classicMatchRef.current.address,
+                classicMatchRef.current.name,
+                { shouldAbort: () => abortRequestedRef.current },
+              )
+            : false
+          : bleMatchRef.current
+            ? await connect(bleMatchRef.current.id, { shouldAbort: () => abortRequestedRef.current })
+            : false;
+
+      if (abortRequestedRef.current) {
+        if (!settledRef.current) finish('dismissed');
+        return;
+      }
+
+      if (!ok) {
+        finish('failed');
+        return;
+      }
+
+      // Chỉ tự điều hướng khỏi màn hình hiện tại khi user CHỦ ĐỘNG bấm "Kết
+      // nối ngay" - nếu là đếm ngược tự chạy hết thì không được kéo user ra
+      // khỏi việc họ đang làm, chỉ báo bằng banner nhỏ + cho họ tự bấm mở.
+      if (manual) {
+        goToDashboard(deviceName);
+        finish('completed');
+      } else {
+        finish('completed-silent');
+      }
+    } catch {
+      if (!abortRequestedRef.current) finish('failed');
+    } finally {
+      connectingRef.current = false;
+    }
+  }, [clearCountdown, connect, connectClassic, finish, goToDashboard, target.transport, target.vehicleName]);
+
+  const dismissPrompt = useCallback(() => {
+    if (phase === 'connecting' || phase === 'canceling') {
+      requestCancel();
+      return;
+    }
+    finish('dismissed');
+  }, [finish, phase, requestCancel]);
+
+  const disableAutoConnect = useCallback(() => {
+    void setAutoConnect(target.vehicleId, false).catch(() => {});
+    finish('dismissed');
+  }, [finish, target.vehicleId]);
+
+  useEffect(() => {
+    if (phase !== 'countdown' || settledRef.current) return;
+    setSecondsLeft(AUTO_CONNECT_COUNTDOWN_SECONDS);
+    clearCountdown();
+    countdownTimerRef.current = setInterval(() => {
+      setSecondsLeft((current) => {
+        if (current <= 1) {
+          clearCountdown();
+          void connectNow(false);
+          return 0;
+        }
+        return current - 1;
+      });
+    }, 1000);
+
+    return clearCountdown;
+  }, [clearCountdown, connectNow, phase]);
+
+  useEffect(() => {
+    if (target.transport !== 'classic' || settledRef.current) return;
+    let cancelled = false;
+
+    NotedriBtPairing.discoverDevices()
+      .then((found) => {
+        if (cancelled || settledRef.current) return;
+        const match = found.find((d) => d.address === target.deviceId);
+        if (!match) {
+          finish('failed');
+          return;
+        }
+        classicMatchRef.current = match;
+        setPhase('countdown');
+      })
+      .catch(() => {
+        if (!cancelled) finish('failed');
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [finish, target.deviceId, target.transport]);
 
   useEffect(() => {
     if (target.transport !== 'ble' || settledRef.current) return;
+
+    startScan(false);
+    const timeout = setTimeout(() => finish('failed'), BLE_ATTEMPT_TIMEOUT_MS);
+    return () => {
+      clearTimeout(timeout);
+      stopScan();
+    };
+  }, [finish, startScan, stopScan, target.transport]);
+
+  useEffect(() => {
+    if (target.transport !== 'ble' || settledRef.current || phase !== null) return;
     const match = foundDevices.find((d) => d.id === target.deviceId);
     if (!match) return;
-    settledRef.current = true; // chặn timeout gọi settle() lần 2 trong lúc đang connect
-    connect(match.id)
-      .then((ok) => { if (ok) goToDashboard(match.name); })
-      .finally(onDone);
-  }, [foundDevices]);
+    bleMatchRef.current = match;
+    stopScan();
+    setPhase('countdown');
+  }, [foundDevices, phase, stopScan, target.deviceId, target.transport]);
 
-  // Hết giờ mà connectionState rơi về lỗi (vd BT vừa tắt giữa chừng) - dừng
-  // sớm thay vì chờ hết 16s vô ích.
   useEffect(() => {
-    if (connectionState === 'error') settle();
-  }, [connectionState]);
+    if (connectionState === 'error') {
+      finish('failed');
+    }
+  }, [connectionState, finish]);
 
-  return null;
+  useEffect(() => () => {
+    clearCountdown();
+    clearFinishTimer();
+  }, [clearCountdown, clearFinishTimer]);
+
+  // Không dùng <Modal> nữa (24/7 rà soát: Modal chặn touch TOÀN màn hình, user
+  // không chuyển tab/thao tác gì khác được trong lúc đếm ngược/đang kết nối -
+  // đúng phàn nàn "lúc nào cũng kết nối, không ra màn hình khác được"). Sheet
+  // giờ là overlay không chặn (pointerEvents box-none ở ngoài), user vẫn dùng
+  // app bình thường bên dưới; back cứng Android vẫn coi như bấm Đóng.
+  useEffect(() => {
+    if (phase === null) return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      dismissPrompt();
+      return true;
+    });
+    return () => sub.remove();
+  }, [dismissPrompt, phase]);
+
+  if (phase === null) return null;
+
+  const deviceName =
+    bleMatchRef.current?.name ??
+    classicMatchRef.current?.name ??
+    (target.vehicleName || 'OBD2');
+  const progressWidth = phase === 'countdown'
+    ? Math.max(15, (secondsLeft / AUTO_CONNECT_COUNTDOWN_SECONDS) * 100)
+    : 100;
+  const title =
+    phase === 'connecting'
+      ? t('obd.auto_connect_prompt_connecting_title')
+      : phase === 'canceling'
+        ? t('obd.auto_connect_prompt_canceling_title')
+        : t('obd.auto_connect_prompt_title');
+  const body =
+    phase === 'connecting'
+      ? t('obd.auto_connect_prompt_connecting_body', { name: deviceName })
+      : phase === 'canceling'
+        ? t('obd.auto_connect_prompt_canceling_body', { name: deviceName })
+        : t('obd.auto_connect_prompt_body', { name: deviceName, seconds: secondsLeft });
+
+  return (
+    <View style={styles.sheetOverlay} pointerEvents="box-none">
+      <View style={styles.sheetCard}>
+        <View style={styles.dragHandle} />
+
+          <View style={styles.headerRow}>
+            <View style={styles.badge}>
+              <FontAwesome5 name="bolt" size={11} color="#3B82F6" />
+              <Text style={styles.badgeText}>{t('obd.auto_connect_prompt_badge')}</Text>
+            </View>
+            <TouchableOpacity onPress={dismissPrompt} style={styles.iconBtn}>
+              <FontAwesome5 name="times" size={13} color="#CBD5E1" />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.heroRow}>
+            <View style={styles.iconWrap}>
+              <FontAwesome5
+                name={phase === 'connecting' || phase === 'canceling' ? 'bluetooth-b' : 'car'}
+                size={22}
+                color="#3B82F6"
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.title}>{title}</Text>
+              <Text style={styles.body}>{body}</Text>
+            </View>
+          </View>
+
+          {phase === 'countdown' && (
+            <>
+              <View style={styles.progressTrack}>
+                <View style={[styles.progressFill, { width: `${progressWidth}%` }]} />
+              </View>
+              <Text style={styles.hint}>
+                {t('obd.auto_connect_prompt_hint', { vehicle: target.vehicleName })}
+              </Text>
+            </>
+          )}
+
+          {phase === 'connecting' && (
+            <View style={styles.inlineStateRow}>
+              <ActivityIndicator color="#3B82F6" />
+              <Text style={styles.connectingText}>
+                {t('obd.auto_connect_prompt_connecting_cta')}
+              </Text>
+            </View>
+          )}
+
+          {phase === 'canceling' && (
+            <View style={styles.inlineStateRow}>
+              <ActivityIndicator color="#F59E0B" />
+              <Text style={styles.connectingText}>
+                {t('obd.auto_connect_prompt_canceling_cta')}
+              </Text>
+            </View>
+          )}
+
+          <View style={styles.actionsStack}>
+            {phase === 'countdown' && (
+              <>
+                <TouchableOpacity style={styles.primaryBtn} onPress={() => connectNow(true)}>
+                  <Text style={styles.primaryBtnText}>{t('obd.auto_connect_prompt_connect')}</Text>
+                </TouchableOpacity>
+                <View style={styles.rowActions}>
+                  <TouchableOpacity style={styles.secondaryBtn} onPress={dismissPrompt}>
+                    <Text style={styles.secondaryBtnText}>{t('common.close')}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.linkBtn} onPress={disableAutoConnect}>
+                    <Text style={styles.linkBtnText}>{t('obd.auto_connect_prompt_disable')}</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+
+            {phase === 'connecting' && (
+              <TouchableOpacity style={styles.dangerBtn} onPress={requestCancel}>
+                <Text style={styles.dangerBtnText}>{t('obd.auto_connect_prompt_cancel')}</Text>
+              </TouchableOpacity>
+            )}
+
+            {phase === 'canceling' && (
+              <TouchableOpacity style={[styles.secondaryBtn, styles.secondaryBtnWide]} onPress={dismissPrompt}>
+                <Text style={styles.secondaryBtnText}>{t('common.close')}</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+      </View>
+    </View>
+  );
 }
 
-/**
- * Rà soát 25/7 (góp ý user: kết nối OBD2 lần 1 xong, tắt/mở lại app không tự
- * kết nối lại) - component ẩn, mount 1 lần cạnh ObdSessionBanner (App.tsx).
- * Thành công thì tự chuyển thẳng vào OBD2 Live (goToDashboard trong
- * AutoConnectAttempt) - hợp lý vì đây là tính năng OPT-IN, user đã chủ động
- * bật switch nên không còn là hành vi "tự tiện" nữa. Thất bại thì im lặng,
- * không toast lỗi, không thử lại cho tới lần mở/quay lại app kế tiếp (có
- * cooldown).
- *
- * Đây là tính năng OPT-IN theo từng xe (PairedDevice.autoConnect, bật ở
- * OBDSetupScreen) - mặc định KHÔNG bật cho ai, tránh quét BLE tốn pin mỗi lần
- * mở app kể cả khi không ở trong xe.
- */
 export default function ObdAutoConnect() {
+  const t = useT();
   const isPremium = useAuthStore((s) => s.user?.is_premium ?? false);
   const token = useAuthStore((s) => s.token);
   const [target, setTarget] = useState<AttemptTarget | null>(null);
+  const [notice, setNotice] = useState<AutoConnectNotice | null>(null);
   const lastAttemptAtRef = useRef(0);
   const appStateRef = useRef(AppState.currentState);
   const pendingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dismissedPairingRef = useRef<{ vehicleId: number; deviceId: string } | null>(null);
+  const noticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  async function tryAutoConnect() {
+  const clearNoticeTimer = useCallback(() => {
+    if (noticeTimerRef.current) {
+      clearTimeout(noticeTimerRef.current);
+      noticeTimerRef.current = null;
+    }
+  }, []);
+
+  const showNotice = useCallback((next: AutoConnectNotice) => {
+    clearNoticeTimer();
+    setNotice(next);
+    noticeTimerRef.current = setTimeout(() => {
+      noticeTimerRef.current = null;
+      setNotice(null);
+    }, 7000);
+  }, [clearNoticeTimer]);
+
+  const handleAttemptEnd = useCallback((
+    reason: AutoConnectEndReason,
+    endedTarget: AttemptTarget,
+    deviceName: string,
+  ) => {
+    if (reason === 'dismissed') {
+      dismissedPairingRef.current = {
+        vehicleId: endedTarget.vehicleId,
+        deviceId: endedTarget.deviceId,
+      };
+      showNotice({
+        kind: 'paused',
+        vehicleId: endedTarget.vehicleId,
+        vehicleName: endedTarget.vehicleName,
+        deviceName,
+      });
+    } else if (reason === 'completed-silent') {
+      // Đếm ngược tự chạy xong (user không chạm gì) - KHÔNG kéo user khỏi màn
+      // hình họ đang dùng dở, chỉ báo bằng banner nhỏ, để họ tự bấm mở nếu muốn.
+      showNotice({
+        kind: 'connected',
+        vehicleId: endedTarget.vehicleId,
+        vehicleName: endedTarget.vehicleName,
+        deviceName,
+      });
+    }
+    setTarget(null);
+  }, [showNotice]);
+
+  const openConnectedDashboard = useCallback((n: AutoConnectNotice) => {
+    clearNoticeTimer();
+    setNotice(null);
+    if (!navigationRef.isReady()) return;
+    navigationRef.navigate('OBDDashboard', {
+      vehicleId: n.vehicleId,
+      vehicleName: n.vehicleName,
+      deviceName: n.deviceName,
+      consumptionOfficial: null,
+    });
+  }, [clearNoticeTimer]);
+
+  const tryAutoConnect = useCallback(async () => {
     if (!isPremium || !token) return;
-    if (target) return; // đã có 1 lượt thử đang chạy
+    if (target) return;
     if (Date.now() - lastAttemptAtRef.current < COOLDOWN_MS) return;
-    if (bleService.isConnected()) return; // đã kết nối sẵn (vd sống sót qua nền)
+    if (bleService.isConnected()) return;
 
     const routeName = navigationRef.isReady() ? navigationRef.getCurrentRoute()?.name : undefined;
     if (routeName && SKIP_ON_ROUTES.has(routeName)) return;
 
-    // Ưu tiên xe mặc định nếu >1 xe cùng bật auto-connect (xem comment
-    // getAutoConnectPairing() ở pairedDevices.ts) - đồng bộ với đường vào NFC/App
-    // Link (handleConnectLink.ts) để 2 đường không chọn ra 2 xe khác nhau.
     const defaultVehicle = await resolveDefaultVehicle();
     const pairing = await getAutoConnectPairing(defaultVehicle?.id);
-    if (!pairing) return; // chưa xe nào bật auto-connect
+    if (!pairing) return;
+    if (
+      dismissedPairingRef.current &&
+      dismissedPairingRef.current.vehicleId === pairing.vehicleId &&
+      dismissedPairingRef.current.deviceId === pairing.bleDeviceId
+    ) {
+      showNotice({
+        kind: 'paused',
+        vehicleId: pairing.vehicleId,
+        vehicleName: pairing.vehicleName,
+        deviceName: pairing.bleDeviceId,
+      });
+      return;
+    }
 
-    // Không tự xin quyền/bật hộ Bluetooth từ nền - chỉ chạy khi cả 2 đã sẵn
-    // có từ trước (đã cấp lúc kết nối thủ công lần đầu). Thiếu 1 trong 2 thì
-    // bỏ qua im lặng, để user tự vào OBDSetupScreen xử lý như bình thường.
     const btState = await bleService.getBluetoothState();
     if (btState !== BleAdapterState.PoweredOn) return;
     const hasPerms = await bleService.hasScanPermissions();
@@ -163,37 +488,347 @@ export default function ObdAutoConnect() {
       deviceId: pairing.bleDeviceId,
       transport: pairing.transport ?? 'ble',
     });
-  }
+  }, [isPremium, showNotice, target, token]);
 
-  // Đợi INITIAL_ATTEMPT_DELAY_MS rồi mới thật sự thử - không gọi tryAutoConnect
-  // ngay lúc app vừa mở/vừa quay lại foreground (xem giải thích ở hằng số).
-  function scheduleAutoConnect() {
+  const retryDismissedPairing = useCallback(() => {
+    dismissedPairingRef.current = null;
+    clearNoticeTimer();
+    setNotice(null);
     if (pendingTimerRef.current) clearTimeout(pendingTimerRef.current);
     pendingTimerRef.current = setTimeout(() => {
       pendingTimerRef.current = null;
-      tryAutoConnect();
+      void tryAutoConnect();
+    }, 150);
+  }, [clearNoticeTimer, tryAutoConnect]);
+
+  const scheduleAutoConnect = useCallback(() => {
+    if (target) return;
+    if (pendingTimerRef.current) clearTimeout(pendingTimerRef.current);
+    pendingTimerRef.current = setTimeout(() => {
+      pendingTimerRef.current = null;
+      void tryAutoConnect();
     }, INITIAL_ATTEMPT_DELAY_MS);
-  }
+  }, [tryAutoConnect]);
+
+  useEffect(() => {
+    dismissedPairingRef.current = null;
+    setTarget(null);
+    setNotice(null);
+    lastAttemptAtRef.current = 0;
+    if (pendingTimerRef.current) {
+      clearTimeout(pendingTimerRef.current);
+      pendingTimerRef.current = null;
+    }
+    clearNoticeTimer();
+  }, [token]);
 
   useEffect(() => {
     scheduleAutoConnect();
-    return () => { if (pendingTimerRef.current) clearTimeout(pendingTimerRef.current); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isPremium, token]);
+    return () => {
+      if (pendingTimerRef.current) clearTimeout(pendingTimerRef.current);
+    };
+  }, [isPremium, scheduleAutoConnect, token]);
 
   useEffect(() => {
     const sub = AppState.addEventListener('change', (next: AppStateStatus) => {
-      // Chỉ khi THỰC SỰ quay lại từ nền - không fire ở mọi đổi trạng thái (vd
-      // 'active' lặp lại) tránh quét dư thừa không cần thiết.
       if (appStateRef.current.match(/inactive|background/) && next === 'active') {
         scheduleAutoConnect();
       }
       appStateRef.current = next;
     });
     return () => sub.remove();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isPremium, token]);
+  }, [scheduleAutoConnect]);
 
-  if (!target) return null;
-  return <AutoConnectAttempt target={target} onDone={() => setTarget(null)} />;
+  useEffect(() => () => {
+    clearNoticeTimer();
+  }, [clearNoticeTimer]);
+
+  if (!target && !notice) return null;
+  return (
+    <>
+      {target ? (
+        <AutoConnectPrompt target={target} onEnd={handleAttemptEnd} />
+      ) : (
+        <View style={styles.noticeWrap} pointerEvents="box-none">
+          <View style={styles.noticeCard}>
+            <View style={styles.noticeIcon}>
+              <FontAwesome5
+                name={notice?.kind === 'connected' ? 'check-circle' : 'info-circle'}
+                size={14}
+                color={notice?.kind === 'connected' ? '#4ADE80' : '#93C5FD'}
+              />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.noticeTitle}>
+                {notice?.kind === 'connected'
+                  ? t('obd.auto_connect_connected_title')
+                  : t('obd.auto_connect_paused_title')}
+              </Text>
+              <Text style={styles.noticeBody}>
+                {notice?.kind === 'connected'
+                  ? t('obd.auto_connect_connected_body', { name: notice.deviceName })
+                  : t('obd.auto_connect_paused_body', { name: notice?.deviceName ?? 'OBD2' })}
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={styles.noticeBtn}
+              onPress={() => (notice?.kind === 'connected' ? openConnectedDashboard(notice) : retryDismissedPairing())}>
+              <Text style={styles.noticeBtnText}>
+                {notice?.kind === 'connected'
+                  ? t('obd.auto_connect_connected_open')
+                  : t('obd.auto_connect_paused_retry')}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+    </>
+  );
 }
+
+const styles = StyleSheet.create({
+  sheetOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: 12,
+    paddingBottom: 14,
+  },
+  sheetCard: {
+    width: '100%',
+    maxWidth: 520,
+    alignSelf: 'center',
+    borderRadius: 28,
+    backgroundColor: '#0F172A',
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(148, 163, 184, 0.18)',
+    shadowColor: '#000',
+    shadowOpacity: 0.32,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: -8 },
+    elevation: 18,
+  },
+  dragHandle: {
+    width: 42,
+    height: 5,
+    borderRadius: 999,
+    backgroundColor: 'rgba(148, 163, 184, 0.38)',
+    alignSelf: 'center',
+    marginBottom: 14,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  badge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: 'rgba(59, 130, 246, 0.12)',
+  },
+  badgeText: {
+    color: '#93C5FD',
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.2,
+  },
+  iconBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(148, 163, 184, 0.12)',
+  },
+  iconWrap: {
+    width: 58,
+    height: 58,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+    marginTop: 10,
+    marginBottom: 14,
+    backgroundColor: 'rgba(59, 130, 246, 0.14)',
+  },
+  heroRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 14,
+    marginTop: 16,
+  },
+  title: {
+    color: '#F8FAFC',
+    fontSize: 19,
+    fontWeight: '800',
+    textAlign: 'left',
+  },
+  body: {
+    color: '#CBD5E1',
+    fontSize: 13.5,
+    lineHeight: 20,
+    textAlign: 'left',
+    marginTop: 10,
+  },
+  progressTrack: {
+    height: 7,
+    borderRadius: 999,
+    backgroundColor: 'rgba(148, 163, 184, 0.16)',
+    overflow: 'hidden',
+    marginTop: 16,
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 999,
+    backgroundColor: '#3B82F6',
+  },
+  hint: {
+    color: '#94A3B8',
+    fontSize: 12,
+    lineHeight: 17,
+    textAlign: 'left',
+    marginTop: 10,
+  },
+  inlineStateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 16,
+  },
+  actionsStack: {
+    marginTop: 16,
+  },
+  primaryBtn: {
+    minHeight: 48,
+    borderRadius: 14,
+    backgroundColor: '#3B82F6',
+    paddingVertical: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  primaryBtnText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  dangerBtn: {
+    minHeight: 48,
+    borderRadius: 14,
+    backgroundColor: '#DC2626',
+    paddingVertical: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dangerBtnText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  rowActions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 10,
+  },
+  secondaryBtn: {
+    flex: 1,
+    minHeight: 46,
+    borderRadius: 14,
+    backgroundColor: 'rgba(148, 163, 184, 0.12)',
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  secondaryBtnText: {
+    color: '#E2E8F0',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  linkBtn: {
+    flexShrink: 0,
+    minHeight: 46,
+    alignSelf: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+  },
+  linkBtnText: {
+    color: '#93C5FD',
+    fontSize: 12.5,
+    fontWeight: '700',
+  },
+  secondaryBtnWide: {
+    flex: 0,
+    width: '100%',
+  },
+  connectingText: {
+    color: '#E2E8F0',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  noticeWrap: {
+    position: 'absolute',
+    left: 12,
+    right: 12,
+    bottom: 18,
+    alignItems: 'center',
+  },
+  noticeCard: {
+    width: '100%',
+    maxWidth: 520,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    borderRadius: 16,
+    backgroundColor: '#0F172A',
+    borderWidth: 1,
+    borderColor: 'rgba(59, 130, 246, 0.34)',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.26,
+    shadowRadius: 14,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 10,
+  },
+  noticeIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(59, 130, 246, 0.14)',
+  },
+  noticeTitle: {
+    color: '#F8FAFC',
+    fontSize: 13.5,
+    fontWeight: '800',
+  },
+  noticeBody: {
+    color: '#CBD5E1',
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: 2,
+  },
+  noticeBtn: {
+    minHeight: 36,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(59, 130, 246, 0.14)',
+  },
+  noticeBtnText: {
+    color: '#BFDBFE',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+});

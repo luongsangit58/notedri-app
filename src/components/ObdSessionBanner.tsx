@@ -78,9 +78,16 @@ const HIDDEN_ON = new Set(['OBDSetup', 'OBDDashboard', 'NfcSetup']);
  */
 export default function ObdSessionBanner() {
   const t = useT();
-  const { connected, reconnecting, vehicleId, vehicleName } = useObdSessionStore();
+  const { connected, reconnecting, vehicleId, vehicleName, sharedByOtherDevice } = useObdSessionStore();
   const [routeName, setRouteName] = useState<string | undefined>(undefined);
   const [toast, dismissToast] = useTransitionToast();
+  const [lockNoticeDismissed, setLockNoticeDismissed] = useState(false);
+
+  // Reset "đã đóng" mỗi khi thông tin khoá đổi (xe khác, hoặc hết bị giữ rồi
+  // lại bị giữ lần mới) - không được để dismiss 1 lần là im lặng vĩnh viễn.
+  useEffect(() => {
+    setLockNoticeDismissed(false);
+  }, [sharedByOtherDevice?.deviceName, sharedByOtherDevice?.since]);
 
   useEffect(() => {
     const update = () => {
@@ -116,8 +123,39 @@ export default function ObdSessionBanner() {
     </TouchableOpacity>
   ) : null;
 
-  if (!connected && !reconnecting) return toastView;
-  if (routeName && HIDDEN_ON.has(routeName)) return toastView;
+  // Cảnh báo khoá mềm (29/7): xe đang được máy khác giữ - CHỈ báo, không chặn
+  // gì. Hiện ở MỌI màn kể cả Dashboard/Setup (khác với pill trạng thái - đây
+  // là thông tin user cần thấy đúng lúc họ đang thao tác với xe này nhất).
+  const lockView = sharedByOtherDevice && !lockNoticeDismissed ? (
+    <TouchableOpacity
+      activeOpacity={0.85}
+      onPress={() => setLockNoticeDismissed(true)}
+      style={{
+        position: 'absolute',
+        top: 108,
+        left: 12,
+        right: 12,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        backgroundColor: '#78350fee',
+        borderRadius: 12,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+        borderWidth: 1,
+        borderColor: '#F59E0B66',
+        elevation: 8,
+      }}>
+      <FontAwesome5 name="exclamation-triangle" size={13} color="#FBBF24" />
+      <Text style={{ color: '#FEF3C7', fontSize: 12, fontWeight: '600', flex: 1 }}>
+        {t('obd.shared_device_warning', { name: sharedByOtherDevice.deviceName })}
+      </Text>
+      <FontAwesome5 name="times" size={12} color="#FEF3C7" />
+    </TouchableOpacity>
+  ) : null;
+
+  if (!connected && !reconnecting) return <>{toastView}{lockView}</>;
+  if (routeName && HIDDEN_ON.has(routeName)) return <>{toastView}{lockView}</>;
 
   const color = reconnecting ? '#F59E0B' : '#22C55E';
   const label = reconnecting
@@ -127,6 +165,7 @@ export default function ObdSessionBanner() {
   return (
     <>
     {toastView}
+    {lockView}
     <TouchableOpacity
       activeOpacity={0.85}
       onPress={() => {

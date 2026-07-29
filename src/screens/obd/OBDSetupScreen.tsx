@@ -18,7 +18,12 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { State as BtState } from 'react-native-ble-plx';
 import { useObdConnection } from '../../hooks/useObd';
 import { bleService } from '../../services/obd/BleService';
-import { getPairingForVehicle, getPairingForDevice, setAutoConnect } from '../../services/obd/pairedDevices';
+import {
+  getPairingForVehicle,
+  getPairingForDevice,
+  setAutoConnect,
+  removePairingForVehicle,
+} from '../../services/obd/pairedDevices';
 import AppBgPattern from '../../components/AppBgPattern';
 import { useColors } from '../../utils/theme';
 import { useAuthStore } from '../../store/authStore';
@@ -305,6 +310,7 @@ export default function OBDSetupScreen() {
   // TẮT (xem ObdAutoConnect.tsx) - chỉ hiện switch khi xe này đã từng ghép ít
   // nhất 1 thiết bị (chưa ghép thì chưa có gì để tự kết nối tới).
   const [autoConnectOnLaunch, setAutoConnectOnLaunchState] = useState(false);
+  const [forgettingPairing, setForgettingPairing] = useState(false);
   useEffect(() => {
     getPairingForVehicle(vehicleId).then((p) => {
       setPairedDeviceId(p?.bleDeviceId ?? null);
@@ -316,6 +322,33 @@ export default function OBDSetupScreen() {
   async function handleToggleAutoConnectOnLaunch(next: boolean) {
     setAutoConnectOnLaunchState(next); // phản hồi tức thì, không đợi AsyncStorage
     await setAutoConnect(vehicleId, next);
+  }
+
+  async function handleForgetPairing() {
+    if (forgettingPairing) return;
+    Alert.alert(
+      t('obd.forget_device_title'),
+      t('obd.forget_device_body', { vehicle: vehicleName || t('obd.pair_this_vehicle') }),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('common.confirm'),
+          style: 'destructive',
+          onPress: async () => {
+            setForgettingPairing(true);
+            try {
+              await removePairingForVehicle(vehicleId);
+              setPairedDeviceId(null);
+              setPairedTransport('ble');
+              setAutoConnectOnLaunchState(false);
+              Alert.alert(t('common.done'), t('obd.forget_device_done'));
+            } finally {
+              setForgettingPairing(false);
+            }
+          },
+        },
+      ],
+    );
   }
 
   // NFC tag chỉ mang theo deviceId (viết lúc đó có thể là địa chỉ Classic) -
@@ -585,7 +618,7 @@ export default function OBDSetupScreen() {
         </>
         )}
 
-        {/* Tự động kết nối khi mở app (25/7) - chỉ hiện khi xe này đã từng
+        {/* Hỏi trước khi tự kết nối (25/7) - chỉ hiện khi xe này đã từng
             ghép ít nhất 1 thiết bị, không phụ thuộc đang ở mode BLE hay
             Classic. Mặc định TẮT - xem ObdAutoConnect.tsx. */}
         {pairedDeviceId && (
@@ -603,6 +636,15 @@ export default function OBDSetupScreen() {
               onValueChange={handleToggleAutoConnectOnLaunch}
               trackColor={{ true: '#3B82F6' }}
             />
+            <TouchableOpacity
+              onPress={handleForgetPairing}
+              disabled={forgettingPairing}
+              style={{ opacity: forgettingPairing ? 0.6 : 1 }}
+            >
+              <Text style={{ color: '#EF4444', fontSize: 12, fontWeight: '700' }}>
+                {forgettingPairing ? t('common.loading') : t('obd.forget_device')}
+              </Text>
+            </TouchableOpacity>
           </View>
         )}
 

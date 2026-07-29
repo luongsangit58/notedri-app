@@ -50,5 +50,12 @@ export const gpsTripsApi = {
       client.delete('/gps/tracking-lock', { data: { vehicle_id: vehicleId, device_id: deviceId } }),
     renew: (vehicleId: number, deviceId: string) =>
       client.put('/gps/tracking-lock', { vehicle_id: vehicleId, device_id: deviceId }),
+    // Máy nào đang THỰC SỰ giữ lock cho xe này (29/7) - dùng để đồng bộ
+    // GpsPrimaryBanner với sự thật thay vì is_gps_primary (per-user, không
+    // theo xe - xem comment ở GpsTripsScreen.tsx).
+    status: (vehicleId: number) =>
+      client.get<{ holder_device_id: string | null; holder_device_name: string | null }>(
+        '/gps/tracking-lock/status', { params: { vehicle_id: vehicleId } },
+      ),
   },
 };

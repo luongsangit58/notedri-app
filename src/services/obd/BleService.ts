@@ -861,7 +861,8 @@ class BleService {
         const isKnownAdapter =
           name.includes('OBD') || name.includes('ELM') ||
           name.includes('VGATE') || name.includes('VEEPEAK') ||
-          name.includes('VLINK') || name.includes('ICAR');
+          name.includes('VLINK') || name.includes('ICAR') ||
+          name.includes('KONNWEI');
         if (showAll || isKnownAdapter) {
           if (!found.has(device.id)) {
             found.add(device.id);

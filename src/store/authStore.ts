@@ -9,6 +9,7 @@ import { useI18nStore } from '../i18n';
 import { clearGpsQueue } from '../services/gps/GpsTripSyncQueue';
 import { clearObdQueue } from '../services/obd/TripSyncQueue';
 import { clearObdSessionQueue } from '../services/obd/ObdSessionSyncQueue';
+import { clearPairings } from '../services/obd/pairedDevices';
 
 interface User {
   id: number;
@@ -177,6 +178,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await clearGpsQueue();
       await clearObdQueue();
       await clearObdSessionQueue();
+      // Xoá luôn pairing OBD local để user khác trên cùng máy không bị auto-connect
+      // hoặc state "đang ghép" của người dùng trước bám lại.
+      await clearPairings();
       set({ user: null, token: null, isLoggingOut: false, userSynced: false });
     }
   },

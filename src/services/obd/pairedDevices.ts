@@ -43,8 +43,15 @@ export async function savePairing(pairing: PairedDevice): Promise<void> {
   // Giữ lại lựa chọn autoConnect đã có (25/7) - useObd.ts gọi hàm này sau MỌI
   // lần connect thành công mà không biết gì về field này, ghi đè trực tiếp sẽ
   // âm thầm xoá mất lựa chọn user đã bật ở OBDSetupScreen mỗi khi họ kết nối lại.
-  const previous = devices.find((d) => d.bleDeviceId === pairing.bleDeviceId);
-  const next = devices.filter((d) => d.bleDeviceId !== pairing.bleDeviceId);
+  //
+  // Dedupe theo cả device lẫn vehicle:
+  // - 1 thiết bị chỉ nên thuộc 1 xe tại một thời điểm
+  // - 1 xe chỉ nên giữ 1 pairing "hiện hành" để getPairingForVehicle() và
+  //   auto-connect không bám bản ghi cũ khi adapter đổi máy.
+  const previous = devices.find((d) => d.vehicleId === pairing.vehicleId);
+  const next = devices.filter(
+    (d) => d.bleDeviceId !== pairing.bleDeviceId && d.vehicleId !== pairing.vehicleId,
+  );
   next.push({
     ...pairing,
     autoConnect: pairing.autoConnect ?? previous?.autoConnect,
@@ -53,7 +60,16 @@ export async function savePairing(pairing: PairedDevice): Promise<void> {
   await writeAll(next);
 }
 
-// User bật/tắt "Tự động kết nối khi mở app" cho 1 xe cụ thể (OBDSetupScreen).
+export async function removePairingForVehicle(vehicleId: number): Promise<void> {
+  const devices = await readAll();
+  await writeAll(devices.filter((d) => d.vehicleId !== vehicleId));
+}
+
+export async function clearPairings(): Promise<void> {
+  await AsyncStorage.removeItem(KEY);
+}
+
+// User bật/tắt "Hỏi trước khi tự kết nối" cho 1 xe cụ thể (OBDSetupScreen).
 export async function setAutoConnect(vehicleId: number, enabled: boolean): Promise<void> {
   const devices = await readAll();
   const idx = devices.findIndex((d) => d.vehicleId === vehicleId);

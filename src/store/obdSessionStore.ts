@@ -24,6 +24,10 @@ type ObdSessionState = {
   // (đồng bộ, từ buildSessionSummary() đã có sẵn) để banner hiện toast xác nhận,
   // tách khỏi việc enqueue/flush lên server chạy async phía sau.
   lastSessionSaved: LastSessionSaved | null;
+  // Khoá MỀM theo vehicle_id (29/7): xe này đang được 1 máy KHÁC (cùng account
+  // hoặc khác) giữ kết nối OBD tại thời điểm claim gần nhất - CHỈ để cảnh báo,
+  // không chặn kết nối của máy này (xem obdApi.deviceLock, useObd.ts).
+  sharedByOtherDevice: { deviceName: string; since: string | null } | null;
   patch: (p: Partial<Omit<ObdSessionState, 'patch' | 'clear'>>) => void;
   clear: () => void;
 };
@@ -35,6 +39,7 @@ export const useObdSessionStore = create<ObdSessionState>((set) => ({
   vehicleName: null,
   deviceName: null,
   lastSessionSaved: null,
+  sharedByOtherDevice: null,
   patch: (p) => set(p),
   clear: () =>
     set({
@@ -43,5 +48,6 @@ export const useObdSessionStore = create<ObdSessionState>((set) => ({
       vehicleId: null,
       vehicleName: null,
       deviceName: null,
+      sharedByOtherDevice: null,
     }),
 }));

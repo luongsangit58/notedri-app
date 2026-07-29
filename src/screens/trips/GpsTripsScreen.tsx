@@ -642,66 +642,64 @@ function Chip({ icon, label }: { icon: string; label: string }) {
   );
 }
 
-// Quản lý "Máy chính ghi hành trình": 1 thời điểm chỉ 1 máy nên khi máy KHÁC (không phải
-// máy chính) mở màn Hành trình -> hỏi có chuyển máy chính sang máy này không.
-function GpsPrimaryBanner() {
+// Rà soát 29/7 (góp ý user: "máy A vẫn hiện primary dù máy B đang thực sự ghi
+// hành trình xe này" - is_gps_primary là Ý ĐỊNH user chọn, per-USER, không
+// theo xe; còn trackingLock là SỰ THẬT per-VEHICLE). Banner này giờ đọc
+// gpsTripsApi.trackingLock.status() - đúng máy đang giữ lock CHO XE ĐANG XEM -
+// thay vì is_gps_primary, để không còn lệch hiển thị giữa 2 khái niệm khác nhau.
+// "Đặt máy chính" (is_gps_primary, DevicesScreen) vẫn giữ nguyên là preference
+// riêng, KHÔNG đổi ở đây - chỉ đổi nguồn dữ liệu banner để phản ánh đúng thực tế.
+function GpsPrimaryBanner({ vehicleId }: { vehicleId: number }) {
   const colors = useColors();
   const t = useT();
-  const qc = useQueryClient();
-  const { data } = useQuery({
+  const promptedRef = useRef<string | null>(null);
+
+  const { data: sessionsData } = useQuery({
     queryKey: ['device-sessions'],
     queryFn: () => devicesApi.list().then((r) => r.data.data),
     staleTime: 30_000,
   });
-  const sessions: DeviceSession[] = Array.isArray(data) ? data : [];
+  const sessions: DeviceSession[] = Array.isArray(sessionsData) ? sessionsData : [];
   const current = sessions.find((s) => s.is_current);
-  const primary = sessions.find((s) => s.is_gps_primary);
-  const isThisPrimary = !!current?.is_gps_primary;
-  const promptedRef = useRef(false);
 
-  const setPrimary = useMutation({
-    mutationFn: (id: number) => devicesApi.setPrimary(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['device-sessions'] }),
+  const { data: lockStatus } = useQuery({
+    queryKey: ['gps-tracking-lock-status', vehicleId],
+    queryFn: () => gpsTripsApi.trackingLock.status(vehicleId).then((r) => r.data),
+    enabled: !!vehicleId,
+    staleTime: 15_000,
+    refetchInterval: 30_000, // xe đang chạy trên máy khác có thể đổi bất kỳ lúc nào
   });
 
-  const makeThisPrimary = useCallback(() => {
-    if (current) setPrimary.mutate(current.id);
-  }, [current]); // eslint-disable-line react-hooks/exhaustive-deps
+  const holderDeviceId = lockStatus?.holder_device_id ?? null;
+  const holderDeviceName = lockStatus?.holder_device_name ?? null;
+  const heldByOther = !!holderDeviceId && holderDeviceId !== current?.device_id;
+  const heldByThis = !!holderDeviceId && holderDeviceId === current?.device_id;
 
-  // Máy khác đang là máy chính -> hỏi 1 lần khi vào màn.
+  // Máy khác đang THỰC SỰ ghi hành trình xe này -> báo 1 lần khi vào màn.
+  // Không có nút "chuyển" nữa (không thể cưỡng ép chiếm lock của phiên đang
+  // chạy thật trên máy kia) - chỉ thông báo, user tự tắt theo dõi ở máy đó.
   useEffect(() => {
-    if (promptedRef.current || !current) return;
-    if (primary && primary.id !== current.id && !isThisPrimary) {
-      promptedRef.current = true;
-      Alert.alert(
-        t('gps_trips.primary_switch_title'),
-        t('gps_trips.primary_switch_body', { name: primary.device_name }),
-        [
-          { text: t('gps_trips.primary_keep'), style: 'cancel' },
-          { text: t('gps_trips.primary_switch_here'), onPress: makeThisPrimary },
-        ],
-      );
-    }
-  }, [primary?.id, current?.id, isThisPrimary]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (!heldByOther || !holderDeviceId) return;
+    if (promptedRef.current === holderDeviceId) return;
+    promptedRef.current = holderDeviceId;
+    Alert.alert(
+      t('gps_trips.primary_switch_title'),
+      t('gps_trips.primary_switch_body', { name: holderDeviceName ?? t('gps_trips.primary_none') }),
+      [{ text: t('common.ok') }],
+    );
+  }, [heldByOther, holderDeviceId, holderDeviceName]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (!current) return null;
+  if (!current || !holderDeviceId) return null;
 
   return (
-    <View style={{ marginHorizontal: 16, marginTop: 12, marginBottom: 4, backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1, borderColor: isThisPrimary ? '#f59e0b55' : colors.border, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-      <FontAwesome5 name="star" size={14} color={isThisPrimary ? '#f59e0b' : colors.textSecondary} solid />
+    <View style={{ marginHorizontal: 16, marginTop: 12, marginBottom: 4, backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1, borderColor: heldByThis ? '#f59e0b55' : colors.border, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+      <FontAwesome5 name="star" size={14} color={heldByThis ? '#f59e0b' : colors.textSecondary} solid />
       <View style={{ flex: 1 }}>
         <Text style={{ color: colors.text, fontSize: 13, fontWeight: '700' }}>{t('gps_trips.primary_device_label')}</Text>
         <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 1 }} numberOfLines={1}>
-          {isThisPrimary ? t('gps_trips.primary_is_this') : (primary?.device_name ?? t('gps_trips.primary_none'))}
+          {heldByThis ? t('gps_trips.primary_is_this') : (holderDeviceName ?? t('gps_trips.primary_none'))}
         </Text>
       </View>
-      {!isThisPrimary && (
-        <TouchableOpacity onPress={makeThisPrimary} disabled={setPrimary.isPending}
-          style={{ flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: 1, borderColor: '#f59e0b', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 }}>
-          <FontAwesome5 name="star" size={10} color="#f59e0b" solid />
-          <Text style={{ color: '#f59e0b', fontSize: 12, fontWeight: '700' }}>{t('gps_trips.primary_set_this')}</Text>
-        </TouchableOpacity>
-      )}
     </View>
   );
 }
@@ -841,7 +839,7 @@ export default function GpsTripsScreen({ embedded }: { embedded?: boolean } = {}
         refreshControl={<RefreshControl refreshing={isFetching} onRefresh={handleRefresh} tintColor={colors.primary} />}
         ListHeaderComponent={
           <>
-            <GpsPrimaryBanner />
+            <GpsPrimaryBanner vehicleId={vehicleId} />
             <ActiveTripCard vehicleId={vehicleId} />
           </>
         }
