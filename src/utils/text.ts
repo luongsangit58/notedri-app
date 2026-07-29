@@ -42,6 +42,10 @@ export function prepareTextForSpeech(text: string): string {
     // LocalReplyTemplates.ts) - "đ" đứng NGAY SAU chữ số, không đụng tới các từ có sẵn "đ" khác
     // (được, đường...).
     .replace(/(\d[\d.,]*)\s*đ(?=[\s,.;:!?)/]|$)/gi, '$1 đồng')
+    // Số lít viết tắt "30L" -> "30 lít" (xem LocalReplyTemplates.ts: `${m.tong_lit}L`) - user báo
+    // Nori đọc "L" thành tên chữ cái "lờ" thay vì "lít". CHỈ khớp "L" HOA đứng ngay sau số (không
+    // dùng "l" thường - sẽ đụng vào các từ tiếng Việt bắt đầu bằng "l" bất kỳ đứng sau số).
+    .replace(/(\d[\d.,]*)\s*L(?=[\s,.;:!?)]|$)/g, '$1 lít')
     .replace(/\s{2,}/g, ' ')
     .trim();
 }

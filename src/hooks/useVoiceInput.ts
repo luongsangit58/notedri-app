@@ -95,6 +95,11 @@ export function useVoiceInput(): UseVoiceInputResult {
   // trong lúc nghe, và CHỈ gọi callback 1 LẦN DUY NHẤT khi phiên nghe thật sự kết thúc ('end').
   const latestResultRef = useRef<{ parsed: string; raw: string } | null>(null);
   const maxListenTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // true nếu user bấm dừng NGAY trong lúc listen() đang đợi tiếng bíp phát xong (trước khi
+  // recognizer thật sự start()) - không có cờ này, stop() gọi native stop() cho 1 phiên CHƯA
+  // start() (vô nghĩa/không có gì để dừng), rồi start() vẫn cứ chạy tiếp sau khi đợi xong, mic
+  // bật lên dù user vừa huỷ. Rà soát khi thêm playListenStartCue()/độ trễ 150ms ở listen().
+  const startCancelledRef = useRef(false);
   // Lưới an toàn cho stop() thủ công (bên dưới) - phòng trường hợp hiếm gặp 1 ROM/thiết bị nào
   // đó gọi native stop() xong không bao giờ bắn sự kiện 'end' (lẽ ra luôn phải bắn theo hợp đồng
   // của SpeechRecognizer, nhưng OEM tự chế không phải lúc nào cũng tuân thủ đúng) - nếu không có
@@ -254,6 +259,7 @@ export function useVoiceInput(): UseVoiceInputResult {
     callbackRef.current = onResult;
     latestResultRef.current = null;
     clearStopFallbackTimer();
+    startCancelledRef.current = false;
     setError(null);
     setVolume(0);
     setInterimTranscript('');
@@ -266,6 +272,17 @@ export function useVoiceInput(): UseVoiceInputResult {
     // bắt đầu nghe vì ROM đó thay rung bằng tiếng "cạch" hệ thống, nhưng điện thoại thật chỉ
     // rung - không phát ra âm thanh, nên không nhất quán giữa các thiết bị) - xem voiceCues.ts.
     playListenStartCue();
+    // Đợi tiếng bíp phát xong (120ms thật, chờ dư 150ms) rồi MỚI bật recognizer - nếu bật đồng
+    // thời, tiếng bíp phát ra loa có thể bị chính mic vừa mở thu lại, lẫn vào đầu transcript.
+    // Đúng lý do các trợ lý giọng nói khác (Google Assistant/Siri) luôn phát xong chime rồi mới
+    // mở mic, không phát chồng lên nhau - rà soát khi thêm playListenStartCue() ở trên.
+    await new Promise((resolve) => setTimeout(resolve, 150));
+    if (startCancelledRef.current) {
+      // User bấm dừng ngay trong lúc đợi tiếng bíp (xem stop() bên dưới) - KHÔNG start() nữa,
+      // coi như phiên nghe này chưa từng bắt đầu, trả UI về idle thay vì kẹt "Đang nghe...".
+      setStatus('idle');
+      return;
+    }
     // interimResults: true (MỚI, trước đây false) - CHỈ để bắn sự kiện 'result' tạm liên tục cho
     // hiệu ứng chữ hiện dần lúc đang nói (interimTranscript ở trên) - KHÔNG liên quan tới bug
     // trùng tin nhắn đã fix 2026-07-27 (bug đó do gọi callback NGAY tại mỗi 'result', đã fix tận
@@ -302,6 +319,11 @@ export function useVoiceInput(): UseVoiceInputResult {
     // gọi (bug thật user báo: "ấn mic, nói xong ấn lần 2 để dừng thì không thấy gửi gì"). Chỉ gọi
     // native stop() - vẫn cố trả kết quả cuối qua 'result' rồi 'end' xử lý status/callback như
     // bình thường (dùng chung logic với native tự dừng, không lặp code).
+    // Phòng user bấm dừng NGAY trong lúc listen() đang đợi tiếng bíp phát xong (chưa kịp
+    // start() recognizer thật - xem startCancelledRef ở trên) - đặt cờ TRƯỚC, native stop() gọi
+    // cho 1 phiên chưa từng start() vô hại (no-op), nhưng nếu thiếu cờ này thì listen() vẫn cứ
+    // start() tiếp sau khi đợi xong dù user vừa huỷ.
+    startCancelledRef.current = true;
     clearMaxListenTimer();
     ExpoSpeechRecognitionModule.stop();
 
