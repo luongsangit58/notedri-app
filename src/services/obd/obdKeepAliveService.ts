@@ -2,7 +2,7 @@ import { Platform } from 'react-native';
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 import { useI18nStore } from '../../i18n';
-import { showBackgroundLocationDisclosure } from '../permissions/backgroundLocationDisclosure';
+import { PermissionManager } from '../permissions/PermissionManager';
 
 // Trùng GPS_TASK_NAME (GpsTripTracker.ts) - KHÔNG import trực tiếp từ đó: module
 // này kéo theo expo-notifications/gpsTripsApi, chuỗi phụ thuộc nặng không cần
@@ -64,8 +64,8 @@ export async function startObdKeepAlive(platformOS: string = Platform.OS): Promi
     const gpsRunning = await Location.hasStartedLocationUpdatesAsync(GPS_TASK_NAME).catch(() => false);
     if (gpsRunning) return 'skipped_gps_active';
 
-    const perm = await Location.getBackgroundPermissionsAsync();
-    if (perm.status !== 'granted') return 'skipped_no_permission';
+    const perm = await PermissionManager.getLocationBackgroundStatus();
+    if (!perm.granted) return 'skipped_no_permission';
 
     const already = await Location.hasStartedLocationUpdatesAsync(OBD_KEEPALIVE_TASK_NAME).catch(() => false);
     if (already) { startedByUs = true; return 'already_running'; }
@@ -102,21 +102,11 @@ export async function startObdKeepAlive(platformOS: string = Platform.OS): Promi
 export async function requestKeepAlivePermissions(platformOS: string = Platform.OS): Promise<boolean> {
   if (platformOS !== 'android') return true;
 
-  const existing = await Location.getBackgroundPermissionsAsync().catch(() => null);
-  if (existing?.status === 'granted') return true;
-
-  const proceed = await showBackgroundLocationDisclosure(
-    'obd.keepalive_disclosure_title',
-    'obd.keepalive_disclosure_body',
-  );
-  if (!proceed) return false;
-
-  // Android bắt buộc phải có quyền foreground TRƯỚC khi xin được quyền nền.
-  const fg = await Location.requestForegroundPermissionsAsync().catch(() => ({ status: 'denied' as const }));
-  if (fg.status !== 'granted') return false;
-
-  const bg = await Location.requestBackgroundPermissionsAsync().catch(() => ({ status: 'denied' as const }));
-  return bg.status === 'granted';
+  const bg = await PermissionManager.requestLocationBackground({
+    titleKey: 'obd.keepalive_disclosure_title',
+    bodyKey: 'obd.keepalive_disclosure_body',
+  }).catch(() => ({ granted: false, canAskAgain: true }));
+  return bg.granted;
 }
 
 /** Gọi khi obdLiveMonitor dừng (BLE disconnect). Chỉ dừng task DO CHÍNH nó khởi. */

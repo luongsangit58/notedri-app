@@ -1,10 +1,11 @@
 import { BleManager, Device, State, Characteristic, BleRestoredState, BleErrorCode, ScanMode } from 'react-native-ble-plx';
-import { Platform, PermissionsAndroid } from 'react-native';
+import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import * as Location from 'expo-location';
 import { useI18nStore } from '../../i18n';
 import { useObdSessionStore } from '../../store/obdSessionStore';
 import NotedriBtPairing from '../../../modules/notedri-bt-pairing/src/NotedriBtPairingModule';
+import { PermissionManager } from '../permissions/PermissionManager';
 
 // Transport thứ 2 (22/7) cho đầu Android ô tô có chip/ROM không quét/kết nối
 // BLE được (xem BT_UNSUPPORTED + fixture Honda Jazz V 2017) nhưng Bluetooth
@@ -450,71 +451,30 @@ class BleService {
     useObdSessionStore.getState().clear();
   }
 
+  /**
+   * Xin quyền quét/kết nối BLE - CHỈ nên gọi khi user tự tay vào màn kết nối, không gọi từ
+   * auto-connect chạy nền (dùng hasScanPermissions() cho việc đó). Logic Android-version
+   * branching (API>=31 BLUETOOTH_SCAN/CONNECT vs <31 ACCESS_FINE_LOCATION) đã CHUYỂN sang
+   * PermissionManager.requestBluetooth() (refactor gom permission về 1 chỗ) - hàm này chỉ còn là
+   * wrapper mỏng, giữ lại để log rõ TỪNG quyền vào session log (đổi tên quyền -> "granted"/
+   * "denied", cần cho log OBD hiện có - khi ROM tuỳ biến deny riêng 1 quyền trong nhóm, log gộp
+   * true/false không phân biệt được quyền nào bị chặn so với quyền không tồn tại trên OS đó).
+   */
   async requestPermissions(): Promise<boolean> {
-    if (Platform.OS === 'android') {
-      // BLUETOOTH_SCAN/BLUETOOTH_CONNECT chỉ tồn tại từ Android 12 (API 31) trở
-      // lên. Trên đầu Android ô tô đời cũ (vd Unisoc UMS512, thường Android
-      // 9/10), xin 2 quyền này qua requestMultiple khiến vài ROM tuỳ biến trả
-      // về "denied" cho quyền không tồn tại thay vì bỏ qua, làm cả nhóm luôn
-      // fail vĩnh viễn (báo cáo 20/7: mở Cài đặt ứng dụng cũng không có mục
-      // Bluetooth để bật vì quyền đó không áp dụng cho OS này). Trước 12,
-      // BLUETOOTH/BLUETOOTH_ADMIN là quyền cài-đặt-thời (không cần xin runtime)
-      // nên chỉ cần xin vị trí để quét BLE.
-      //
-      // Sửa 25/7 (rà soát permission): BLUETOOTH_SCAN đã khai báo cờ
-      // neverForLocation trong manifest (app.json plugin react-native-ble-plx) -
-      // app không suy ra vị trí thật từ kết quả quét, nên KHÔNG cần xin
-      // ACCESS_FINE_LOCATION nữa trên API 31+. Bớt hẳn 1 quyền nhạy cảm (và bớt
-      // luôn phụ thuộc vào công tắc "Vị trí" hệ thống - xem isLocationServicesEnabled).
-      if (Platform.Version >= 31) {
-        const result = await PermissionsAndroid.requestMultiple([
-          PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
-          PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
-        ]);
-        const granted = Object.values(result).every(
-          (r) => r === PermissionsAndroid.RESULTS.GRANTED
-        );
-        // Ghi rõ TỪNG quyền (không chỉ true/false gộp) - khi ROM tuỳ biến deny
-        // riêng 1 quyền trong nhóm, log gộp không phân biệt được quyền nào bị
-        // chặn so với quyền không tồn tại trên OS đó.
-        this.logSession('#permission', Object.entries(result).map(([k, v]) => `${k}=${v}`).join(','));
-        return granted;
-      }
-      // API <31: BLUETOOTH_SCAN/CONNECT chưa tồn tại, OS bắt buộc phải có vị trí
-      // để quét BLE (neverForLocation chỉ áp dụng từ API 31) - không có cách nào
-      // tránh xin quyền này trên bản Android cũ.
-      const result = await PermissionsAndroid.request(
-        PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
-      );
-      this.logSession('#permission', `ACCESS_FINE_LOCATION=${result} (API<31, BLUETOOTH_SCAN/CONNECT không áp dụng)`);
-      return result === PermissionsAndroid.RESULTS.GRANTED;
-    }
-    return true;
+    const result = await PermissionManager.requestBluetooth();
+    this.logSession('#permission', `granted=${result.granted} canAskAgain=${result.canAskAgain}`);
+    return result.granted;
   }
 
   /**
-   * Kiểm tra quyền HIỆN CÓ, KHÔNG xin thêm (25/7, cho auto-connect chạy nền lúc
-   * mở app) - khác requestPermissions() ở trên vốn CHỦ ĐỘNG bật popup hệ thống,
-   * chỉ nên gọi khi user tự tay vào màn kết nối. Tự động quét ngầm mà bật popup
-   * xin quyền không rõ ngữ cảnh (user còn chưa biết app đang làm gì) đúng là
-   * kiểu "phiền" cần tránh - auto-connect phải bỏ qua im lặng nếu quyền chưa có.
+   * Kiểm tra quyền HIỆN CÓ, KHÔNG xin thêm (25/7, cho auto-connect chạy nền lúc mở app) - khác
+   * requestPermissions() ở trên vốn CHỦ ĐỘNG bật popup hệ thống, chỉ nên gọi khi user tự tay vào
+   * màn kết nối. Tự động quét ngầm mà bật popup xin quyền không rõ ngữ cảnh (user còn chưa biết
+   * app đang làm gì) đúng là kiểu "phiền" cần tránh - auto-connect phải bỏ qua im lặng nếu quyền
+   * chưa có.
    */
   async hasScanPermissions(): Promise<boolean> {
-    if (Platform.OS !== 'android') return true;
-    try {
-      if (Platform.Version >= 31) {
-        const [scan, connect] = await Promise.all([
-          PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN),
-          PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT),
-        ]);
-        return scan && connect;
-      }
-      return await PermissionsAndroid.check(PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION);
-    } catch {
-      // Không xác định được -> coi như CHƯA có, để auto-connect bỏ qua im lặng
-      // thay vì lỡ tay gọi tiếp startScan() rồi tự bật popup xin quyền.
-      return false;
-    }
+    return PermissionManager.hasBluetooth();
   }
 
   /**

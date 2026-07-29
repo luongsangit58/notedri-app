@@ -4,6 +4,7 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import * as Location from 'expo-location';
 import client from '../../api/client';
+import { PermissionManager } from '../../services/permissions/PermissionManager';
 
 const FA5_ICON_MAP: Record<string, string> = {
   'cloud-bolt': 'bolt',
@@ -17,8 +18,8 @@ const FA5_ICON_MAP: Record<string, string> = {
 export default function CockpitWeather({ color, fontSize = 18 }: { color: string; fontSize?: number }) {
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   useEffect(() => {
-    Location.getForegroundPermissionsAsync().then(({ status }) => {
-      if (status !== 'granted') return;
+    PermissionManager.getLocationForegroundStatus().then(({ granted }) => {
+      if (!granted) return;
       Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced })
         .then((loc) => setCoords({ lat: loc.coords.latitude, lng: loc.coords.longitude }))
         .catch(() => {});

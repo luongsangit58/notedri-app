@@ -6,11 +6,12 @@ import {
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
-import { CameraView, useCameraPermissions } from 'expo-camera';
+import { CameraView } from 'expo-camera';
 import TextRecognition from '@react-native-ml-kit/text-recognition';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useColors } from '../utils/theme';
 import { useT } from '../i18n';
+import { PermissionManager } from '../services/permissions/PermissionManager';
 
 export type OcrMode = 'odo' | 'receipt';
 
@@ -96,7 +97,6 @@ export default function OcrCamera({ visible, onClose, onResult, onReceiptResult,
   const [ocrStatus, setOcrStatus] = useState<OcrStatus>('manual');
 
   // Live scan
-  const [permission, requestPermission] = useCameraPermissions();
   const [liveValue, setLiveValue] = useState('');
   const [liveTimeout, setLiveTimeout] = useState(false);
   const cameraRef = useRef<CameraView>(null);
@@ -123,8 +123,9 @@ export default function OcrCamera({ visible, onClose, onResult, onReceiptResult,
   };
 
   const startLive = async () => {
-    if (!permission?.granted) {
-      const r = await requestPermission();
+    const status = await PermissionManager.getCameraStatus();
+    if (!status.granted) {
+      const r = await PermissionManager.requestCamera();
       if (!r.granted) {
         Alert.alert(
           t('ocr.camera_perm_title'),

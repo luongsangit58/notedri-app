@@ -14,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { PermissionManager } from '../../services/permissions/PermissionManager';
 import { useVehicle, useUpdateVehicle, useDeleteVehicle } from '../../hooks/useVehicles';
 import { useSendTransferRequest } from '../../hooks/useVehicleTransfer';
 import { useAuthStore } from '../../store/authStore';
@@ -101,8 +102,8 @@ export default function EditVehicleScreen() {
   }, [vehicleData, initialized]);
 
   const pickPhoto = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
+    const { granted } = await PermissionManager.requestMediaLibrary();
+    if (!granted) {
       Alert.alert(t('common.error'), t('add_vehicle.photo_permission'));
       return;
     }

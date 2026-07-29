@@ -7,7 +7,7 @@ import * as BackgroundTask from 'expo-background-task';
 import { gpsTripsApi } from '../../api/gpsTrips';
 import { getDeviceId } from '../../utils/deviceId';
 import { useI18nStore } from '../../i18n';
-import { showBackgroundLocationDisclosure } from '../permissions/backgroundLocationDisclosure';
+import { PermissionManager } from '../permissions/PermissionManager';
 
 export const GPS_TASK_NAME = 'GPS_TRIP_TRACKING';
 export const RECOVERY_TASK_NAME = 'GPS_TRIP_RECOVERY';
@@ -538,8 +538,8 @@ export async function requestPermissionsAndStart(vehicleId: number): Promise<Sta
   }
 
   // 1) Foreground location is mandatory
-  const fg = await Location.requestForegroundPermissionsAsync().catch(() => ({ status: 'denied' }));
-  if (fg.status !== 'granted') {
+  const fg = await PermissionManager.requestLocationForeground().catch(() => ({ granted: false, canAskAgain: true }));
+  if (!fg.granted) {
     return { ok: false, reason: 'foreground_denied', backgroundGranted: false };
   }
 
@@ -561,13 +561,11 @@ export async function requestPermissionsAndStart(vehicleId: number): Promise<Sta
   //    start, and only surface a settings prompt if the start actually fails.
   let backgroundGranted = false;
   try {
-    const existing = await Location.getBackgroundPermissionsAsync().catch(() => null);
-    if (existing?.status === 'granted') {
-      backgroundGranted = true;
-    } else if (await showBackgroundLocationDisclosure('gps_trips.disclosure_title', 'gps_trips.disclosure_body')) {
-      const bg = await Location.requestBackgroundPermissionsAsync();
-      backgroundGranted = bg.status === 'granted';
-    }
+    const bg = await PermissionManager.requestLocationBackground({
+      titleKey: 'gps_trips.disclosure_title',
+      bodyKey: 'gps_trips.disclosure_body',
+    });
+    backgroundGranted = bg.granted;
   } catch { backgroundGranted = false; }
 
   // 3) Prepare state (đọc-sửa-ghi qua hàng đợi để không đè lên handler nền đang chạy)
@@ -719,9 +717,9 @@ export async function maybeAutoShutdownStale(): Promise<boolean> {
 }
 
 export async function getPermissionStatus(): Promise<{ foreground: boolean; background: boolean }> {
-  const fg = await Location.getForegroundPermissionsAsync().catch(() => ({ status: 'undetermined' }));
-  const bg = await Location.getBackgroundPermissionsAsync().catch(() => ({ status: 'undetermined' }));
-  return { foreground: fg.status === 'granted', background: bg.status === 'granted' };
+  const fg = await PermissionManager.getLocationForegroundStatus().catch(() => ({ granted: false, canAskAgain: true }));
+  const bg = await PermissionManager.getLocationBackgroundStatus().catch(() => ({ granted: false, canAskAgain: true }));
+  return { foreground: fg.granted, background: bg.granted };
 }
 
 export type Readiness = { foreground: boolean; background: boolean; locationEnabled: boolean };
@@ -730,13 +728,13 @@ export type Readiness = { foreground: boolean; background: boolean; locationEnab
 // poll mỗi giây để tránh app nặng.
 export async function getReadiness(): Promise<Readiness> {
   const [fg, bg, enabled] = await Promise.all([
-    Location.getForegroundPermissionsAsync().catch(() => ({ status: 'undetermined' })),
-    Location.getBackgroundPermissionsAsync().catch(() => ({ status: 'undetermined' })),
+    PermissionManager.getLocationForegroundStatus().catch(() => ({ granted: false, canAskAgain: true })),
+    PermissionManager.getLocationBackgroundStatus().catch(() => ({ granted: false, canAskAgain: true })),
     Location.hasServicesEnabledAsync().catch(() => true),
   ]);
   return {
-    foreground: fg.status === 'granted',
-    background: bg.status === 'granted',
+    foreground: fg.granted,
+    background: bg.granted,
     locationEnabled: enabled,
   };
 }

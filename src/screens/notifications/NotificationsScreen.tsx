@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import {
   View, Text, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator,
 } from 'react-native';
@@ -15,6 +15,7 @@ import { navigateFromUrl } from '../../utils/navigation';
 import { contentWide } from '../../utils/layout';
 import { useT } from '../../i18n';
 import AppBgPattern from '../../components/AppBgPattern';
+import { registerPushTokenAfterPermission } from '../../utils/pushNotifications';
 
 dayjs.extend(relativeTime);
 // locale dayjs do store i18n quản lý (theo ngôn ngữ app) - không ép 'vi' ở đây.
@@ -150,6 +151,13 @@ export default function NotificationsScreen() {
   const { mutate: markRead } = useMarkRead();
 
   const notifications: NotificationItem[] = data?.data ?? [];
+
+  // JIT: mở màn Thông báo là tín hiệu rõ ràng user quan tâm tới thông báo - xin quyền (nếu chưa
+  // có) ĐÚNG lúc này thay vì ngay sau đăng nhập (refactor permission, xem PermissionManager.ts).
+  // Idempotent - requestNotifications() tự bỏ qua nếu đã cấp sẵn, an toàn gọi lại mỗi lần mount.
+  useEffect(() => {
+    registerPushTokenAfterPermission().catch(() => {});
+  }, []);
 
   useFocusEffect(useCallback(() => {
     Notifications.setBadgeCountAsync(0).catch(() => {});

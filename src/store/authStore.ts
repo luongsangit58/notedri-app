@@ -3,7 +3,7 @@ import { InteractionManager } from 'react-native';
 import { authApi } from '../api/auth';
 import { queryClient } from '../api/queryClient';
 import { storage } from '../utils/storage';
-import { registerPushToken } from '../utils/pushNotifications';
+import { syncPushTokenIfGranted } from '../utils/pushNotifications';
 import { sendDeviceHeartbeat } from '../api/devices';
 import { useI18nStore } from '../i18n';
 import { clearGpsQueue } from '../services/gps/GpsTripSyncQueue';
@@ -117,7 +117,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // ngay giữa lúc set() vừa render lại + điều hướng đang chạy dễ đụng native
       // bridge lúc app đang bận -> app bị kill trên một số máy (đầu Android ô tô).
       InteractionManager.runAfterInteractions(() => {
-        registerPushToken().catch(() => {});
+        syncPushTokenIfGranted().catch(() => {});
       });
       sendDeviceHeartbeat();
     } catch (error: any) {
@@ -189,7 +189,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     // Vừa đăng nhập (Google) -> user LUÔN là dữ liệu tươi từ server, không phải cache.
     set({ token, user, isLoading: false, userSynced: true });
     InteractionManager.runAfterInteractions(() => {
-      registerPushToken().catch(() => {});
+      syncPushTokenIfGranted().catch(() => {});
     });
   },
   clearError: () => set({ error: null }),

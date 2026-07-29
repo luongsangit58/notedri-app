@@ -3,6 +3,7 @@ import {
   View, Text, ScrollView, RefreshControl, TouchableOpacity, Modal, FlatList, Pressable, Image, ActivityIndicator,
 } from 'react-native';
 import * as Location from 'expo-location';
+import { PermissionManager } from '../../services/permissions/PermissionManager';
 import * as Notifications from 'expo-notifications';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AppBgPattern from '../../components/AppBgPattern';
@@ -133,8 +134,8 @@ export default function HomeScreen() {
   // widget trong im lặng, không ép user phải quyết định ngay khi vừa mở app.
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   useEffect(() => {
-    Location.getForegroundPermissionsAsync().then(({ status }) => {
-      if (status === 'granted') {
+    PermissionManager.getLocationForegroundStatus().then(({ granted }) => {
+      if (granted) {
         Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }).then(loc => {
           setCoords({ lat: loc.coords.latitude, lng: loc.coords.longitude });
         }).catch(() => {});

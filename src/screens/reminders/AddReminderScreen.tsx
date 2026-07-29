@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
-  KeyboardAvoidingView, Platform, Alert, ActivityIndicator, Switch,
+  KeyboardAvoidingView, Platform, Alert, ActivityIndicator, Switch, InteractionManager,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AppBgPattern from '../../components/AppBgPattern';
@@ -11,6 +11,7 @@ import { useCreateReminder } from '../../hooks/useReminders';
 import { useVehicles } from '../../hooks/useVehicles';
 import { useColors } from '../../utils/theme';
 import { useT } from '../../i18n';
+import { registerPushTokenAfterPermission } from '../../utils/pushNotifications';
 
 type Loai = 'bao_duong' | 'dang_kiem' | 'bao_hiem' | 'giay_to' | 'khac';
 type CheDo = 'chu_ky' | 'ngay_co_dinh' | 'mot_lan';
@@ -107,7 +108,16 @@ export default function AddReminderScreen() {
         },
       },
       {
-        onSuccess: () => navigation.goBack(),
+        onSuccess: () => {
+          navigation.goBack();
+          // JIT: tạo nhắc nhở là tín hiệu rõ ràng nhất user muốn được thông báo - xin quyền
+          // thông báo (nếu chưa có) ĐÚNG lúc này thay vì ngay sau đăng nhập (refactor permission,
+          // xem PermissionManager.ts). runAfterInteractions - tránh bật popup hệ thống giữa lúc
+          // animation back đang chạy (cùng lý do đã áp dụng cho registerPushToken cũ ở authStore.ts).
+          InteractionManager.runAfterInteractions(() => {
+            registerPushTokenAfterPermission().catch(() => {});
+          });
+        },
         onError: (e: any) =>
           Alert.alert(t('common.error'), e?.response?.data?.message ?? t('reminders.error_save_failed')),
       },

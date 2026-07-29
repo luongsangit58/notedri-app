@@ -5,6 +5,7 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import { useColors } from '../utils/theme';
 import { useT } from '../i18n';
 import { ServicePhoto } from '../api/services';
+import { PermissionManager } from '../services/permissions/PermissionManager';
 
 /**
  * Ô chọn ảnh hoá đơn cho bản ghi bảo dưỡng (dùng cho Add + Edit).
@@ -26,8 +27,8 @@ export default function ReceiptPicker({
   const [viewing, setViewing] = useState(false);
 
   const pick = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') { Alert.alert(t('common.error'), t('add_vehicle.photo_permission')); return; }
+    const { granted } = await PermissionManager.requestMediaLibrary();
+    if (!granted) { Alert.alert(t('common.error'), t('add_vehicle.photo_permission')); return; }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       quality: 0.8,

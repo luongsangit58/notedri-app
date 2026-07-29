@@ -18,6 +18,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
 import { FontAwesome5 } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { PermissionManager } from '../../services/permissions/PermissionManager';
 import { useCreateVehicle } from '../../hooks/useVehicles';
 import { useSendTransferRequest } from '../../hooks/useVehicleTransfer';
 import { useAuthStore } from '../../store/authStore';
@@ -267,8 +268,8 @@ export default function AddVehicleScreen() {
 
   // ── Photo picker ──────────────────────────────────────────────────────────
   const pickPhoto = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') { Alert.alert(t('common.error'), t('add_vehicle.photo_permission')); return; }
+    const { granted } = await PermissionManager.requestMediaLibrary();
+    if (!granted) { Alert.alert(t('common.error'), t('add_vehicle.photo_permission')); return; }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true, aspect: [4, 3], quality: 0.7,

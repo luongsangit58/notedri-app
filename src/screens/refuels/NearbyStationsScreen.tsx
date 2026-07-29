@@ -9,6 +9,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import * as Location from 'expo-location';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { refuelsApi } from '../../api/refuels';
+import { PermissionManager } from '../../services/permissions/PermissionManager';
 import { useColors } from '../../utils/theme';
 import { contentWide } from '../../utils/layout';
 import { useT } from '../../i18n';
@@ -224,8 +225,8 @@ export default function NearbyStationsScreen() {
         longitude = paramLng;
       } else {
         setScreenState('requesting');
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== 'granted') {
+        const { granted } = await PermissionManager.requestLocationForeground();
+        if (!granted) {
           setScreenState('permission_denied');
           return;
         }

@@ -13,8 +13,12 @@
       },
       "googleWebClientId": "1004530110791-mdsui9ttl0vc43214nilgu564vok8nqs.apps.googleusercontent.com",
       "admob": {
-        "androidBannerAdUnitId": "ca-app-pub-3940256099942544/6300978111",
-        "iosBannerAdUnitId": "ca-app-pub-3940256099942544/2934735716"
+        "androidBannerAdUnitId": "ca-app-pub-4780395471669390/6833047366",
+        "iosBannerAdUnitId": "ca-app-pub-3940256099942544/2934735716",
+        "androidInterstitialAdUnitId": "ca-app-pub-4780395471669390/7843444928",
+        "iosInterstitialAdUnitId": "ca-app-pub-3940256099942544/4411468910",
+        "androidAppOpenAdUnitId": "ca-app-pub-4780395471669390/4447125391",
+        "iosAppOpenAdUnitId": "ca-app-pub-3940256099942544/5575463023"
       }
     },
     "ios": {
@@ -74,6 +78,9 @@
         "android.permission.RECORD_AUDIO",
         "android.permission.BLUETOOTH",
         "android.permission.BLUETOOTH_ADMIN"
+      ],
+      "blockedPermissions": [
+        "android.permission.WRITE_EXTERNAL_STORAGE"
       ]
     },
     "web": {

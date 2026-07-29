@@ -8,6 +8,7 @@ import AppBgPattern from '../../components/AppBgPattern';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import * as Location from 'expo-location';
+import { maybeShowInterstitialAfterSave } from '../../services/ads/admob';
 import dayjs from 'dayjs';
 import { useVehicles } from '../../hooks/useVehicles';
 import { useSelectedVehicleStore } from '../../store/selectedVehicleStore';
@@ -22,6 +23,7 @@ import { contentWide } from '../../utils/layout';
 import { formatVND, formatKm } from '../../utils/format';
 import { useT } from '../../i18n';
 import { refuelsApi } from '../../api/refuels';
+import { PermissionManager } from '../../services/permissions/PermissionManager';
 
 // Chuẩn hoá số lít: bàn phím VN cho "12,5" -> parseFloat("12,5")=12 (mất 0.5L).
 // Đổi dấu phẩy thành chấm trước khi parse.
@@ -300,8 +302,8 @@ export default function AddRefuelScreen() {
     try {
       setNearbyLoading(true);
       setStationsDropdown([]);
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
+      const { granted } = await PermissionManager.requestLocationForeground();
+      if (!granted) {
         Alert.alert(t('nearby_stations.permission_title'), t('add_refuel.location_permission_desc'));
         return;
       }
@@ -341,6 +343,7 @@ export default function AddRefuelScreen() {
         ghi_chu: ghiChu || null,
         is_full_tank: isFullTank,
       });
+      void maybeShowInterstitialAfterSave();
       navigation.goBack();
     } catch (err: any) {
       const msg = err.response?.data?.message ?? t('common.save_failed');

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
-  KeyboardAvoidingView, Platform, Alert, ActivityIndicator, Switch,
+  KeyboardAvoidingView, Platform, Alert, ActivityIndicator, Switch, InteractionManager,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AppBgPattern from '../../components/AppBgPattern';
@@ -12,6 +12,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useColors } from '../../utils/theme';
 import { useT } from '../../i18n';
 import { flattenReminders } from '../../utils/reminders';
+import { registerPushTokenAfterPermission } from '../../utils/pushNotifications';
 
 type Loai = 'bao_duong' | 'dang_kiem' | 'bao_hiem' | 'giay_to' | 'khac';
 type CheDo = 'chu_ky' | 'ngay_co_dinh' | 'mot_lan';
@@ -123,6 +124,11 @@ export default function EditReminderScreen() {
         qc.invalidateQueries({ queryKey: ['reminders', vehicleId] });
         qc.invalidateQueries({ queryKey: ['dashboard'] });
         navigation.goBack();
+        // JIT: sửa nhắc nhở cũng là tín hiệu user muốn được thông báo - cùng lý do với
+        // AddReminderScreen.tsx (xem chú thích ở đó, PermissionManager.ts).
+        InteractionManager.runAfterInteractions(() => {
+          registerPushTokenAfterPermission().catch(() => {});
+        });
       })
       .catch((e: any) => {
         Alert.alert(t('common.error'), e?.response?.data?.message ?? t('common.error_generic'));
