@@ -5,6 +5,7 @@ import { dashboardApi } from '../api/dashboard';
 import { remindersApi } from '../api/reminders';
 import { obdApi } from '../api/obd';
 import { refuelsApi } from '../api/refuels';
+import { fuelTypesApi } from '../api/fuelTypes';
 import client from '../api/client';
 
 /**
@@ -168,6 +169,9 @@ export const NoteDriApi = {
    * `POST /refuels` (RefuelController@store, validateData()) - Phase 2 ghi đổ xăng (mục 6/7).
    * vehicle_id gắn ở đây (từ ToolContext), KHÔNG để LLM tự chọn xe. Các field còn lại đều
    * nullable phía backend (FuelCalculator::autoCalc tự suy 1 trong 3: lít/giá/tổng nếu có đủ 2).
+   * fuel_type_id/fuel_type (MỚI) - CÙNG 2 field màn AddRefuelScreen.tsx đã gửi lâu nay, chỉ chưa
+   * bọc cho Nori - cho phép fuel.create() ghi kèm loại xăng khi tra được giá qua
+   * fuel.getCurrentPrices() (xem businessTools.ts).
    */
   async createRefuel(
     vehicleId: number,
@@ -180,9 +184,28 @@ export const NoteDriApi = {
       cay_xang?: string;
       is_full_tank?: boolean;
       ghi_chu?: string;
+      fuel_type_id?: number;
+      fuel_type?: string;
     },
   ) {
     const res = await refuelsApi.create({ vehicle_id: vehicleId, ...data });
     return res.data;
+  },
+
+  /**
+   * `/fuel-types` (đã dùng ở AddRefuelScreen.tsx/FuelPricesScreen.tsx qua `fuelTypesApi.list()`)
+   * - MỚI cho tool `fuel.getCurrentPrices`: câu hỏi "đổ 1 triệu tiền xăng" (chỉ có tổng tiền,
+   * chưa rõ số lít/đơn giá) trước đây không có cách nào tra giá THẬT theo loại xăng, LLM chỉ có
+   * thể hỏi lại user hoặc (rủi ro) tự bịa giá - giờ tra đúng bảng giá tham chiếu thật app đã có,
+   * cùng nguồn `gia_hien_tai` màn hình Giá xăng (FuelPricesScreen.tsx) hiển thị. Chỉ trả loại
+   * ĐANG kích hoạt và có giá (`kich_hoat && gia_hien_tai != null`) - loại chưa có giá không giúp
+   * gì được cho việc tính ngược số lít.
+   */
+  async getFuelTypesWithPrices() {
+    const res = await fuelTypesApi.list();
+    const types: any[] = res.data?.data ?? res.data ?? [];
+    return types
+      .filter((t) => t.kich_hoat && t.gia_hien_tai != null)
+      .map((t) => ({ id: t.id, ten: t.ten, nhom: t.nhom, gia_hien_tai: t.gia_hien_tai }));
   },
 };

@@ -70,7 +70,7 @@ export function buildWriteTools(): ToolDefinition[] {
     {
       name: 'fuel.create',
       description:
-        'GHI 1 lần đổ xăng mới cho xe - dùng khi user nói kiểu "ghi đổ xăng 5 lít hết 150 nghìn", "vừa đổ đầy bình 200 nghìn, giá 20 nghìn 1 lít". Backend yêu cầu ÍT NHẤT 2 TRONG 3 số: số lít (so_lit), đơn giá (gia_lit), tổng tiền (tong_tien) - nếu user chỉ mới cho 1 số (vd chỉ nói tổng tiền), hỏi lại thêm 1 số nữa (số lít hoặc đơn giá) trước khi gọi tool này, KHÔNG tự đoán số còn lại.',
+        'GHI 1 lần đổ xăng mới cho xe - dùng khi user nói kiểu "ghi đổ xăng 5 lít hết 150 nghìn", "vừa đổ đầy bình 200 nghìn, giá 20 nghìn 1 lít". Backend yêu cầu ÍT NHẤT 2 TRONG 3 số: số lít (so_lit), đơn giá (gia_lit), tổng tiền (tong_tien) - nếu user chỉ cho 1 số (vd chỉ nói TỔNG TIỀN như "đổ 1 triệu tiền xăng", chưa nói số lít/đơn giá), TUYỆT ĐỐI KHÔNG tự bịa đơn giá - phải gọi tool fuel.getCurrentPrices TRƯỚC để lấy giá thật theo loại xăng, hỏi user muốn đổ loại nào (hoặc dùng loại đầu tiên trong danh sách làm mặc định nếu user nói không quan tâm/xăng gì cũng được), rồi gọi fuel.create với tong_tien + gia_lit (đơn giá lấy từ fuel.getCurrentPrices, không phải số tự đoán) kèm fuel_type_id/fuel_type tương ứng - KHÔNG cần tự tính số lít, backend tự suy ra.',
       authority: 'mutating',
       requiresConfirmation: true,
       inputSchema: {
@@ -78,7 +78,9 @@ export function buildWriteTools(): ToolDefinition[] {
         properties: {
           so_lit: { type: 'number', description: 'Số lít xăng đã đổ, nếu user có nói' },
           tong_tien: { type: 'number', description: 'Tổng số tiền đã trả (VNĐ), nếu user có nói' },
-          gia_lit: { type: 'number', description: 'Đơn giá mỗi lít (VNĐ), nếu user có nói' },
+          gia_lit: { type: 'number', description: 'Đơn giá mỗi lít (VNĐ) - nếu user không nói rõ, lấy từ kết quả fuel.getCurrentPrices theo loại xăng đã chọn, KHÔNG tự bịa số' },
+          fuel_type_id: { type: 'integer', description: 'id loại xăng (lấy từ kết quả fuel.getCurrentPrices) nếu đã xác định được loại xăng dùng để tra gia_lit' },
+          fuel_type: { type: 'string', description: 'Tên loại xăng (vd "RON95-III"), lấy từ kết quả fuel.getCurrentPrices' },
           odometer: { type: 'integer', description: 'Số công-tơ-mét tại thời điểm đổ xăng, nếu user có nói' },
           ngay: { type: 'string', description: 'Ngày đổ xăng, định dạng YYYY-MM-DD. Bỏ trống nếu user không nói (mặc định hôm nay).' },
           is_full_tank: { type: 'boolean', description: 'true nếu user nói đổ đầy bình, false nếu đổ lửng/1 phần' },
@@ -93,6 +95,7 @@ export function buildWriteTools(): ToolDefinition[] {
         if (input.so_lit != null) parts.push(`${input.so_lit} lít`);
         if (input.tong_tien != null) parts.push(`${Number(input.tong_tien).toLocaleString('vi-VN')}đ`);
         if (input.gia_lit != null) parts.push(`đơn giá ${Number(input.gia_lit).toLocaleString('vi-VN')}đ/lít`);
+        if (input.fuel_type) parts.push(`loại ${input.fuel_type}`);
         const amount = parts.length > 0 ? parts.join(', ') : 'chưa rõ số lượng';
         const tank = input.is_full_tank === true ? ' - đổ đầy bình' : input.is_full_tank === false ? ' - đổ lửng' : '';
         return `Ghi đổ xăng: ${amount}${tank} (${formatDateForSummary(input.ngay as string | undefined)}).`;
@@ -120,6 +123,8 @@ export function buildWriteTools(): ToolDefinition[] {
             so_lit: soLit,
             gia_lit: giaLit,
             tong_tien: tongTien,
+            fuel_type_id: input.fuel_type_id != null ? Number(input.fuel_type_id) : undefined,
+            fuel_type: input.fuel_type as string | undefined,
             cay_xang: input.cay_xang as string | undefined,
             is_full_tank: input.is_full_tank as boolean | undefined,
             ghi_chu: input.ghi_chu as string | undefined,

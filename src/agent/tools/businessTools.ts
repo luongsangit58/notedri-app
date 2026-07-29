@@ -206,6 +206,21 @@ export function buildBusinessTools(): ToolDefinition[] {
       },
     },
     {
+      // MỚI: câu "đổ 1 triệu tiền xăng" (chỉ có tổng tiền, chưa rõ số lít/đơn giá) trước đây
+      // KHÔNG có cách tra giá THẬT theo loại xăng - LLM chỉ có thể hỏi lại user hoặc (rủi ro) tự
+      // bịa giá. Tool này lộ đúng bảng giá tham chiếu thật app đã có sẵn (cùng nguồn
+      // FuelPricesScreen.tsx dùng) để fuel.create (writeTools.ts) gọi TRƯỚC khi hỏi loại xăng.
+      name: 'fuel.getCurrentPrices',
+      description: 'Lấy danh sách LOẠI NHIÊN LIỆU đang bán (RON95-III, RON95-V, E5 RON92, Dầu DO...) kèm GIÁ HIỆN TẠI (đồng/lít) theo bảng giá tham chiếu thật của app - gọi tool này TRƯỚC khi ghi đổ xăng (fuel.create) nếu user CHỈ nói tổng số tiền (vd "đổ 1 triệu tiền xăng") mà CHƯA cho biết số lít hoặc đơn giá cụ thể, để hỏi user chọn loại xăng (hoặc mặc định loại đầu tiên nếu user không quan tâm) rồi tự tính ra số lít từ tổng tiền/giá - TUYỆT ĐỐI không tự bịa giá khi chưa gọi tool này.',
+      authority: 'read-only',
+      inputSchema: NO_INPUT_SCHEMA,
+      async execute() {
+        const types = await NoteDriApi.getFuelTypesWithPrices();
+        if (types.length === 0) return { status: 'unavailable', reason: 'no_fuel_price_data' };
+        return { status: 'ok', fuel_types: types, age_seconds: 0 };
+      },
+    },
+    {
       // MỚI: câu hỏi thời tiết trước đây rơi hẳn vào LLM (không có dữ liệu thời tiết thật để
       // tra) dù app đã có sẵn endpoint `/weather` thật (đang dùng ở widget Trang chủ/Cockpit) -
       // bọc thành tool đọc-thẳng qua LocalIntentMatcher, KHÔNG cần LLM (mục 4 kế hoạch: câu hỏi
