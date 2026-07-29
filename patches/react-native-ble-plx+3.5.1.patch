@@ -43,3 +43,46 @@ index 44392b6..7dedd93 100644
    }
  
    @BluetoothState
+diff --git a/node_modules/react-native-ble-plx/plugin/build/withBLEAndroidManifest.js b/node_modules/react-native-ble-plx/plugin/build/withBLEAndroidManifest.js
+index 94b349f..790ea08 100644
+--- a/node_modules/react-native-ble-plx/plugin/build/withBLEAndroidManifest.js
++++ b/node_modules/react-native-ble-plx/plugin/build/withBLEAndroidManifest.js
+@@ -21,30 +21,14 @@ exports.withBLEAndroidManifest = withBLEAndroidManifest;
+  *    From Android SDK 31 (Android 12) it might not be required if BLE is not used for location.
+  */
+ function addLocationPermissionToManifest(androidManifest, neverForLocationSinceSdk31) {
+-    if (!Array.isArray(androidManifest.manifest['uses-permission-sdk-23'])) {
+-        androidManifest.manifest['uses-permission-sdk-23'] = [];
+-    }
+-    const optMaxSdkVersion = neverForLocationSinceSdk31
+-        ? {
+-            'android:maxSdkVersion': '30'
+-        }
+-        : {};
+-    if (!androidManifest.manifest['uses-permission-sdk-23'].find(item => item.$['android:name'] === 'android.permission.ACCESS_COARSE_LOCATION')) {
+-        androidManifest.manifest['uses-permission-sdk-23'].push({
+-            $: {
+-                'android:name': 'android.permission.ACCESS_COARSE_LOCATION',
+-                ...optMaxSdkVersion
+-            }
+-        });
+-    }
+-    if (!androidManifest.manifest['uses-permission-sdk-23'].find(item => item.$['android:name'] === 'android.permission.ACCESS_FINE_LOCATION')) {
+-        androidManifest.manifest['uses-permission-sdk-23'].push({
+-            $: {
+-                'android:name': 'android.permission.ACCESS_FINE_LOCATION',
+-                ...optMaxSdkVersion
+-            }
+-        });
+-    }
++    // PATCHED (notedri-app, patches/react-native-ble-plx+3.5.1.patch): bỏ hẳn bước tự thêm
++    // ACCESS_COARSE_LOCATION/ACCESS_FINE_LOCATION dạng <uses-permission-sdk-23> - app.json đã có
++    // plugin "expo-location" tự thêm đúng 2 quyền này dạng <uses-permission> thường rồi. Google
++    // Play từ chối AAB lúc upload vì báo "trùng lặp với các maxSdkVersion khác" khi CÙNG 1 quyền
++    // xuất hiện dưới cả 2 dạng phần tử khác nhau trong manifest cuối cùng (dù cả 2 đều không đặt
++    // maxSdkVersion tường minh) - loại bỏ hẳn dạng sdk-23 ở nguồn thay vì cố dọn dẹp lại bằng 1
++    // config plugin chạy sau (thử nhưng thứ tự mod của `expo prebuild` giữa các plugin không ổn
++    // định/đáng tin cậy để đảm bảo luôn chạy SAU withBLEAndroidManifest).
+     return androidManifest;
+ }
+ /**
