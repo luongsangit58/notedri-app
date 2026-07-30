@@ -14,13 +14,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Location from 'expo-location';
 import { StatusBar } from 'expo-status-bar';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { useObdConnection } from '../../hooks/useObd';
 import { bleService, LinkQuality } from '../../services/obd/BleService';
-import { requestKeepAlivePermissions, startObdKeepAlive, consumeSessionGapFlag } from '../../services/obd/obdKeepAliveService';
-import { getReadiness, requestPermissionsAndStart, consumeGpsTripNudgeFlag } from '../../services/gps/GpsTripTracker';
+import { requestKeepAlivePermissions, startObdKeepAlive } from '../../services/obd/obdKeepAliveService';
+import { getReadiness, requestPermissionsAndStart } from '../../services/gps/GpsTripTracker';
 import { isNfcSupported } from '../../services/nfc/NfcService';
 import AppBgPattern from '../../components/AppBgPattern';
 import { useColors } from '../../utils/theme';
@@ -36,12 +35,6 @@ import NotedriPip from '../../../modules/notedri-pip/src/NotedriPipModule';
 // lái): user chỉ dùng OBD2 không đi qua luồng bật GPS trip nên không bao giờ
 // cấp quyền vị trí nền - obdKeepAliveService luôn no-op âm thầm.
 //
-// Rà soát 29/7 (user báo cảm thấy quá nhiều popup xin quyền ngay lần kết nối
-// đầu tiên): đổi từ "1 lần/xe" sang "1 lần/user" (không phụ thuộc vehicleId
-// nữa) - user có nhiều xe không cần bị hỏi lại cho từng xe. Chỉ hiện đúng 1
-// LẦN DUY NHẤT trong đời user, dù chấp nhận hay từ chối đều không hỏi lại.
-const KEEPALIVE_NUDGE_SHOWN_KEY = 'obd_keepalive_nudge_shown';
-
 // Rà soát 24/7 (user báo: kết nối OBD2 rồi lái mà chuyến không được tự ghi):
 // OBDDashboardScreen trước đây không có bất kỳ cảnh báo nào về quyền vị trí
 // nền cho GPS trip - user cắm OBD2 và cứ nghĩ vậy là "đang ghi hành trình",
@@ -213,78 +206,19 @@ export default function OBDDashboardScreen() {
     return () => clearInterval(timer);
   }, [isConnected]);
 
-  // Nhắc bật chạy nền (rà soát 20/7, đổi thời điểm 29/7) - xem comment
-  // KEEPALIVE_NUDGE_SHOWN_KEY ở đầu file. Chạy TRƯỚC nhắc NFC (settle xong mới
-  // cho nhắc NFC hiện) để 2 Alert không chồng lên nhau.
-  //
-  // Rà soát 29/7 (user báo 4 popup dồn dập ngay sau lần kết nối OBD2 ĐẦU
-  // TIÊN - lúc đó user chưa từng gặp vấn đề mất dữ liệu nên cảm giác bị xin
-  // quyền vô cớ): KHÔNG còn hiện nudge ngay khi `isConnected` lần đầu nữa.
-  // Chỉ hiện khi `consumeSessionGapFlag()` xác nhận phiên TRƯỚC ĐÓ (đã ngắt
-  // kết nối) thực sự có khoảng trống dữ liệu do khoá màn hình (xem
-  // obdLiveMonitor.ts -> recordSessionGap) - nhắc đúng lúc user đã thực sự
-  // "đau" thay vì đoán trước.
-  const [keepAliveNudgeSettled, setKeepAliveNudgeSettled] = useState(false);
+  // Nhắc xin quyền vị trí nền (rà soát 20/7, 24/7, đổi thời điểm 29/7, gộp
+  // 30/7) - trước đây có 2 Alert RIÊNG chạy nối tiếp nhau ngay sau lần kết nối
+  // OBD2 đầu tiên: 1 cho keep-alive (tránh mất dữ liệu OBD khi khoá màn hình)
+  // và 1 cho GPS trip (bật ghi hành trình tự động, gpsTripNudgeKey). Cả 2
+  // thực chất xin CÙNG 1 quyền hệ thống (vị trí "Luôn
+  // cho phép") - dù đã sắp xếp không chồng lên nhau (cái sau chờ cái trước
+  // settle), user vẫn thấy 2 popup xin quyền liên tiếp ngay lần đầu dùng, cảm
+  // giác bị hỏi dồn dập. Gộp thành 1 Alert duy nhất, giải thích cả 2 lý do,
+  // xin quyền 1 lần rồi áp dụng cho cả 2 mục đích (re-arm keep-alive cho phiên
+  // đang chạy + tự bật GPS trip). Chỉ hiện 1 LẦN/xe (gpsTripNudgeKey).
   useEffect(() => {
     if (!isConnected || !vehicleId) return;
-    if (Platform.OS !== 'android') { setKeepAliveNudgeSettled(true); return; }
-    let cancelled = false;
-    // Chỉ setState nếu effect chưa bị dọn (màn hình chưa unmount) - Alert vẫn
-    // có thể còn mở sau khi user đã rời màn hình (vd bấm back trong lúc đang
-    // hiện dialog), bấm nút lúc đó không được setState trên component đã unmount.
-    const settle = () => { if (!cancelled) setKeepAliveNudgeSettled(true); };
-    (async () => {
-      const shown = await AsyncStorage.getItem(KEEPALIVE_NUDGE_SHOWN_KEY);
-      const alreadyGranted = (await Location.getBackgroundPermissionsAsync().catch(() => null))?.status === 'granted';
-      const hadGap = !shown && !alreadyGranted ? await consumeSessionGapFlag() : false;
-      if (shown || alreadyGranted || !hadGap || cancelled) { settle(); return; }
-      await AsyncStorage.setItem(KEEPALIVE_NUDGE_SHOWN_KEY, '1');
-      Alert.alert(
-        t('obd.keepalive_nudge_title'),
-        t('obd.keepalive_nudge_body'),
-        [
-          { text: t('gps_trips.later'), style: 'cancel', onPress: settle },
-          {
-            text: t('obd.keepalive_nudge_cta'),
-            onPress: async () => {
-              // requestKeepAlivePermissions() không còn hiện thêm dialog custom
-              // riêng nữa (rà soát 29/7) - Alert này đã đủ vai trò "công bố nổi
-              // bật", gọi thẳng vào popup hệ thống xin quyền vị trí "Luôn cho
-              // phép". Không còn chain thêm popup miễn trừ tối ưu pin ngay sau
-              // đó nữa (trước đây gọi openBatterySettings() ở đây) - quyền đó
-              // là phụ, không cần ép user quyết định thêm ngay lúc này.
-              const granted = await requestKeepAlivePermissions();
-              if (!granted) { settle(); return; }
-              // Phiên OBD hiện tại đã start() TRƯỚC khi user cấp quyền ở đây -
-              // keep-alive lúc đó đã bỏ qua (skipped_no_permission) và sẽ KHÔNG
-              // tự thử lại. Gọi lại ngay để có tác dụng cho phiên đang chạy,
-              // không phải đợi tới lần kết nối sau.
-              await startObdKeepAlive().then((s) => bleService.logDiagnostic('#keepalive', s));
-              settle();
-            },
-          },
-        ],
-        { onDismiss: settle },
-      );
-    })();
-    return () => { cancelled = true; };
-  }, [isConnected, vehicleId]);
-
-  // Nhắc thiếu quyền GPS trip (24/7, đổi thời điểm 29/7) - chạy SAU khi nhắc
-  // keep-alive đã settle (không chồng 2 Alert). Dùng lại chính flow bật GPS
-  // trip (requestPermissionsAndStart) để user không phải tự tìm màn
-  // GpsTripsScreen.
-  //
-  // Rà soát 29/7 (cùng vấn đề đã sửa cho nhắc keep-alive ở trên): trước đây
-  // hiện NGAY ở lần kết nối OBD2 đầu tiên chỉ vì thiếu quyền, kể cả khi user
-  // chưa từng lái xe thật - user 2 nhắc liên tiếp (keep-alive rồi tới cái
-  // này) ngay sau lần kết nối đầu tiên, cả 2 đều "đoán trước" chứ chưa có vấn
-  // đề thật xảy ra. Giờ chỉ hiện khi `consumeGpsTripNudgeFlag()` xác nhận
-  // phiên TRƯỚC ĐÓ có lái xe thật (drivingSeconds>0) mà chuyến đó có nguy cơ
-  // chưa được ghi do thiếu quyền (xem GpsTripTracker.ts ->
-  // recordDrivingWithoutTripPermission).
-  useEffect(() => {
-    if (!isConnected || !vehicleId || !keepAliveNudgeSettled) return;
+    if (Platform.OS !== 'android') return;
     let cancelled = false;
     (async () => {
       const key = gpsTripNudgeKey(vehicleId);
@@ -292,26 +226,37 @@ export default function OBDDashboardScreen() {
       if (shown || cancelled) return;
       const readiness = await getReadiness();
       if (readiness.foreground && readiness.background) return;
-      const hadDrivingGap = await consumeGpsTripNudgeFlag();
-      if (!hadDrivingGap || cancelled) return;
       await AsyncStorage.setItem(key, '1');
       Alert.alert(
-        t('obd.gps_trip_nudge_title'),
-        t('obd.gps_trip_nudge_body'),
+        t('obd.permission_nudge_title'),
+        t('obd.permission_nudge_body'),
         [
           { text: t('gps_trips.later'), style: 'cancel' },
           {
-            text: t('obd.gps_trip_nudge_cta'),
-            // skipDisclosure: true (rà soát 29/7) - Alert này (obd.gps_trip_nudge_*)
-            // đã tự giải thích lý do cần quyền vị trí nền, không cần GpsTripTracker
-            // hiện thêm 1 dialog "disclosure" trùng nội dung nữa trước popup hệ thống.
-            onPress: () => { requestPermissionsAndStart(vehicleId, { skipDisclosure: true }).catch(() => {}); },
+            text: t('obd.permission_nudge_cta'),
+            onPress: async () => {
+              // requestKeepAlivePermissions() không hiện thêm dialog custom
+              // riêng nữa (rà soát 29/7) - Alert này đã đủ vai trò "công bố nổi
+              // bật", gọi thẳng vào popup hệ thống xin quyền vị trí "Luôn cho
+              // phép".
+              const granted = await requestKeepAlivePermissions();
+              if (!granted) return;
+              // Phiên OBD hiện tại đã start() TRƯỚC khi user cấp quyền ở đây -
+              // keep-alive lúc đó đã bỏ qua (skipped_no_permission) và sẽ KHÔNG
+              // tự thử lại. Gọi lại ngay để có tác dụng cho phiên đang chạy,
+              // không phải đợi tới lần kết nối sau.
+              await startObdKeepAlive().then((s) => bleService.logDiagnostic('#keepalive', s));
+              // skipDisclosure: true - Alert này đã tự giải thích lý do cần
+              // quyền vị trí nền, không cần GpsTripTracker hiện thêm 1 dialog
+              // "disclosure" trùng nội dung nữa trước popup hệ thống.
+              requestPermissionsAndStart(vehicleId, { skipDisclosure: true }).catch(() => {});
+            },
           },
         ],
       );
     })();
     return () => { cancelled = true; };
-  }, [isConnected, vehicleId, keepAliveNudgeSettled]);
+  }, [isConnected, vehicleId]);
 
   // Đã bỏ nhắc ghép thẻ NFC tự động sau khi kết nối OBD (từng hiện Alert ở đây) -
   // tránh chồng dialog nhắc với các popup xin quyền khác ngay sau login/kết nối.

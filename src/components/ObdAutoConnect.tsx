@@ -13,6 +13,7 @@ import { State as BleAdapterState } from 'react-native-ble-plx';
 import { FontAwesome5 } from '@expo/vector-icons';
 import NotedriBtPairing, { ClassicBtDevice } from '../../modules/notedri-bt-pairing/src/NotedriBtPairingModule';
 import { useAuthStore } from '../store/authStore';
+import { useObdAutoConnectSettingsStore } from '../store/obdAutoConnectSettingsStore';
 import { bleService } from '../services/obd/BleService';
 import { getAutoConnectPairing, setAutoConnect } from '../services/obd/pairedDevices';
 import { resolveDefaultVehicle } from '../services/vehicles/resolveDefaultVehicle';
@@ -36,7 +37,7 @@ type AttemptTarget = {
 
 type AutoConnectEndReason = 'completed' | 'completed-silent' | 'dismissed' | 'failed';
 type AutoConnectNotice = {
-  kind: 'paused' | 'connected';
+  kind: 'connected';
   vehicleId: number;
   vehicleName: string;
   deviceName: string;
@@ -50,7 +51,7 @@ function AutoConnectPrompt({
   onEnd: (reason: AutoConnectEndReason, target: AttemptTarget, deviceName: string) => void;
 }) {
   const t = useT();
-  const { connectionState, foundDevices, startScan, stopScan, connect, connectClassic } =
+  const { connectionState, foundDevices, startScan, stopScan, connect, connectClassic, disconnect } =
     useObdConnection(target.vehicleId, target.vehicleName);
   const [phase, setPhase] = useState<'countdown' | 'connecting' | 'canceling' | null>(null);
   const [secondsLeft, setSecondsLeft] = useState(AUTO_CONNECT_COUNTDOWN_SECONDS);
@@ -106,14 +107,22 @@ function AutoConnectPrompt({
 
     if (phase === 'connecting') {
       setPhase('canceling');
-      void bleService.disconnect().catch(() => {});
+      // Rà soát 30/7 (kẽ hở: finishConnect() có thể đã claim khoá mềm
+      // deviceLock TRƯỚC khi cờ huỷ này kịp lan tới - claim() chạy fire-and-
+      // forget, không có checkpoint isAborted() nào chặn được sau khi request
+      // đã bắn đi). Trước đây gọi thẳng bleService.disconnect() - chỉ ngắt kết
+      // nối BLE, không release() khoá, để lại khoá "treo" trên server tới khi
+      // tự hết hạn (2 lần renew thiếu ~180s, xem DEVICE_LOCK_RENEW_INTERVAL_MS
+      // trong useObd.ts). Đổi sang gọi disconnect() đầy đủ của hook - vừa ngắt
+      // BLE vừa release() khoá ngay nếu nó đã lỡ được claim, thay vì chờ hết hạn.
+      void disconnect().catch(() => {});
       clearFinishTimer();
       finishTimerRef.current = setTimeout(() => finish('dismissed'), 900);
       return;
     }
 
     finish('dismissed');
-  }, [clearCountdown, clearFinishTimer, finish, phase, stopScan]);
+  }, [clearCountdown, clearFinishTimer, disconnect, finish, phase, stopScan]);
 
   const connectNow = useCallback(async (manual: boolean) => {
     if (settledRef.current || connectingRef.current) return;
@@ -385,12 +394,14 @@ export default function ObdAutoConnect() {
   const t = useT();
   const isPremium = useAuthStore((s) => s.user?.is_premium ?? false);
   const token = useAuthStore((s) => s.token);
+  // Công tắc toàn cục (30/7, xem obdAutoConnectSettingsStore.ts) - tắt ở Cài
+  // đặt là dừng hẳn, không phụ thuộc xe nào đã bật autoConnect riêng.
+  const autoConnectMasterEnabled = useObdAutoConnectSettingsStore((s) => s.enabled);
   const [target, setTarget] = useState<AttemptTarget | null>(null);
   const [notice, setNotice] = useState<AutoConnectNotice | null>(null);
   const lastAttemptAtRef = useRef(0);
   const appStateRef = useRef(AppState.currentState);
   const pendingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const dismissedPairingRef = useRef<{ vehicleId: number; deviceId: string } | null>(null);
   const noticeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const clearNoticeTimer = useCallback(() => {
@@ -414,18 +425,15 @@ export default function ObdAutoConnect() {
     endedTarget: AttemptTarget,
     deviceName: string,
   ) => {
-    if (reason === 'dismissed') {
-      dismissedPairingRef.current = {
-        vehicleId: endedTarget.vehicleId,
-        deviceId: endedTarget.deviceId,
-      };
-      showNotice({
-        kind: 'paused',
-        vehicleId: endedTarget.vehicleId,
-        vehicleName: endedTarget.vehicleName,
-        deviceName,
-      });
-    } else if (reason === 'completed-silent') {
+    // Rà soát 30/7 (user: bấm X thì chỉ cần dừng và quay lại màn hình hiện tại,
+    // không cần thông báo "tạm dừng" gì thêm - Home đã sẵn thẻ "Kết nối OBD2" để
+    // user tự bấm nếu muốn). Trước đây nhớ dismissedPairingRef + hiện banner
+    // "paused" - vừa thêm 1 lớp thông báo không cần thiết, vừa khiến lần mở app
+    // KẾ TIẾP (vd tắt máy xe rồi nổ lại) không tự thử auto-connect nữa mà bị
+    // banner đó chặn cho tới khi user tự bấm "Thử lại". Giờ dismissed = im lặng
+    // hoàn toàn, lần sau mở app/quay lại foreground sẽ tự thử auto-connect như
+    // bình thường (vẫn tôn trọng cooldown 60s).
+    if (reason === 'completed-silent') {
       // Đếm ngược tự chạy xong (user không chạm gì) - KHÔNG kéo user khỏi màn
       // hình họ đang dùng dở, chỉ báo bằng banner nhỏ, để họ tự bấm mở nếu muốn.
       showNotice({
@@ -452,6 +460,7 @@ export default function ObdAutoConnect() {
 
   const tryAutoConnect = useCallback(async () => {
     if (!isPremium || !token) return;
+    if (!autoConnectMasterEnabled) return;
     if (target) return;
     if (Date.now() - lastAttemptAtRef.current < COOLDOWN_MS) return;
     if (bleService.isConnected()) return;
@@ -462,19 +471,6 @@ export default function ObdAutoConnect() {
     const defaultVehicle = await resolveDefaultVehicle();
     const pairing = await getAutoConnectPairing(defaultVehicle?.id);
     if (!pairing) return;
-    if (
-      dismissedPairingRef.current &&
-      dismissedPairingRef.current.vehicleId === pairing.vehicleId &&
-      dismissedPairingRef.current.deviceId === pairing.bleDeviceId
-    ) {
-      showNotice({
-        kind: 'paused',
-        vehicleId: pairing.vehicleId,
-        vehicleName: pairing.vehicleName,
-        deviceName: pairing.bleDeviceId,
-      });
-      return;
-    }
 
     const btState = await bleService.getBluetoothState();
     if (btState !== BleAdapterState.PoweredOn) return;
@@ -488,18 +484,7 @@ export default function ObdAutoConnect() {
       deviceId: pairing.bleDeviceId,
       transport: pairing.transport ?? 'ble',
     });
-  }, [isPremium, showNotice, target, token]);
-
-  const retryDismissedPairing = useCallback(() => {
-    dismissedPairingRef.current = null;
-    clearNoticeTimer();
-    setNotice(null);
-    if (pendingTimerRef.current) clearTimeout(pendingTimerRef.current);
-    pendingTimerRef.current = setTimeout(() => {
-      pendingTimerRef.current = null;
-      void tryAutoConnect();
-    }, 150);
-  }, [clearNoticeTimer, tryAutoConnect]);
+  }, [autoConnectMasterEnabled, isPremium, target, token]);
 
   const scheduleAutoConnect = useCallback(() => {
     if (target) return;
@@ -511,7 +496,6 @@ export default function ObdAutoConnect() {
   }, [tryAutoConnect]);
 
   useEffect(() => {
-    dismissedPairingRef.current = null;
     setTarget(null);
     setNotice(null);
     lastAttemptAtRef.current = 0;
@@ -527,7 +511,7 @@ export default function ObdAutoConnect() {
     return () => {
       if (pendingTimerRef.current) clearTimeout(pendingTimerRef.current);
     };
-  }, [isPremium, scheduleAutoConnect, token]);
+  }, [autoConnectMasterEnabled, isPremium, scheduleAutoConnect, token]);
 
   useEffect(() => {
     const sub = AppState.addEventListener('change', (next: AppStateStatus) => {
@@ -552,32 +536,16 @@ export default function ObdAutoConnect() {
         <View style={styles.noticeWrap} pointerEvents="box-none">
           <View style={styles.noticeCard}>
             <View style={styles.noticeIcon}>
-              <FontAwesome5
-                name={notice?.kind === 'connected' ? 'check-circle' : 'info-circle'}
-                size={14}
-                color={notice?.kind === 'connected' ? '#4ADE80' : '#93C5FD'}
-              />
+              <FontAwesome5 name="check-circle" size={14} color="#4ADE80" />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.noticeTitle}>
-                {notice?.kind === 'connected'
-                  ? t('obd.auto_connect_connected_title')
-                  : t('obd.auto_connect_paused_title')}
-              </Text>
+              <Text style={styles.noticeTitle}>{t('obd.auto_connect_connected_title')}</Text>
               <Text style={styles.noticeBody}>
-                {notice?.kind === 'connected'
-                  ? t('obd.auto_connect_connected_body', { name: notice.deviceName })
-                  : t('obd.auto_connect_paused_body', { name: notice?.deviceName ?? 'OBD2' })}
+                {t('obd.auto_connect_connected_body', { name: notice?.deviceName ?? 'OBD2' })}
               </Text>
             </View>
-            <TouchableOpacity
-              style={styles.noticeBtn}
-              onPress={() => (notice?.kind === 'connected' ? openConnectedDashboard(notice) : retryDismissedPairing())}>
-              <Text style={styles.noticeBtnText}>
-                {notice?.kind === 'connected'
-                  ? t('obd.auto_connect_connected_open')
-                  : t('obd.auto_connect_paused_retry')}
-              </Text>
+            <TouchableOpacity style={styles.noticeBtn} onPress={() => notice && openConnectedDashboard(notice)}>
+              <Text style={styles.noticeBtnText}>{t('obd.auto_connect_connected_open')}</Text>
             </TouchableOpacity>
           </View>
         </View>

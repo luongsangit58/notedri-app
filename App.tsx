@@ -15,6 +15,7 @@ import AppOpenAdManager from './src/components/AppOpenAdManager';
 import NoriFloatingButton from './src/components/nori/NoriFloatingButton';
 import { useThemeStore } from './src/utils/theme';
 import { useCockpitThemeStore } from './src/store/cockpitThemeStore';
+import { useObdAutoConnectSettingsStore } from './src/store/obdAutoConnectSettingsStore';
 import { useI18nStore } from './src/i18n';
 import { flushPendingTrips } from './src/services/obd/TripSyncQueue';
 import { bleService } from './src/services/obd/BleService';
@@ -55,6 +56,7 @@ function AppLoader({ children }: { children: React.ReactNode }) {
     loadTheme();
     loadLang();
     void useCockpitThemeStore.getState().loadSaved();
+    void useObdAutoConnectSettingsStore.getState().loadSaved();
     void initializeAdMob();
     // Khôi phục đăng nhập/liên kết Google nếu OS kill app giữa lúc đang chờ callback (xem
     // src/services/googleAuthRecovery.ts). Đặt ở đây (không phải LoginScreen/ProfileScreen) vì

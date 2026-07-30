@@ -436,15 +436,32 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
   // gọi release() kịp, BE tự hết hạn lock sau vài lần renew thiếu (xem hằng số
   // DEVICE_LOCK_RENEW_INTERVAL_MS). Không renew khi 'connecting'/'error' - chỉ
   // khi đã thực sự ELM_READY.
+  //
+  // Rà soát 30/7: cũng cập nhật sharedByOtherDevice từ kết quả renew, giống hệt
+  // claim() ở finishConnect() - trước đây renew chỉ .catch(() => {}) bỏ luôn kết
+  // quả, nên nếu claim() lúc vừa kết nối lỡ bị lỗi mạng tạm thời thì banner "xe
+  // đang dùng máy khác" không bao giờ xuất hiện suốt cả phiên dù renew vẫn chạy
+  // đều. Không thêm cơ chế retry/error-toast riêng - heartbeat 90s có sẵn đã đủ
+  // để tự "thử lại" và tự cập nhật UI trong vòng tối đa 1 chu kỳ, đúng tinh thần
+  // "khoá mềm, im lặng khi mất mạng" đã chọn từ đầu.
   useEffect(() => {
     if (connectionState !== 'connected') return;
     const timer = setInterval(() => {
       getDeviceId().then((appDeviceId) =>
-        obdApi.deviceLock.renew(vehicleId, appDeviceId).catch(() => {}),
+        obdApi.deviceLock.renew(vehicleId, appDeviceId)
+          .then(({ data }) => {
+            const lockDeviceName = useObdSessionStore.getState().deviceName ?? vehicleName ?? 'OBD2';
+            useObdSessionStore.getState().patch({
+              sharedByOtherDevice: data.locked_by_other
+                ? { deviceName: data.held_by_device_name ?? lockDeviceName, since: data.held_since ?? null }
+                : null,
+            });
+          })
+          .catch(() => {}),
       );
     }, DEVICE_LOCK_RENEW_INTERVAL_MS);
     return () => clearInterval(timer);
-  }, [connectionState, vehicleId]);
+  }, [connectionState, vehicleId, vehicleName]);
 
   // --- Trip ---
 

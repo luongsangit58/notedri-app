@@ -802,40 +802,6 @@ export async function autoArmIfReady(vehicleId: number): Promise<AutoArmResult> 
   }
 }
 
-const GPS_TRIP_NUDGE_PENDING_KEY = 'obd_gps_trip_nudge_pending';
-
-/**
- * Rà soát 29/7 (cùng vấn đề đã sửa cho obdKeepAliveService.recordSessionGap/
- * consumeSessionGapFlag): nhắc "Chưa ghi hành trình tự động" ở OBDDashboardScreen
- * trước đây hiện NGAY ở lần kết nối OBD2 đầu tiên chỉ vì thiếu quyền vị trí
- * nền, kể cả khi user chưa từng thực sự lái xe (không có chuyến nào bị bỏ
- * lỡ) - cảm giác bị xin quyền vô cớ giống hệt luồng keep-alive trước khi sửa.
- * Đặt cờ ở đây khi phiên OBD VỪA kết thúc có drivingSeconds>0 (xe thực sự đã
- * chạy) mà vẫn thiếu quyền nền - OBDDashboardScreen chỉ hiện nhắc ở lần kết
- * nối KẾ TIẾP nếu cờ này được đặt, tức là đã có ít nhất 1 chuyến thực tế có
- * nguy cơ chưa được ghi.
- */
-export async function recordDrivingWithoutTripPermission(drivingSeconds: number): Promise<void> {
-  if (Platform.OS !== 'android' || drivingSeconds <= 0) return;
-  try {
-    const { background } = await getPermissionStatus();
-    if (background) return;
-    await AsyncStorage.setItem(GPS_TRIP_NUDGE_PENDING_KEY, '1');
-  } catch {
-    // Best-effort - không được để lỗi ở đây làm gãy luồng ngắt kết nối OBD chính.
-  }
-}
-
-/** Đọc-rồi-xoá cờ ở trên - gọi từ OBDDashboardScreen khi quyết định có hiện nudge hay không. */
-export async function consumeGpsTripNudgeFlag(): Promise<boolean> {
-  try {
-    const had = (await AsyncStorage.getItem(GPS_TRIP_NUDGE_PENDING_KEY)) === '1';
-    if (had) await AsyncStorage.removeItem(GPS_TRIP_NUDGE_PENDING_KEY);
-    return had;
-  } catch {
-    return false;
-  }
-}
 
 // Mở Cài đặt định vị hệ thống (khi không bật được bằng dialog)
 export async function openLocationSettings(): Promise<void> {

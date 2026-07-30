@@ -11,8 +11,6 @@ import {
   startObdKeepAlive,
   stopObdKeepAlive,
   requestKeepAlivePermissions,
-  recordSessionGap,
-  consumeSessionGapFlag,
   OBD_KEEPALIVE_TASK_NAME,
 } from '../obdKeepAliveService';
 
@@ -129,34 +127,5 @@ describe('requestKeepAlivePermissions', () => {
     const granted = await requestKeepAlivePermissions('android');
     expect(granted).toBe(true);
     expect(Alert.alert).not.toHaveBeenCalled();
-  });
-});
-
-describe('recordSessionGap / consumeSessionGapFlag', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-    (Location.getBackgroundPermissionsAsync as jest.Mock).mockResolvedValue({ status: 'denied' });
-  });
-
-  it('không đặt cờ nếu không có gap nào trong phiên', async () => {
-    await recordSessionGap(0, 'android');
-    expect(await consumeSessionGapFlag()).toBe(false);
-  });
-
-  it('không đặt cờ trên iOS dù có gap', async () => {
-    await recordSessionGap(3, 'ios');
-    expect(await consumeSessionGapFlag()).toBe(false);
-  });
-
-  it('không đặt cờ nếu quyền vị trí nền đã được cấp (nudge không còn cần thiết)', async () => {
-    (Location.getBackgroundPermissionsAsync as jest.Mock).mockResolvedValue({ status: 'granted' });
-    await recordSessionGap(3, 'android');
-    expect(await consumeSessionGapFlag()).toBe(false);
-  });
-
-  it('đặt cờ khi Android + có gap thật + chưa có quyền nền, đọc xong tự xoá', async () => {
-    await recordSessionGap(2, 'android');
-    expect(await consumeSessionGapFlag()).toBe(true);
-    expect(await consumeSessionGapFlag()).toBe(false);
   });
 });

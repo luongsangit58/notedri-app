@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Alert, ScrollView, Modal, TextInput, ActivityIndicator, Image } from 'react-native';
+import { View, Text, TouchableOpacity, Alert, ScrollView, Modal, TextInput, ActivityIndicator, Image, Switch } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AppBgPattern from '../../components/AppBgPattern';
@@ -9,6 +9,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import * as WebBrowser from 'expo-web-browser';
 import { useAuthStore } from '../../store/authStore';
+import { useObdAutoConnectSettingsStore } from '../../store/obdAutoConnectSettingsStore';
 import { profileApi } from '../../api/profile';
 import { authApi } from '../../api/auth';
 import { achievementsApi } from '../../api/achievements';
@@ -43,6 +44,8 @@ export default function ProfileScreen() {
   const { mode: themeMode, toggle: toggleTheme } = useThemeStore();
   const { lang, setLang } = useI18nStore();
   const t = useT();
+  const autoConnectEnabled = useObdAutoConnectSettingsStore((s) => s.enabled);
+  const setAutoConnectEnabled = useObdAutoConnectSettingsStore((s) => s.setEnabled);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState('');
   const [deleteError, setDeleteError] = useState('');
@@ -285,6 +288,22 @@ export default function ProfileScreen() {
             icon={<FontAwesome5 name="mobile-alt" size={16} color={colors.textSecondary} solid />}
             label={t('devices.title')}
             onPress={() => navigation.navigate('Devices')}
+          />
+          {/* Công tắc TOÀN CỤC (30/7, xem obdAutoConnectSettingsStore.ts) - tách
+              biệt hẳn với autoConnect bật/tắt theo TỪNG xe ở OBDSetupScreen.
+              Tắt ở đây là user chủ động không muốn app tự mời kết nối mỗi lần
+              mở app (vd chỉ mở app để làm việc khác), dù xe nào đó vẫn đang
+              bật autoConnect riêng. */}
+          <MenuItem
+            icon={<FontAwesome5 name="bluetooth-b" size={16} color={colors.textSecondary} solid />}
+            label={t('profile.obd_auto_connect')}
+            right={(
+              <Switch
+                value={autoConnectEnabled}
+                onValueChange={setAutoConnectEnabled}
+                trackColor={{ true: '#3B82F6' }}
+              />
+            )}
           />
           <MenuItem
             icon={<FontAwesome5 name="bell" size={16} color={colors.textSecondary} solid />}

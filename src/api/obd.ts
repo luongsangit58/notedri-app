@@ -141,7 +141,9 @@ export const obdApi = {
         '/obd2/device-lock', { vehicle_id: vehicleId, device_id: deviceId, device_name: deviceName },
       ),
     renew: (vehicleId: number, deviceId: string) =>
-      client.put('/obd2/device-lock', { vehicle_id: vehicleId, device_id: deviceId }),
+      client.put<{ locked_by_other: boolean; held_by_device_name?: string; held_since?: string }>(
+        '/obd2/device-lock', { vehicle_id: vehicleId, device_id: deviceId },
+      ),
     release: (vehicleId: number, deviceId: string) =>
       client.delete('/obd2/device-lock', { data: { vehicle_id: vehicleId, device_id: deviceId } }),
   },
