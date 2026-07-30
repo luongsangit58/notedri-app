@@ -101,6 +101,67 @@ describe('NoriAgent - grounding validator (LLM path, scripted chatFn)', () => {
     expect(result.passed).toBe(true);
   });
 
+  it('allows Vietnamese-formatted numbers ("500.000") even though tool_result has raw digits ("500000")', async () => {
+    // Bug thật (ảnh user gửi 2026-07-30): "tiền xăng tháng này hết bao nhiêu" gọi đúng tool thật,
+    // nhưng LLM viết tiền theo `toLocaleString('vi-VN')` ("500.000đ") trong khi tool_result là số
+    // thô JSON không dấu chấm ("500000") - validator cũ coi 2 chuỗi này KHÁC NHAU nên chặn nhầm
+    // câu trả lời hoàn toàn có thật. speedKmh dùng số lớn bất thường (500000) chỉ để mô phỏng
+    // đúng hình dạng "số nhiều chữ số định dạng đẹp" - không cần đúng nghĩa tốc độ xe thật.
+    const result = await runScenario({
+      name: 'grounding-vi-currency-format',
+      vehicle: { snapshot: { speedKmh: 500000 } },
+      chatScript: [
+        toolUseResponse('t1', 'vehicle.getSpeed', {}),
+        textResponse('Xe bạn đang chạy 500.000 km/h.'),
+      ],
+      turns: [{ userText: 'kể chuyện cười cho tôi nghe', expectSource: 'llm', expectReplyContains: '500.000 km/h' }],
+    });
+    expect(result.passed).toBe(true);
+  });
+
+  it('allows Nori to echo a Vietnamese word-number ("1 triệu"/"một triệu") the user just said, with no tool called', async () => {
+    // Bug thật (ảnh user gửi 2026-07-30): "đổ một triệu tiền xăng" / "đổ xăng 1 triệu" - Nori
+    // CHƯA gọi tool nào (đúng thiết kế fuel.create: chỉ 1/3 số, phải hỏi lại trước khi ghi), chỉ
+    // hỏi lại/quy đổi đúng số user vừa nói ra "1.000.000đ" - validator cũ coi đây là số "bịa" vì
+    // không tìm thấy trong tool_result nào (user không hề gõ chữ số "1000000", chỉ nói bằng chữ).
+    const wordForm = await runScenario({
+      name: 'grounding-echo-user-word-number',
+      chatScript: [textResponse('Bạn nói đổ 1.000.000đ tiền xăng, muốn dùng loại xăng nào để mình tính giúp bạn?')],
+      turns: [{
+        userText: 'đổ một triệu tiền xăng',
+        expectSource: 'llm',
+        expectReplyContains: '1.000.000đ',
+      }],
+    });
+    expect(wordForm.passed).toBe(true);
+
+    const digitPlusWordForm = await runScenario({
+      name: 'grounding-echo-user-digit-word-number',
+      chatScript: [textResponse('Bạn nói đổ 1.000.000đ tiền xăng, muốn dùng loại xăng nào để mình tính giúp bạn?')],
+      turns: [{
+        userText: 'đổ xăng 1 triệu',
+        expectSource: 'llm',
+        expectReplyContains: '1.000.000đ',
+      }],
+    });
+    expect(digitPlusWordForm.passed).toBe(true);
+  });
+
+  it('still blocks a genuinely invented number the user never mentioned and no tool backs', async () => {
+    // Đảm bảo 2 fix trên không nới lỏng quá tay: số KHÔNG liên quan gì tới lời user lẫn
+    // tool_result vẫn phải bị chặn như cũ.
+    const result = await runScenario({
+      name: 'grounding-still-blocks-real-hallucination',
+      chatScript: [textResponse('Xe bạn đã đi được 123456 km rồi đó.')],
+      turns: [{
+        userText: 'kể chuyện cười cho tôi nghe',
+        expectSource: 'llm',
+        expectReplyNotContains: '123456',
+      }],
+    });
+    expect(result.passed).toBe(true);
+  });
+
   it('gives up gracefully after MAX_TOOL_LOOP_ITERATIONS instead of looping forever', async () => {
     // ConversationManager.MAX_TOOL_LOOP_ITERATIONS = 6 - script đúng 6 lần tool_use, không bao
     // giờ trả stop_reason khác 'tool_use', để xác nhận vòng lặp THỰC SỰ dừng ở lần thứ 6 thay vì

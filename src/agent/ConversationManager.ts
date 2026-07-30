@@ -7,6 +7,40 @@ import { buildLocalReply } from './LocalReplyTemplates';
 
 const MAX_TOOL_LOOP_ITERATIONS = 6;
 
+// Từ số + từ đơn vị tiếng Việt hay dùng khi nói số tiền tròn (vd "1 triệu", "một triệu", "500
+// nghìn", "năm trăm nghìn") - dùng để bổ sung nguồn "đã xác nhận" cho grounding validator (xem
+// applyGroundingValidator() bên dưới): user gõ SỐ CHỮ ("một triệu") không có chữ số nào trong
+// tin nhắn gốc, nên nếu Nori hỏi lại/quy đổi ra "1.000.000đ" thì validator KHÔNG tìm thấy đâu cả
+// dù đây chỉ là quy đổi đúng lời user vừa nói, không phải bịa. Danh sách CHỈ gồm số đếm 1-10 phổ
+// biến trong văn nói - KHÔNG cần đầy đủ ngữ pháp số tiếng Việt (11, 20, "hai mươi lăm"...) vì mục
+// đích chỉ là nới lỏng đúng false positive thật đã gặp, không phải viết bộ parse số hoàn chỉnh.
+const VI_DIGIT_WORDS: Record<string, number> = {
+  'một': 1, 'mốt': 1, 'hai': 2, 'ba': 3, 'bốn': 4, 'tư': 4, 'năm': 5, 'lăm': 5,
+  'sáu': 6, 'bảy': 7, 'bẩy': 7, 'tám': 8, 'chín': 9, 'mười': 10,
+};
+const VI_MULTIPLIER_WORDS: Record<string, number> = {
+  'nghìn': 1_000, 'ngàn': 1_000, 'trăm': 100, 'triệu': 1_000_000, 'tỷ': 1_000_000_000,
+};
+
+/** Quy ra dạng chữ số của các cụm "<số/từ số> <đơn vị>" tìm thấy trong text (vd "một triệu" ->
+ * "1000000", "5 trăm nghìn" -> "500000") - xem VI_DIGIT_WORDS/VI_MULTIPLIER_WORDS ở trên. */
+function extractViWordNumbers(text: string): string[] {
+  const lower = text.toLowerCase();
+  const digitWordAlt = Object.keys(VI_DIGIT_WORDS).join('|');
+  const multiplierAlt = Object.keys(VI_MULTIPLIER_WORDS).join('|');
+  const re = new RegExp(`(\\d+(?:[.,]\\d+)?|${digitWordAlt})\\s*(${multiplierAlt})`, 'g');
+  const results: string[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(lower))) {
+    const base = VI_DIGIT_WORDS[m[1]] ?? parseFloat(m[1].replace(',', '.'));
+    const mul = VI_MULTIPLIER_WORDS[m[2]];
+    if (Number.isFinite(base) && mul) {
+      results.push(String(Math.round(base * mul)));
+    }
+  }
+  return results;
+}
+
 /** Chữ ký `noriApi.chat` - tách riêng để `TestHarness.ts` bơm được 1 hàm giả (kịch bản LLM dựng
  * sẵn) thay vì gọi HTTP thật, không cần network/API key để test vòng lặp tool-calling. */
 export type ChatFn = (
@@ -83,9 +117,9 @@ export class ConversationManager {
       const text = buildLocalReply(localMatch.toolName, JSON.parse(result.content), userText);
       this.messages.push({ role: 'user', content: userText });
       // Ghi lại đúng shape tool_use/tool_result như đường LLM (KHÔNG chỉ đẩy thẳng text) - nếu
-      // không, số liệu trong câu trả lời local này sẽ vô hình với getAllToolResultContents(),
-      // và 1 câu hỏi nối tiếp qua đường LLM tham chiếu lại số này sẽ bị grounding validator
-      // chặn nhầm (cùng gốc bug với follow-up LLM-LLM đã fix, nhưng ở nhánh local->LLM).
+      // không, số liệu trong câu trả lời local này sẽ vô hình với getGroundingSources(), và 1
+      // câu hỏi nối tiếp qua đường LLM tham chiếu lại số này sẽ bị grounding validator chặn nhầm
+      // (cùng gốc bug với follow-up LLM-LLM đã fix, nhưng ở nhánh local->LLM).
       this.messages.push({
         role: 'assistant',
         content: [{ type: 'tool_use', id: toolUseId, name: localMatch.toolName, input: localMatch.toolInput }],
@@ -146,8 +180,17 @@ export class ConversationManager {
 
       if (stopReason !== 'tool_use') {
         const text = extractText(content);
+        const safeText = this.applyGroundingValidator(text);
+        if (safeText !== text) {
+          // Grounding validator đã thay bằng câu an toàn - SỬA LẠI đúng tin nhắn assistant vừa
+          // push ở trên (còn nguyên văn bản gốc bị chặn) để lịch sử gửi lên LLM ở lượt sau khớp
+          // với những gì user THẬT SỰ đã thấy trên màn hình. Thiếu bước này, LLM ở lượt kế tiếp
+          // vẫn "nhớ" mình đã nói ra số liệu bịa đó (dù user chưa từng thấy), dễ dẫn tới trả lời
+          // mâu thuẫn/khó hiểu ở các lượt sau.
+          this.messages[this.messages.length - 1] = { role: 'assistant', content: safeText };
+        }
         return {
-          text: this.applyGroundingValidator(text),
+          text: safeText,
           requestId,
           source: 'llm',
         };
@@ -181,12 +224,32 @@ export class ConversationManager {
     };
   }
 
+  /**
+   * Bug thật bắt được qua ảnh user gửi (S60729-2132.../S60729-2134...): câu hỏi "tiền xăng
+   * tháng này hết bao nhiêu" (chắc chắn gọi expense.summary, dữ liệu THẬT) và câu hỏi lại "đổ 1
+   * triệu tiền xăng" (chỉ nhắc lại đúng số user vừa nói) đều bị chặn oan, dù không hề bịa số.
+   * Nguyên nhân: 2 lỗ hổng trong validator gốc.
+   * 1) Định dạng tiền LLM viết ("500.000đ", dấu chấm phân cách nghìn theo `toLocaleString(
+   *    'vi-VN')`, xem LocalReplyTemplates.ts) KHÔNG bao giờ khớp `.includes()` với số thô trong
+   *    tool_result JSON (vd `"tong_tien":500000`, không dấu phân cách) - mọi câu trả lời có tiền
+   *    tệ định dạng đẹp gần như CHẮC CHẮN bị chặn nhầm dù số hoàn toàn có thật.
+   * 2) Validator CHỈ coi tool_result là nguồn "đã xác nhận" - số USER TỰ NÓI ra (vd "1 triệu")
+   *    không nằm trong bất kỳ tool_result nào, nên Nori hỏi lại/nhắc lại đúng số đó (không phải
+   *    bịa - chỉ lặp lại lời user) cũng bị chặn y hệt như 1 số bịa thật.
+   */
   private applyGroundingValidator(text: string): string {
-    const toolResultContents = this.getAllToolResultContents();
-    const numberTokens = text.match(/\d+([.,]\d+)?/g) ?? [];
-    const ungrounded = numberTokens.filter(
-      (token) => !toolResultContents.some((result) => result.includes(token)),
-    );
+    const groundingSources = this.getGroundingSources();
+    const numberTokens = text.match(/\d+(?:[.,]\d+)?/g) ?? [];
+    const ungrounded = numberTokens.filter((token) => {
+      const candidates = [token];
+      // "500.000"/"1.234" (nhóm CHẴN 3 chữ số sau dấu chấm - đúng định dạng
+      // toLocaleString('vi-VN')) -> thêm dạng đã bỏ dấu chấm "500000"/"1234" để so khớp với số
+      // thô trong tool_result/JSON, không phân biệt được bằng mắt nhưng LÀ CÙNG 1 SỐ.
+      if (/^\d{1,3}(?:\.\d{3})+$/.test(token)) candidates.push(token.replace(/\./g, ''));
+      // "12,5" (dấu phẩy thập phân kiểu Việt) - số JS/JSON dùng dấu chấm thập phân "12.5".
+      if (/^\d+,\d+$/.test(token)) candidates.push(token.replace(',', '.'));
+      return !candidates.some((c) => groundingSources.some((source) => source.includes(c)));
+    });
 
     if (ungrounded.length > 0) {
       console.warn(
@@ -198,18 +261,23 @@ export class ConversationManager {
     return text;
   }
 
-  /** Quét TOÀN BỘ lịch sử hội thoại (không chỉ lượt hiện tại) lấy nội dung mọi tool_result đã
-   * từng thực thi - xem docblock class ở trên (bug thật 2026-07-27: câu hỏi nối tiếp tham
-   * chiếu tool_result CŨ bị chặn nhầm nếu chỉ soát lượt hiện tại). */
-  private getAllToolResultContents(): string[] {
-    const contents: string[] = [];
+  /** Quét TOÀN BỘ lịch sử hội thoại (không chỉ lượt hiện tại) lấy MỌI nguồn số liệu "đã xác
+   * nhận" - tool_result (dữ liệu xe thật, xem docblock class ở trên: bug thật 2026-07-27 câu hỏi
+   * nối tiếp tham chiếu tool_result CŨ bị chặn nhầm nếu chỉ soát lượt hiện tại) LẪN tin nhắn của
+   * chính USER (số user tự nói ra không phải LLM bịa - Nori nhắc/hỏi lại đúng số đó là an toàn). */
+  private getGroundingSources(): string[] {
+    const sources: string[] = [];
     for (const msg of this.messages) {
+      if (msg.role === 'user' && typeof msg.content === 'string') {
+        sources.push(msg.content, ...extractViWordNumbers(msg.content));
+        continue;
+      }
       if (!Array.isArray(msg.content)) continue;
       for (const block of msg.content) {
-        if (block.type === 'tool_result') contents.push(block.content);
+        if (block.type === 'tool_result') sources.push(block.content);
       }
     }
-    return contents;
+    return sources;
   }
 }
 
