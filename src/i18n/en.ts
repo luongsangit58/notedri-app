@@ -240,6 +240,10 @@ const en = {
   "reports.tco_title": "Total Cost of Ownership",
   "reports.no_vehicle": "No vehicles. Go to Vehicles tab to add one.",
   "reports.premium_lock": "Upgrade to Premium to view reports for previous years.",
+  "reports.period_year": "Year",
+  "reports.period_month": "Month",
+  "reports.period_week": "Week",
+  "reports.period_partial_badge": "Period still in progress - figures may still change",
 
   // Year Review
   "year_review.title": "{{year}} in Review",

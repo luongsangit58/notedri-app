@@ -31,6 +31,27 @@ function fmtNum(n: number | string | null | undefined, unit = ''): string {
   return v.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') + (unit ? ' ' + unit : '');
 }
 
+/* ─── period (tuần/tháng) date helpers ───
+   Ngày từ API luôn dạng 'YYYY-MM-DD' (không giờ) - parse/format qua UTC để
+   +-1 ngày không bị lệch bởi múi giờ máy user (tránh nhảy sai kỳ gần nửa đêm). */
+function addDaysStr(dateStr: string, days: number): string {
+  const d = new Date(`${dateStr}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+function fmtDateShort(dateStr: string): string {
+  const d = new Date(`${dateStr}T00:00:00Z`);
+  return `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}/${d.getUTCFullYear()}`;
+}
+
+function todayStr(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+type ReportPeriodType = 'year' | 'month' | 'week';
+
 /* ─── stat card ─── */
 function StatCard({
   icon, label, value, sub,
@@ -152,6 +173,53 @@ function YearChips({
   );
 }
 
+/* ─── period-type selector (Năm/Tháng/Tuần) ─── */
+function PeriodTypeChips({
+  value,
+  onSelect,
+}: {
+  value: ReportPeriodType;
+  onSelect: (p: ReportPeriodType) => void;
+}) {
+  const colors = useColors();
+  const t = useT();
+  const options: { key: ReportPeriodType; label: string }[] = [
+    { key: 'year', label: t('reports.period_year') },
+    { key: 'month', label: t('reports.period_month') },
+    { key: 'week', label: t('reports.period_week') },
+  ];
+  return (
+    <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 16, marginBottom: 12 }}>
+      {options.map((opt) => {
+        const active = opt.key === value;
+        return (
+          <TouchableOpacity
+            key={opt.key}
+            onPress={() => onSelect(opt.key)}
+            style={{
+              flex: 1,
+              paddingVertical: 9,
+              borderRadius: 12,
+              alignItems: 'center',
+              backgroundColor: active ? colors.primary : colors.surface,
+              borderWidth: 1,
+              borderColor: active ? colors.primary : colors.border,
+            }}>
+            <Text
+              style={{
+                color: active ? colors.primaryText : colors.textSecondary,
+                fontWeight: active ? '700' : '500',
+                fontSize: 13.5,
+              }}>
+              {opt.label}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+}
+
 /* ─── divider ─── */
 function Divider({ index }: { index: number }) {
   const colors = useColors();
@@ -235,6 +303,152 @@ function CardRow({
         </Text>
       </View>
     </>
+  );
+}
+
+/* ─── period (tuần/tháng) report content ───
+   Nguồn: GET /vehicles/{id}/reports?period=week|month&at=YYYY-MM-DD (xem
+   Api\V1\ReportController::index() + ReportService::periodReport() phía backend -
+   cùng nguồn dữ liệu web Garage đang dùng, chỉ khác tầng trình bày). */
+function PeriodReportContent({
+  vehicleId,
+  period,
+  vehicleCreatedAt,
+}: {
+  vehicleId: number;
+  period: 'week' | 'month';
+  vehicleCreatedAt?: string | null;
+}) {
+  const colors = useColors();
+  const t = useT();
+  const [at, setAt] = useState<string | null>(null);
+
+  const { data, isLoading, isError, refetch, isFetching } = useQuery({
+    queryKey: ['period-report', vehicleId, period, at],
+    queryFn: () =>
+      client
+        .get(`/vehicles/${vehicleId}/reports`, { params: { period, at: at ?? undefined } })
+        .then((r) => r.data?.data ?? r.data),
+    enabled: !!vehicleId,
+  });
+
+  // Đổi xe hoặc đổi loại kỳ (tháng<->tuần) -> luôn quay về kỳ HIỆN TẠI, không giữ
+  // lại mốc `at` của xe/loại kỳ trước (dễ hiểu nhầm là chưa đổi xong).
+  useEffect(() => {
+    setAt(null);
+  }, [vehicleId, period]);
+
+  if (isLoading) return <LoadingView />;
+  if (isError) return <ErrorView message={t('common.error_load')} onRetry={refetch} />;
+  if (!data) return null;
+
+  const summary = data.summary ?? {};
+  const periodStart: string = data.period_start;
+  const periodEnd: string = data.period_end;
+  const isPartial = data.status === 'partial';
+
+  const prevAt = addDaysStr(periodStart, -1);
+  const nextAt = addDaysStr(periodEnd, 1);
+  const canGoNext = nextAt <= todayStr();
+  const canGoPrev = vehicleCreatedAt ? prevAt >= vehicleCreatedAt.slice(0, 10) : true;
+
+  return (
+    <ScrollView
+      refreshControl={
+        <RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={colors.primary} />
+      }
+      contentContainerStyle={[{ padding: 16, paddingBottom: 40 }, contentWide]}>
+
+      {/* period nav */}
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: 12,
+        }}>
+        <TouchableOpacity
+          disabled={!canGoPrev}
+          onPress={() => setAt(prevAt)}
+          style={{ padding: 10, opacity: canGoPrev ? 1 : 0.3 }}>
+          <FontAwesome5 name="chevron-left" size={16} color={colors.text} />
+        </TouchableOpacity>
+        <View style={{ alignItems: 'center' }}>
+          <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14 }}>
+            {fmtDateShort(periodStart)} - {fmtDateShort(periodEnd)}
+          </Text>
+          {isPartial && (
+            <Text style={{ color: colors.primary, fontSize: 11, marginTop: 2, fontWeight: '600' }}>
+              {t('reports.period_partial_badge')}
+            </Text>
+          )}
+        </View>
+        <TouchableOpacity
+          disabled={!canGoNext}
+          onPress={() => setAt(nextAt)}
+          style={{ padding: 10, opacity: canGoNext ? 1 : 0.3 }}>
+          <FontAwesome5 name="chevron-right" size={16} color={colors.text} />
+        </TouchableOpacity>
+      </View>
+
+      {/* total cost banner */}
+      <View
+        style={{
+          backgroundColor: colors.primary + '22',
+          borderRadius: 14,
+          padding: 18,
+          marginBottom: 12,
+          borderLeftWidth: 3,
+          borderLeftColor: colors.primary,
+        }}>
+        <Text style={{ color: colors.textSecondary, fontSize: 12, marginBottom: 4 }}>
+          {t('reports.total_cost')}
+        </Text>
+        <Text style={{ color: colors.primary, fontWeight: '800', fontSize: 26 }}>
+          {fmtVnd(summary.total_cost)}
+        </Text>
+      </View>
+
+      {/* row 1: fuel + service */}
+      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
+        <StatCard
+          icon={<FontAwesome5 name="gas-pump" size={20} color={colors.primary} solid />}
+          label={t('reports.fuel_cost')}
+          value={fmtVnd(summary.fuel_cost)}
+          sub={
+            summary.fill_count != null
+              ? `${t('reports.refuels_count', { count: fmtNum(summary.fill_count) })}${summary.liters != null ? ` · ${Number(summary.liters).toFixed(1)} L` : ''}`
+              : undefined
+          }
+        />
+        <StatCard
+          icon={<FontAwesome5 name="wrench" size={20} color={colors.primary} solid />}
+          label={t('reports.service_cost')}
+          value={fmtVnd(summary.service_cost)}
+          sub={
+            summary.service_count != null
+              ? t('reports.services_count', { count: fmtNum(summary.service_count) })
+              : undefined
+          }
+        />
+      </View>
+
+      {/* row 2: km + consumption */}
+      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
+        <StatCard
+          icon={<FontAwesome5 name="road" size={20} color={colors.primary} solid />}
+          label={t('reports.total_km')}
+          value={summary.km != null ? fmtNum(summary.km, 'km') : '—'}
+        />
+        <StatCard
+          icon={<FontAwesome5 name="chart-bar" size={20} color={colors.primary} solid />}
+          label={t('reports.avg_consumption')}
+          value={summary.l100 != null ? `${Number(summary.l100).toFixed(2)} L/100km` : '—'}
+        />
+      </View>
+
+      <AdMobBanner />
+    </ScrollView>
   );
 }
 
@@ -746,6 +960,7 @@ export default function ReportsScreen() {
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
   // Khởi tạo với năm hiện tại để YearChips hiển thị ngay, không giật khi data về
   const [availableYears, setAvailableYears] = useState<number[]>([new Date().getFullYear()]);
+  const [periodType, setPeriodType] = useState<ReportPeriodType>('year');
 
   const { data: vehiclesRaw, isLoading: loadingVehicles } = useVehicles();
   const vehicles: any[] = Array.isArray(vehiclesRaw?.data)
@@ -762,6 +977,8 @@ export default function ReportsScreen() {
     const def = vehicles.find((v) => v.is_default);
     return def?.id ?? vehicles[0]?.id ?? null;
   })();
+
+  const selectedVehicle = vehicles.find((v) => v.id === effectiveId);
 
   if (loadingVehicles) return <LoadingView />;
 
@@ -796,11 +1013,14 @@ export default function ReportsScreen() {
               setAvailableYears([new Date().getFullYear()]);
             }}
           />
-          <YearChips
-            years={availableYears}
-            selectedYear={selectedYear}
-            onSelect={setSelectedYear}
-          />
+          <PeriodTypeChips value={periodType} onSelect={setPeriodType} />
+          {periodType === 'year' && (
+            <YearChips
+              years={availableYears}
+              selectedYear={selectedYear}
+              onSelect={setSelectedYear}
+            />
+          )}
         </View>
       ) : (
         <View
@@ -817,7 +1037,7 @@ export default function ReportsScreen() {
       )}
 
       {/* report body */}
-      {effectiveId != null ? (
+      {effectiveId != null && periodType === 'year' ? (
         <ReportContent
           vehicleId={effectiveId}
           selectedYear={selectedYear}
@@ -829,6 +1049,12 @@ export default function ReportsScreen() {
             });
           }}
           onViewYearReview={(yr, year) => navigation.navigate('YearReview', { yr, year })}
+        />
+      ) : effectiveId != null ? (
+        <PeriodReportContent
+          vehicleId={effectiveId}
+          period={periodType as 'week' | 'month'}
+          vehicleCreatedAt={selectedVehicle?.created_at ?? null}
         />
       ) : vehicles.length > 0 ? (
         <View

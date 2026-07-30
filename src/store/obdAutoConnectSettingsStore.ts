@@ -5,8 +5,17 @@ const AUTO_CONNECT_MASTER_KEY = 'obd_auto_connect_master_enabled';
 
 interface ObdAutoConnectSettingsState {
   enabled: boolean;
+  // Chặn TẠM THỜI trong phiên app hiện tại (KHÔNG lưu AsyncStorage - cố ý, để
+  // tự hết hiệu lực khi user tắt hẳn app rồi mở lại). User vừa CHỦ ĐỘNG bấm
+  // "Ngắt kết nối" trên Dashboard (xong hành trình, muốn dừng hẳn) -> không
+  // được để ObdAutoConnect mời nối lại ngay khi họ quay về Home/đổi màn hình
+  // trong CÙNG phiên. Khác với `enabled` (công tắc user tự bật/tắt ở Cài đặt,
+  // có chủ đích lâu dài) - cờ này chỉ là ý định tức thời của 1 lần ngắt.
+  sessionSuppressed: boolean;
   loadSaved: () => Promise<void>;
   setEnabled: (enabled: boolean) => void;
+  suppressForSession: () => void;
+  clearSessionSuppression: () => void;
 }
 
 // Rà soát 30/7 (user: mở app đôi khi chỉ để làm việc khác, không phải lúc nào
@@ -18,6 +27,7 @@ interface ObdAutoConnectSettingsState {
 // nguyên hành vi hiện tại cho user chưa từng đụng tới cài đặt này).
 export const useObdAutoConnectSettingsStore = create<ObdAutoConnectSettingsState>((set) => ({
   enabled: true,
+  sessionSuppressed: false,
   loadSaved: async () => {
     const saved = await AsyncStorage.getItem(AUTO_CONNECT_MASTER_KEY).catch(() => null);
     if (saved === '0') set({ enabled: false });
@@ -26,4 +36,6 @@ export const useObdAutoConnectSettingsStore = create<ObdAutoConnectSettingsState
     set({ enabled });
     AsyncStorage.setItem(AUTO_CONNECT_MASTER_KEY, enabled ? '1' : '0').catch(() => {});
   },
+  suppressForSession: () => set({ sessionSuppressed: true }),
+  clearSessionSuppression: () => set({ sessionSuppressed: false }),
 }));

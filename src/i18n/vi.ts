@@ -241,6 +241,10 @@ const vi = {
   "reports.tco_title": "Chi phí toàn đời xe (TCO)",
   "reports.no_vehicle": "Chưa có xe nào. Vào tab Xe để thêm.",
   "reports.premium_lock": "Nâng cấp Premium để xem báo cáo các năm trước.",
+  "reports.period_year": "Năm",
+  "reports.period_month": "Tháng",
+  "reports.period_week": "Tuần",
+  "reports.period_partial_badge": "Kỳ đang diễn ra - số liệu sẽ còn thay đổi",
 
   // Year Review
   "year_review.title": "Nhìn lại {{year}}",

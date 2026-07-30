@@ -12,6 +12,7 @@ import { Finding } from '../services/obd/diagnosticEngine';
 import { savePairing } from '../services/obd/pairedDevices';
 import { useAuthStore } from '../store/authStore';
 import { useObdSessionStore } from '../store/obdSessionStore';
+import { useObdAutoConnectSettingsStore } from '../store/obdAutoConnectSettingsStore';
 import { useI18nStore } from '../i18n';
 import { cleanNativeErrorMessage } from '../utils/nativeError';
 import { getDeviceId } from '../utils/deviceId';
@@ -353,6 +354,14 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
     // (đã có sẵn, luôn đáng tin) thay vì VIN - VIN qua PID 0902 không phải
     // ECU nào cũng trả lời, không đủ chắc để làm điều kiện ràng buộc chính.
     claimDeviceLock();
+
+    // Vừa kết nối THẬT SỰ thành công (tới đây mọi bước + mọi checkpoint
+    // isAborted() ở trên đều đã qua) - dù tự tay hay qua ObdAutoConnect, mở lại
+    // cho lần ngắt KẾ TIẾP trong phiên này tự chặn đúng ý (xem
+    // suppressForSession() ở OBDDashboardScreen.handleDisconnect). Đặt Ở CUỐI
+    // (không phải ngay khi transport vừa nối) để 1 lần thử kết nối bị lỗi/abort
+    // giữa chừng không lỡ xoá mất cờ suppression của lần ngắt trước đó.
+    useObdAutoConnectSettingsStore.getState().clearSessionSuppression();
     return true;
   }, [claimDeviceLock, loadCapability]);
 

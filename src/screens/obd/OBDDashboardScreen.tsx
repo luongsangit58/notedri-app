@@ -17,6 +17,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StatusBar } from 'expo-status-bar';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { useObdConnection } from '../../hooks/useObd';
+import { useObdAutoConnectSettingsStore } from '../../store/obdAutoConnectSettingsStore';
 import { bleService, LinkQuality } from '../../services/obd/BleService';
 import { requestKeepAlivePermissions, startObdKeepAlive } from '../../services/obd/obdKeepAliveService';
 import { getReadiness, requestPermissionsAndStart } from '../../services/gps/GpsTripTracker';
@@ -108,6 +109,14 @@ export default function OBDDashboardScreen() {
           await disconnect().catch(() => {});
           // suppressAutoConnect: user vừa CHỦ ĐỘNG ngắt - không để màn Setup
           // quét thấy thiết bị đã ghép rồi tự nối lại ngay (vòng lặp ngắt-nối)
+          //
+          // suppressForSession: cờ RIÊNG cho ObdAutoConnect toàn cục (App.tsx) -
+          // suppressAutoConnect ở trên chỉ có tác dụng trong chính màn OBDSetup
+          // này, không ngăn được popup tự kết nối bật lại ngay khi user rời màn
+          // hình này (quay về Home...) trong CÙNG phiên app. User đã chủ động
+          // ngắt = tôn trọng cho tới khi họ tắt hẳn app/mở lại (xem
+          // obdAutoConnectSettingsStore.ts).
+          useObdAutoConnectSettingsStore.getState().suppressForSession();
           navigation.replace('OBDSetup', {
             vehicleId,
             vehicleName,

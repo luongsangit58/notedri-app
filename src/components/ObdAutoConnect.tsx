@@ -397,6 +397,7 @@ export default function ObdAutoConnect() {
   // Công tắc toàn cục (30/7, xem obdAutoConnectSettingsStore.ts) - tắt ở Cài
   // đặt là dừng hẳn, không phụ thuộc xe nào đã bật autoConnect riêng.
   const autoConnectMasterEnabled = useObdAutoConnectSettingsStore((s) => s.enabled);
+  const sessionSuppressed = useObdAutoConnectSettingsStore((s) => s.sessionSuppressed);
   const [target, setTarget] = useState<AttemptTarget | null>(null);
   const [notice, setNotice] = useState<AutoConnectNotice | null>(null);
   const lastAttemptAtRef = useRef(0);
@@ -461,6 +462,11 @@ export default function ObdAutoConnect() {
   const tryAutoConnect = useCallback(async () => {
     if (!isPremium || !token) return;
     if (!autoConnectMasterEnabled) return;
+    // User vừa chủ động bấm "Ngắt kết nối" trong phiên này - tôn trọng ý định đó
+    // cho tới khi họ tắt hẳn app và mở lại (sessionSuppressed KHÔNG persist, xem
+    // obdAutoConnectSettingsStore.ts), thay vì mời kết nối lại ngay khi họ đổi
+    // màn hình/quay lại foreground.
+    if (sessionSuppressed) return;
     if (target) return;
     if (Date.now() - lastAttemptAtRef.current < COOLDOWN_MS) return;
     if (bleService.isConnected()) return;
@@ -484,7 +490,7 @@ export default function ObdAutoConnect() {
       deviceId: pairing.bleDeviceId,
       transport: pairing.transport ?? 'ble',
     });
-  }, [autoConnectMasterEnabled, isPremium, target, token]);
+  }, [autoConnectMasterEnabled, isPremium, sessionSuppressed, target, token]);
 
   const scheduleAutoConnect = useCallback(() => {
     if (target) return;

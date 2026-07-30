@@ -11,7 +11,18 @@ const client = axios.create({
 client.interceptors.request.use(async (config) => {
   const { useAuthStore } = await import('../store/authStore');
   const { useI18nStore } = await import('../i18n');
-  const token = useAuthStore.getState().token;
+  // Request có thể chạy trong tiến trình JS "headless" (expo-task-manager đánh thức app
+  // để xử lý location update nền / GPS_TRIP_RECOVERY định kỳ, xem GpsTripTracker.ts) -
+  // RootNavigator không mount nên authStore.initialize() chưa từng chạy -> token trong
+  // bộ nhớ luôn null dù máy vẫn đang đăng nhập thật. Trước đây request kiểu này đi ra
+  // KHÔNG có Authorization -> 401 giả -> interceptor dưới tự logout() + xoá sạch hàng
+  // đợi gps_pending_trips (mất chuyến vừa được lưới an toàn 15 phút gom lại). Đọc thẳng
+  // SecureStore (nguồn sự thật, storage.ts) làm phương án dự phòng khi bộ nhớ trống.
+  let token = useAuthStore.getState().token;
+  if (!token) {
+    const { storage } = await import('../utils/storage');
+    token = await storage.getToken();
+  }
   if (token) config.headers.Authorization = `Bearer ${token}`;
   config.headers['Accept-Language'] = useI18nStore.getState().lang ?? 'vi';
   return config;
