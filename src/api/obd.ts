@@ -133,16 +133,19 @@ export const obdApi = {
   // gpsTripsApi.trackingLock (khoá CỨNG, claim() throw 409): claim() ở đây
   // KHÔNG BAO GIỜ chặn kết nối - server chỉ trả về ai đang giữ (nếu có) để FE
   // tự hiện banner "xe này đang được máy khác dùng", user tự quyết định.
-  // Server (ngoài repo FE) cần response 200 luôn (không 409) với shape:
+  // Response 200 luôn (không 409) với shape:
   //   { locked_by_other: boolean, held_by_device_name?: string, held_since?: string }
+  //
+  // Rà soát 30/7: không còn wrapper `renew` (PUT) riêng - endpoint đó CHỈ trả
+  // {"message":"ok"}, không có locked_by_other (xem ObdDeviceLockController::
+  // renew() phía BE), nên không dùng để tự cập nhật banner "xe đang dùng máy
+  // khác" được. useObd.ts heartbeat giờ gọi lại claim() (POST) mỗi 90s thay
+  // renew() - BE cố ý cho phép "reclaim" qua claim() khi chính máy này đang
+  // giữ, vừa gia hạn TTL vừa trả đúng thông tin chia sẻ mới nhất.
   deviceLock: {
     claim: (vehicleId: number, deviceId: string, deviceName: string) =>
       client.post<{ locked_by_other: boolean; held_by_device_name?: string; held_since?: string }>(
         '/obd2/device-lock', { vehicle_id: vehicleId, device_id: deviceId, device_name: deviceName },
-      ),
-    renew: (vehicleId: number, deviceId: string) =>
-      client.put<{ locked_by_other: boolean; held_by_device_name?: string; held_since?: string }>(
-        '/obd2/device-lock', { vehicle_id: vehicleId, device_id: deviceId },
       ),
     release: (vehicleId: number, deviceId: string) =>
       client.delete('/obd2/device-lock', { data: { vehicle_id: vehicleId, device_id: deviceId } }),

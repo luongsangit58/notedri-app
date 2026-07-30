@@ -244,6 +244,31 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
 
   // --- Connect ---
 
+  // Rà soát 30/7 (bug tự gây ra): PUT /obd2/device-lock (renew) CHỈ trả
+  // {"message":"ok"} - KHÔNG có locked_by_other/held_by_device_name/held_since
+  // (xem ObdDeviceLockController::renew() phía BE, khác hẳn claim()). Bản sửa
+  // trước đó đọc field không tồn tại từ response renew() -> luôn undefined ->
+  // luôn ghi đè sharedByOtherDevice về null mỗi 90s, xoá mất banner "xe đang
+  // dùng máy khác" dù máy kia vẫn đang giữ thật. BE cố ý cho phép gọi LẠI
+  // claim() để "reclaim/gia hạn" khi chính máy này đang giữ (xem comment
+  // ObdDeviceLockController::claim()) - dùng luôn claim() làm heartbeat thay
+  // renew(), vừa gia hạn TTL vừa lấy được đúng thông tin chia sẻ mới nhất mỗi
+  // lần gọi (renew() không còn được dùng ở đâu nữa sau thay đổi này).
+  const claimDeviceLock = useCallback(() => {
+    const lockDeviceName = useObdSessionStore.getState().deviceName ?? vehicleName ?? 'OBD2';
+    getDeviceId().then((appDeviceId) =>
+      obdApi.deviceLock.claim(vehicleId, appDeviceId, lockDeviceName)
+        .then(({ data }) => {
+          useObdSessionStore.getState().patch({
+            sharedByOtherDevice: data.locked_by_other
+              ? { deviceName: data.held_by_device_name ?? lockDeviceName, since: data.held_since ?? null }
+              : null,
+          });
+        })
+        .catch(() => {}), // BE chưa triển khai / mất mạng: im lặng, không chặn gì cả
+    );
+  }, [vehicleId, vehicleName]);
+
   // Phần chung SAU KHI transport (BLE hoặc Classic) đã kết nối xong ở tầng
   // BleService - init ELM327, dò capability, khởi động live monitor, lưu
   // pairing... KHÔNG liên quan gì tới BLE/Classic cụ thể, nên connect() và
@@ -327,20 +352,9 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
     // không chặn kết nối này dù xe đang được máy khác giữ. Dùng vehicle_id
     // (đã có sẵn, luôn đáng tin) thay vì VIN - VIN qua PID 0902 không phải
     // ECU nào cũng trả lời, không đủ chắc để làm điều kiện ràng buộc chính.
-    const lockDeviceName = useObdSessionStore.getState().deviceName ?? vehicleName ?? 'OBD2';
-    getDeviceId().then((appDeviceId) =>
-      obdApi.deviceLock.claim(vehicleId, appDeviceId, lockDeviceName)
-        .then(({ data }) => {
-          useObdSessionStore.getState().patch({
-            sharedByOtherDevice: data.locked_by_other
-              ? { deviceName: data.held_by_device_name ?? lockDeviceName, since: data.held_since ?? null }
-              : null,
-          });
-        })
-        .catch(() => {}), // BE chưa triển khai / mất mạng: im lặng, không chặn gì cả
-    );
+    claimDeviceLock();
     return true;
-  }, [vehicleId, vehicleName, loadCapability]);
+  }, [claimDeviceLock, loadCapability]);
 
   // Chung cho cả connect() và connectClassic() khi bước connect transport ban
   // đầu ném lỗi - dọn dẹp transport dở dang + đưa state machine/UI về đúng
@@ -431,37 +445,17 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
     getDeviceId().then((appDeviceId) => obdApi.deviceLock.release(vehicleId, appDeviceId).catch(() => {}));
   }, [vehicleId]);
 
-  // Heartbeat khoá mềm (29/7): renew định kỳ trong lúc còn kết nối, để BE biết
-  // máy này vẫn đang giữ xe - mất kết nối đột ngột (rớt sóng, rút app) không
-  // gọi release() kịp, BE tự hết hạn lock sau vài lần renew thiếu (xem hằng số
-  // DEVICE_LOCK_RENEW_INTERVAL_MS). Không renew khi 'connecting'/'error' - chỉ
-  // khi đã thực sự ELM_READY.
-  //
-  // Rà soát 30/7: cũng cập nhật sharedByOtherDevice từ kết quả renew, giống hệt
-  // claim() ở finishConnect() - trước đây renew chỉ .catch(() => {}) bỏ luôn kết
-  // quả, nên nếu claim() lúc vừa kết nối lỡ bị lỗi mạng tạm thời thì banner "xe
-  // đang dùng máy khác" không bao giờ xuất hiện suốt cả phiên dù renew vẫn chạy
-  // đều. Không thêm cơ chế retry/error-toast riêng - heartbeat 90s có sẵn đã đủ
-  // để tự "thử lại" và tự cập nhật UI trong vòng tối đa 1 chu kỳ, đúng tinh thần
-  // "khoá mềm, im lặng khi mất mạng" đã chọn từ đầu.
+  // Heartbeat khoá mềm (29/7, đổi endpoint 30/7 - xem comment claimDeviceLock()
+  // ở trên): gọi lại claim() định kỳ trong lúc còn kết nối, để BE biết máy này
+  // vẫn đang giữ xe - mất kết nối đột ngột (rớt sóng, rút app) không gọi
+  // release() kịp, BE tự hết hạn lock sau khi hết TTL không được claim/renew
+  // lại (xem hằng số DEVICE_LOCK_RENEW_INTERVAL_MS). Không gọi khi
+  // 'connecting'/'error' - chỉ khi đã thực sự ELM_READY.
   useEffect(() => {
     if (connectionState !== 'connected') return;
-    const timer = setInterval(() => {
-      getDeviceId().then((appDeviceId) =>
-        obdApi.deviceLock.renew(vehicleId, appDeviceId)
-          .then(({ data }) => {
-            const lockDeviceName = useObdSessionStore.getState().deviceName ?? vehicleName ?? 'OBD2';
-            useObdSessionStore.getState().patch({
-              sharedByOtherDevice: data.locked_by_other
-                ? { deviceName: data.held_by_device_name ?? lockDeviceName, since: data.held_since ?? null }
-                : null,
-            });
-          })
-          .catch(() => {}),
-      );
-    }, DEVICE_LOCK_RENEW_INTERVAL_MS);
+    const timer = setInterval(claimDeviceLock, DEVICE_LOCK_RENEW_INTERVAL_MS);
     return () => clearInterval(timer);
-  }, [connectionState, vehicleId, vehicleName]);
+  }, [claimDeviceLock, connectionState]);
 
   // --- Trip ---
 
