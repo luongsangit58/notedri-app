@@ -16,6 +16,7 @@ Master navigation index for all project documentation.
 | Find a specific screen | [screens-inventory.md](screens-inventory.md) |
 | Find a shared component | [component-inventory.md](component-inventory.md) |
 | Understand BLE OBD2 / GPS services | [services-guide.md](services-guide.md) |
+| So sánh độ ổn định/kết nối các đầu đọc OBD2 (cho trang supported-devices) | [obd-supported-devices.md](obd-supported-devices.md) |
 | Know which API endpoint to call | [api-integration.md](api-integration.md) |
 | Verify a formula/threshold against source | [ALGORITHMS.md](ALGORITHMS.md) |
 | Set up local development | [development-guide.md](development-guide.md) |
@@ -34,6 +35,15 @@ Executive summary of what NoteDri mobile is, why it exists alongside the web pro
 - Platform support (Android primary, iOS supported)
 - EAS project info and distribution model
 - Links to all other docs
+
+### [obd-supported-devices.md](obd-supported-devices.md)
+
+Tiếng Việt. So sánh khách quan độ ổn định/kết nối 4 đầu đọc OBD2 đã test
+(KONNWEI KW906, KONNWEI KW902, OBDII giá rẻ, Vgate "Android-Vlink"), rút ra từ
+log phiên thật (`obd-fixtures/`) — dùng làm dữ liệu cho trang **supported-devices**
+bên Web. Có bảng so sánh, giải thích từng khác biệt (VIN mode 09, latency,
+transport BLE/Classic), lưu ý về PIN ghép Classic, và mẫu cấu trúc dữ liệu JSON
+gợi ý cho BE.
 
 ### [architecture.md](architecture.md)
 
