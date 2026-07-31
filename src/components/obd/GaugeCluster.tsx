@@ -34,9 +34,14 @@ const AUTO_HIDE_MS = 4000;
 // cùng ngưỡng MAX_SAFE_INSET đã dùng ở OBDDashboardScreen.tsx.
 const MAX_TOOLBAR_INSET = 64;
 // Rà soát 30/7 (ảnh thật: dải status bar riêng của đầu Android ô tô - không
-// phải StatusBar app, không ẩn được - cao ~64dp ở góc trên-phải) - đẩy cụm nút
-// chức năng bên phải xuống dưới mốc này, không chồng lên dải đó nữa.
-const RIGHT_COLUMN_TOP = 72;
+// phải StatusBar app, không ẩn được - cao ~72dp, nằm sát mép trên cong của màn
+// hình đầu xe). Lần sửa đầu chỉ đẩy cụm nút chức năng bên phải xuống dưới mốc
+// này, còn chip "NoteDri" (góc trái) và đồng hồ/thời tiết (giữa) vẫn để top: 8
+// - ảnh chụp thực tế cho thấy 2 cụm đó vẫn nằm lọt trong đúng dải trên cùng đó
+// (mép cong + status bar ROM), trông như "còn 1 thanh ngang" dù cụm bên phải
+// đã tránh được. Dùng CHUNG 1 mốc top cho cả 3 cụm nổi để không cụm nào còn
+// nằm trong dải trên cùng.
+const TOP_SAFE_OFFSET = 72;
 
 // Rà soát 29/7 (góp ý user: toolbar/giờ-thời tiết của theme "Tối giản EV" gần
 // như biến mất - previewColor của theme này là #111111, gần đen, dùng làm
@@ -210,15 +215,23 @@ export default function GaugeCluster({
 
       {/* Giờ + thời tiết (góp ý user: màn Đồng hồ ẩn StatusBar hệ thống nên mất
           luôn đồng hồ giờ của máy) - LUÔN hiện, không theo chạm-màn-hình như
-          nút chức năng (đúng mục đích ban đầu: liếc giờ không cần thao tác). */}
+          nút chức năng (đúng mục đích ban đầu: liếc giờ không cần thao tác).
+          Rà soát 30/7 (ảnh thật: thời tiết đứng sát ngay cạnh giờ trong CHUNG
+          1 pill, icon thời tiết đè/lấn lên chữ giờ) - tách thành 2 pill RIÊNG
+          BIỆT, có khoảng cách thật giữa 2 khối (gap ở container ngoài) thay vì
+          2 nhóm nội dung khác nhau chen trong cùng 1 khung - giờ luôn đọc được
+          trọn vẹn dù thời tiết có/không có dữ liệu (CockpitWeather tự ẩn khi
+          chưa có data, khi đó pill giờ đứng 1 mình, không lệch vị trí). */}
       <View
         pointerEvents="none"
-        style={[
-          styles.clockPill,
-          { top: 8 + toolbarInsetTop, backgroundColor: toolbarAccent + '33', borderColor: toolbarAccent + '77' },
-        ]}
+        style={{
+          position: 'absolute', top: TOP_SAFE_OFFSET + toolbarInsetTop, alignSelf: 'center',
+          flexDirection: 'row', alignItems: 'center', gap: 10,
+        }}
       >
-        <CockpitClock color={toolbarAccent} fontSize={clockFontSize} />
+        <View style={[styles.clockPill, { backgroundColor: toolbarAccent + '33', borderColor: toolbarAccent + '77' }]}>
+          <CockpitClock color={toolbarAccent} fontSize={clockFontSize} />
+        </View>
         <CockpitWeather color={toolbarAccent} fontSize={clockFontSize} />
       </View>
 
@@ -226,15 +239,15 @@ export default function GaugeCluster({
           pip/theme/palette/disconnect" nằm ngang đúng ngay dải status bar RIÊNG
           của đầu xe (wifi/giờ/loa/thông báo/recents/back của ROM, app không thể
           ẩn được vì không phải StatusBar của app) - toàn bộ hàng ngang đó bị che
-          khuất, không bấm được. Tách nút back/brand (giữ ở góc trên-trái, dưới
-          dải status bar đó ít va chạm hơn) khỏi cụm nút chức năng bên phải -
-          cụm bên phải xếp DỌC (column) và đẩy xuống thấp hơn (RIGHT_COLUMN_TOP)
-          để nằm dưới hẳn dải status bar của ROM thay vì chồng lên nó. */}
+          khuất, không bấm được. Tách nút back/brand khỏi cụm nút chức năng bên
+          phải - cụm bên phải xếp DỌC (column), cả 3 cụm nổi (chip/đồng hồ/cột
+          nút) cùng dùng TOP_SAFE_OFFSET để nằm dưới hẳn dải status bar của ROM
+          thay vì chồng lên nó. */}
       <Animated.View
         pointerEvents={controlsVisible ? 'box-none' : 'none'}
         style={[
           styles.backChip,
-          { top: 8 + toolbarInsetTop, left: 12 + toolbarInsetSide, opacity: controlsOpacity },
+          { top: TOP_SAFE_OFFSET + toolbarInsetTop, left: 12 + toolbarInsetSide, opacity: controlsOpacity },
         ]}
       >
         <View style={[styles.chip, { backgroundColor: toolbarAccent + '33', borderColor: toolbarAccent + '77' }]}>
@@ -250,7 +263,7 @@ export default function GaugeCluster({
         pointerEvents={controlsVisible ? 'box-none' : 'none'}
         style={[
           styles.toolbarBtns,
-          { top: RIGHT_COLUMN_TOP + toolbarInsetTop, right: 12 + toolbarInsetSide, opacity: controlsOpacity },
+          { top: TOP_SAFE_OFFSET + toolbarInsetTop, right: 12 + toolbarInsetSide, opacity: controlsOpacity },
         ]}
       >
         {pipSupported && (
@@ -298,7 +311,6 @@ export default function GaugeCluster({
 const styles = StyleSheet.create({
   root: { flexGrow: 1, padding: 8 },
   clockPill: {
-    position: 'absolute', alignSelf: 'center',
     flexDirection: 'row', alignItems: 'center', gap: 10,
     borderRadius: 20, borderWidth: 1, paddingHorizontal: 16, paddingVertical: 8,
   },
