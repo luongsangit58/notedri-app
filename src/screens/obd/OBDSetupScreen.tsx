@@ -315,7 +315,9 @@ export default function OBDSetupScreen() {
     getPairingForVehicle(vehicleId).then((p) => {
       setPairedDeviceId(p?.bleDeviceId ?? null);
       setPairedTransport(p?.transport ?? 'ble');
-      setAutoConnectOnLaunchState(!!p?.autoConnect);
+      // undefined (pairing cũ trước bản vá 31/7, hoặc pairing mới) = coi như bật,
+      // khớp quy ước ở getAutoConnectPairing() - chỉ false mới là user đã tắt.
+      setAutoConnectOnLaunchState(p?.autoConnect !== false);
     });
   }, [vehicleId]);
 
@@ -620,7 +622,8 @@ export default function OBDSetupScreen() {
 
         {/* Hỏi trước khi tự kết nối (25/7) - chỉ hiện khi xe này đã từng
             ghép ít nhất 1 thiết bị, không phụ thuộc đang ở mode BLE hay
-            Classic. Mặc định TẮT - xem ObdAutoConnect.tsx. */}
+            Classic. Mặc định BẬT (đổi 31/7, xem pairedDevices.ts) - user tự
+            tắt nếu thấy phiền. */}
         {pairedDeviceId && (
           <View style={[styles.showAllRow, { backgroundColor: colors.card }]}>
             <View style={{ flex: 1, paddingRight: 12 }}>

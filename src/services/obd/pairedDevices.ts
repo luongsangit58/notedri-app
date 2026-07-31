@@ -16,10 +16,11 @@ export type PairedDevice = {
   // Dùng để OBDSetupScreen tự chuyển đúng mode + tự kết nối lại (auto-reconnect
   // cho Classic, xem targetTransport ở đó) thay vì luôn mặc định BLE.
   transport?: 'ble' | 'classic';
-  // Opt-in (25/7, góp ý user: mở lại app không tự kết nối, nhưng KHÔNG được tự
-  // bật mặc định cho mọi người - tốn pin quét BLE mỗi lần mở app kể cả khi
-  // không ở trong xe) - user tự bật ở OBDSetupScreen. undefined = chưa từng
-  // chọn (coi như false, không nudge lại nếu đã có giá trị rõ ràng).
+  // Opt-out (31/7, đổi ngược lại theo góp ý user: auto-connect nên mặc định BẬT
+  // cho tiện, user chỉ tắt khi thấy phiền - trước đây default TẮT vì lo tốn pin
+  // quét BLE, nhưng đó không phải điều user muốn). Mặc định true cho pairing
+  // MỚI (xem savePairing() bên dưới) - undefined chỉ còn xảy ra với dữ liệu cũ
+  // lưu trước bản vá này, cũng coi như true (bật) khi đọc lại.
   autoConnect?: boolean;
 };
 
@@ -54,7 +55,10 @@ export async function savePairing(pairing: PairedDevice): Promise<void> {
   );
   next.push({
     ...pairing,
-    autoConnect: pairing.autoConnect ?? previous?.autoConnect,
+    // Pairing mới (chưa từng ghép xe này) -> mặc định BẬT auto-connect. Đã
+    // ghép rồi thì giữ đúng lựa chọn user đã chọn trước đó (kể cả khi họ đã
+    // tắt) - không âm thầm bật lại mỗi lần connect().
+    autoConnect: pairing.autoConnect ?? previous?.autoConnect ?? true,
     lastConnectedAt: pairing.lastConnectedAt ?? Date.now(),
   });
   await writeAll(next);
@@ -89,7 +93,10 @@ export async function setAutoConnect(vehicleId: number, enabled: boolean): Promi
 // thể chọn ra 2 xe KHÁC NHAU cho cùng 1 tài khoản, gây lẫn lộn xe.
 export async function getAutoConnectPairing(preferredVehicleId?: number): Promise<PairedDevice | null> {
   const devices = await readAll();
-  const eligible = devices.filter((d) => d.autoConnect);
+  // !== false (không phải !!d.autoConnect): pairing ghép TRƯỚC bản vá 31/7 lưu
+  // undefined - coi undefined là bật (mặc định mới), chỉ false mới là user đã
+  // chủ động tắt.
+  const eligible = devices.filter((d) => d.autoConnect !== false);
   if (eligible.length === 0) return null;
   if (preferredVehicleId != null) {
     const preferred = eligible.find((d) => d.vehicleId === preferredVehicleId);

@@ -1108,16 +1108,25 @@ class BleService {
       }
       this.connectedDevice = null;
     } else if (this.classicAddress) {
-      // KHÔNG tự detachClassicListeners()/clear state ở đây - để event
-      // onClassicDisconnected (native luôn phát ra sau khi đóng socket, xem
-      // NotedriBtPairingModule.kt) tự chảy qua handleTransportDisconnected(),
-      // giống hệt cách BLE dựa vào device.onDisconnected() sau cancelConnection().
-      // Một điểm dọn dẹp DUY NHẤT, tránh 2 nơi cùng dọn nửa vời gây lệch trạng thái.
+      // Rà soát 31/7 (user báo: bấm X ngắt kết nối ở Dashboard xong, màn
+      // OBDSetup lại tự bật ngay về Dashboard như chưa hề ngắt) - trước đây
+      // chỉ dựa vào event onClassicDisconnected (async, tới sau khi hàm này
+      // đã resolve) để xoá classicAddress, tạo khoảng hở: disconnect() resolve
+      // xong, OBDSetupScreen mount ngay sau đó gọi bleService.isConnected() ->
+      // vẫn true vì event chưa kịp bắn -> tự nhảy thẳng lại OBDDashboard.
+      // Xoá classicAddress NGAY ở đây (giống nhánh BLE ở trên) để isConnected()
+      // đúng ngay khi disconnect() resolve - KHÔNG detach listeners, event
+      // onClassicDisconnected tới muộn vẫn cần chạy để
+      // handleTransportDisconnected() fire disconnectListeners (obdLiveMonitor
+      // lưu tổng kết phiên/telemetry dựa vào đúng listener này, xem
+      // obdLiveMonitor.ts) - chỉ đơn giản là dọn store thêm 1 lần, không thử
+      // reconnect, vì intentionalDisconnect đã true.
       try {
         await NotedriBtPairing.disconnectClassic();
       } catch {
         // Already disconnected — ignore
       }
+      this.classicAddress = null;
     } else {
       // Không có kết nối nào (gọi thừa) - dọn store cho chắc
       useObdSessionStore.getState().clear();
