@@ -204,6 +204,12 @@ const RULES: Rule[] = [
     phrases: ['dien ap ac quy', 'dien ap ac-quy', 'ac quy con tot khong', 'binh dien co yeu khong', 'ac quy the nao'],
   },
   {
+    // Thêm 29/7 (tool mới `vehicle.getReadiness`) - hỏi về trạng thái sẵn sàng
+    // đăng kiểm/khí thải, khác hẳn `maintenance.getUpcoming` (hạn đăng kiểm).
+    toolName: 'vehicle.getReadiness',
+    phrases: ['san sang dang kiem', 'trang thai khi thai', 'readiness monitor'],
+  },
+  {
     // MỚI: hỏi thời tiết KHÔNG cần LLM - endpoint `/weather` thật đã có sẵn (xem
     // weather.getCurrent ở businessTools.ts), trả lời tất định từ dữ liệu thật luôn nhanh + đáng
     // tin hơn để LLM tự bịa hoặc từ chối vì "không có dữ liệu thời tiết".

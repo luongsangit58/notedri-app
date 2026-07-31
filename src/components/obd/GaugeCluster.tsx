@@ -216,15 +216,23 @@ export default function GaugeCluster({
 
       {/* Giờ + thời tiết (góp ý user: màn Đồng hồ ẩn StatusBar hệ thống nên mất
           luôn đồng hồ giờ của máy) - LUÔN hiện, không theo chạm-màn-hình như
-          nút chức năng (đúng mục đích ban đầu: liếc giờ không cần thao tác). */}
+          nút chức năng (đúng mục đích ban đầu: liếc giờ không cần thao tác).
+          Rà soát 30/7 (ảnh thật: thời tiết đứng sát ngay cạnh giờ trong CHUNG
+          1 pill, icon thời tiết đè/lấn lên chữ giờ) - tách thành 2 pill RIÊNG
+          BIỆT, có khoảng cách thật giữa 2 khối (gap ở container ngoài) thay vì
+          2 nhóm nội dung khác nhau chen trong cùng 1 khung - giờ luôn đọc được
+          trọn vẹn dù thời tiết có/không có dữ liệu (CockpitWeather tự ẩn khi
+          chưa có data, khi đó pill giờ đứng 1 mình, không lệch vị trí). */}
       <View
         pointerEvents="none"
-        style={[
-          styles.clockPill,
-          { top: 8 + clockInsetTop, backgroundColor: toolbarAccent + '33', borderColor: toolbarAccent + '77' },
-        ]}
+        style={{
+          position: 'absolute', top: 8 + clockInsetTop, alignSelf: 'center',
+          flexDirection: 'row', alignItems: 'center', gap: 10,
+        }}
       >
-        <CockpitClock color={toolbarAccent} fontSize={clockFontSize} />
+        <View style={[styles.clockPill, { backgroundColor: toolbarAccent + '33', borderColor: toolbarAccent + '77' }]}>
+          <CockpitClock color={toolbarAccent} fontSize={clockFontSize} />
+        </View>
         <CockpitWeather color={toolbarAccent} fontSize={clockFontSize} />
       </View>
 
@@ -299,7 +307,6 @@ export default function GaugeCluster({
 const styles = StyleSheet.create({
   root: { flexGrow: 1, padding: 8 },
   clockPill: {
-    position: 'absolute', alignSelf: 'center',
     flexDirection: 'row', alignItems: 'center', gap: 10,
     borderRadius: 20, borderWidth: 1, paddingHorizontal: 16, paddingVertical: 8,
   },

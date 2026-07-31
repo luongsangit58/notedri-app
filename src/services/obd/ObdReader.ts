@@ -1,5 +1,13 @@
 import { bleService } from './BleService';
-import { extractPayload, isNoData, isPlausibleValue, parseDtcCodes, PID_REGISTRY } from './obdParser';
+import {
+  extractPayload,
+  isNoData,
+  isPlausibleValue,
+  parseDtcCodes,
+  parseReadinessStatus,
+  PID_REGISTRY,
+  ReadinessStatus,
+} from './obdParser';
 import { readCurrentVin } from './capabilityService';
 
 // Capability-aware polling (ý #18): PID xe không hỗ trợ (Honda City: 2F fuel,
@@ -202,22 +210,48 @@ export async function readFuelRate(): Promise<number | null> {
   return isPlausibleValue('5E', rate) ? rate : null;
 }
 
+export async function readFuelTrimLongB1(): Promise<number | null> {
+  const bytes = await readPid('07');
+  if (!bytes || bytes.length < 1) return null;
+  const pct = Math.round((((bytes[0] - 128) * 100) / 128) * 10) / 10;
+  return isPlausibleValue('07', pct) ? pct : null;
+}
+
+export async function readO2SensorB1S1Voltage(): Promise<number | null> {
+  const bytes = await readPid('14');
+  if (!bytes || bytes.length < 1) return null;
+  const volts = Math.round((bytes[0] / 200) * 1000) / 1000;
+  return isPlausibleValue('14', volts) ? volts : null;
+}
+
+export async function readBarometricPressure(): Promise<number | null> {
+  const bytes = await readPid('33');
+  if (!bytes || bytes.length < 1) return null;
+  return isPlausibleValue('33', bytes[0]) ? bytes[0] : null;
+}
+
 export type ObdExtendedSnapshot = {
   fuelTrimShortB1Pct: number | null;
   intakeManifoldPressureKpa: number | null;
   intakeAirTempC: number | null;
   ambientAirTempC: number | null;
   fuelRateLPerHour: number | null;
+  fuelTrimLongB1Pct: number | null;
+  o2SensorB1S1Voltage: number | null;
+  barometricPressureKpa: number | null;
   timestamp: number;
 };
 
-/** Chỉ dùng cho màn kỹ thuật - 5 PID KHÔNG nằm trong readSnapshot() của live monitor. */
+/** Chỉ dùng cho màn kỹ thuật - PID KHÔNG nằm trong readSnapshot() của live monitor. */
 export async function readExtendedSnapshot(): Promise<ObdExtendedSnapshot> {
   const fuelTrimShortB1Pct = await readFuelTrimShortB1();
   const intakeManifoldPressureKpa = await readIntakeManifoldPressure();
   const intakeAirTempC = await readIntakeAirTemp();
   const ambientAirTempC = await readAmbientAirTemp();
   const fuelRateLPerHour = await readFuelRate();
+  const fuelTrimLongB1Pct = await readFuelTrimLongB1();
+  const o2SensorB1S1Voltage = await readO2SensorB1S1Voltage();
+  const barometricPressureKpa = await readBarometricPressure();
 
   return {
     fuelTrimShortB1Pct,
@@ -225,6 +259,9 @@ export async function readExtendedSnapshot(): Promise<ObdExtendedSnapshot> {
     intakeAirTempC,
     ambientAirTempC,
     fuelRateLPerHour,
+    fuelTrimLongB1Pct,
+    o2SensorB1S1Voltage,
+    barometricPressureKpa,
     timestamp: Date.now(),
   };
 }
@@ -293,6 +330,49 @@ export async function readPermanentDtcCodes(): Promise<DtcCode[]> {
     return parseDtcCodes(response, '4A').map((code) => ({ code, description: null }));
   } catch {
     return [];
+  }
+}
+
+/**
+ * Mode 04 - Xoá DTC/tắt đèn check engine. KHÔNG xoá được nguyên nhân gốc -
+ * nếu lỗi còn tồn tại, ECU sẽ ghi nhận lại và đèn có thể sáng lại sau vài chu
+ * kỳ lái. Response OK thật là "44" (echo mode+0x40) hoặc "OK" tuỳ adapter.
+ *
+ * Rà soát (code review): kiểm tra CŨ chỉ loại NO DATA/ERROR/"?" rồi coi phần
+ * còn lại là thành công - response rỗng, bị cắt cụt do sóng yếu, hoặc negative
+ * response "7F 04 <NRC>" (ECU từ chối lệnh, vd đang chạy máy) đều lọt qua và
+ * bị báo "xoá thành công" sai. Giờ đòi CÓ tín hiệu thành công thật ("44"/"OK"),
+ * không chỉ suy ra từ VIỆC KHÔNG THẤY lỗi.
+ */
+export async function clearDtcCodes(): Promise<boolean> {
+  try {
+    const response = await bleService.sendCommand('04', 5000);
+    const normalized = response.toUpperCase().replace(/\s+/g, '');
+    if (isNoData(response) || normalized.includes('ERROR') || normalized.includes('?') || normalized.includes('7F04')) {
+      return false;
+    }
+    return normalized.includes('44') || normalized.includes('OK');
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Mode 01 PID 01 - MIL + số DTC + trạng thái sẵn sàng monitor khí thải (dùng
+ * để ước lượng khả năng đạt đăng kiểm). PID 01 BẮT BUỘC theo chuẩn OBD2 (mọi
+ * ECU compliant phải trả lời) nên đọc trực tiếp, KHÔNG gate qua
+ * activePidWhitelist như các PID mở rộng khác (giống cách 0100 tự gọi để dò
+ * capability, không tự-gate chính nó). Timeout 5000ms khớp các lệnh DTC anh em
+ * (03/07/0A/04) - rà soát: bản đầu dùng timeout mặc định 2000ms, dễ timeout
+ * hơn các lệnh cùng nhóm trên sóng yếu dù cùng độ phức tạp payload.
+ */
+export async function readReadinessStatus(): Promise<ReadinessStatus | null> {
+  try {
+    const response = await bleService.sendCommand('0101', 5000);
+    if (isNoData(response) || response.toUpperCase().includes('ERROR')) return null;
+    return parseReadinessStatus(response);
+  } catch {
+    return null;
   }
 }
 

@@ -4,7 +4,7 @@
  * Đây là hồi quy cho bug "màn hình toàn dấu -": ATS0 làm response dính liền
  * ("410C1034") trong khi parser cũ tách token theo dấu cách.
  */
-import { extractPayload, isNoData, parseSupportedPids, parseVin, parseDtcCodes, assembleIsoTpFrames, PID_REGISTRY, PID_PLAUSIBLE_RANGE, isPlausibleValue } from '../obdParser';
+import { extractPayload, isNoData, parseSupportedPids, parseVin, parseDtcCodes, assembleIsoTpFrames, parseReadinessStatus, PID_REGISTRY, PID_PLAUSIBLE_RANGE, isPlausibleValue } from '../obdParser';
 
 describe('extractPayload - format thật từ fixture #2 (ATS0, không dấu cách)', () => {
   it('parse RPM 410C1034 → 1037 rpm', () => {
@@ -249,5 +249,49 @@ describe('isPlausibleValue - chặn giá trị ngoài dải vật lý hợp lý 
     for (const pid of Object.keys(PID_REGISTRY)) {
       expect(PID_PLAUSIBLE_RANGE).toHaveProperty(pid);
     }
+  });
+});
+
+// Bit-layout hex test vector tự dựng theo bảng chuẩn Mode 01 PID 01 "Monitor
+// status since DTCs cleared" - SAE J1979 / ISO 15031-5 (cùng cách python-OBD
+// decoders.py triển khai, xem comment SPARK_TESTS/COMPRESSION_TESTS trong
+// obdParser.ts) - không có response thật trong fixture hiện có để đối chiếu.
+describe('parseReadinessStatus - Mode 01 PID 01', () => {
+  it('spark, MIL off, 0 DTC, catalyst chưa ready, o2Sensor đã ready', () => {
+    // byte A=0x00 (MIL off/0 DTC); byte B=0x03 (misfire+fuelSystem supported+ready, spark);
+    // byte C=0x21 (catalyst+o2Sensor supported); byte D=0x01 (catalyst chưa ready)
+    const status = parseReadinessStatus('410100032101');
+    expect(status).not.toBeNull();
+    expect(status!.milOn).toBe(false);
+    expect(status!.dtcCount).toBe(0);
+    expect(status!.ignitionType).toBe('spark');
+    expect(status!.monitors).toContainEqual({ key: 'misfire', supported: true, ready: true });
+    expect(status!.monitors).toContainEqual({ key: 'fuelSystem', supported: true, ready: true });
+    expect(status!.monitors).toContainEqual({ key: 'components', supported: false, ready: true });
+    expect(status!.monitors).toContainEqual({ key: 'catalyst', supported: true, ready: false });
+    expect(status!.monitors).toContainEqual({ key: 'o2Sensor', supported: true, ready: true });
+    // Bit "A/C refrigerant" (reserved/obsolete) KHÔNG được đưa vào danh sách hiển thị
+    expect(status!.monitors.find((m) => m.key.startsWith('reserved'))).toBeUndefined();
+  });
+
+  it('MIL on + 5 DTC (byte A = 0x85)', () => {
+    const status = parseReadinessStatus('410185000000');
+    expect(status!.milOn).toBe(true);
+    expect(status!.dtcCount).toBe(5);
+  });
+
+  it('compression ignition (bit3 byte B = 1) dùng đúng bộ 8 test khác với spark', () => {
+    const status = parseReadinessStatus('410100080000');
+    expect(status!.ignitionType).toBe('compression');
+    expect(status!.monitors.some((m) => m.key === 'nmhcCatalyst')).toBe(true);
+    expect(status!.monitors.some((m) => m.key === 'catalyst')).toBe(false);
+  });
+
+  it('response thiếu byte (chưa đủ 4 byte payload) -> null', () => {
+    expect(parseReadinessStatus('410100')).toBeNull();
+  });
+
+  it('NO DATA -> null', () => {
+    expect(parseReadinessStatus('NO DATA')).toBeNull();
   });
 });

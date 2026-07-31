@@ -107,5 +107,24 @@ export function buildVehicleTools(vehicleIO: IVehicleIO): ToolDefinition[] {
         return { status: 'ok', codes, age_seconds: 0 };
       },
     },
+    {
+      name: 'vehicle.getReadiness',
+      description: 'Đọc trạng thái đèn check engine (MIL) và các monitor khí thải sẵn sàng/chưa sẵn sàng (Mode 01 PID 01) - dùng để trả lời câu hỏi kiểu "xe có đủ điều kiện đăng kiểm không". Không giải nghĩa DTC, dùng knowledge.explainDTC riêng cho việc đó.',
+      authority: 'read-only',
+      inputSchema: NO_INPUT_SCHEMA,
+      async execute() {
+        if (!vehicleIO.isConnected()) return { status: 'unavailable', reason: 'ble_disconnected' };
+        const readiness = await vehicleIO.readReadinessStatus();
+        if (!readiness) return { status: 'unavailable', reason: 'no_data_yet' };
+        return {
+          status: 'ok',
+          mil_on: readiness.milOn,
+          dtc_count: readiness.dtcCount,
+          ignition_type: readiness.ignitionType,
+          monitors: readiness.monitors.filter((m) => m.supported).map((m) => ({ key: m.key, ready: m.ready })),
+          age_seconds: 0,
+        };
+      },
+    },
   ];
 }

@@ -13,22 +13,22 @@ describe('pairedDevices - autoConnect (25/7)', () => {
     await AsyncStorage.clear();
   });
 
-  it('getAutoConnectPairing trả null khi chưa xe nào bật', async () => {
+  it('getAutoConnectPairing trả về pairing mới ghép (mặc định BẬT từ 31/7)', async () => {
     await savePairing({ bleDeviceId: 'AA:BB', vehicleId: 1, vehicleName: 'Xe 1' });
-    expect(await getAutoConnectPairing()).toBeNull();
+    expect((await getAutoConnectPairing())?.vehicleId).toBe(1);
   });
 
-  it('setAutoConnect bật cho đúng xe, không ảnh hưởng xe khác', async () => {
+  it('setAutoConnect(false) tắt riêng 1 xe, không ảnh hưởng xe khác vẫn đang bật mặc định', async () => {
     await savePairing({ bleDeviceId: 'AA:BB', vehicleId: 1, vehicleName: 'Xe 1' });
     await savePairing({ bleDeviceId: 'CC:DD', vehicleId: 2, vehicleName: 'Xe 2' });
 
-    await setAutoConnect(1, true);
-
-    const pairing = await getAutoConnectPairing();
-    expect(pairing?.vehicleId).toBe(1);
+    await setAutoConnect(1, false);
 
     const xe2 = await getPairingForVehicle(2);
-    expect(xe2?.autoConnect).toBeFalsy();
+    expect(xe2?.autoConnect).not.toBe(false);
+
+    const pairing = await getAutoConnectPairing();
+    expect(pairing?.vehicleId).toBe(2);
   });
 
   it('getAutoConnectPairing chọn xe kết nối GẦN NHẤT khi nhiều xe cùng bật', async () => {

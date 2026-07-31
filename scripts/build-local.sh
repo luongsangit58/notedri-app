@@ -30,8 +30,8 @@ else
 fi
 
 echo "== Build $PROFILE (GRADLE_OPTS=$GRADLE_OPTS) =="
-npx eas-cli "${ARGS[@]}"
-STATUS=$?
+STATUS=0
+npx eas-cli "${ARGS[@]}" || STATUS=$?
 
 echo "== Dừng Gradle daemon vừa tạo để trả lại RAM cho máy =="
 pkill -f 'org\.gradle\.launcher\.daemon\.bootstrap' 2>/dev/null || true

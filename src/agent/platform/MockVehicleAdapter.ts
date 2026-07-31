@@ -1,4 +1,4 @@
-import { IVehicleIO, VehicleSnapshot, Unsubscribe } from './types';
+import { IVehicleIO, VehicleSnapshot, VehicleReadiness, Unsubscribe } from './types';
 
 /**
  * Adapter giả cho TestHarness/CI (mục 7, mục 8) - dùng để test NoriAgent/ToolRegistry mà không
@@ -8,12 +8,14 @@ export class MockVehicleAdapter implements IVehicleIO {
   private snapshot: VehicleSnapshot | null;
   private connected: boolean;
   private dtcCodes: { code: string; description: string | null }[];
+  private readiness: VehicleReadiness | null;
   private listeners = new Set<(s: VehicleSnapshot) => void>();
 
   constructor(opts?: {
     connected?: boolean;
     snapshot?: Partial<VehicleSnapshot>;
     dtcCodes?: { code: string; description: string | null }[];
+    readiness?: VehicleReadiness | null;
   }) {
     this.connected = opts?.connected ?? true;
     this.snapshot = this.connected
@@ -28,6 +30,7 @@ export class MockVehicleAdapter implements IVehicleIO {
         }
       : null;
     this.dtcCodes = opts?.dtcCodes ?? [];
+    this.readiness = opts?.readiness ?? null;
   }
 
   getSnapshot(): VehicleSnapshot | null {
@@ -40,6 +43,10 @@ export class MockVehicleAdapter implements IVehicleIO {
 
   async readDtcCodes(): Promise<{ code: string; description: string | null }[]> {
     return this.dtcCodes;
+  }
+
+  async readReadinessStatus(): Promise<VehicleReadiness | null> {
+    return this.readiness;
   }
 
   subscribe(cb: (snapshot: VehicleSnapshot) => void): Unsubscribe {

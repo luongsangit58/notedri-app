@@ -1,5 +1,5 @@
 import { runScenario } from '../platform/TestHarness';
-import { NoriChatResponse } from '../../api/nori';
+import { NoriChatResponse, NoriToolCall } from '../../api/nori';
 
 /**
  * Test tự động cho `NoriAgent` qua `TestHarness` (docs/nori-agent-plan.md mục 7 `TestHarness`) -
@@ -97,6 +97,29 @@ describe('NoriAgent - grounding validator (LLM path, scripted chatFn)', () => {
         textResponse('Xe bạn đang chạy 80 km/h.'),
       ],
       turns: [{ userText: 'kể chuyện cười cho tôi nghe', expectSource: 'llm', expectReplyContains: '80 km/h' }],
+    });
+    expect(result.passed).toBe(true);
+  });
+
+  it('vehicle.getReadiness (không có mẫu local, luôn qua LLM): trả lời đúng MIL + số DTC từ tool_result', async () => {
+    // Không có rule local nào cho tool này (cố tình - "đăng kiểm" dễ nhầm với
+    // maintenance.getUpcoming "sắp đến hạn đăng kiểm", xem LocalIntentMatcher.ts) nên câu hỏi
+    // luôn rơi về LLM, dựng tool_use kịch bản sẵn như các tool khác trong nhóm này.
+    const result = await runScenario({
+      name: 'vehicle-getReadiness',
+      vehicle: {
+        readiness: {
+          milOn: true,
+          dtcCount: 1,
+          ignitionType: 'spark',
+          monitors: [{ key: 'catalyst', supported: true, ready: false }],
+        },
+      },
+      chatScript: [
+        toolUseResponse('t1', 'vehicle.getReadiness', {}),
+        textResponse('Đèn check engine đang sáng, xe có 1 mã lỗi đang lưu.'),
+      ],
+      turns: [{ userText: 'xe tôi có đủ điều kiện đăng kiểm không', expectSource: 'llm', expectReplyContains: '1 mã lỗi' }],
     });
     expect(result.passed).toBe(true);
   });

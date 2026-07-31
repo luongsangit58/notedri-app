@@ -36,8 +36,18 @@ export default function CockpitWeather({ color, fontSize = 18 }: { color: string
   if (!data || data.temp == null) return null;
   const rawIcon = (data.condition?.icon ?? 'fa-sun').replace('fa-', '');
   const icon = FA5_ICON_MAP[rawIcon] ?? rawIcon;
+  // Rà soát 30/7 (ảnh thật: thời tiết từng đứng CHUNG 1 pill với giờ, icon đè
+  // lên chữ giờ) - tự vẽ pill RIÊNG của mình ở đây thay vì nhận từ ngoài, nhờ
+  // đó khi chưa có dữ liệu (return null ở trên) không để lại 1 pill rỗng lơ
+  // lửng cạnh đồng hồ.
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+    <View
+      style={{
+        flexDirection: 'row', alignItems: 'center', gap: 6,
+        borderRadius: 20, borderWidth: 1, paddingHorizontal: 16, paddingVertical: 8,
+        backgroundColor: color + '33', borderColor: color + '77',
+      }}
+    >
       <FontAwesome5 name={icon} size={fontSize * 0.94} color={color} solid />
       <Text style={{ color, fontWeight: '800', fontSize }}>{data.temp}°</Text>
     </View>

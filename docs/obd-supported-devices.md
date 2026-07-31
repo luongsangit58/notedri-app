@@ -13,17 +13,56 @@ Nguồn: `obd-fixtures/notedri-obd-session-{KONNWEI-KW906,KONNWEI-KW902,OBDII,Vg
 
 | | KONNWEI KW906 | KONNWEI KW902 | OBDII (giá rẻ) | Vgate ("Android-Vlink") |
 |---|---|---|---|---|
-| Transport trong log | BLE | BLE | BLE | **Classic (SPP)** — device line ghi `(classic)`, không phải BLE dù tên file "Vgate-BLE" |
-| Transport xác nhận thêm qua thực tế dùng (ngoài log, 2026-07-30) | — | **Đã kết nối được cả BLE lẫn Classic** | **BLE kết nối được; Classic CHƯA kết nối được** — nhập PIN `0000` và `1234` đều báo sai, chưa xác định đúng PIN | — |
-| ELM327 firmware báo qua `ATI` | v1.5 | v1.5 | v1.5 | v2.3 |
-| GATT profile | 4 service, 2 characteristic (`fff0`/`fff1` notify, `fff0`/`fff2` writeNoResp) | Giống hệt KW906 (cùng model) | **8 service, 12 characteristic** (thêm Device Info `1804`, Battery `180f`, 2 custom service `ae30`/`ae3a`) — phức tạp hơn hẳn | N/A (Classic không có GATT) |
-| Mode 09 VIN (`0902`) | ✅ đọc đúng VIN | ✅ đọc đúng VIN | ❌ `NO DATA` | ✅ đọc đúng VIN |
-| Mode 03/07 (DTC hiện tại/pending) | `4300`/`4700` (không lỗi) | `4300`/`4700` | `4300`/`4700` | `4300`/`4700` |
-| Mode 0A (permanent DTC) | `NO DATA` | `NO DATA` | `NO DATA` | `NO DATA` |
+| Transport trong log | BLE (log #1, 2026-07-30) **+ Classic/SPP (log #2, 2026-07-31 — mới, xem mục riêng dưới)** | BLE | BLE | **Classic (SPP)** — device line ghi `(classic)`, không phải BLE dù tên file "Vgate-BLE" |
+| Transport xác nhận thêm qua thực tế dùng (ngoài log, 2026-07-30) | **Log #2 (2026-07-31) chính là bằng chứng Classic hoạt động** — không cần suy đoán như KW902 | **Đã kết nối được cả BLE lẫn Classic** | **BLE kết nối được; Classic CHƯA kết nối được** — nhập PIN `0000` và `1234` đều báo sai, chưa xác định đúng PIN | — |
+| ELM327 firmware báo qua `ATI` | v1.5 (cả 2 log) | v1.5 | v1.5 | v2.3 |
+| GATT profile | 4 service, 2 characteristic (`fff0`/`fff1` notify, `fff0`/`fff2` writeNoResp) — chỉ áp dụng cho log BLE #1 | Giống hệt KW906 (cùng model) | **8 service, 12 characteristic** (thêm Device Info `1804`, Battery `180f`, 2 custom service `ae30`/`ae3a`) — phức tạp hơn hẳn | N/A (Classic không có GATT) |
+| Mode 09 VIN (`0902`) | ✅ đọc đúng VIN (cả 2 log, cùng VIN) | ✅ đọc đúng VIN | ❌ `NO DATA` | ✅ đọc đúng VIN |
+| Mode 03/07 (DTC hiện tại/pending) | `4300`/`4700` (không lỗi, cả 2 log) | `4300`/`4700` | `4300`/`4700` | `4300`/`4700` |
+| Mode 0A (permanent DTC) | `NO DATA` (cả 2 log) | `NO DATA` | `NO DATA` | `NO DATA` |
 | → Duy nhất khác biệt lỗi giữa các thiết bị | — | — | **VIN không đọc được** | — |
-| Median round-trip/lệnh (lúc đang poll, loại trừ khoảng nghỉ màn khoá) | ~91ms | ~91ms | **~150ms** | ~55ms |
-| Tốc độ poll RPM thực tế | ~76 lần/phút | ~83 lần/phút | ~60 lần/phút | ~93 lần/phút |
-| Khoảng nghỉ dài bất thường trong log (screen-lock, không phải lỗi kết nối) | không có | 2 lần (~17 phút, ~10.5 phút) | không có | 1 lần (~14.8 phút) |
+| Median round-trip/lệnh (lúc đang poll, loại trừ khoảng nghỉ màn khoá) | ~91ms (log #1, BLE) / **~100ms (log #2, Classic — gần như ngang BLE, không có chi phí SPP đáng kể)** | ~91ms | **~150ms** | ~55ms |
+| Tốc độ poll RPM thực tế | ~76 lần/phút (BLE) / ~81 lần/phút (Classic, log #2) | ~83 lần/phút | ~60 lần/phút | ~93 lần/phút |
+| Khoảng nghỉ dài bất thường trong log (screen-lock, không phải lỗi kết nối) | không có (log #1) / không có (log #2, nhưng log #2 chỉ dài ~3.4 phút nên ít cơ hội gặp) | 2 lần (~17 phút, ~10.5 phút) | không có | 1 lần (~14.8 phút) |
+
+## Cập nhật 2026-07-31 — KW906 xác nhận Classic (SPP) qua log thật
+
+File `notedri-obd-session-KONNWEI-KW906.json` đã được thay bằng log mới hơn
+(`exported_at: 2026-07-31T01:20:23.999Z`, chưa commit vào lúc viết mục này).
+Log cũ commit trong `35dc916` (`exported_at: 2026-07-30T13:17:43.786Z`) ghi
+device line `KONNWEI 12:34:15:0C:19:93` (BLE). Log mới ghi
+`KONNWEI 12:34:15:0C:19:93 (classic)` — **cùng một thiết bị vật lý (cùng MAC),
+nhưng lần này kết nối qua Bluetooth Classic (SPP)** thay vì BLE. Điều này khớp
+với tính năng mới thêm ở `ad08235` (Thêm kết nối Bluetooth Classic (SPP) song
+song BLE cho OBD2).
+
+So sánh 2 log của cùng KW906:
+
+| | Log #1 — BLE (2026-07-30) | Log #2 — Classic/SPP (2026-07-31) |
+|---|---|---|
+| Thời lượng phiên | ~34s (219 entries) | ~3.4 phút (1000 entries) |
+| ELM327 (`ATI`) | v1.5 | v1.5 |
+| VIN (`0902`) | ✅ `MRHGK5830JT040005` | ✅ `MRHGK5830JT040005` (giống, cùng xe) |
+| DTC 03/07/0A | `4300`/`4700`/`NO DATA` | `4300`/`4700`/`NO DATA` (giống) |
+| Lỗi giao thức (TIMEOUT/WRITE_ERROR) | không có | không có |
+| Median latency/lệnh trong 1 chu kỳ poll | ~91ms | ~100ms |
+| Khoảng nghỉ lớn nhất giữa 2 lệnh | — | ~895ms — nhưng đây là khoảng nghỉ **giữa 2 chu kỳ poll** (`0111` cuối chu kỳ → `010C` đầu chu kỳ sau), tức là do lịch polling của app chủ động chờ, không phải do Classic chậm. Trong 1 chu kỳ (`010C`→`010D`→`0111`) độ trễ vẫn ~100ms như BLE. |
+
+**Kết luận:** KW906 hoạt động tốt trên cả 2 transport, không có sự đánh đổi độ
+trễ đáng kể khi dùng Classic (SPP) so với BLE (~100ms vs ~91ms, chênh lệch nằm
+trong nhiễu đo). Đây là log thật đầu tiên xác nhận Classic hoạt động ổn định
+trên KONNWEI KW906 (trước đó phần "Transport xác nhận thêm qua thực tế" chỉ có
+dữ liệu này cho KW902). Lưu ý phiên log #2 ngắn (~3.4 phút) nên **chưa kiểm
+chứng được độ ổn định dài hạn** (khoảng nghỉ do khoá màn hình, rớt kết nối nền)
+như log #1 của KW902/OBDII/Vgate — nên khuyến nghị thu thêm 1 log Classic dài
+hơn (>10 phút, có khoá màn hình) cho KW906 trước khi khẳng định chắc trên trang
+supported-devices.
+
+Có một file log rời chưa liên quan trực tiếp tới KW906
+(`obd-fixtures/obd-session-log/notedri-obd-session.json`, chưa track trong git,
+device `Android-Vlink ... (classic)`, 2026-07-27) — đây là log Vgate/Android-Vlink
+Classic từ lúc phát triển tính năng SPP, không phải KW906, không đưa vào bảng
+so sánh trên nhưng có thể xoá hoặc giữ làm tư liệu tham khảo thêm cho Vgate Classic.
 
 ## Diễn giải
 
@@ -87,7 +126,8 @@ xác minh PIN" thay vì khẳng định hỗ trợ cả 2 transport như KW902.
 ```
 {
   "device": "KONNWEI KW906",
-  "transport": ["ble"],
+  "transport": ["ble", "classic"],
+  "transport_classic_evidence": "confirmed via real session log 2026-07-31, same physical device (MAC 12:34:15:0C:19:93), no protocol errors — but session short (~3.4min), long-term stability not yet verified",
   "elm_firmware": "v1.5",
   "vin_read_mode09": true,
   "live_pid_reliability": "no errors beyond vehicle-level NO DATA (mode 0A)",

@@ -4,6 +4,7 @@
  * mode 0A (permanent) chỉ đọc 1 lần/phiên, freeze frame (mode 02) chụp 1 lần
  * khi mode 03 phát hiện mã MỚI.
  */
+import type { ReadinessStatus } from '../obdParser';
 
 const idleSnapshot = {
   rpm: 800, speedKmh: 0, engineLoadPct: 20, coolantTempC: 84, fuelLevelPct: 50,
@@ -20,6 +21,8 @@ let mockDtcCodes: { code: string; description: string | null }[] = [];
 let mockPendingCodes: { code: string; description: string | null }[] = [];
 let mockPermanentCallCount = 0;
 let mockFreezeFrameCallCount = 0;
+let mockReadiness: ReadinessStatus | null = null;
+let mockReadinessCallCount = 0;
 
 jest.mock('../BleService', () => ({
   bleService: {
@@ -39,6 +42,10 @@ jest.mock('../ObdReader', () => ({
   readPermanentDtcCodes: async () => {
     mockPermanentCallCount++;
     return [];
+  },
+  readReadinessStatus: async () => {
+    mockReadinessCallCount++;
+    return mockReadiness;
   },
   readFreezeFrame: async () => {
     mockFreezeFrameCallCount++;
@@ -76,6 +83,8 @@ describe('obdLiveMonitor - Phase 2: session_phase/driving_seconds', () => {
     mockDtcCodes = [];
     mockPendingCodes = [];
     mockPermanentCallCount = 0;
+    mockReadiness = null;
+    mockReadinessCallCount = 0;
     mockFreezeFrameCallCount = 0;
     jest.useFakeTimers();
   });
@@ -118,6 +127,8 @@ describe('obdLiveMonitor - Phase 2: Mode 07 Pending DTC', () => {
     mockDtcCodes = [];
     mockPendingCodes = [];
     mockPermanentCallCount = 0;
+    mockReadiness = null;
+    mockReadinessCallCount = 0;
     jest.useFakeTimers();
   });
 
@@ -171,6 +182,8 @@ describe('obdLiveMonitor - Phase 2: Mode 0A Permanent DTC (chỉ đọc 1 lần/
     mockDtcCodes = [];
     mockPendingCodes = [];
     mockPermanentCallCount = 0;
+    mockReadiness = null;
+    mockReadinessCallCount = 0;
     jest.useFakeTimers();
   });
 
@@ -195,6 +208,8 @@ describe('obdLiveMonitor - Phase 2: Freeze Frame (mode 02) khi có DTC MỚI', (
     mockDtcCodes = [];
     mockPendingCodes = [];
     mockFreezeFrameCallCount = 0;
+    mockReadiness = null;
+    mockReadinessCallCount = 0;
     jest.useFakeTimers();
   });
 
@@ -233,5 +248,63 @@ describe('obdLiveMonitor - Phase 2: Freeze Frame (mode 02) khi có DTC MỚI', (
     for (let i = 0; i < 100; i++) await tick(); // chạm mốc đọc DTC lần 2 - vẫn cùng mã P0420 (không mới)
 
     expect(mockFreezeFrameCallCount).toBe(1);
+  });
+});
+
+describe('obdLiveMonitor - Readiness (Mode 01 PID 01, chỉ đọc 1 lần/phiên)', () => {
+  beforeEach(() => {
+    mockPhaseSnapshot = idleSnapshot;
+    mockDtcCodes = [];
+    mockPendingCodes = [];
+    mockReadiness = null;
+    mockReadinessCallCount = 0;
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    obdLiveMonitor.stop();
+    jest.useRealTimers();
+  });
+
+  it('đọc đúng 1 lần dù phiên poll qua nhiều vòng kiểm DTC (poll 2 và mốc 5 phút)', async () => {
+    obdLiveMonitor.start(1);
+    await tick(); // poll 1
+    await tick(); // poll 2 - lần đọc đầu tiên (mode 03/07/0A/0101)
+    for (let i = 0; i < 100; i++) await tick(); // chạm mốc DTC_EVERY_N_POLLS lần 2
+
+    expect(mockReadinessCallCount).toBe(1);
+  });
+
+  it('MIL sáng + 2 monitor supported (1 ready, 1 chưa) -> đúng mil_on/readiness_ready_count/readiness_supported_count trong summary', async () => {
+    mockReadiness = {
+      milOn: true,
+      dtcCount: 1,
+      ignitionType: 'spark',
+      monitors: [
+        { key: 'catalyst', supported: true, ready: true },
+        { key: 'evapSystem', supported: true, ready: false },
+        { key: 'egrSystem', supported: false, ready: true },
+      ],
+    };
+    obdLiveMonitor.start(1);
+    await tick();
+    await tick();
+
+    const summary = buildSessionSummary();
+    expect(summary!.mil_on).toBe(true);
+    expect(summary!.readiness_ready_count).toBe(1);
+    expect(summary!.readiness_supported_count).toBe(2);
+  });
+
+  it('xe không phản hồi Mode 01 PID 01 -> 3 field readiness đều null trong summary, không throw', async () => {
+    mockReadiness = null;
+    obdLiveMonitor.start(1);
+    await tick();
+    await tick();
+
+    const summary = buildSessionSummary();
+    expect(summary!.mil_on).toBeNull();
+    expect(summary!.readiness_ready_count).toBeNull();
+    expect(summary!.readiness_supported_count).toBeNull();
   });
 });

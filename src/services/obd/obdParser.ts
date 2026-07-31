@@ -204,6 +204,64 @@ export function parseSupportedPids(response: string, basePid: number): string[] 
   return pids;
 }
 
+export type ReadinessMonitor = { key: string; supported: boolean; ready: boolean };
+
+export type ReadinessStatus = {
+  milOn: boolean;
+  dtcCount: number;
+  ignitionType: 'spark' | 'compression';
+  monitors: ReadinessMonitor[];
+};
+
+// Thứ tự 8 monitor đặc thù theo loại máy trong byte C (supported)/D (chưa xong)
+// của Mode 01 PID 01 - bit thứ i (0-based) tương ứng monitor thứ i trong mảng.
+// Đối chiếu theo bảng chuẩn SAE J1979/ISO 15031-5, cùng cách python-OBD
+// (decoders.py, thư viện OBD2 phổ biến đã kiểm chứng với xe thật) triển khai -
+// KHÔNG tự suy đoán bit layout.
+// Bit 4 (A/C refrigerant) bị SAE đánh dấu reserved/obsolete ở bản sửa đổi sau -
+// bỏ qua như 2 bit reserved của compression, tránh hiện 1 monitor không đáng
+// tin cho người dùng.
+const SPARK_TESTS = [
+  'catalyst', 'heatedCatalyst', 'evapSystem', 'secondaryAirSystem',
+  'reserved3', 'o2Sensor', 'o2SensorHeater', 'egrSystem',
+];
+const COMPRESSION_TESTS = [
+  'nmhcCatalyst', 'noxScr', 'reserved1', 'boostPressure',
+  'reserved2', 'exhaustGasSensor', 'pmFilter', 'egrVvtSystem',
+];
+
+/**
+ * Mode 01 PID 01 - "Monitor status since DTCs cleared": MIL, số DTC, và trạng
+ * thái sẵn sàng của các monitor khí thải (dùng để ước lượng khả năng đạt đăng
+ * kiểm). Byte A = MIL/DTC count; byte B = 3 monitor CHUNG (misfire/fuel
+ * system/component) + cờ loại máy (bit3: 0=spark, 1=compression); byte C/D =
+ * 8 monitor ĐẶC THÙ theo loại máy (supported/chưa hoàn tất).
+ */
+export function parseReadinessStatus(response: string): ReadinessStatus | null {
+  const bytes = extractPayload(response, '01', '01');
+  if (!bytes || bytes.length < 4) return null;
+
+  const [a, bByte, c, d] = bytes;
+  const milOn = (a & 0x80) !== 0;
+  const dtcCount = a & 0x7f;
+  const ignitionType: 'spark' | 'compression' = (bByte & 0x08) !== 0 ? 'compression' : 'spark';
+
+  const monitors: ReadinessMonitor[] = [
+    { key: 'misfire', supported: (bByte & 0x01) !== 0, ready: (bByte & 0x10) === 0 },
+    { key: 'fuelSystem', supported: (bByte & 0x02) !== 0, ready: (bByte & 0x20) === 0 },
+    { key: 'components', supported: (bByte & 0x04) !== 0, ready: (bByte & 0x40) === 0 },
+  ];
+
+  const specificTests = ignitionType === 'spark' ? SPARK_TESTS : COMPRESSION_TESTS;
+  specificTests.forEach((key, i) => {
+    if (key.startsWith('reserved')) return;
+    const bit = 1 << i;
+    monitors.push({ key, supported: (c & bit) !== 0, ready: (d & bit) === 0 });
+  });
+
+  return { milOn, dtcCount, ignitionType, monitors };
+}
+
 export type PidRange = { min: number; max: number };
 
 // Ngưỡng vật lý hợp lý cho xe con (bài học fixture #5: parser tin tuyệt đối giá
@@ -229,6 +287,9 @@ export const PID_PLAUSIBLE_RANGE: Record<string, PidRange> = {
   '46': { min: -40, max: 100 },   // Ambient air temperature °C
   '5C': { min: -40, max: 150 },   // Engine oil temperature °C
   '5E': { min: 0, max: 3276.75 }, // Fuel rate L/h
+  '07': { min: -100, max: 100 },  // Long term fuel trim B1 %
+  '14': { min: 0, max: 1.275 },   // O2 Sensor B1S1 voltage V (byte max 255/200)
+  '33': { min: 0, max: 120 },     // Absolute barometric pressure kPa
 };
 
 /**

@@ -23,10 +23,12 @@ Outputs: - Overall Score - System Scores - Trend - Recommendations
 
 ## Feature 2 - Smart Diagnosis
 
-Inputs: - DTC - Live Data - Timeline
+Inputs: - DTC - Live Data - Timeline - Readiness Status (MIL + I/M
+monitor readiness, Mode 01 PID 01)
 
 Outputs: - Diagnosis - Confidence - Can Continue Driving - Repair Cost -
-Blog - FAQ - Checklist
+Blog - FAQ - Checklist - Clear DTC (Mode 04, user-triggered, does not
+fix root cause)
 
 ------------------------------------------------------------------------
 
@@ -48,7 +50,8 @@ Outputs: - Cooling Score - Warm-up Trend - Overheat Warning
 
 ## Feature 5 - Fuel System Health
 
-Inputs: - Fuel Trim - MAF/MAP
+Inputs: - Fuel Trim (Short-term + Long-term B1) - MAF/MAP - O2 Sensor
+Voltage (B1S1) - Barometric Pressure
 
 Outputs: - Fuel Health - Possible Causes - Recommendations
 
