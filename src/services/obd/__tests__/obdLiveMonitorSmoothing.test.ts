@@ -27,6 +27,7 @@ jest.mock('../ObdReader', () => ({
   readDtcCodes: async () => [],
   readPendingDtcCodes: async () => [],
   readPermanentDtcCodes: async () => [],
+  readReadinessStatus: async () => null,
   readFreezeFrame: async () => ({
     rpm: null, speedKmh: null, coolantTempC: null,
     engineLoadPct: null, fuelTrimShortB1Pct: null, controlModuleVoltage: null,

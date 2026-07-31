@@ -7,6 +7,8 @@ import {
   readDtcCodes,
   readPendingDtcCodes,
   readPermanentDtcCodes,
+  clearDtcCodes,
+  readReadinessStatus,
   readFreezeFrame,
   reinitElm327AfterReconnect,
   readRpm,
@@ -20,6 +22,7 @@ import {
   DtcCode,
   FreezeFrameSnapshot,
 } from './ObdReader';
+import { ReadinessStatus } from './obdParser';
 import { evaluate, Finding } from './diagnosticEngine';
 import { getActiveRules, refreshRulesFromServer } from './diagnosticRulesStore';
 import { detectDrivingEvents, scoreFromCounts, SpeedSample } from '../drivingScore/drivingScoreEngine';
@@ -149,6 +152,10 @@ let sessionPendingDtcCount = 0;
 // Permanent DTC (mode 0A): gần như tĩnh trong 1 phiên, chỉ đọc 1 lần.
 let sessionPermanentDtcCount = 0;
 let permanentDtcChecked = false;
+// Readiness (Mode 01 PID 01) - gần như tĩnh trong 1 phiên như permanent DTC,
+// chỉ cần đọc 1 LẦN để nuôi session summary (Daily Report), không lặp mỗi 5 phút.
+let readinessChecked = false;
+let lastReadiness: ReadinessStatus | null = null;
 // Freeze Frame (mode 02): chụp cho MỖI mã DTC mới riêng biệt trong phiên (tối
 // đa MAX_FREEZE_FRAMES mã để không tốn round-trip vô hạn trên phiên nhiều lỗi
 // bất thường) - trước đây chỉ chụp cho mã đầu tiên, các mã mới xuất hiện sau
@@ -178,6 +185,7 @@ function resetSessionStats(): void {
   smoothedCoolantTempC = null; smoothedThrottlePct = null; smoothedControlModuleVoltage = null;
   engineRunSeconds = 0; drivingSeconds = 0; currentPhase = 'engine_off';
   sessionPendingDtcCount = 0; sessionPermanentDtcCount = 0; permanentDtcChecked = false;
+  readinessChecked = false; lastReadiness = null;
   freezeFrames = {};
   lastConfirmedDtc = []; lastPendingDtc = []; lastPermanentDtc = [];
   sessionCapability = null;
@@ -215,6 +223,16 @@ export function buildSessionSummary(): Record<string, unknown> | null {
     session_phase: currentPhase,
     pending_dtc_count: sessionPendingDtcCount,
     permanent_dtc_count: sessionPermanentDtcCount,
+    // Readiness (Mode 01 PID 01, đọc 1 lần/phiên) - state cuối phiên, KHÔNG
+    // phải trung bình/tích luỹ nên backend chỉ cần ghi đè lần kết nối gần nhất
+    // (không cần sửa mergeSummary() whitelist avg/max/min).
+    mil_on: lastReadiness ? lastReadiness.milOn : null,
+    readiness_ready_count: lastReadiness
+      ? lastReadiness.monitors.filter((m) => m.supported && m.ready).length
+      : null,
+    readiness_supported_count: lastReadiness
+      ? lastReadiness.monitors.filter((m) => m.supported).length
+      : null,
     // Giữ freeze_frame (số ít, mã ĐẦU tiên) cho phía tiêu thụ cũ không đổi -
     // freeze_frames (số nhiều, theo mã) là dữ liệu mới, đầy đủ hơn.
     freeze_frame: Object.values(freezeFrames)[0] ?? null,
@@ -361,6 +379,98 @@ async function pollSlowTier(): Promise<void> {
   lastFuelRateAt = fuelRateLPerHour !== null ? now : null;
 }
 
+// Đọc lại DTC xác nhận (03)/đang hình thành (07)/vĩnh viễn (0A), update state
+// + notify listeners + báo server mã mới. Tách riêng khỏi poll() để gọi lại
+// được ngay sau clearDtcAndRefresh() (Mode 04), không chỉ theo nhịp poll.
+//
+// Rà soát (code review): trước đây poll() (mỗi ~3s, tới gate DTC ở pollCount
+// ===2 hoặc mỗi 100 vòng) và clearDtcAndRefresh() (user bấm "Xoá mã lỗi") có
+// thể gọi hàm này ĐỒNG THỜI - không có guard nào giống `inFlight` mà poll()
+// tự dùng cho chính nó. BLE queue serialize được LỆNH (không hỏng dây), nhưng
+// 2 lệnh gọi refreshDtcState() chồng nhau ở tầng JS có thể: đọc/ghi
+// reportedCodes chồng nhau (báo trùng 1 mã lên server), chụp freeze frame
+// trùng lặp, và notify listener 2 lần cho 1 hành động người dùng cảm nhận là
+// MỘT. `scheduleDtcRefresh()` xâu chuỗi mọi lệnh gọi qua 1 promise chain để
+// đảm bảo chạy TUẦN TỰ - đúng bản chất kênh BLE vốn cũng chỉ serial 1 lệnh.
+let dtcRefreshChain: Promise<void> = Promise.resolve();
+function scheduleDtcRefresh(): Promise<void> {
+  const next = dtcRefreshChain.then(() => refreshDtcState());
+  // .catch() trên chain nội bộ để 1 lần refresh lỗi không kẹt chain mãi cho
+  // các lần gọi SAU - nhưng promise trả về cho CALLER vẫn giữ nguyên `next`
+  // (chưa .catch) để lỗi thật vẫn lan lên đúng chỗ gọi.
+  dtcRefreshChain = next.catch(() => {});
+  return next;
+}
+
+async function refreshDtcState(): Promise<void> {
+  const codes = await readDtcCodes();
+  lastConfirmedDtc = codes;
+  if (codes.length > 0) {
+    sessionDtcCount = codes.length;
+    dtcListeners.forEach((fn) => fn(codes));
+    dtcLog.info('mode 03 confirmed DTC', codes.map((c) => c.code));
+    // Báo server các mã CHƯA báo trong phiên này (fire-and-forget)
+    const fresh = codes.filter((c) => !reportedCodes.has(c.code));
+    // Freeze Frame (mode 02): chụp thông số ECU cho MỖI mã MỚI riêng biệt
+    // (tối đa MAX_FREEZE_FRAMES/phiên) - trước đây chỉ chụp mã đầu tiên.
+    for (const c of fresh) {
+      if (Object.keys(freezeFrames).length >= MAX_FREEZE_FRAMES) break;
+      if (freezeFrames[c.code]) continue;
+      freezeFrames[c.code] = await readFreezeFrame();
+      dtcLog.info('freeze frame captured', c.code);
+    }
+    if (fresh.length > 0 && activeVehicleId) {
+      fresh.forEach((c) => reportedCodes.add(c.code));
+      obdApi.reportDtc(activeVehicleId, fresh).catch(() => {});
+    }
+  }
+  // Thông báo đẩy mã lỗi mới - dùng bộ nhớ BỀN VỮNG riêng (không phải
+  // reportedCodes ở trên, chỉ sống trong phiên) nên không báo lại spam mỗi lần
+  // kết nối lại dongle cho 1 lỗi user chưa/không sửa; và tự "quên" mã đã biến
+  // mất (xe đã sửa) để nếu tái xuất hiện sau này vẫn coi là mới (rà soát 17/7).
+  if (activeVehicleId) {
+    syncDtcNotifications(activeVehicleId, codes).catch(() => {});
+  }
+
+  // Mode 07 - Pending DTC: cùng nhịp mode 03 (đang hình thành, đổi liên
+  // tục) nhưng KHÔNG báo server/không gộp dtc_count chính thức - ý nghĩa
+  // khác DTC đã xác nhận, tránh báo động giả ("Phát hiện lỗi đang hình thành").
+  const pending = await readPendingDtcCodes();
+  lastPendingDtc = pending;
+  // Rà soát 16/7: gán lại toàn bộ (không chỉ khi length>0) - mã đang hình
+  // thành có thể tự hết giữa phiên; trước đây chỉ set khi >0 nên count kẹt
+  // ở đỉnh cũ, không bao giờ về 0 dù xe đã sạch mã pending.
+  sessionPendingDtcCount = pending.length;
+  if (pending.length > 0) {
+    pendingDtcListeners.forEach((fn) => fn(pending));
+    dtcLog.info('mode 07 pending DTC (đang hình thành)', pending.map((c) => c.code));
+  }
+
+  // Mode 0A - Permanent DTC: gần như tĩnh trong 1 phiên (chỉ tự xoá sau
+  // nhiều chu kỳ lái đạt chuẩn) - chỉ cần đọc 1 LẦN, không lặp mỗi 5 phút
+  // như mode 03/07 (đỡ round-trip BLE vô ích cho dữ liệu hiếm khi đổi).
+  if (!permanentDtcChecked) {
+    permanentDtcChecked = true;
+    const permanent = await readPermanentDtcCodes();
+    lastPermanentDtc = permanent;
+    if (permanent.length > 0) {
+      sessionPermanentDtcCount = permanent.length;
+      permanentDtcListeners.forEach((fn) => fn(permanent));
+      dtcLog.info('mode 0A permanent DTC', permanent.map((c) => c.code));
+    }
+  }
+
+  // Mode 01 PID 01 - Readiness (MIL + monitor khí thải): cũng gần như tĩnh
+  // trong 1 phiên, chỉ đọc 1 LẦN để nuôi session summary (Daily Report).
+  if (!readinessChecked) {
+    readinessChecked = true;
+    lastReadiness = await readReadinessStatus();
+    if (lastReadiness) {
+      dtcLog.info('mode 0101 readiness', { milOn: lastReadiness.milOn, dtcCount: lastReadiness.dtcCount });
+    }
+  }
+}
+
 async function poll(): Promise<void> {
   if (inFlight || !bleService.isConnected()) return;
 
@@ -494,62 +604,7 @@ async function poll(): Promise<void> {
 
     // DTC: sớm ở vòng 2 rồi mỗi ~5 phút
     if (pollCount === 2 || pollCount % DTC_EVERY_N_POLLS === 0) {
-      const codes = await readDtcCodes();
-      lastConfirmedDtc = codes;
-      if (codes.length > 0) {
-        sessionDtcCount = codes.length;
-        dtcListeners.forEach((fn) => fn(codes));
-        dtcLog.info('mode 03 confirmed DTC', codes.map((c) => c.code));
-        // Báo server các mã CHƯA báo trong phiên này (fire-and-forget)
-        const fresh = codes.filter((c) => !reportedCodes.has(c.code));
-        // Freeze Frame (mode 02): chụp thông số ECU cho MỖI mã MỚI riêng biệt
-        // (tối đa MAX_FREEZE_FRAMES/phiên) - trước đây chỉ chụp mã đầu tiên.
-        for (const c of fresh) {
-          if (Object.keys(freezeFrames).length >= MAX_FREEZE_FRAMES) break;
-          if (freezeFrames[c.code]) continue;
-          freezeFrames[c.code] = await readFreezeFrame();
-          dtcLog.info('freeze frame captured', c.code);
-        }
-        if (fresh.length > 0 && activeVehicleId) {
-          fresh.forEach((c) => reportedCodes.add(c.code));
-          obdApi.reportDtc(activeVehicleId, fresh).catch(() => {});
-        }
-      }
-      // Thông báo đẩy mã lỗi mới - dùng bộ nhớ BỀN VỮNG riêng (không phải
-      // reportedCodes ở trên, chỉ sống trong phiên) nên không báo lại spam mỗi lần
-      // kết nối lại dongle cho 1 lỗi user chưa/không sửa; và tự "quên" mã đã biến
-      // mất (xe đã sửa) để nếu tái xuất hiện sau này vẫn coi là mới (rà soát 17/7).
-      if (activeVehicleId) {
-        syncDtcNotifications(activeVehicleId, codes).catch(() => {});
-      }
-
-      // Mode 07 - Pending DTC: cùng nhịp mode 03 (đang hình thành, đổi liên
-      // tục) nhưng KHÔNG báo server/không gộp dtc_count chính thức - ý nghĩa
-      // khác DTC đã xác nhận, tránh báo động giả ("Phát hiện lỗi đang hình thành").
-      const pending = await readPendingDtcCodes();
-      lastPendingDtc = pending;
-      // Rà soát 16/7: gán lại toàn bộ (không chỉ khi length>0) - mã đang hình
-      // thành có thể tự hết giữa phiên; trước đây chỉ set khi >0 nên count kẹt
-      // ở đỉnh cũ, không bao giờ về 0 dù xe đã sạch mã pending.
-      sessionPendingDtcCount = pending.length;
-      if (pending.length > 0) {
-        pendingDtcListeners.forEach((fn) => fn(pending));
-        dtcLog.info('mode 07 pending DTC (đang hình thành)', pending.map((c) => c.code));
-      }
-
-      // Mode 0A - Permanent DTC: gần như tĩnh trong 1 phiên (chỉ tự xoá sau
-      // nhiều chu kỳ lái đạt chuẩn) - chỉ cần đọc 1 LẦN, không lặp mỗi 5 phút
-      // như mode 03/07 (đỡ round-trip BLE vô ích cho dữ liệu hiếm khi đổi).
-      if (!permanentDtcChecked) {
-        permanentDtcChecked = true;
-        const permanent = await readPermanentDtcCodes();
-        lastPermanentDtc = permanent;
-        if (permanent.length > 0) {
-          sessionPermanentDtcCount = permanent.length;
-          permanentDtcListeners.forEach((fn) => fn(permanent));
-          dtcLog.info('mode 0A permanent DTC', permanent.map((c) => c.code));
-        }
-      }
+      await scheduleDtcRefresh();
     }
   } catch {
     // Poll lỗi thoáng qua - bỏ qua, vòng sau thử lại
@@ -717,6 +772,38 @@ export const obdLiveMonitor = {
   onVehicleUnresponsive(fn: () => void): () => void {
     vehicleUnresponsiveListeners.add(fn);
     return () => vehicleUnresponsiveListeners.delete(fn);
+  },
+
+  /** Đọc nhanh danh sách DTC gần nhất - dùng để render lần đầu khi màn hình mount, không đợi tick poll. */
+  getLastConfirmedDtc(): DtcCode[] {
+    return lastConfirmedDtc;
+  },
+  getLastPendingDtc(): DtcCode[] {
+    return lastPendingDtc;
+  },
+
+  /**
+   * Mode 04: xoá DTC + tắt đèn check engine, rồi đọc lại NGAY 03/07/0A để UI
+   * cập nhật tức thời (không đợi tới nhịp poll DTC kế tiếp, ~5 phút). Đây là
+   * hành động NGƯỜI DÙNG chủ động bấm nên KHÔNG dùng chung guard
+   * "chỉ notify khi length>0" của refreshDtcState() - phải báo listener kể cả
+   * khi danh sách về rỗng để UI thấy ngay kết quả xoá.
+   */
+  async clearDtcAndRefresh(): Promise<boolean> {
+    const ok = await clearDtcCodes();
+    if (ok) {
+      reportedCodes = new Set();
+      // KHÔNG reset permanentDtcChecked: Mode 0A (permanent DTC) theo đúng
+      // định nghĩa KHÔNG thể xoá bằng Mode 04/scan tool thường (xem comment
+      // readPermanentDtcCodes trong ObdReader.ts) - đọc lại chỉ tốn 1 round-trip
+      // BLE vô ích, không bao giờ phản ánh thay đổi thật từ hành động này.
+      readinessChecked = false; // MIL có thể tắt ngay sau khi xoá - đọc lại luôn, không dùng cache cũ
+      sessionDtcCount = 0; sessionPendingDtcCount = 0;
+      await scheduleDtcRefresh();
+      dtcListeners.forEach((fn) => fn(lastConfirmedDtc));
+      pendingDtcListeners.forEach((fn) => fn(lastPendingDtc));
+    }
+    return ok;
   },
 };
 

@@ -1,9 +1,9 @@
 /**
- * 5 PID (06 fuel trim, 0B áp suất khí nạp, 0F/46 nhiệt độ, 5E tốc độ tiêu hao
- * xăng) đã có decoder trong PID_REGISTRY từ lâu nhưng CHƯA từng được ĐỌC ở đâu
- * (không có reader function, không dùng cho snapshot nào) - phát hiện qua rà
- * soát 14/7 khi làm màn "Xem tất cả thông số kỹ thuật". Test hex tính tay,
- * khớp công thức trong obdParser.PID_REGISTRY.
+ * 8 PID mở rộng (06 fuel trim ngắn hạn, 0B áp suất khí nạp, 0F/46 nhiệt độ,
+ * 5E tốc độ tiêu hao xăng, 07 fuel trim dài hạn, 14 điện áp cảm biến oxy,
+ * 33 áp suất khí quyển) - CHƯA từng được đọc trong live monitor 3s (round-trip
+ * BLE không đáng để tốn cho dữ liệu ít dùng), chỉ dùng cho màn "Xem tất cả
+ * thông số kỹ thuật". Test hex tính tay, khớp công thức trong obdParser.
  */
 const responses: Record<string, string> = {
   '0106': '410690', // (0x90-128)*100/128 = 12.5%
@@ -11,6 +11,9 @@ const responses: Record<string, string> = {
   '010F': '410F32', // 0x32-40 = 10°C
   '0146': '41463C', // 0x3C-40 = 20°C
   '015E': '415E0064', // (0*256+100)/20 = 5.0 L/h
+  '0107': '410790', // long-term fuel trim B1, cùng công thức PID 06 = 12.5%
+  '0114': '41146400', // O2 B1S1: 0x64/200 = 0.5V
+  '0133': '413365', // barometric pressure: 0x65 = 101 kPa
 };
 
 jest.mock('../BleService', () => ({
@@ -29,6 +32,9 @@ const {
   readIntakeAirTemp,
   readAmbientAirTemp,
   readFuelRate,
+  readFuelTrimLongB1,
+  readO2SensorB1S1Voltage,
+  readBarometricPressure,
   readExtendedSnapshot,
   setActivePidWhitelist,
 } = require('../ObdReader');
@@ -56,7 +62,19 @@ describe('ObdReader - 5 PID mở rộng (màn Xem tất cả thông số kỹ th
     expect(await readFuelRate()).toBe(5.0);
   });
 
-  it('readExtendedSnapshot: gộp cả 5 giá trị', async () => {
+  it('readFuelTrimLongB1: cùng công thức PID 06', async () => {
+    expect(await readFuelTrimLongB1()).toBe(12.5);
+  });
+
+  it('readO2SensorB1S1Voltage: byte / 200', async () => {
+    expect(await readO2SensorB1S1Voltage()).toBe(0.5);
+  });
+
+  it('readBarometricPressure: raw byte = kPa', async () => {
+    expect(await readBarometricPressure()).toBe(101);
+  });
+
+  it('readExtendedSnapshot: gộp đủ 8 giá trị', async () => {
     const ext = await readExtendedSnapshot();
     expect(ext).toMatchObject({
       fuelTrimShortB1Pct: 12.5,
@@ -64,6 +82,9 @@ describe('ObdReader - 5 PID mở rộng (màn Xem tất cả thông số kỹ th
       intakeAirTempC: 10,
       ambientAirTempC: 20,
       fuelRateLPerHour: 5.0,
+      fuelTrimLongB1Pct: 12.5,
+      o2SensorB1S1Voltage: 0.5,
+      barometricPressureKpa: 101,
     });
   });
 

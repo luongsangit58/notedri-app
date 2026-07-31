@@ -16,11 +16,22 @@ export type VehicleSnapshot = {
 
 export type Unsubscribe = () => void;
 
+export type VehicleReadinessMonitor = { key: string; supported: boolean; ready: boolean };
+
+export type VehicleReadiness = {
+  milOn: boolean;
+  dtcCount: number;
+  ignitionType: 'spark' | 'compression';
+  monitors: VehicleReadinessMonitor[];
+};
+
 /** Đọc snapshot từ Vehicle Cache - KHÔNG tự poll, chỉ đọc lại giá trị obdLiveMonitor đã có sẵn. */
 export interface IVehicleIO {
   getSnapshot(): VehicleSnapshot | null;
   isConnected(): boolean;
   readDtcCodes(): Promise<{ code: string; description: string | null }[]>;
+  /** Mode 01 PID 01 - đọc trực tiếp từ xe (không cache), giống readDtcCodes(). */
+  readReadinessStatus(): Promise<VehicleReadiness | null>;
   subscribe(cb: (snapshot: VehicleSnapshot) => void): Unsubscribe;
 }
 

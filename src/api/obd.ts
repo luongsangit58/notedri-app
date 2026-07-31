@@ -43,6 +43,11 @@ export type ObdSessionSummary = {
   // fuel rate) không có 2 key này.
   fuel_rate_avg?: number | null;
   fuel_used_liters_est?: number | null;
+  // Optional: Readiness (Mode 01 PID 01, đọc 1 lần/phiên) - phiên cũ không có
+  // 3 key này. State cuối phiên (không phải trung bình/tích luỹ).
+  mil_on?: boolean | null;
+  readiness_ready_count?: number | null;
+  readiness_supported_count?: number | null;
 };
 
 export type ObdSessionRecord = {

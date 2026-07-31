@@ -1,7 +1,7 @@
 import { obdLiveMonitor } from '../services/obd/obdLiveMonitor';
 import { bleService } from '../services/obd/BleService';
-import { readDtcCodes } from '../services/obd/ObdReader';
-import { IVehicleIO, VehicleSnapshot, Unsubscribe } from './platform/types';
+import { readDtcCodes, readReadinessStatus } from '../services/obd/ObdReader';
+import { IVehicleIO, VehicleSnapshot, VehicleReadiness, Unsubscribe } from './platform/types';
 
 /**
  * Wrapper mỏng đọc snapshot từ obdLiveMonitor (docs/nori-agent-plan.md mục 5, 10.1) - KHÔNG
@@ -53,6 +53,11 @@ export class VehicleContext implements IVehicleIO {
   async readDtcCodes(): Promise<{ code: string; description: string | null }[]> {
     if (!bleService.isConnected()) return [];
     return readDtcCodes();
+  }
+
+  async readReadinessStatus(): Promise<VehicleReadiness | null> {
+    if (!bleService.isConnected()) return null;
+    return readReadinessStatus();
   }
 
   subscribe(cb: (snapshot: VehicleSnapshot) => void): Unsubscribe {

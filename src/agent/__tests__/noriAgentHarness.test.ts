@@ -101,6 +101,29 @@ describe('NoriAgent - grounding validator (LLM path, scripted chatFn)', () => {
     expect(result.passed).toBe(true);
   });
 
+  it('vehicle.getReadiness (không có mẫu local, luôn qua LLM): trả lời đúng MIL + số DTC từ tool_result', async () => {
+    // Không có rule local nào cho tool này (cố tình - "đăng kiểm" dễ nhầm với
+    // maintenance.getUpcoming "sắp đến hạn đăng kiểm", xem LocalIntentMatcher.ts) nên câu hỏi
+    // luôn rơi về LLM, dựng tool_use kịch bản sẵn như các tool khác trong nhóm này.
+    const result = await runScenario({
+      name: 'vehicle-getReadiness',
+      vehicle: {
+        readiness: {
+          milOn: true,
+          dtcCount: 1,
+          ignitionType: 'spark',
+          monitors: [{ key: 'catalyst', supported: true, ready: false }],
+        },
+      },
+      chatScript: [
+        toolUseResponse('t1', 'vehicle.getReadiness', {}),
+        textResponse('Đèn check engine đang sáng, xe có 1 mã lỗi đang lưu.'),
+      ],
+      turns: [{ userText: 'xe tôi có đủ điều kiện đăng kiểm không', expectSource: 'llm', expectReplyContains: '1 mã lỗi' }],
+    });
+    expect(result.passed).toBe(true);
+  });
+
   it('allows Vietnamese-formatted numbers ("500.000") even though tool_result has raw digits ("500000")', async () => {
     // Bug thật (ảnh user gửi 2026-07-30): "tiền xăng tháng này hết bao nhiêu" gọi đúng tool thật,
     // nhưng LLM viết tiền theo `toLocaleString('vi-VN')` ("500.000đ") trong khi tool_result là số

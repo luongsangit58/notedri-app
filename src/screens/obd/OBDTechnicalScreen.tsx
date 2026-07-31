@@ -38,6 +38,9 @@ const ROWS: Row[] = [
   { pid: '0F', nameKey: 'obd.stat_intake_temp', unit: '°C', read: (_s, e) => e?.intakeAirTempC ?? null },
   { pid: '46', nameKey: 'obd.stat_ambient_temp', unit: '°C', read: (_s, e) => e?.ambientAirTempC ?? null },
   { pid: '5E', nameKey: 'obd.stat_fuel_rate', unit: ' L/h', read: (_s, e) => e?.fuelRateLPerHour ?? null },
+  { pid: '07', nameKey: 'obd.stat_fuel_trim_long', unit: '%', read: (_s, e) => e?.fuelTrimLongB1Pct ?? null },
+  { pid: '14', nameKey: 'obd.stat_o2_voltage', unit: ' V', read: (_s, e) => e?.o2SensorB1S1Voltage ?? null },
+  { pid: '33', nameKey: 'obd.stat_barometric', unit: ' kPa', read: (_s, e) => e?.barometricPressureKpa ?? null },
 ];
 
 export default function OBDTechnicalScreen() {
