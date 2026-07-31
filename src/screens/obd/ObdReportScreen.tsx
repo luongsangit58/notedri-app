@@ -107,7 +107,7 @@ export default function ObdReportScreen() {
   const t = useT();
   const colors = useColors();
   const queryClient = useQueryClient();
-  const [tab, setTab] = useState<'latest' | 'trend'>('latest');
+  const [tab, setTab] = useState<'latest' | 'trend' | 'history'>('latest');
 
   const { data, isLoading } = useQuery({
     queryKey: ['obd', 'sessions-recent', vehicleId],
@@ -224,6 +224,53 @@ export default function ObdReportScreen() {
               </Text>
             </ScrollView>
           )}
+        </>
+      ) : tab === 'history' ? (
+        <>
+          <TabRow tab={tab} onChange={setTab} />
+          <ScrollView contentContainerStyle={[styles.body, contentWide]}>
+            <Text style={[styles.sessionMeta, { color: colors.textSecondary }]}>
+              {t('obd.report_history_hint', { n: sessions.length })}
+            </Text>
+            {sessions.map((s) => {
+              const sFindings = evaluateSession(s.summary, s.duration_seconds);
+              return (
+                <View key={s.id} style={[styles.historyCard, { backgroundColor: colors.card }]}>
+                  <View style={styles.historyCardHeader}>
+                    <Text style={[styles.historyCardDate, { color: colors.text }]}>
+                      {dayjs(s.connected_at).format('DD/MM/YYYY HH:mm')}
+                    </Text>
+                    <Text style={[styles.historyCardDevice, { color: colors.textSecondary }]}>
+                      {s.device_name ?? 'OBD2'} · {t('obd.report_history_duration', { min: Math.round(s.duration_seconds / 60) })}
+                    </Text>
+                  </View>
+                  {sFindings.length === 0 ? (
+                    <View style={styles.historyOkRow}>
+                      <FontAwesome5 name="check-circle" size={12} color="#22C55E" solid />
+                      <Text style={[styles.historyOkText, { color: '#22C55E' }]}>{t('obd.report_all_good')}</Text>
+                    </View>
+                  ) : (
+                    sFindings.map((f) => (
+                      <View key={f.ruleId} style={styles.historyFindingRow}>
+                        <FontAwesome5
+                          name={f.can_drive === 'stop' ? 'hand-paper' : 'exclamation-triangle'}
+                          size={11}
+                          color={f.severity === 'critical' ? '#EF4444' : '#F59E0B'}
+                          solid
+                        />
+                        <Text style={[styles.historyFindingText, { color: colors.text }]} numberOfLines={1}>
+                          {f.title_vi}
+                        </Text>
+                      </View>
+                    ))
+                  )}
+                </View>
+              );
+            })}
+            <Text style={[styles.disclaimer, { color: colors.textSecondary }]}>
+              {t('obd.report_disclaimer')}
+            </Text>
+          </ScrollView>
         </>
       ) : (
         <>
@@ -347,19 +394,26 @@ export default function ObdReportScreen() {
   );
 }
 
-// Toggle "Phiên gần nhất" / "Xu hướng" (E2) - không tạo route mới, giữ deep link cũ
-function TabRow({ tab, onChange }: { tab: 'latest' | 'trend'; onChange: (t: 'latest' | 'trend') => void }) {
+const TAB_LABEL_KEY: Record<'latest' | 'trend' | 'history', string> = {
+  latest: 'obd.report_tab_latest',
+  trend: 'obd.report_tab_trend',
+  history: 'obd.report_tab_history',
+};
+
+// Toggle "Phiên gần nhất" / "Lịch sử" / "Xu hướng" (E2, +history 31/7) -
+// không tạo route mới, giữ deep link cũ.
+function TabRow({ tab, onChange }: { tab: 'latest' | 'trend' | 'history'; onChange: (t: 'latest' | 'trend' | 'history') => void }) {
   const t = useT();
   const colors = useColors();
   return (
     <View style={[styles.tabRow, { backgroundColor: colors.card }]}>
-      {(['latest', 'trend'] as const).map((key) => (
+      {(['latest', 'history', 'trend'] as const).map((key) => (
         <TouchableOpacity
           key={key}
           style={[styles.tabBtn, tab === key && { backgroundColor: colors.primary }]}
           onPress={() => onChange(key)}>
           <Text style={[styles.tabBtnText, { color: tab === key ? '#fff' : colors.textSecondary }]}>
-            {t(key === 'latest' ? 'obd.report_tab_latest' : 'obd.report_tab_trend')}
+            {t(TAB_LABEL_KEY[key] as any)}
           </Text>
         </TouchableOpacity>
       ))}
@@ -394,4 +448,12 @@ const styles = StyleSheet.create({
   trendCard: { flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: 10, padding: 12 },
   trendText: { fontSize: 13, flex: 1 },
   disclaimer: { fontSize: 11, lineHeight: 16, marginTop: 8, fontStyle: 'italic' },
+  historyCard: { borderRadius: 12, padding: 14, gap: 6 },
+  historyCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 4 },
+  historyCardDate: { fontSize: 13, fontWeight: '700' },
+  historyCardDevice: { fontSize: 11 },
+  historyOkRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  historyOkText: { fontSize: 12, fontWeight: '600' },
+  historyFindingRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  historyFindingText: { fontSize: 12, flex: 1 },
 });

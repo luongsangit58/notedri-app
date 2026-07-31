@@ -207,6 +207,37 @@ function debounceVoltageFindings(raw: Finding[]): Finding[] {
   return raw.filter((f) => !VOLTAGE_DEBOUNCE_RULE_IDS.has(f.ruleId) || voltageDebouncedActive.has(f.ruleId));
 }
 
+// Rà soát 31/7 (báo cáo user: cảnh báo hiện rất nhanh rồi mất, user chưa kịp
+// đọc/thao tác): SafetyAlerts.tsx/ObdSystemHealthScreen không có timer tự ẩn -
+// chúng chỉ mirror TRỰC TIẾP mảng findings mỗi lần onFindings() bắn ra, nên hễ
+// điều kiện gốc hết đúng ở lần poll kế (~3s) là banner biến mất ngay lập tức.
+// Đây là lớp GIỮ HIỂN THỊ (áp dụng SAU debounceVoltageFindings, cho MỌI rule -
+// không riêng điện áp): 1 finding đã xuất hiện được "khoá" hiển thị tối thiểu
+// STICKY_HOLD_MS kể từ lần cuối nó thật sự đúng, dù raw đã hết đúng ngay sau
+// đó. Không có timer JS nào ở đây (tránh phụ thuộc setInterval khi app nền) -
+// chỉ so sánh mốc thời gian mỗi lần poll, giống cách BACKGROUND_GAP_THRESHOLD_MS
+// đã làm phía trên.
+const STICKY_HOLD_MS = 20000; // 20s - đủ đọc tiêu đề+hành động ngắn, không giữ quá lâu che tình trạng đã hết
+const findingLastTrueAt: Record<string, number> = {};
+let stickyFindingObjs: Record<string, Finding> = {};
+
+function applyStickyHold(raw: Finding[]): Finding[] {
+  const now = Date.now();
+  for (const f of raw) findingLastTrueAt[f.ruleId] = now;
+
+  const rawById = new Map(raw.map((f) => [f.ruleId, f]));
+  const nextObjs: Record<string, Finding> = {};
+  const ids = new Set([...rawById.keys(), ...Object.keys(stickyFindingObjs)]);
+  for (const id of ids) {
+    const lastTrue = findingLastTrueAt[id];
+    if (lastTrue !== undefined && now - lastTrue < STICKY_HOLD_MS) {
+      nextObjs[id] = rawById.get(id) ?? stickyFindingObjs[id];
+    }
+  }
+  stickyFindingObjs = nextObjs;
+  return Object.values(stickyFindingObjs);
+}
+
 function feed(agg: Agg, v: number | null): void {
   if (v === null) return;
   agg.sum += v; agg.n += 1;
@@ -231,6 +262,8 @@ function resetSessionStats(): void {
   sessionStartedAtMs = Date.now();
   for (const id of VOLTAGE_DEBOUNCE_RULE_IDS) delete voltageDebounceCounters[id];
   voltageDebouncedActive = new Set();
+  for (const id in findingLastTrueAt) delete findingLastTrueAt[id];
+  stickyFindingObjs = {};
   lastPollAt = null; backgroundGapCount = 0; backgroundGapSecondsTotal = 0;
   consecutiveAllNullPolls = 0; vehicleUnresponsiveNotified = false;
   obdSessionStateMachine.clearHistory();
@@ -655,8 +688,9 @@ async function poll(): Promise<void> {
     }
 
     // Rule engine trên từng snapshot (hàm thuần, rẻ) - debounce riêng rule điện
-    // áp trước khi báo cho UI/listener (xem debounceVoltageFindings).
-    const findings = debounceVoltageFindings(evaluate(getActiveRules(), {
+    // áp trước khi báo cho UI/listener (xem debounceVoltageFindings), rồi giữ
+    // hiển thị tối thiểu STICKY_HOLD_MS cho MỌI finding (xem applyStickyHold).
+    const findings = applyStickyHold(debounceVoltageFindings(evaluate(getActiveRules(), {
       rpm: snapshot.rpm,
       speedKmh: snapshot.speedKmh,
       engineLoadPct: snapshot.engineLoadPct,
@@ -664,7 +698,7 @@ async function poll(): Promise<void> {
       throttlePct: snapshot.throttlePct,
       controlModuleVoltage: snapshot.controlModuleVoltage,
       engineRunSeconds,
-    }));
+    })));
     findingListeners.forEach((fn) => fn(findings));
     findings.forEach((f) => sessionFindingIds.add(f.ruleId));
 
