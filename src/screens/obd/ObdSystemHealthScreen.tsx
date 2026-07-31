@@ -114,23 +114,26 @@ function SystemCard({ sys }: { sys: SystemHealth }) {
 function useDtcState() {
   const [confirmed, setConfirmed] = useState<DtcCode[]>(() => obdLiveMonitor.getLastConfirmedDtc());
   const [pending, setPending] = useState<DtcCode[]>(() => obdLiveMonitor.getLastPendingDtc());
+  const [permanent, setPermanent] = useState<DtcCode[]>(() => obdLiveMonitor.getLastPermanentDtc());
 
   useEffect(() => {
     const offConfirmed = obdLiveMonitor.onDtcFound(setConfirmed);
     const offPending = obdLiveMonitor.onPendingDtcFound(setPending);
+    const offPermanent = obdLiveMonitor.onPermanentDtcFound(setPermanent);
     return () => {
       offConfirmed();
       offPending();
+      offPermanent();
     };
   }, []);
 
-  return { confirmed, pending };
+  return { confirmed, pending, permanent };
 }
 
 function DtcCard({ isConnected, onCleared }: { isConnected: boolean; onCleared: () => void }) {
   const colors = useColors();
   const t = useT();
-  const { confirmed, pending } = useDtcState();
+  const { confirmed, pending, permanent } = useDtcState();
   const [clearing, setClearing] = useState(false);
   // Rà soát (code review): tránh setState sau khi màn hình đã unmount (user
   // rời màn giữa lúc đang chờ clearDtcAndRefresh()) - Alert.alert là API toàn
@@ -138,7 +141,7 @@ function DtcCard({ isConnected, onCleared }: { isConnected: boolean; onCleared: 
   const mountedRef = React.useRef(true);
   useEffect(() => () => { mountedRef.current = false; }, []);
 
-  const hasAny = confirmed.length > 0 || pending.length > 0;
+  const hasAny = confirmed.length > 0 || pending.length > 0 || permanent.length > 0;
   const canClear = isConnected && confirmed.length > 0 && !clearing;
   const borderColor = confirmed.length > 0 ? '#EF4444' : pending.length > 0 ? '#F59E0B' : '#22C55E';
 
@@ -193,6 +196,22 @@ function DtcCard({ isConnected, onCleared }: { isConnected: boolean; onCleared: 
               {pending.map((c) => (
                 <Text key={c.code} style={{ color: colors.textSecondary, fontSize: 13 }}>{c.code}</Text>
               ))}
+            </View>
+          )}
+          {permanent.length > 0 && (
+            <View style={{ gap: 3 }}>
+              <Text style={[styles.dtcGroupLabel, { color: colors.textSecondary }]}>{t('obd.dtc_permanent')}</Text>
+              {permanent.map((c) => {
+                const info = lookupDtcOffline(c.code);
+                return (
+                  <Text key={c.code} style={{ color: colors.text, fontSize: 13 }}>
+                    {c.code}{info.known ? ` — ${info.title_vi}` : ''}
+                  </Text>
+                );
+              })}
+              <Text style={[styles.disclaimer, { color: colors.textSecondary }]}>
+                {t('obd.dtc_permanent_note')}
+              </Text>
             </View>
           )}
         </View>

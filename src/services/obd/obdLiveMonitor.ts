@@ -168,6 +168,45 @@ let lastPermanentDtc: DtcCode[] = [];
 let sessionCapability: VehicleCapability | null = null;
 let sessionStartedAtMs: number | null = null;
 
+// Rà soát 31/7 (báo cáo user: cảnh báo điện áp thấp xuất hiện rồi tắt liên
+// tục): evaluate() chạy trên RAW từng poll (3s/lần) - 1 mẫu dip tải điện tức
+// thời (quạt làm mát/lốc AC bật, đèn pha...) đủ kích rule rồi tắt ngay ở mẫu
+// kế, dù KHÔNG phải máy phát có vấn đề thật. Nguồn ngành xác nhận dip tạm thời
+// xuống ~13V khi tải tăng đột ngột lúc không tải (idle) là BÌNH THƯỜNG
+// (underhoodservice.com - alternator low voltage; diễn đàn kỹ thuật xe về
+// voltage drop khi AC/quạt bật) - kỹ thuật viên đọc đồng hồ đo LIÊN TỤC theo
+// thời gian chứ không kết luận từ 1 lần đọc tức thời, evaluate() (hàm thuần,
+// vô trạng thái) không tự làm được việc này. Chỉ debounce 3 rule ĐIỆN ÁP (tín
+// hiệu analog dễ dao động theo tải) - rule khác (nhiệt độ...) có quán tính vật
+// lý riêng và cần báo tức thời khi vượt ngưỡng thật, không debounce thêm.
+const VOLTAGE_DEBOUNCE_RULE_IDS = new Set([
+  'charging-voltage-low', 'charging-voltage-critical-low', 'charging-voltage-high',
+]);
+// 2 lần liên tiếp ở nhịp poll 3s (~6s bền vững) - không có con số chuẩn từ tài
+// liệu ngành (viết cho kỹ thuật viên đọc đồng hồ tay, không định nghĩa số giây
+// cụ thể), chọn đủ để loại dip tải tức thời (thường <3-5s) mà không trễ quá
+// lâu khi máy phát thật sự hỏng.
+const VOLTAGE_DEBOUNCE_CONFIRM_TICKS = 2;
+const voltageDebounceCounters: Record<string, number> = {};
+let voltageDebouncedActive = new Set<string>();
+
+/** Chỉ cho 3 rule điện áp qua sau khi RAW đã kích liên tiếp đủ số nhịp poll. */
+function debounceVoltageFindings(raw: Finding[]): Finding[] {
+  const rawIds = new Set(raw.map((f) => f.ruleId));
+  for (const id of VOLTAGE_DEBOUNCE_RULE_IDS) {
+    if (rawIds.has(id)) {
+      voltageDebounceCounters[id] = (voltageDebounceCounters[id] ?? 0) + 1;
+      if (voltageDebounceCounters[id] >= VOLTAGE_DEBOUNCE_CONFIRM_TICKS) {
+        voltageDebouncedActive.add(id);
+      }
+    } else {
+      voltageDebounceCounters[id] = 0;
+      voltageDebouncedActive.delete(id);
+    }
+  }
+  return raw.filter((f) => !VOLTAGE_DEBOUNCE_RULE_IDS.has(f.ruleId) || voltageDebouncedActive.has(f.ruleId));
+}
+
 function feed(agg: Agg, v: number | null): void {
   if (v === null) return;
   agg.sum += v; agg.n += 1;
@@ -190,6 +229,8 @@ function resetSessionStats(): void {
   lastConfirmedDtc = []; lastPendingDtc = []; lastPermanentDtc = [];
   sessionCapability = null;
   sessionStartedAtMs = Date.now();
+  for (const id of VOLTAGE_DEBOUNCE_RULE_IDS) delete voltageDebounceCounters[id];
+  voltageDebouncedActive = new Set();
   lastPollAt = null; backgroundGapCount = 0; backgroundGapSecondsTotal = 0;
   consecutiveAllNullPolls = 0; vehicleUnresponsiveNotified = false;
   obdSessionStateMachine.clearHistory();
@@ -286,6 +327,12 @@ type SessionCheckpoint = {
   vehicleId: number;
   deviceName: string | null;
   startedAt: number;
+  // Mốc GHI checkpoint gần nhất (rà soát 31/7: user nêu ca vài NGÀY mới kết nối
+  // lại OBD) - recoverOrphanedCheckpoint() PHẢI tính duration tới mốc này, không
+  // phải tới lúc phục hồi. Phiên lái thật chỉ 20 phút mà vài ngày sau mới cắm lại
+  // adapter, nếu lấy "now" làm mốc kết thúc thì duration_seconds bị thổi phồng
+  // thành cỡ số giây của "vài ngày", làm sai total_engine_hours/thống kê tích luỹ.
+  lastWriteAt: number;
   summary: Record<string, unknown>;
 };
 
@@ -306,6 +353,7 @@ async function persistCheckpoint(): Promise<void> {
     vehicleId: activeVehicleId,
     deviceName: bleService.getDeviceName(),
     startedAt: sessionStartedAtMs,
+    lastWriteAt: Date.now(),
     summary,
   };
   if (checkpointEpoch !== epochAtStart) return; // stop() đã chạy giữa chừng - đừng ghi đè checkpoint đã bị xoá
@@ -317,7 +365,11 @@ async function recoverOrphanedCheckpoint(): Promise<void> {
     const raw = await AsyncStorage.getItem(CHECKPOINT_KEY);
     if (!raw) return;
     const checkpoint = JSON.parse(raw) as SessionCheckpoint;
-    const durationSeconds = Math.max(0, Math.round((Date.now() - checkpoint.startedAt) / 1000));
+    // Dùng lastWriteAt (checkpoint cũ trước bản vá này có thể thiếu field ->
+    // fallback startedAt, chấp nhận sai số như hành vi cũ) thay vì Date.now():
+    // phục hồi có thể xảy ra rất lâu sau khi phiên thực sự dừng (xem lastWriteAt ở trên).
+    const endedAtMs = checkpoint.lastWriteAt ?? checkpoint.startedAt;
+    const durationSeconds = Math.max(0, Math.round((endedAtMs - checkpoint.startedAt) / 1000));
     await enqueueObdSession({
       vehicle_id: checkpoint.vehicleId,
       device_name: checkpoint.deviceName,
@@ -400,6 +452,19 @@ function scheduleDtcRefresh(): Promise<void> {
   // (chưa .catch) để lỗi thật vẫn lan lên đúng chỗ gọi.
   dtcRefreshChain = next.catch(() => {});
   return next;
+}
+
+// Đối chiếu mã vừa xoá (Mode 04 trên xe) với danh sách "chưa xử lý" server
+// đang giữ (GET /obd2/dtc), rồi resolve từng bản ghi khớp code. Server không
+// tự biết việc xoá xảy ra ở tầng adapter/BLE nên phải tự đối chiếu ở đây -
+// không có cách nào khác để 2 phía đồng bộ trạng thái "đã xử lý".
+async function resolveClearedDtcOnServer(vehicleId: number, codes: string[]): Promise<void> {
+  const res = await obdApi.dtcEvents(vehicleId);
+  const records = (res.data as any)?.data ?? [];
+  const matches = records.filter(
+    (r: any) => r && typeof r.id === 'number' && codes.includes(r.code) && !r.resolved_at,
+  );
+  await Promise.all(matches.map((r: any) => obdApi.resolveDtc(r.id).catch(() => {})));
 }
 
 async function refreshDtcState(): Promise<void> {
@@ -589,8 +654,9 @@ async function poll(): Promise<void> {
       lastSpeedSample = curSpeedSample;
     }
 
-    // Rule engine trên từng snapshot (hàm thuần, rẻ)
-    const findings = evaluate(getActiveRules(), {
+    // Rule engine trên từng snapshot (hàm thuần, rẻ) - debounce riêng rule điện
+    // áp trước khi báo cho UI/listener (xem debounceVoltageFindings).
+    const findings = debounceVoltageFindings(evaluate(getActiveRules(), {
       rpm: snapshot.rpm,
       speedKmh: snapshot.speedKmh,
       engineLoadPct: snapshot.engineLoadPct,
@@ -598,7 +664,7 @@ async function poll(): Promise<void> {
       throttlePct: snapshot.throttlePct,
       controlModuleVoltage: snapshot.controlModuleVoltage,
       engineRunSeconds,
-    });
+    }));
     findingListeners.forEach((fn) => fn(findings));
     findings.forEach((f) => sessionFindingIds.add(f.ruleId));
 
@@ -781,6 +847,10 @@ export const obdLiveMonitor = {
   getLastPendingDtc(): DtcCode[] {
     return lastPendingDtc;
   },
+  /** Mode 0A - không xoá được bằng nút "Xoá mã lỗi" (xem clearDtcAndRefresh). */
+  getLastPermanentDtc(): DtcCode[] {
+    return lastPermanentDtc;
+  },
 
   /**
    * Mode 04: xoá DTC + tắt đèn check engine, rồi đọc lại NGAY 03/07/0A để UI
@@ -790,6 +860,7 @@ export const obdLiveMonitor = {
    * khi danh sách về rỗng để UI thấy ngay kết quả xoá.
    */
   async clearDtcAndRefresh(): Promise<boolean> {
+    const clearedCodes = lastConfirmedDtc;
     const ok = await clearDtcCodes();
     if (ok) {
       reportedCodes = new Set();
@@ -802,6 +873,14 @@ export const obdLiveMonitor = {
       await scheduleDtcRefresh();
       dtcListeners.forEach((fn) => fn(lastConfirmedDtc));
       pendingDtcListeners.forEach((fn) => fn(lastPendingDtc));
+      // Báo server các mã VỪA xoá trên xe là đã xử lý (rà soát 31/7: trước đây
+      // Mode 04 chỉ đổi state cục bộ, server không hề biết việc xoá đã xảy ra -
+      // GET /obd2/dtc vẫn coi các mã này là "chưa xử lý" mãi mãi). Fire-and-
+      // forget, KHÔNG chặn kết quả trả về UI: Mode 04 trên xe đã thành công
+      // thật, lỗi mạng lúc đồng bộ server không nên khiến user tưởng xoá thất bại.
+      if (activeVehicleId && clearedCodes.length > 0) {
+        resolveClearedDtcOnServer(activeVehicleId, clearedCodes.map((c) => c.code)).catch(() => {});
+      }
     }
     return ok;
   },

@@ -102,6 +102,10 @@ export const obdApi = {
   reportDtc: (vehicleId: number, codes: Array<{ code: string; description: string | null }>) =>
     client.post('/obd2/dtc', { vehicle_id: vehicleId, codes }),
 
+  // Đánh dấu 1 bản ghi DTC server đã xử lý - gọi sau khi Mode 04 xoá lỗi
+  // thành công trên xe (xem obdLiveMonitor.resolveClearedDtcOnServer).
+  resolveDtc: (id: number) => client.post(`/obd2/dtc/${id}/resolve`),
+
   // Lịch sử phiên gần nhất (đã có summary) cho Daily Report - app tự đánh giá.
   // meta.total_engine_hours (C1): tổng giờ máy tích luỹ mọi phiên.
   // meta.driving_score_stats (rà soát 16/7): điểm lái xe TB 10 phiên gần nhất +
