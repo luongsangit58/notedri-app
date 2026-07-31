@@ -242,7 +242,7 @@ const en = {
   "reports.premium_lock": "Upgrade to Premium to view reports for previous years.",
   "reports.period_year": "Year",
   "reports.period_month": "Month",
-  "reports.period_week": "Week",
+  "reports.period_quarter": "Quarter",
   "reports.period_partial_badge": "Period still in progress - figures may still change",
 
   // Year Review

@@ -50,7 +50,7 @@ function todayStr(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-type ReportPeriodType = 'year' | 'month' | 'week';
+type ReportPeriodType = 'year' | 'month' | 'quarter';
 
 /* ─── stat card ─── */
 function StatCard({
@@ -173,7 +173,7 @@ function YearChips({
   );
 }
 
-/* ─── period-type selector (Năm/Tháng/Tuần) ─── */
+/* ─── period-type selector (Năm/Tháng/Quý) ─── */
 function PeriodTypeChips({
   value,
   onSelect,
@@ -186,7 +186,7 @@ function PeriodTypeChips({
   const options: { key: ReportPeriodType; label: string }[] = [
     { key: 'year', label: t('reports.period_year') },
     { key: 'month', label: t('reports.period_month') },
-    { key: 'week', label: t('reports.period_week') },
+    { key: 'quarter', label: t('reports.period_quarter') },
   ];
   return (
     <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 16, marginBottom: 12 }}>
@@ -306,17 +306,17 @@ function CardRow({
   );
 }
 
-/* ─── period (tuần/tháng) report content ───
-   Nguồn: GET /vehicles/{id}/reports?period=week|month&at=YYYY-MM-DD (xem
-   Api\V1\ReportController::index() + ReportService::periodReport() phía backend -
-   cùng nguồn dữ liệu web Garage đang dùng, chỉ khác tầng trình bày). */
+/* ─── period (tháng/quý) report content ───
+   Nguồn: GET /vehicles/{id}/reports?period=month|quarter&at=YYYY-MM-DD (xem
+   Api\V1\ReportController::index() + ReportService::periodReport()/periodComparison()
+   phía backend - cùng nguồn dữ liệu web Garage đang dùng, chỉ khác tầng trình bày). */
 function PeriodReportContent({
   vehicleId,
   period,
   vehicleCreatedAt,
 }: {
   vehicleId: number;
-  period: 'week' | 'month';
+  period: 'month' | 'quarter';
   vehicleCreatedAt?: string | null;
 }) {
   const colors = useColors();
@@ -346,6 +346,11 @@ function PeriodReportContent({
   const periodStart: string = data.period_start;
   const periodEnd: string = data.period_end;
   const isPartial = data.status === 'partial';
+  const insight: string | undefined = data.insight;
+  const trend: string | null | undefined = data.delta?.trend;
+  const totalCostPct: number | null | undefined = data.delta?.total_cost_pct;
+  const trendColor =
+    trend === 'up' ? colors.error : trend === 'down' ? colors.success : colors.textSecondary;
 
   const prevAt = addDaysStr(periodStart, -1);
   const nextAt = addDaysStr(periodEnd, 1);
@@ -404,10 +409,37 @@ function PeriodReportContent({
         <Text style={{ color: colors.textSecondary, fontSize: 12, marginBottom: 4 }}>
           {t('reports.total_cost')}
         </Text>
-        <Text style={{ color: colors.primary, fontWeight: '800', fontSize: 26 }}>
-          {fmtVnd(summary.total_cost)}
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8 }}>
+          <Text style={{ color: colors.primary, fontWeight: '800', fontSize: 26 }}>
+            {fmtVnd(summary.total_cost)}
+          </Text>
+          {totalCostPct != null && (
+            <Text style={{ color: trendColor, fontWeight: '700', fontSize: 13 }}>
+              {totalCostPct > 0 ? '+' : ''}
+              {totalCostPct}%
+            </Text>
+          )}
+        </View>
       </View>
+
+      {/* insight vs previous period */}
+      {insight ? (
+        <View
+          style={{
+            backgroundColor: colors.surface,
+            borderRadius: 12,
+            padding: 14,
+            marginBottom: 12,
+            flexDirection: 'row',
+            alignItems: 'flex-start',
+            gap: 10,
+          }}>
+          <FontAwesome5 name="lightbulb" size={14} color={trendColor} solid style={{ marginTop: 2 }} />
+          <Text style={{ color: colors.text, fontSize: 13, flex: 1, lineHeight: 18 }}>
+            {insight}
+          </Text>
+        </View>
+      ) : null}
 
       {/* row 1: fuel + service */}
       <View style={{ flexDirection: 'row', gap: 8, marginBottom: 8 }}>
@@ -1053,7 +1085,7 @@ export default function ReportsScreen() {
       ) : effectiveId != null ? (
         <PeriodReportContent
           vehicleId={effectiveId}
-          period={periodType as 'week' | 'month'}
+          period={periodType as 'month' | 'quarter'}
           vehicleCreatedAt={selectedVehicle?.created_at ?? null}
         />
       ) : vehicles.length > 0 ? (

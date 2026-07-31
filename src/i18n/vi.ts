@@ -243,7 +243,7 @@ const vi = {
   "reports.premium_lock": "Nâng cấp Premium để xem báo cáo các năm trước.",
   "reports.period_year": "Năm",
   "reports.period_month": "Tháng",
-  "reports.period_week": "Tuần",
+  "reports.period_quarter": "Quý",
   "reports.period_partial_badge": "Kỳ đang diễn ra - số liệu sẽ còn thay đổi",
 
   // Year Review
