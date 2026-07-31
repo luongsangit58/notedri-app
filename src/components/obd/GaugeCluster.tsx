@@ -29,14 +29,19 @@ import CockpitWeather from './CockpitWeather';
 // riêng back/brand/nút chức năng bên trái-phải ẩn mặc định, chạm màn hình để
 // hiện lại (tự ẩn sau 4s không thao tác) - đúng tinh thần "full hoàn toàn".
 const AUTO_HIDE_MS = 4000;
-// Toolbar chặn trần inset ở mức vừa đủ che thanh điều hướng/status bar của
-// đầu Android ô tô (rà soát 24/7: ROM custom có thể báo inset vài trăm dp) -
-// cùng ngưỡng MAX_SAFE_INSET đã dùng ở OBDDashboardScreen.tsx.
+// Toolbar chặn trần inset ở mức vừa đủ né viền/notch thật, KHÔNG dùng cho
+// giờ/thời tiết (xem CLOCK_INSET_CAP bên dưới - user muốn giờ/thời tiết luôn
+// sát mép trên, không đẩy xuống theo inset báo sai của ROM đầu xe).
 const MAX_TOOLBAR_INSET = 64;
-// Rà soát 30/7 (ảnh thật: dải status bar riêng của đầu Android ô tô - không
-// phải StatusBar app, không ẩn được - cao ~64dp ở góc trên-phải) - đẩy cụm nút
-// chức năng bên phải xuống dưới mốc này, không chồng lên dải đó nữa.
-const RIGHT_COLUMN_TOP = 72;
+// Rà soát 30/7 (góp ý user, ảnh thật màn ngang đầu Android ô tô: đẩy hết
+// giờ/thời tiết + nút chức năng xuống thấp là THỪA - chỉ dải status bar RIÊNG
+// của ROM (không phải StatusBar app, không ẩn được) mới thật sự che nút, và
+// dải đó chỉ nằm ở top. Giờ/thời tiết không cần né - giữ SÁT mép trên (chỉ
+// nhích theo notch thật nếu có, chặn trần rất thấp). Toàn bộ nút chức năng
+// (back/brand + pip/theme/palette/ngắt) dời hẳn XUỐNG ĐÁY màn hình thay vì
+// nằm trên - né dứt điểm dải status bar của ROM mà không cần đoán chiều cao
+// của nó hay xếp cột dọc như trước.
+const CLOCK_INSET_CAP = 12;
 
 // Rà soát 29/7 (góp ý user: toolbar/giờ-thời tiết của theme "Tối giản EV" gần
 // như biến mất - previewColor của theme này là #111111, gần đen, dùng làm
@@ -84,8 +89,9 @@ export default function GaugeCluster({
   // nền đó vẫn cần né vùng hệ thống). Đọc riêng insets ở đây, chỉ áp cho vị
   // trí toolbar/giờ - nền ScrollView bên dưới vẫn full-bleed như cũ.
   const rawInsets = useSafeAreaInsets();
-  const toolbarInsetTop = Math.min(rawInsets.top, MAX_TOOLBAR_INSET);
+  const toolbarInsetBottom = Math.min(rawInsets.bottom, MAX_TOOLBAR_INSET);
   const toolbarInsetSide = Math.min(Math.max(rawInsets.left, rawInsets.right), MAX_TOOLBAR_INSET);
+  const clockInsetTop = Math.min(rawInsets.top, CLOCK_INSET_CAP);
 
   // Nút PiP thủ công (rà soát 24/7: user báo PiP tự động vẫn chưa thấy hoạt
   // động trên đầu Android ô tô cụ thể của họ) - không thể chẩn đoán từ xa liệu
@@ -215,26 +221,27 @@ export default function GaugeCluster({
         pointerEvents="none"
         style={[
           styles.clockPill,
-          { top: 8 + toolbarInsetTop, backgroundColor: toolbarAccent + '33', borderColor: toolbarAccent + '77' },
+          { top: 8 + clockInsetTop, backgroundColor: toolbarAccent + '33', borderColor: toolbarAccent + '77' },
         ]}
       >
         <CockpitClock color={toolbarAccent} fontSize={clockFontSize} />
         <CockpitWeather color={toolbarAccent} fontSize={clockFontSize} />
       </View>
 
-      {/* Rà soát 30/7 (ảnh thật đầu Android ô tô: hàng nút bên phải "tachometer/
-          pip/theme/palette/disconnect" nằm ngang đúng ngay dải status bar RIÊNG
-          của đầu xe (wifi/giờ/loa/thông báo/recents/back của ROM, app không thể
-          ẩn được vì không phải StatusBar của app) - toàn bộ hàng ngang đó bị che
-          khuất, không bấm được. Tách nút back/brand (giữ ở góc trên-trái, dưới
-          dải status bar đó ít va chạm hơn) khỏi cụm nút chức năng bên phải -
-          cụm bên phải xếp DỌC (column) và đẩy xuống thấp hơn (RIGHT_COLUMN_TOP)
-          để nằm dưới hẳn dải status bar của ROM thay vì chồng lên nó. */}
+      {/* Toàn bộ nút chức năng dời hẳn xuống ĐÁY màn hình (xem comment
+          CLOCK_INSET_CAP đầu file) - né dứt điểm dải status bar riêng của ROM
+          đầu Android ô tô (chỉ nằm ở top), không cần đoán chiều cao hay xếp
+          cột dọc như trước. */}
       <Animated.View
         pointerEvents={controlsVisible ? 'box-none' : 'none'}
         style={[
-          styles.backChip,
-          { top: 8 + toolbarInsetTop, left: 12 + toolbarInsetSide, opacity: controlsOpacity },
+          styles.toolbar,
+          {
+            bottom: 8 + toolbarInsetBottom,
+            left: 12 + toolbarInsetSide,
+            right: 12 + toolbarInsetSide,
+            opacity: controlsOpacity,
+          },
         ]}
       >
         <View style={[styles.chip, { backgroundColor: toolbarAccent + '33', borderColor: toolbarAccent + '77' }]}>
@@ -244,41 +251,35 @@ export default function GaugeCluster({
           <FontAwesome5 name="tachometer-alt" size={17} color={toolbarAccent} solid />
           <Text style={styles.brandText}>NoteDri</Text>
         </View>
-      </Animated.View>
 
-      <Animated.View
-        pointerEvents={controlsVisible ? 'box-none' : 'none'}
-        style={[
-          styles.toolbarBtns,
-          { top: RIGHT_COLUMN_TOP + toolbarInsetTop, right: 12 + toolbarInsetSide, opacity: controlsOpacity },
-        ]}
-      >
-        {pipSupported && (
+        <View style={styles.toolbarBtns}>
+          {pipSupported && (
+            <TouchableOpacity
+              onPress={handlePressPip}
+              style={[styles.styleBtn, { backgroundColor: toolbarAccent + '33', borderColor: toolbarAccent + '77' }]}
+            >
+              <FontAwesome5 name="compress" size={18} color={toolbarAccent} solid />
+            </TouchableOpacity>
+          )}
           <TouchableOpacity
-            onPress={handlePressPip}
+            onPress={toggleCockpitMode}
             style={[styles.styleBtn, { backgroundColor: toolbarAccent + '33', borderColor: toolbarAccent + '77' }]}
           >
-            <FontAwesome5 name="compress" size={18} color={toolbarAccent} solid />
+            <FontAwesome5 name={cockpitMode === 'dark' ? 'sun' : 'moon'} size={18} color={toolbarAccent} solid />
           </TouchableOpacity>
-        )}
-        <TouchableOpacity
-          onPress={toggleCockpitMode}
-          style={[styles.styleBtn, { backgroundColor: toolbarAccent + '33', borderColor: toolbarAccent + '77' }]}
-        >
-          <FontAwesome5 name={cockpitMode === 'dark' ? 'sun' : 'moon'} size={18} color={toolbarAccent} solid />
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => setPickerVisible(true)}
-          style={[styles.styleBtn, { backgroundColor: toolbarAccent + '33', borderColor: toolbarAccent + '77' }]}
-        >
-          <FontAwesome5 name="palette" size={18} color={toolbarAccent} solid />
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={onDisconnect}
-          style={[styles.styleBtn, { backgroundColor: '#EF444433', borderColor: '#EF444477' }]}
-        >
-          <FontAwesome5 name="times" size={18} color="#EF4444" solid />
-        </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => setPickerVisible(true)}
+            style={[styles.styleBtn, { backgroundColor: toolbarAccent + '33', borderColor: toolbarAccent + '77' }]}
+          >
+            <FontAwesome5 name="palette" size={18} color={toolbarAccent} solid />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={onDisconnect}
+            style={[styles.styleBtn, { backgroundColor: '#EF444433', borderColor: '#EF444477' }]}
+          >
+            <FontAwesome5 name="times" size={18} color="#EF4444" solid />
+          </TouchableOpacity>
+        </View>
       </Animated.View>
 
       <DashboardStylePicker
@@ -302,8 +303,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 10,
     borderRadius: 20, borderWidth: 1, paddingHorizontal: 16, paddingVertical: 8,
   },
-  backChip: {
+  toolbar: {
     position: 'absolute',
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
   },
   chip: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
@@ -311,7 +313,7 @@ const styles = StyleSheet.create({
   },
   iconBtn: { padding: 2 },
   brandText: { fontSize: 15, fontWeight: '800', letterSpacing: 0.3, color: '#FFFFFF' },
-  toolbarBtns: { position: 'absolute', flexDirection: 'column', gap: 10 },
+  toolbarBtns: { flexDirection: 'row', gap: 10 },
   styleBtn: {
     width: 46, height: 46, borderRadius: 23, borderWidth: 1, alignItems: 'center', justifyContent: 'center',
   },
