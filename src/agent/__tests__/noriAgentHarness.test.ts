@@ -1,5 +1,5 @@
 import { runScenario } from '../platform/TestHarness';
-import { NoriChatResponse } from '../../api/nori';
+import { NoriChatResponse, NoriToolCall } from '../../api/nori';
 
 /**
  * Test tự động cho `NoriAgent` qua `TestHarness` (docs/nori-agent-plan.md mục 7 `TestHarness`) -

@@ -143,7 +143,7 @@ function DtcCard({ isConnected, onCleared }: { isConnected: boolean; onCleared: 
   const borderColor = confirmed.length > 0 ? '#EF4444' : pending.length > 0 ? '#F59E0B' : '#22C55E';
 
   const handleClear = () => {
-    Alert.alert(t('obd.dtc_clear_confirm_title'), t('obd.dtc_clear_confirm_body'), [
+    Alert.alert(t('obd.dtc_clear_confirm_title') || 'Xoá mã lỗi?', t('obd.dtc_clear_confirm_body'), [
       { text: t('common.cancel'), style: 'cancel' },
       {
         text: t('obd.dtc_clear_confirm_cta'),
@@ -154,7 +154,10 @@ function DtcCard({ isConnected, onCleared }: { isConnected: boolean; onCleared: 
           if (!mountedRef.current) return;
           setClearing(false);
           if (ok) onCleared();
-          Alert.alert(ok ? t('obd.dtc_clear_success') : t('obd.dtc_clear_fail'));
+          // Fix #9: Alert title không được rỗng, có thể gây crash.
+          const title = ok ? t('obd.dtc_clear_success') : t('obd.dtc_clear_fail');
+          const body = ok ? t('obd.readiness_disclaimer') : undefined;
+          Alert.alert(title || (ok ? 'Thành công' : 'Thất bại'), body);
         },
       },
     ]);
@@ -235,7 +238,7 @@ function ReadinessCard() {
       <View style={styles.cardHeader}>
         <FontAwesome5 name="clipboard-check" size={15} color={colors.text} />
         <Text style={[styles.cardTitle, { color: colors.text }]}>{t('obd.readiness_title')}</Text>
-        <TouchableOpacity onPress={load} disabled={loading} accessibilityLabel={t('obd.readiness_refresh')}>
+        <TouchableOpacity onPress={load} disabled={loading} accessibilityLabel={t('common.retry')}>
           <FontAwesome5 name="sync" size={13} color={colors.textSecondary} />
         </TouchableOpacity>
       </View>
@@ -247,7 +250,12 @@ function ReadinessCard() {
         <Text style={{ color: colors.textSecondary, fontSize: 13 }}>
           {t('obd.readiness_not_available')}
         </Text>
-      ) : !status && loading ? null : (
+      ) : !status && loading ? (
+        // Fix #5: Hiển thị rõ đang tải, thay vì không hiện gì (trông như lỗi)
+        <Text style={{ color: colors.textSecondary, fontSize: 13, fontStyle: 'italic' }}>
+          {t('common.loading')}
+        </Text>
+      ) : status ? (
         <>
           <Text style={{ color: status.milOn ? '#EF4444' : '#22C55E', fontSize: 14, fontWeight: '700' }}>
             {status.milOn ? t('obd.readiness_mil_on') : t('obd.readiness_mil_off')}
@@ -260,11 +268,11 @@ function ReadinessCard() {
           <View style={styles.readinessMonitorGrid}>
             {status.monitors.map((m) => {
               // 3 trạng thái đúng theo thiết kế gốc: đã xong / chưa xong / xe
-              // không có monitor này (N/A) - trước đây ẨN HẲN monitor N/A,
-              // khiến người dùng không phân biệt được "xe không có" với
-              // "thiếu dữ liệu do lỗi đọc".
+              // không có monitor này (N/A) - Fix #13: trước đây ẨN HẲN monitor
+              // N/A, khiến người dùng không phân biệt được "xe không có" với
+              // "lỗi đọc". Giờ hiện rõ N/A.
               const icon = !m.supported ? 'minus-circle' : m.ready ? 'check-circle' : 'clock';
-              const color = !m.supported ? colors.textSecondary : m.ready ? '#22C55E' : '#F59E0B';
+              const color = !m.supported ? colors.textSecondary : m.ready ? '#22C55E' : '#F59E0B'; // warn
               return (
                 <View key={m.key} style={styles.readinessMonitorRow}>
                   <FontAwesome5 name={icon} size={12} color={color} solid={m.supported} />
@@ -277,7 +285,7 @@ function ReadinessCard() {
           </View>
           <Text style={[styles.disclaimer, { color: colors.textSecondary }]}>{t('obd.readiness_disclaimer')}</Text>
         </>
-      )}
+      ) : null}
     </View>
   );
 }
@@ -316,7 +324,7 @@ export default function ObdSystemHealthScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <FontAwesome5 name="arrow-left" size={18} color={colors.text} />
         </TouchableOpacity>
-        <Text style={[styles.title, { color: colors.text }]}>{t('obd.sys_health_title')}</Text>
+        <Text style={[styles.title, { color: colors.text }]}>{t('obd.dtc_card_title')}</Text>
         <View style={{ width: 32 }} />
       </View>
 
