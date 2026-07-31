@@ -39,7 +39,7 @@
     },
     "android": {
       "package": "com.notedri",
-      "versionCode": 46,
+      "versionCode": 47,
       "googleServicesFile": "./google-services.json",
       "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
