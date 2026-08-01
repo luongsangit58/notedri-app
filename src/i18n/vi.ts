@@ -635,6 +635,8 @@ const vi = {
   "obd.permission_nudge_title": "Cần thêm 1 quyền để hoạt động đầy đủ",
   "obd.permission_nudge_body": "Đọc dữ liệu OBD2 liên tục khi khoá màn hình và ghi hành trình tự động đều cần quyền vị trí \"Luôn cho phép\". Cho phép để bật đầy đủ cả 2 tính năng này.",
   "obd.permission_nudge_cta": "Cho phép",
+  "obd.gps_trip_off_banner": "Hành trình sẽ KHÔNG được tự ghi - thiếu quyền vị trí nền",
+  "obd.gps_trip_off_cta": "Cấp quyền",
   "home.obd_quick_setup": "Kết nối adapter OBD2 cho xe của bạn",
   "home.obd_quick_upsell": "Tính năng Premium - chẩn đoán lỗi xe qua Bluetooth",
   "vehicle_detail.vin_prefill_title": "Đã đọc được số khung xe (VIN) qua OBD",

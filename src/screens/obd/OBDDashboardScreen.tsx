@@ -225,6 +225,34 @@ export default function OBDDashboardScreen() {
   // giác bị hỏi dồn dập. Gộp thành 1 Alert duy nhất, giải thích cả 2 lý do,
   // xin quyền 1 lần rồi áp dụng cho cả 2 mục đích (re-arm keep-alive cho phiên
   // đang chạy + tự bật GPS trip). Chỉ hiện 1 LẦN/xe (gpsTripNudgeKey).
+  // Rà soát 1/8 (user báo: đi nhiều lần trong ngày mà không có chuyến nào được
+  // ghi) - trước đây KHÔNG có cách nào để user tự biết hành trình đang không
+  // được ghi ngoài đúng 1 Alert lúc kết nối OBD2 lần đầu (gpsTripNudgeKey) - ai
+  // bấm "Để sau", hoặc bấm "Cho phép" nhưng hệ thống chỉ cấp "Trong khi dùng
+  // app" (rất phổ biến trên luồng xin quyền 2 bước của Android 11+), hoặc bị
+  // OS tự thu hồi quyền nền sau nhiều tháng không mở app, đều rơi vào im lặng
+  // vĩnh viễn - Alert đó không hiện lại lần 2. Thêm gpsReadiness: đọc lại MỖI
+  // lần kết nối (không gated bởi AsyncStorage) để hiện banner thường trực bên
+  // dưới (không phải popup, không chặn thao tác) mỗi khi quyền còn thiếu, thay
+  // vì chỉ dựa vào đúng 1 lần nhắc.
+  const [gpsReadiness, setGpsReadiness] = useState<{ foreground: boolean; background: boolean } | null>(null);
+  const refreshGpsReadiness = React.useCallback(async () => {
+    setGpsReadiness(await getReadiness());
+  }, []);
+  useEffect(() => {
+    if (!isConnected || !vehicleId) return;
+    refreshGpsReadiness();
+  }, [isConnected, vehicleId, refreshGpsReadiness]);
+
+  async function handleGrantGpsPermission() {
+    const granted = await requestKeepAlivePermissions();
+    if (granted) {
+      await startObdKeepAlive().then((s) => bleService.logDiagnostic('#keepalive', s));
+      await requestPermissionsAndStart(vehicleId, { skipDisclosure: true }).catch(() => {});
+    }
+    await refreshGpsReadiness();
+  }
+
   useEffect(() => {
     if (!isConnected || !vehicleId) return;
     if (Platform.OS !== 'android') return;
@@ -243,23 +271,13 @@ export default function OBDDashboardScreen() {
           { text: t('gps_trips.later'), style: 'cancel' },
           {
             text: t('obd.permission_nudge_cta'),
-            onPress: async () => {
-              // requestKeepAlivePermissions() không hiện thêm dialog custom
-              // riêng nữa (rà soát 29/7) - Alert này đã đủ vai trò "công bố nổi
-              // bật", gọi thẳng vào popup hệ thống xin quyền vị trí "Luôn cho
-              // phép".
-              const granted = await requestKeepAlivePermissions();
-              if (!granted) return;
-              // Phiên OBD hiện tại đã start() TRƯỚC khi user cấp quyền ở đây -
-              // keep-alive lúc đó đã bỏ qua (skipped_no_permission) và sẽ KHÔNG
-              // tự thử lại. Gọi lại ngay để có tác dụng cho phiên đang chạy,
-              // không phải đợi tới lần kết nối sau.
-              await startObdKeepAlive().then((s) => bleService.logDiagnostic('#keepalive', s));
-              // skipDisclosure: true - Alert này đã tự giải thích lý do cần
-              // quyền vị trí nền, không cần GpsTripTracker hiện thêm 1 dialog
-              // "disclosure" trùng nội dung nữa trước popup hệ thống.
-              requestPermissionsAndStart(vehicleId, { skipDisclosure: true }).catch(() => {});
-            },
+            // requestKeepAlivePermissions() không hiện thêm dialog custom
+            // riêng nữa (rà soát 29/7) - Alert này đã đủ vai trò "công bố nổi
+            // bật", gọi thẳng vào popup hệ thống xin quyền vị trí "Luôn cho
+            // phép". Dùng chung handleGrantGpsPermission() với banner bên dưới
+            // (rà soát 1/8) - cả 2 đường đều cần re-arm keep-alive cho phiên
+            // đang chạy + tự bật GPS trip + cập nhật lại gpsReadiness.
+            onPress: handleGrantGpsPermission,
           },
         ],
       );
@@ -398,6 +416,23 @@ export default function OBDDashboardScreen() {
           <Text style={{ color: colors.textSecondary, fontSize: 11, textAlign: 'center', marginTop: -8 }}>
             {t('obd.leave_hint')}
           </Text>
+        )}
+
+        {/* Banner thường trực (rà soát 1/8) - hiện MỖI lần kết nối nếu quyền vị
+            trí nền còn thiếu, không phụ thuộc AsyncStorage/Alert 1-lần ở trên -
+            đó là nguyên nhân chính khiến user lái nhiều lần trong ngày mà không
+            có chuyến nào được ghi lại mà không hề hay biết vì sao. */}
+        {isConnected && gpsReadiness && !gpsReadiness.background && (
+          <TouchableOpacity
+            style={[styles.warningBanner, { backgroundColor: '#78350F' }]}
+            onPress={handleGrantGpsPermission}
+          >
+            <FontAwesome5 name="route" size={14} color="#FEF3C7" style={{ marginTop: 2 }} />
+            <Text style={styles.warningText}>{t('obd.gps_trip_off_banner')}</Text>
+            <Text style={[styles.warningText, { flex: 0, fontWeight: '700', textDecorationLine: 'underline' }]}>
+              {t('obd.gps_trip_off_cta')}
+            </Text>
+          </TouchableOpacity>
         )}
 
         {/* Rà soát 16/7 (góp ý user: quá nhiều text trước khi thấy số liệu) - số

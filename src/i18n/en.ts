@@ -634,6 +634,8 @@ const en = {
   "obd.permission_nudge_title": "One more permission for full functionality",
   "obd.permission_nudge_body": "Both uninterrupted OBD2 reading when the screen locks and automatic trip recording need \"Allow all the time\" location permission. Allow it to enable both.",
   "obd.permission_nudge_cta": "Allow",
+  "obd.gps_trip_off_banner": "Trip won't be auto-recorded - background location permission missing",
+  "obd.gps_trip_off_cta": "Grant",
   "home.obd_quick_setup": "Connect an OBD2 adapter for your car",
   "home.obd_quick_upsell": "Premium feature - diagnose car issues via Bluetooth",
   "vehicle_detail.vin_prefill_title": "VIN read via OBD",

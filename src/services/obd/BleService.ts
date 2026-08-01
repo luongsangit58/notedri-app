@@ -138,6 +138,15 @@ class BleService {
 
   private reconnecting = false;
   private intentionalDisconnect = false;
+  // Rà soát 1/8: user bấm X ở Dashboard -> disconnect() clear connectedDevice/
+  // classicAddress đồng bộ (isConnected() đúng ngay) NHƯNG disconnectListeners/
+  // useObdSessionStore.clear() trước đây chỉ chạy khi native event onDisconnected/
+  // onClassicDisconnected bắn về - trên vài adapter rẻ tiền event này tới trễ hoặc
+  // không tới, nên Home/banner đọc useObdSessionStore vẫn thấy connected:true vô
+  // thời hạn dù màn OBD đã "ngắt" xong. Cờ này canh finalizeIntentionalDisconnect()
+  // chỉ chạy đúng 1 lần/phiên, cho phép gọi sớm (đồng bộ trong disconnect()) mà
+  // không sợ double-fire khi event native tới muộn sau đó.
+  private disconnectFinalized = false;
 
   // Telemetry retention (ý #14): mốc phiên nằm ở singleton vì hook useObd bị
   // tạo mới khi chuyển màn (Setup → Dashboard) - ref trong hook sẽ mất mốc.
@@ -368,9 +377,7 @@ class BleService {
     // lặp lo).
     if (this.intentionalDisconnect || this.reconnecting) {
       if (!this.reconnecting) {
-        // Fire listener TRƯỚC khi clear store: telemetry cần đọc vehicleId
-        this.disconnectListeners.forEach((fn) => fn());
-        useObdSessionStore.getState().clear();
+        this.finalizeIntentionalDisconnect();
       }
       return;
     }
@@ -384,6 +391,18 @@ class BleService {
     }
 
     void this.attemptReconnect(id, transport);
+  }
+
+  // Fire listener TRƯỚC khi clear store: telemetry cần đọc vehicleId. Idempotent
+  // (disconnectFinalized guard) vì có 2 nơi gọi tới cho cùng 1 lần ngắt chủ động -
+  // disconnect() gọi ngay lập tức (đồng bộ) để Home/banner không kẹt connected:true
+  // chờ event native, và handleTransportDisconnected() vẫn gọi lại khi event đó
+  // cuối cùng cũng tới (không tác dụng gì thêm nếu đã finalize).
+  private finalizeIntentionalDisconnect(): void {
+    if (this.disconnectFinalized) return;
+    this.disconnectFinalized = true;
+    this.disconnectListeners.forEach((fn) => fn());
+    useObdSessionStore.getState().clear();
   }
 
   private async attemptReconnect(id: string, transport: Transport): Promise<void> {
@@ -950,6 +969,7 @@ class BleService {
     try {
       this.manager.stopDeviceScan();
       this.intentionalDisconnect = false;
+      this.disconnectFinalized = false;
       this.linkResults = [];
       // Phiên mới = log mới; log phiên cũ giữ nguyên tới lúc này để user kịp xuất sau khi ngắt.
       this.sessionLog = [];
@@ -988,6 +1008,7 @@ class BleService {
     this.connecting = true;
     try {
       this.intentionalDisconnect = false;
+      this.disconnectFinalized = false;
       this.linkResults = [];
       this.sessionLog = [];
       this.classicPin = pin;
@@ -1096,9 +1117,7 @@ class BleService {
   }
 
   async disconnect(): Promise<void> {
-    // Chặn reconnect grace: đây là ngắt CHỦ ĐỘNG của user. KHÔNG clear store ở
-    // đây - handleTransportDisconnected (do cancelConnection/disconnectClassic
-    // kích) fire listener trước rồi mới clear, để telemetry còn đọc được vehicleId.
+    // Chặn reconnect grace: đây là ngắt CHỦ ĐỘNG của user.
     this.intentionalDisconnect = true;
     if (this.connectedDevice) {
       try {
@@ -1127,10 +1146,14 @@ class BleService {
         // Already disconnected — ignore
       }
       this.classicAddress = null;
-    } else {
-      // Không có kết nối nào (gọi thừa) - dọn store cho chắc
-      useObdSessionStore.getState().clear();
     }
+    // Dọn store NGAY tại đây thay vì chỉ chờ event native onDisconnected/
+    // onClassicDisconnected (async, có thể tới trễ/không tới trên vài adapter -
+    // xem giải thích ở khai báo disconnectFinalized): nếu chờ, Home/banner đọc
+    // useObdSessionStore vẫn thấy connected:true dù user đã bấm ngắt và màn OBD
+    // đã rời khỏi trạng thái kết nối. finalizeIntentionalDisconnect() tự guard
+    // double-fire nên event native tới sau (nếu có) chỉ là no-op.
+    this.finalizeIntentionalDisconnect();
     this.commandQueue = Promise.resolve();
   }
 
