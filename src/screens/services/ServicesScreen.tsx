@@ -243,6 +243,40 @@ export default function ServicesScreen() {
               <FontAwesome5 name="chevron-right" size={11} color={colors.primary} />
             </TouchableOpacity>
 
+            {/* Gara/Đăng kiểm gần đây - cùng nhóm "Gần đây" như bản web (Trạm/Gara/Đăng kiểm). */}
+            <TouchableOpacity
+              onPress={() => navigation.navigate('NearbyGarages', { mode: 'garage' })}
+              style={{
+                flexDirection: 'row', alignItems: 'center', gap: 8,
+                backgroundColor: colors.primary + '15', borderRadius: 10, padding: 12, marginBottom: 8,
+                borderWidth: 1, borderColor: colors.primary + '33',
+              }}>
+              <FontAwesome5 name="wrench" size={14} color={colors.primary} solid />
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 13 }}>{t('nearby_garages.title_garage')}</Text>
+                <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 1 }}>
+                  {t('nearby_garages.empty_subtitle_garage')}
+                </Text>
+              </View>
+              <FontAwesome5 name="chevron-right" size={11} color={colors.primary} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('NearbyGarages', { mode: 'dangkiem' })}
+              style={{
+                flexDirection: 'row', alignItems: 'center', gap: 8,
+                backgroundColor: colors.primary + '15', borderRadius: 10, padding: 12, marginBottom: 12,
+                borderWidth: 1, borderColor: colors.primary + '33',
+              }}>
+              <FontAwesome5 name="clipboard-check" size={14} color={colors.primary} solid />
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 13 }}>{t('nearby_garages.title_dangkiem')}</Text>
+                <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 1 }}>
+                  {t('nearby_garages.empty_subtitle_dangkiem')}
+                </Text>
+              </View>
+              <FontAwesome5 name="chevron-right" size={11} color={colors.primary} />
+            </TouchableOpacity>
+
             {/* Stats */}
             {totalCost > 0 && (
               <View style={{ flexDirection: 'row', gap: 8, paddingBottom: 12 }}>

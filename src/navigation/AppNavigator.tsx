@@ -29,6 +29,7 @@ import ThongKeScreen from '../screens/stats/ThongKeScreen';
 import QuanLyScreen from '../screens/management/QuanLyScreen';
 import EditRefuelScreen from '../screens/refuels/EditRefuelScreen';
 import NearbyStationsScreen from '../screens/refuels/NearbyStationsScreen';
+import NearbyGaragesScreen from '../screens/services/NearbyGaragesScreen';
 import RefuelsListScreen from '../screens/refuels/RefuelsListScreen';
 import OdometerListScreen from '../screens/odometer/OdometerListScreen';
 import EditServiceScreen from '../screens/services/EditServiceScreen';
@@ -186,6 +187,12 @@ export default function AppNavigator() {
       {/* Nearby Stations */}
       <RootStack.Screen name="NearbyStations" component={NearbyStationsScreen}
         options={{ headerShown: true, ...headerOpts, title: t('nearby_stations.title') }} />
+      <RootStack.Screen name="NearbyGarages" component={NearbyGaragesScreen}
+        options={({ route }: any) => ({
+          headerShown: true,
+          ...headerOpts,
+          title: route.params?.mode === 'dangkiem' ? t('nearby_garages.title_dangkiem') : t('nearby_garages.title_garage'),
+        })} />
       <RootStack.Screen name="FuelPrices" component={FuelPricesScreen}
         options={{ headerShown: true, ...headerOpts, title: t('fuel_prices.title') }} />
 

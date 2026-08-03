@@ -375,18 +375,20 @@ export default function OBDSetupScreen() {
 
   // One Tap Connect: NFC (biết trước deviceId) ưu tiên hơn bộ nhớ ghép thiết bị.
   useEffect(() => {
-    if (!autoTargetId || autoTargetTransport !== 'ble' || connectionState !== 'scanning') return;
-    const match = foundDevices.find((d) => d.id === autoTargetId);
-    if (match) handleConnect(match.id, match.name);
+    if (autoTargetId && autoTargetTransport === 'ble' && connectionState === 'scanning') {
+      const match = foundDevices.find((d) => d.id === autoTargetId);
+      if (match) void handleConnect(match.id, match.name);
+    }
   }, [autoTargetId, autoTargetTransport, foundDevices, connectionState]);
 
   // Tương đương bản trên nhưng cho Classic (22/7) - danh sách đã ghép nạp gần
   // như tức thì (không phải quét sống ~10s như trước), khớp địa chỉ là tự kết
   // nối ngay, không bắt user tự bấm chọn lại mỗi lần mở màn.
   useEffect(() => {
-    if (!autoTargetId || autoTargetTransport !== 'classic') return;
-    const match = classicDevices.find((d) => d.address === autoTargetId);
-    if (match) handleConnectClassic(match);
+    if (autoTargetId && autoTargetTransport === 'classic') {
+      const match = classicDevices.find((d) => d.address === autoTargetId);
+      if (match) void handleConnectClassic(match);
+    }
   }, [autoTargetId, autoTargetTransport, classicDevices]);
 
   const isScanning = connectionState === 'scanning';

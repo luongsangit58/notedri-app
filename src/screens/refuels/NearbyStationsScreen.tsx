@@ -27,6 +27,9 @@ type Station = {
   fuel_types?: string[];
 };
 
+type Hang = 'VinFast' | 'BYD';
+const HANG_LIST: Hang[] = ['VinFast', 'BYD'];
+
 type ScreenState = 'idle' | 'requesting' | 'loading' | 'success' | 'permission_denied' | 'error';
 
 function openGoogleMapsDirections(lat: number, lng: number, _name: string) {
@@ -58,6 +61,10 @@ export default function NearbyStationsScreen() {
   const [screenState, setScreenState] = useState<ScreenState>('idle');
   const [stations, setStations] = useState<Station[]>([]);
   const [errorMsg, setErrorMsg] = useState('');
+  // Trạm sạc: backend gom nhóm theo hãng (VinFast/BYD, xem ChargingStationService::nearby()
+  // + Api\V1\RefuelController::nearbyCharging) - cây xăng không có groups, dùng thẳng `stations`.
+  const [hangGroups, setHangGroups] = useState<Record<Hang, Station[]>>({ VinFast: [], BYD: [] });
+  const [activeHang, setActiveHang] = useState<Hang | null>(null);
   // 'fuel' = cây xăng (Overpass), 'charging' = trạm sạc EV (DB, nguồn VinFast/EVCS). Mặc định theo param, có toggle.
   const [mode, setMode] = useState<'fuel' | 'charging'>(route.params?.mode === 'charging' ? 'charging' : 'fuel');
   const isCharging = mode === 'charging';
@@ -239,9 +246,28 @@ export default function NearbyStationsScreen() {
       const res: any = isCharging
         ? await refuelsApi.nearbyCharging(latitude, longitude)
         : await refuelsApi.nearbyStations(latitude, longitude);
-      const raw = res?.data?.data ?? res?.data?.stations ?? res?.data ?? [];
-      const list: Station[] = Array.isArray(raw) ? raw : [];
-      setStations(list);
+      const data = res?.data ?? {};
+
+      // Trạm sạc: chọn tab hãng mặc định theo xe user (default_hang), rơi về hãng còn lại
+      // nếu tab mặc định rỗng - khớp applyResponse() bản web (garage/stations/index.blade.php).
+      if (isCharging && data.groups) {
+        const groups: Record<Hang, Station[]> = {
+          VinFast: Array.isArray(data.groups.VinFast) ? data.groups.VinFast : [],
+          BYD: Array.isArray(data.groups.BYD) ? data.groups.BYD : [],
+        };
+        const defaultHang: Hang | null = data.default_hang === 'VinFast' || data.default_hang === 'BYD' ? data.default_hang : null;
+        const hang: Hang = defaultHang && groups[defaultHang].length
+          ? defaultHang
+          : (groups.VinFast.length ? 'VinFast' : 'BYD');
+        setHangGroups(groups);
+        setActiveHang(hang);
+        setStations(groups[hang]);
+      } else {
+        const raw = data.data ?? data.stations ?? data ?? [];
+        setHangGroups({ VinFast: [], BYD: [] });
+        setActiveHang(null);
+        setStations(Array.isArray(raw) ? raw : []);
+      }
       setScreenState('success');
     } catch (err: any) {
       const msg = err?.response?.data?.message ?? err?.message ?? t('nearby_stations.load_failed');
@@ -253,6 +279,12 @@ export default function NearbyStationsScreen() {
   useEffect(() => {
     fetchNearby();
   }, [fetchNearby]);
+
+  const switchHang = (h: Hang) => {
+    setActiveHang(h);
+    setStations(hangGroups[h]);
+  };
+  const hasAnyHangGroup = hangGroups.VinFast.length > 0 || hangGroups.BYD.length > 0;
 
   const getStationName = (s: Station) =>
     s.name ?? s.ten ?? (isCharging ? t('nearby_stations.default_name_charging') : t('nearby_stations.default_name'));
@@ -420,6 +452,19 @@ export default function NearbyStationsScreen() {
       );
     }
 
+    // Trạm sạc còn dữ liệu ở hãng kia (chỉ tab đang chọn rỗng) - cho user đổi tab thay vì
+    // chặn hẳn bằng màn "không có kết quả" (khớp bản web: chỉ hiện dòng chú thích ngắn).
+    if (screenState === 'success' && stations.length === 0 && isCharging && hasAnyHangGroup) {
+      return (
+        <View style={{ padding: 16 }}>
+          <HangTabs />
+          <Text style={styles.errorBody}>
+            {t('nearby_stations.brand_empty', { brand: activeHang ?? '' })}
+          </Text>
+        </View>
+      );
+    }
+
     if (screenState === 'success' && stations.length === 0) {
       return (
         <View style={styles.center}>
@@ -442,16 +487,48 @@ export default function NearbyStationsScreen() {
         renderItem={renderStation}
         contentContainerStyle={[{ padding: 16 }, contentWide]}
         ListHeaderComponent={
-          <Text style={styles.listHeader}>
-            {isCharging
-              ? t('nearby_stations.count_title_charging', { n: stations.length })
-              : t('nearby_stations.count_title', { n: stations.length })}
-          </Text>
+          <>
+            {isCharging && hasAnyHangGroup ? <HangTabs /> : null}
+            <Text style={styles.listHeader}>
+              {isCharging
+                ? t('nearby_stations.count_title_charging', { n: stations.length })
+                : t('nearby_stations.count_title', { n: stations.length })}
+            </Text>
+          </>
         }
         ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
       />
     );
   };
+
+  const HangTabs = () => (
+    <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
+      {HANG_LIST.map((h) => {
+        const active = activeHang === h;
+        const count = hangGroups[h].length;
+        return (
+          <TouchableOpacity
+            key={h}
+            disabled={count === 0}
+            onPress={() => switchHang(h)}
+            style={{
+              paddingHorizontal: 12,
+              paddingVertical: 7,
+              borderRadius: 8,
+              borderWidth: 1,
+              borderColor: active ? '#10b981' : colors.border,
+              backgroundColor: active ? '#10b981' : colors.surface,
+              opacity: count === 0 ? 0.4 : 1,
+            }}
+            activeOpacity={0.85}>
+            <Text style={{ fontSize: 13, fontWeight: '700', color: active ? '#fff' : colors.text }}>
+              {h} ({count})
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
 
   const ModeToggle = () => (
     <View style={styles.toggleBar}>
@@ -460,7 +537,7 @@ export default function NearbyStationsScreen() {
         return (
           <TouchableOpacity
             key={m}
-            onPress={() => { if (mode !== m) { setStations([]); setMode(m); } }}
+            onPress={() => { if (mode !== m) { setStations([]); setHangGroups({ VinFast: [], BYD: [] }); setActiveHang(null); setMode(m); } }}
             style={[styles.toggleBtn, active && styles.toggleBtnActive, active && m === 'charging' && { backgroundColor: '#10b981', borderColor: '#10b981' }]}
             activeOpacity={0.85}>
             <FontAwesome5
