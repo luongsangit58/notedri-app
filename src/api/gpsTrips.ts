@@ -37,6 +37,14 @@ export const gpsTripsApi = {
       params: { vehicle_id: vehicleId, page },
     }),
 
+  // Chuyến GPS trong 1 khoảng thời gian (rà soát 4/8) - dùng để hiện hành trình
+  // "song hành" với 1 phiên OBD cụ thể trên ObdSessionDetailScreen, KHÔNG phải nguồn
+  // sự thật mới (GPS vẫn là nguồn CHUYẾN ĐI duy nhất, OBD vẫn độc lập - xem useObd.ts).
+  tripsInRange: (vehicleId: number, sinceIso: string, untilIso: string) =>
+    client.get<{ data: GpsTripRecord[] }>('/gps/trips', {
+      params: { vehicle_id: vehicleId, since: sinceIso, until: untilIso },
+    }),
+
   updateNote: (id: number, ghi_chu: string) =>
     client.patch(`/gps/trips/${id}`, { ghi_chu }),
 

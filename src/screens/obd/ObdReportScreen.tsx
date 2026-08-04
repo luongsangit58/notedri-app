@@ -13,6 +13,7 @@ import { groupSessionsByDay, TrendMetric } from '../../services/obd/sessionTrend
 import { obdLiveMonitor } from '../../services/obd/obdLiveMonitor';
 import { flushPendingObdSessions } from '../../services/obd/ObdSessionSyncQueue';
 import ObdTrendChart from './ObdTrendChart';
+import CorrelatedGpsTrips from './CorrelatedGpsTrips';
 import AppBgPattern from '../../components/AppBgPattern';
 import { useColors } from '../../utils/theme';
 import { useT } from '../../i18n';
@@ -87,7 +88,7 @@ const dsStyles = StyleSheet.create({
   score: { fontSize: 30, fontWeight: '800' },
 });
 
-function Vital({ label, value, unit, icon }: { label: string; value: string; unit?: string; icon: string }) {
+export function Vital({ label, value, unit, icon }: { label: string; value: string; unit?: string; icon: string }) {
   const colors = useColors();
   return (
     <View style={[styles.vitalBox, { backgroundColor: colors.card }]}>
@@ -156,6 +157,18 @@ export default function ObdReportScreen() {
   const totalEngineHours = data?.meta?.total_engine_hours ?? 0;
   const latest = sessions[0];
   const previous = sessions[1];
+
+  // Nhóm theo NGÀY chỉ để hiển thị (rà soát 4/8, giống màn Hành trình GPS) - từ khi
+  // backend đổi sang gộp theo khoảng cách thời gian thay vì cứng theo ngày, 1 ngày có
+  // thể có nhiều phiên (nhiều lần lái) thay vì luôn đúng 1 dòng/ngày.
+  const sessionsByDay = useMemo(() => {
+    const groups = new Map<string, typeof sessions>();
+    for (const s of sessions) {
+      const key = dayjs(s.connected_at).format('DD/MM/YYYY');
+      groups.set(key, [...(groups.get(key) ?? []), s]);
+    }
+    return Array.from(groups.entries());
+  }, [sessions]);
 
   const findings = useMemo(
     () => (latest ? evaluateSession(latest.summary, latest.duration_seconds) : []),
@@ -232,41 +245,60 @@ export default function ObdReportScreen() {
             <Text style={[styles.sessionMeta, { color: colors.textSecondary }]}>
               {t('obd.report_history_hint', { n: sessions.length })}
             </Text>
-            {sessions.map((s) => {
-              const sFindings = evaluateSession(s.summary, s.duration_seconds);
-              return (
-                <View key={s.id} style={[styles.historyCard, { backgroundColor: colors.card }]}>
-                  <View style={styles.historyCardHeader}>
-                    <Text style={[styles.historyCardDate, { color: colors.text }]}>
-                      {dayjs(s.connected_at).format('DD/MM/YYYY HH:mm')}
-                    </Text>
-                    <Text style={[styles.historyCardDevice, { color: colors.textSecondary }]}>
-                      {s.device_name ?? 'OBD2'} · {t('obd.report_history_duration', { min: Math.round(s.duration_seconds / 60) })}
-                    </Text>
-                  </View>
-                  {sFindings.length === 0 ? (
-                    <View style={styles.historyOkRow}>
-                      <FontAwesome5 name="check-circle" size={12} color="#22C55E" solid />
-                      <Text style={[styles.historyOkText, { color: '#22C55E' }]}>{t('obd.report_all_good')}</Text>
-                    </View>
-                  ) : (
-                    sFindings.map((f) => (
-                      <View key={f.ruleId} style={styles.historyFindingRow}>
-                        <FontAwesome5
-                          name={f.can_drive === 'stop' ? 'hand-paper' : 'exclamation-triangle'}
-                          size={11}
-                          color={f.severity === 'critical' ? '#EF4444' : '#F59E0B'}
-                          solid
-                        />
-                        <Text style={[styles.historyFindingText, { color: colors.text }]} numberOfLines={1}>
-                          {f.title_vi}
-                        </Text>
-                      </View>
-                    ))
-                  )}
+            {sessionsByDay.map(([day, daySessions]) => (
+              <View key={day}>
+                <View style={styles.dayHeaderRow}>
+                  <Text style={[styles.dayHeaderLabel, { color: colors.text }]}>
+                    {day === dayjs().format('DD/MM/YYYY') ? t('gps_trips.day_today')
+                      : day === dayjs().subtract(1, 'day').format('DD/MM/YYYY') ? t('gps_trips.day_yesterday')
+                      : dayjs(day, 'DD/MM/YYYY').format('dddd')}
+                    <Text style={{ color: colors.textSecondary, fontWeight: '400' }}> · {day}</Text>
+                  </Text>
+                  <Text style={[styles.dayHeaderMeta, { color: colors.textSecondary }]}>
+                    {t('obd.report_history_duration_day', { n: daySessions.length })}
+                  </Text>
                 </View>
-              );
-            })}
+                {daySessions.map((s) => {
+                  const sFindings = evaluateSession(s.summary, s.duration_seconds);
+                  return (
+                    <TouchableOpacity
+                      key={s.id}
+                      style={[styles.historyCard, { backgroundColor: colors.card }]}
+                      onPress={() => navigation.navigate('ObdSessionDetail', { session: s, vehicleId, vehicleName })}>
+                      <View style={styles.historyCardHeader}>
+                        <Text style={[styles.historyCardDate, { color: colors.text }]}>
+                          {dayjs(s.connected_at).format('HH:mm')}
+                        </Text>
+                        <Text style={[styles.historyCardDevice, { color: colors.textSecondary }]}>
+                          {s.device_name ?? 'OBD2'} · {t('obd.report_history_duration', { min: Math.round(s.duration_seconds / 60) })}
+                        </Text>
+                        <FontAwesome5 name="chevron-right" size={11} color={colors.textSecondary} />
+                      </View>
+                      {sFindings.length === 0 ? (
+                        <View style={styles.historyOkRow}>
+                          <FontAwesome5 name="check-circle" size={12} color="#22C55E" solid />
+                          <Text style={[styles.historyOkText, { color: '#22C55E' }]}>{t('obd.report_all_good')}</Text>
+                        </View>
+                      ) : (
+                        sFindings.map((f) => (
+                          <View key={f.ruleId} style={styles.historyFindingRow}>
+                            <FontAwesome5
+                              name={f.can_drive === 'stop' ? 'hand-paper' : 'exclamation-triangle'}
+                              size={11}
+                              color={f.severity === 'critical' ? '#EF4444' : '#F59E0B'}
+                              solid
+                            />
+                            <Text style={[styles.historyFindingText, { color: colors.text }]} numberOfLines={1}>
+                              {f.title_vi}
+                            </Text>
+                          </View>
+                        ))
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            ))}
             <Text style={[styles.disclaimer, { color: colors.textSecondary }]}>
               {t('obd.report_disclaimer')}
             </Text>
@@ -294,6 +326,13 @@ export default function ObdReportScreen() {
               </Text>
             </View>
           )}
+
+          <CorrelatedGpsTrips
+            vehicleId={vehicleId}
+            vehicleName={vehicleName}
+            connectedAt={latest.connected_at}
+            durationSeconds={latest.duration_seconds}
+          />
 
           {findings.length === 0 ? (
             <View style={[styles.okBanner, { backgroundColor: '#16653422' }]}>
@@ -339,11 +378,11 @@ export default function ObdReportScreen() {
                 unit="°C"
                 icon="thermometer-half"
               />
-              <Vital label={t('obd.report_voltage')} value={`${latest.summary.voltage_avg ?? '-'}`} unit="V" icon="bolt" />
+              <Vital label={t('obd.report_voltage')} value={latest.summary.voltage_avg != null ? latest.summary.voltage_avg.toFixed(1) : '-'} unit="V" icon="bolt" />
             </View>
             <View style={styles.vitalsRow}>
-              <Vital label={t('obd.report_idle_rpm')} value={`${latest.summary.rpm_idle_avg ?? '-'}`} icon="cogs" />
-              <Vital label={t('obd.report_load')} value={`${latest.summary.load_avg ?? '-'}`} unit="%" icon="fire" />
+              <Vital label={t('obd.report_idle_rpm')} value={latest.summary.rpm_idle_avg != null ? `${Math.round(latest.summary.rpm_idle_avg)}` : '-'} icon="cogs" />
+              <Vital label={t('obd.report_load')} value={latest.summary.load_avg != null ? `${Math.round(latest.summary.load_avg)}` : '-'} unit="%" icon="fire" />
             </View>
             <View style={styles.vitalsRow}>
               <Vital label={t('obd.report_top_speed')} value={`${latest.summary.speed_max ?? '-'}`} unit=" km/h" icon="tachometer-alt" />
@@ -353,7 +392,7 @@ export default function ObdReportScreen() {
                 null với phiên cũ hoặc xe không có PID này, VD 1 số xe Honda fixture #2) */}
             {latest.summary.fuel_used_liters_est != null && (
               <View style={styles.vitalsRow}>
-                <Vital label={t('obd.report_fuel_used')} value={`${latest.summary.fuel_used_liters_est}`} unit=" L" icon="gas-pump" />
+                <Vital label={t('obd.report_fuel_used')} value={latest.summary.fuel_used_liters_est.toFixed(1)} unit=" L" icon="gas-pump" />
               </View>
             )}
           </View>
@@ -448,6 +487,9 @@ const styles = StyleSheet.create({
   trendCard: { flexDirection: 'row', alignItems: 'center', gap: 10, borderRadius: 10, padding: 12 },
   trendText: { fontSize: 13, flex: 1 },
   disclaimer: { fontSize: 11, lineHeight: 16, marginTop: 8, fontStyle: 'italic' },
+  dayHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 4, marginTop: 8, marginBottom: 4 },
+  dayHeaderLabel: { fontSize: 13, fontWeight: '700' },
+  dayHeaderMeta: { fontSize: 11 },
   historyCard: { borderRadius: 12, padding: 14, gap: 6 },
   historyCardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 4 },
   historyCardDate: { fontSize: 13, fontWeight: '700' },

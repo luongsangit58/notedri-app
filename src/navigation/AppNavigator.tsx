@@ -52,6 +52,7 @@ import ObdSystemHealthScreen from '../screens/obd/ObdSystemHealthScreen';
 import NfcSetupScreen from '../screens/obd/NfcSetupScreen';
 import DtcLookupScreen from '../screens/obd/DtcLookupScreen';
 import ObdReportScreen from '../screens/obd/ObdReportScreen';
+import ObdSessionDetailScreen from '../screens/obd/ObdSessionDetailScreen';
 import GpsTripsScreen from '../screens/trips/GpsTripsScreen';
 import DevicesScreen from '../screens/profile/DevicesScreen';
 import NoriChatScreen from '../screens/nori/NoriChatScreen';
@@ -302,6 +303,8 @@ export default function AppNavigator() {
       <RootStack.Screen name="DtcLookup" component={DtcLookupScreen}
         options={{ headerShown: false }} />
       <RootStack.Screen name="ObdReport" component={ObdReportScreen}
+        options={{ headerShown: false }} />
+      <RootStack.Screen name="ObdSessionDetail" component={ObdSessionDetailScreen}
         options={{ headerShown: false }} />
 
       {/* Year Review */}

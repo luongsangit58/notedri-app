@@ -457,23 +457,37 @@ export default function HomeScreen() {
             </TouchableOpacity>
 
             <View style={{ height: 1, backgroundColor: 'rgba(255,255,255,0.15)' }} />
+            {/* 3 mục phụ ngang hàng (rà soát 4/8, góp ý user: Lịch sử OBD2 chôn sâu trong
+                luồng OBDSetup -> OBDDashboard -> Report, mất nhiều bước bấm mới thấy).
+                Hành trình GPS đặt CẠNH Lịch sử OBD2 (không phải 2 chỗ tách biệt) - đúng ý
+                "đi song hành", dù 2 hệ thống tracking vẫn độc lập ở tầng dữ liệu. */}
             <View style={{ flexDirection: 'row' }}>
               <TouchableOpacity
                 activeOpacity={0.85}
                 onPress={() => vehicleId ? nav.navigate('GpsTrips', { vehicleId, vehicleName }) : nav.navigate('AddVehicle')}
-                style={{ flex: 1, paddingHorizontal: 14, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <FontAwesome5 name="route" size={13} color="#ffffffcc" solid />
-                <Text style={{ color: '#ffffffe6', fontSize: 12.5, fontWeight: '600', flex: 1 }} numberOfLines={1}>
+                style={{ flex: 1, paddingHorizontal: 10, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <FontAwesome5 name="route" size={12} color="#ffffffcc" solid />
+                <Text style={{ color: '#ffffffe6', fontSize: 11.5, fontWeight: '600', flex: 1 }} numberOfLines={1}>
                   {t('home.gps_title')}
                 </Text>
               </TouchableOpacity>
               <View style={{ width: 1, backgroundColor: 'rgba(255,255,255,0.15)' }} />
               <TouchableOpacity
                 activeOpacity={0.85}
+                onPress={() => vehicleId ? nav.navigate('ObdReport', { vehicleId, vehicleName }) : nav.navigate('AddVehicle')}
+                style={{ flex: 1, paddingHorizontal: 10, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <FontAwesome5 name="history" size={12} color="#ffffffcc" solid />
+                <Text style={{ color: '#ffffffe6', fontSize: 11.5, fontWeight: '600', flex: 1 }} numberOfLines={1}>
+                  {t('home.obd_history_title')}
+                </Text>
+              </TouchableOpacity>
+              <View style={{ width: 1, backgroundColor: 'rgba(255,255,255,0.15)' }} />
+              <TouchableOpacity
+                activeOpacity={0.85}
                 onPress={() => nav.navigate('DtcLookup')}
-                style={{ flex: 1, paddingHorizontal: 14, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <FontAwesome5 name="search" size={13} color="#ffffffcc" solid />
-                <Text style={{ color: '#ffffffe6', fontSize: 12.5, fontWeight: '600', flex: 1 }} numberOfLines={1}>
+                style={{ flex: 1, paddingHorizontal: 10, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <FontAwesome5 name="search" size={12} color="#ffffffcc" solid />
+                <Text style={{ color: '#ffffffe6', fontSize: 11.5, fontWeight: '600', flex: 1 }} numberOfLines={1}>
                   {t('dtc.lookup_title')}
                 </Text>
               </TouchableOpacity>
