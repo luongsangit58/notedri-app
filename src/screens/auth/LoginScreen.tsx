@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, Alert, ActivityIndicator, Platform } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import { useAuthStore } from '../../store/authStore';
 import { useT } from '../../i18n';
 import { BASE_URL } from '../../utils/api';
@@ -17,6 +18,7 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
   const [showPw, setShowPw] = useState(false);
   const { login, isLoading, error, clearError } = useAuthStore();
   const [googleBusy, setGoogleBusy] = useState(false);
+  const [appleBusy, setAppleBusy] = useState(false);
 
   // Bóc token/lỗi từ URL callback do CHÍNH openAuthSessionAsync trả về (app tự khởi tạo phiên,
   // đúng scheme notedri://auth). KHÔNG dùng listener Linking toàn cục -> tránh chèn token deep-link.
@@ -77,6 +79,37 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
       // Luồng bình thường (app còn sống) đã xử lý xong callback -> không cần cờ nữa.
       await clearGooglePending();
       setGoogleBusy(false);
+    }
+  };
+
+  const handleApple = async () => {
+    if (appleBusy || isLoading) return;
+    setAppleBusy(true);
+    try {
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
+      if (!credential.identityToken) {
+        Alert.alert(t('common.error'), t('auth.login_apple_failed'));
+        return;
+      }
+      // Apple chỉ trả fullName ở lần đăng nhập ĐẦU TIÊN trên thiết bị - các lần sau là null,
+      // backend phải tự lưu lại tên từ lần đầu đó.
+      const fullName = credential.fullName
+        ? [credential.fullName.givenName, credential.fullName.familyName].filter(Boolean).join(' ') || undefined
+        : undefined;
+      const { authApi } = await import('../../api/auth');
+      const res = await authApi.loginWithApple(credential.identityToken, fullName);
+      const { token, user } = res.data?.data ?? res.data;
+      await useAuthStore.getState().setSession(token, user);
+    } catch (e: any) {
+      if (e?.code === 'ERR_REQUEST_CANCELED') return; // user tự huỷ -> im lặng như Google
+      Alert.alert(t('common.error'), e?.response?.data?.message ?? e?.message ?? t('auth.login_apple_failed'));
+    } finally {
+      setAppleBusy(false);
     }
   };
 
@@ -156,6 +189,16 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
           <Text style={{ color: C.textSecondary, marginHorizontal: 12, fontSize: 13 }}>{t('auth.or')}</Text>
           <View style={{ flex: 1, height: 1, backgroundColor: C.divider }} />
         </View>
+
+        {Platform.OS === 'ios' && (
+          <AppleAuthentication.AppleAuthenticationButton
+            buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+            buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+            cornerRadius={12}
+            style={{ width: '100%', height: 44, marginBottom: 12, opacity: (isLoading || appleBusy) ? 0.5 : 1 }}
+            onPress={handleApple}
+          />
+        )}
 
         <TouchableOpacity
           onPress={handleGoogle}

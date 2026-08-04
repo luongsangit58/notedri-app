@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import NfcManager, { NfcTech, Ndef } from 'react-native-nfc-manager';
 
 export type NfcVehicleLink = { vehicleId: number; bleDeviceId: string };
@@ -17,6 +18,13 @@ function parseAutoDriveUrl(url: string): NfcVehicleLink | null {
 }
 
 export async function isNfcSupported(): Promise<boolean> {
+  // iOS: BLE auto-reconnect (BleService restoreStateIdentifier) đã đảm nhiệm việc "lên xe
+  // tự kết nối", còn Core NFC không cho app tự mở khi quét thẻ lúc khoá máy/tắt app như
+  // Android - không đủ giá trị để giữ. Entitlement NFC cũng đã bị gỡ khỏi build iOS
+  // (xem withIosNfcDisabled.js), nên NfcManager.isSupported() (chỉ check phần cứng, KHÔNG
+  // biết app có entitlement hay không) vẫn trả true trên iPhone hỗ trợ NFC -> phải chặn ở
+  // đây để không hiện nút dẫn tới 1 tính năng sẽ lỗi khi bấm.
+  if (Platform.OS === 'ios') return false;
   try {
     return await NfcManager.isSupported();
   } catch {

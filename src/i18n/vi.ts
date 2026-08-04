@@ -33,6 +33,7 @@ const vi = {
   "auth.app_tagline": "Quản lý xe thông minh",
   "auth.login": "Đăng nhập",
   "auth.login_with_google": "Đăng nhập với Google",
+  "auth.login_with_apple": "Đăng nhập với Apple",
   "auth.register": "Đăng ký",
   "auth.register_title": "Tạo tài khoản",
   "auth.email": "Email",
@@ -1584,6 +1585,7 @@ const vi = {
 
   // ==== i18n audit: hardcoded strings wrapped ====
   "auth.login_google_failed": "Đăng nhập Google thất bại",
+  "auth.login_apple_failed": "Đăng nhập Apple thất bại",
   "auth.slogan": "Quản lý chi phí, tối ưu vận hành",
   "management.tab_health": "Kiểm tra xe",
   "management.tab_reminders": "Lời nhắc",

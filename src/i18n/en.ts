@@ -33,6 +33,7 @@ const en = {
   "auth.app_tagline": "Smart vehicle management",
   "auth.login": "Sign in",
   "auth.login_with_google": "Sign in with Google",
+  "auth.login_with_apple": "Sign in with Apple",
   "auth.register": "Sign up",
   "auth.register_title": "Create account",
   "auth.email": "Email",
@@ -1578,6 +1579,7 @@ const en = {
 
   // ==== i18n audit: hardcoded strings wrapped ====
   "auth.login_google_failed": "Google sign-in failed",
+  "auth.login_apple_failed": "Apple sign-in failed",
   "auth.slogan": "Track costs, optimize every drive",
   "management.tab_health": "Vehicle check",
   "management.tab_reminders": "Reminders",

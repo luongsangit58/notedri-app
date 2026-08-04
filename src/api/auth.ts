@@ -17,6 +17,10 @@ export const authApi = {
   },
   logout: () => client.post('/auth/logout'),
   unlinkGoogle: () => client.post('/auth/google/unlink'),
+  loginWithApple: async (identityToken: string, fullName?: string) => {
+    const meta = await deviceMeta();
+    return client.post('/auth/apple', { identity_token: identityToken, full_name: fullName, ...meta });
+  },
   me: (bearerToken?: string) =>
     bearerToken
       ? client.get('/auth/me', { headers: { Authorization: `Bearer ${bearerToken}` } })
