@@ -1,7 +1,8 @@
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import mobileAds, { InterstitialAd, AdEventType, TestIds } from 'react-native-google-mobile-ads';
+import mobileAds, { InterstitialAd, AdEventType, TestIds, MaxAdContentRating } from 'react-native-google-mobile-ads';
+import { requestTrackingPermissionsAsync } from 'expo-tracking-transparency';
 import { useAuthStore } from '../../store/authStore';
 
 type AdMobExtra = {
@@ -82,8 +83,25 @@ export async function maybeShowInterstitialAfterSave(): Promise<void> {
 export function initializeAdMob(): Promise<void> {
   if (initPromise) return initPromise;
 
-  initPromise = mobileAds()
-    .initialize()
+  // iOS 14.5+: phải xin quyền App Tracking Transparency TRƯỚC khi khởi tạo Mobile Ads SDK
+  // (Google khuyến nghị thứ tự này để SDK biết dùng ads cá nhân hoá hay không ngay từ đầu).
+  // requestTrackingPermissionsAsync() tự động không hiện lại dialog nếu user đã trả lời rồi
+  // (trả về trạng thái đã lưu) - gọi thẳng mỗi lần app khởi động là an toàn. Android không có
+  // khái niệm ATT nên bỏ qua.
+  const attStep = Platform.OS === 'ios'
+    ? requestTrackingPermissionsAsync().catch(() => {})
+    : Promise.resolve();
+
+  // Khai báo rõ NoteDri không phải app hướng tới trẻ em (app theo dõi xe/nhiên liệu cho
+  // người lái) - giúp Google trả đúng loại quảng cáo phù hợp thay vì mặc định dè dặt nhất.
+  initPromise = attStep
+    .then(() => mobileAds().setRequestConfiguration({
+      maxAdContentRating: MaxAdContentRating.T,
+      tagForChildDirectedTreatment: false,
+      tagForUnderAgeOfConsent: false,
+    }))
+    .catch(() => {}) // best-effort - lỗi setRequestConfiguration không nên chặn initialize()
+    .then(() => mobileAds().initialize())
     .then(() => {})
     .catch((error) => {
       console.warn('AdMob init failed:', error);
