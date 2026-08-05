@@ -458,6 +458,7 @@ const en = {
   // OBD
   "obd.setup_title": "Connect OBD2",
   "obd.dashboard_title": "OBD2 Live",
+  "obd.gauge_cta": "View live gauges",
   "obd.entry_desc": "Read real-time vehicle data via an OBD2 adapter",
   "obd.entry_last_seen": "Not connected for {{n}} days - plug the adapter back in when convenient",
   "obd.no_device_reassure": "No adapter? GPS trips, DTC lookup and vehicle health still work.",

@@ -465,9 +465,9 @@ export default function HomeScreen() {
               <TouchableOpacity
                 activeOpacity={0.85}
                 onPress={() => vehicleId ? nav.navigate('GpsTrips', { vehicleId, vehicleName }) : nav.navigate('AddVehicle')}
-                style={{ flex: 1, paddingHorizontal: 10, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <FontAwesome5 name="route" size={12} color="#ffffffcc" solid />
-                <Text style={{ color: '#ffffffe6', fontSize: 11.5, fontWeight: '600', flex: 1 }} numberOfLines={1}>
+                style={{ flex: 1, paddingHorizontal: 4, paddingVertical: 10, alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                <FontAwesome5 name="route" size={14} color="#ffffffcc" solid />
+                <Text style={{ color: '#ffffffe6', fontSize: 10.5, fontWeight: '600', textAlign: 'center' }} numberOfLines={2}>
                   {t('home.gps_title')}
                 </Text>
               </TouchableOpacity>
@@ -475,9 +475,9 @@ export default function HomeScreen() {
               <TouchableOpacity
                 activeOpacity={0.85}
                 onPress={() => vehicleId ? nav.navigate('ObdReport', { vehicleId, vehicleName }) : nav.navigate('AddVehicle')}
-                style={{ flex: 1, paddingHorizontal: 10, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <FontAwesome5 name="history" size={12} color="#ffffffcc" solid />
-                <Text style={{ color: '#ffffffe6', fontSize: 11.5, fontWeight: '600', flex: 1 }} numberOfLines={1}>
+                style={{ flex: 1, paddingHorizontal: 4, paddingVertical: 10, alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                <FontAwesome5 name="history" size={14} color="#ffffffcc" solid />
+                <Text style={{ color: '#ffffffe6', fontSize: 10.5, fontWeight: '600', textAlign: 'center' }} numberOfLines={2}>
                   {t('home.obd_history_title')}
                 </Text>
               </TouchableOpacity>
@@ -485,9 +485,9 @@ export default function HomeScreen() {
               <TouchableOpacity
                 activeOpacity={0.85}
                 onPress={() => nav.navigate('DtcLookup')}
-                style={{ flex: 1, paddingHorizontal: 10, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <FontAwesome5 name="search" size={12} color="#ffffffcc" solid />
-                <Text style={{ color: '#ffffffe6', fontSize: 11.5, fontWeight: '600', flex: 1 }} numberOfLines={1}>
+                style={{ flex: 1, paddingHorizontal: 4, paddingVertical: 10, alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                <FontAwesome5 name="search" size={14} color="#ffffffcc" solid />
+                <Text style={{ color: '#ffffffe6', fontSize: 10.5, fontWeight: '600', textAlign: 'center' }} numberOfLines={2}>
                   {t('dtc.lookup_title')}
                 </Text>
               </TouchableOpacity>

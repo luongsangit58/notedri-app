@@ -459,6 +459,7 @@ const vi = {
   // OBD
   "obd.setup_title": "Kết nối OBD2",
   "obd.dashboard_title": "OBD2 Live",
+  "obd.gauge_cta": "Xem đồng hồ trực tiếp",
   "obd.entry_desc": "Đọc dữ liệu xe theo thời gian thực qua adapter OBD2",
   "obd.entry_last_seen": "Đã {{n}} ngày chưa kết nối - cắm lại adapter khi tiện nhé",
   "obd.no_device_reassure": "Không có adapter vẫn dùng được: chuyến GPS, tra mã lỗi, sức khoẻ xe.",

@@ -477,6 +477,21 @@ export default function OBDDashboardScreen() {
           })()}
         </View>
 
+        {/* Nút CTA có nhãn sang chế độ Đồng hồ (rà soát 5/8, góp ý user: nút
+            icon-only 44x44 trên header dễ bị bỏ sót, nhất là màn hình đầu
+            Android ô tô - không có gợi ý rõ ràng nào để bấm sang xem đồng hồ
+            trực tiếp). Giữ nguyên nút icon trên header cho thao tác nhanh,
+            thêm hàng CTA to, có chữ, tô màu primary làm hành động chính. */}
+        {isConnected && (
+          <TouchableOpacity
+            style={[styles.historyBtn, { backgroundColor: colors.primary }]}
+            onPress={() => setViewMode('gauge')}>
+            <FontAwesome5 name="tachometer-alt" size={14} color="#fff" />
+            <Text style={[styles.historyBtnText, { color: '#fff' }]}>{t('obd.gauge_cta')}</Text>
+            <FontAwesome5 name="chevron-right" size={12} color="#ffffffcc" />
+          </TouchableOpacity>
+        )}
+
         {/* Trạng thái "mọi chỉ số bình thường" khi ĐANG kết nối + không có
             cảnh báo nào (rà soát 14/7: trước đây 0 finding hiển thị y như "chưa
             tải xong" - user không phân biệt được xe khoẻ với app treo). Chỉ
