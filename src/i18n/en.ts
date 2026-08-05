@@ -1381,6 +1381,8 @@ const en = {
   "vehicle_card.health_caution": "Needs attention",
   "vehicle_card.health_poor": "Poor",
   "vehicle_card.health_critical": "Needs a check-up",
+  "vehicle_card.locked_badge": "Locked - Free plan",
+  "vehicle_card.locked_set_default": "Set as default",
   "odometer.date_required_msg": "Please enter a date",
   "odometer.update_failed": "Update failed",
   "odometer.delete_failed": "Delete failed",

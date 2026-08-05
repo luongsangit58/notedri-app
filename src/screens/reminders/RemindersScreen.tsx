@@ -472,14 +472,16 @@ export default function RemindersScreen() {
         const n = res?.data?.created ?? 0;
         Alert.alert(t('reminders.seed_done_title'), t('reminders.seed_done_msg', { n }));
       },
-      onError: () => Alert.alert(t('common.error'), t('reminders.error_load_failed')),
+      // Ưu tiên message từ server (vd xe đã bị khoá do vượt hạn mức gói Free) thay vì
+      // luôn hiện chung 1 câu "không tải được" không đúng lý do thật.
+      onError: (err: any) => Alert.alert(t('common.error'), err?.response?.data?.message ?? t('reminders.error_load_failed')),
     });
   };
 
   const handleConfirmAll = () => {
     if (!resolvedVehicleId || confirmAllReminders.isPending) return;
     confirmAllReminders.mutate(resolvedVehicleId, {
-      onError: () => Alert.alert(t('common.error'), t('reminders.error_load_failed')),
+      onError: (err: any) => Alert.alert(t('common.error'), err?.response?.data?.message ?? t('reminders.error_load_failed')),
     });
   };
 
@@ -499,12 +501,19 @@ export default function RemindersScreen() {
     if (doneModalId == null) return;
     const odo = doneOdo.trim() !== '' ? parseInt(doneOdo, 10) : undefined;
     const date = doneDate.trim() || undefined;
-    doneReminder.mutate({ id: doneModalId, odo, date });
+    // Trước đây không có onError -> lỗi 403 (vd xe bị khoá do vượt hạn mức Free) bị nuốt
+    // im lặng, modal đóng như thể đã thành công dù server đã từ chối.
+    doneReminder.mutate(
+      { id: doneModalId, odo, date },
+      { onError: (err: any) => Alert.alert(t('common.error'), err?.response?.data?.message ?? t('reminders.error_save_failed')) },
+    );
     setDoneModalId(null);
   };
 
   const handleDelete = (id: number) => {
-    deleteReminder.mutate(id);
+    deleteReminder.mutate(id, {
+      onError: (err: any) => Alert.alert(t('common.error'), err?.response?.data?.message ?? t('reminders.error_save_failed')),
+    });
   };
 
   const handleEdit = (reminderId: number) => {

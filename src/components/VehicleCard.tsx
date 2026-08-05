@@ -21,6 +21,10 @@ interface Props {
   // nút "Sửa" đè tuyệt đối ở VehiclesScreen vẫn cùng kích thước cố định, nên chỉ
   // cần chừa chỗ nhỏ hơn thay vì 120px (vốn tính cho card full-width 1 cột).
   compact?: boolean;
+  // Xe bị khoá (vehicle.plan_disabled - vượt hạn mức gói Free sau khi Premium hết hạn):
+  // truyền callback này để hiện nút "Đặt làm mặc định" ngay trên card - cách user tự
+  // "đổi" xe đang chiếm suất Free sang xe này mà không cần nâng cấp Premium.
+  onSetDefault?: () => void;
 }
 
 const BAND_KEY: Record<string, string> = {
@@ -31,7 +35,7 @@ const BAND_KEY: Record<string, string> = {
   critical:  'vehicle_card.health_critical',
 };
 
-export default function VehicleCard({ vehicle, onPress, score, compact }: Props) {
+export default function VehicleCard({ vehicle, onPress, score, compact, onSetDefault }: Props) {
   const colors = useColors();
   const t = useT();
   const name = vehicle.ten ?? vehicle.name;
@@ -100,7 +104,34 @@ export default function VehicleCard({ vehicle, onPress, score, compact }: Props)
             </Text>
           </View>
         )}
+        {vehicle.plan_disabled && (
+          <View style={{
+            flexDirection: 'row', alignItems: 'center', gap: 4,
+            backgroundColor: colors.textSecondary + '22',
+            borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2,
+          }}>
+            <FontAwesome5 name="lock" size={10} color={colors.textSecondary} solid />
+            <Text style={{ color: colors.textSecondary, fontSize: 11, fontWeight: '700' }}>
+              {t('vehicle_card.locked_badge')}
+            </Text>
+          </View>
+        )}
       </View>
+
+      {vehicle.plan_disabled && onSetDefault && (
+        <TouchableOpacity
+          onPress={onSetDefault}
+          style={{
+            flexDirection: 'row', alignSelf: 'flex-start', alignItems: 'center', gap: 6,
+            marginTop: 8, backgroundColor: colors.warning + '22',
+            borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6,
+          }}>
+          <FontAwesome5 name="lock-open" size={12} color={colors.warning} solid />
+          <Text style={{ color: colors.warning, fontSize: 12, fontWeight: '700' }}>
+            {t('vehicle_card.locked_set_default')}
+          </Text>
+        </TouchableOpacity>
+      )}
 
       {subtitle ? (
         <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 4 }}>{subtitle}</Text>

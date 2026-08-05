@@ -1381,6 +1381,8 @@ const vi = {
   "vehicle_card.health_caution": "Cần chú ý",
   "vehicle_card.health_poor": "Kém",
   "vehicle_card.health_critical": "Cần kiểm tra",
+  "vehicle_card.locked_badge": "Đã khoá - gói Free",
+  "vehicle_card.locked_set_default": "Đặt làm mặc định",
   "odometer.date_required_msg": "Vui lòng nhập ngày",
   "odometer.update_failed": "Không cập nhật được",
   "odometer.delete_failed": "Không xoá được",

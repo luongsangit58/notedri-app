@@ -1,5 +1,5 @@
 import React from 'react';
-import { FlatList, View, Text, TouchableOpacity, RefreshControl, useWindowDimensions } from 'react-native';
+import { Alert, FlatList, View, Text, TouchableOpacity, RefreshControl, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AppBgPattern from '../../components/AppBgPattern';
 import AdMobBanner from '../../components/AdMobBanner';
@@ -19,6 +19,14 @@ export default function VehiclesScreen() {
   const { data, isLoading, isError, refetch, isFetching } = useVehicles();
   const navigation = useNavigation<any>();
   const { mutate: setDefault } = useSetDefaultVehicle();
+
+  // Xe bị khoá (plan_disabled - vượt hạn mức gói Free) -> đặt làm mặc định để tự "đổi"
+  // xe đang chiếm suất Free sang xe này, không cần nâng cấp Premium hay chờ hỗ trợ.
+  const handleSetDefault = (vehicleId: number) => {
+    setDefault(vehicleId, {
+      onError: (err: any) => Alert.alert(t('common.error'), err?.response?.data?.message ?? t('vehicles.error_generic')),
+    });
+  };
   // Rà soát 20/7 (car head-unit landscape): danh sách xe 1 cột trải rất rộng
   // trên head-unit ngang, để trống nhiều 2 bên. 2 cột khi landscape VÀ có >1
   // xe (không đáng chia cột khi chỉ 1 thẻ). key remount vì FlatList không cho
@@ -53,6 +61,7 @@ export default function VehiclesScreen() {
               onPress={() => navigation.navigate('VehicleDetail', { vehicleId: item.id, vehicleName: item.ten ?? item.name })}
               score={scores[item.id] ?? null}
               compact={numColumns > 1}
+              onSetDefault={() => handleSetDefault(item.id)}
             />
             <TouchableOpacity
               onPress={() => navigation.navigate('EditVehicle', { vehicleId: item.id })}
