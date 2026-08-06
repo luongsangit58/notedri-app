@@ -28,6 +28,10 @@ type ObdSessionState = {
   // hoặc khác) giữ kết nối OBD tại thời điểm claim gần nhất - CHỈ để cảnh báo,
   // không chặn kết nối của máy này (xem obdApi.deviceLock, useObd.ts).
   sharedByOtherDevice: { deviceName: string; since: string | null } | null;
+  // Tổng số mục OBD2 (phiên + DTC report/resolve) đang chờ đồng bộ lên server -
+  // độc lập với phiên BLE connected/disconnected (đọc/ghi bởi obdSyncStatus.ts),
+  // không reset theo clear() bên dưới.
+  pendingSyncCount: number;
   patch: (p: Partial<Omit<ObdSessionState, 'patch' | 'clear'>>) => void;
   clear: () => void;
 };
@@ -40,6 +44,7 @@ export const useObdSessionStore = create<ObdSessionState>((set) => ({
   deviceName: null,
   lastSessionSaved: null,
   sharedByOtherDevice: null,
+  pendingSyncCount: 0,
   patch: (p) => set(p),
   clear: () =>
     set({

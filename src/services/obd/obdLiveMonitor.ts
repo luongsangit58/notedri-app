@@ -2,6 +2,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { obdApi } from '../../api/obd';
 import { bleService } from './BleService';
 import { enqueueObdSession, flushPendingObdSessions } from './ObdSessionSyncQueue';
+import { enqueueDtcReport, flushPendingDtcReports, enqueueDtcResolve, flushPendingDtcResolves } from './ObdDtcSyncQueue';
+import { refreshPendingSyncCount } from './obdSyncStatus';
 import {
   readSnapshot,
   readDtcCodes,
@@ -487,19 +489,6 @@ function scheduleDtcRefresh(): Promise<void> {
   return next;
 }
 
-// Đối chiếu mã vừa xoá (Mode 04 trên xe) với danh sách "chưa xử lý" server
-// đang giữ (GET /obd2/dtc), rồi resolve từng bản ghi khớp code. Server không
-// tự biết việc xoá xảy ra ở tầng adapter/BLE nên phải tự đối chiếu ở đây -
-// không có cách nào khác để 2 phía đồng bộ trạng thái "đã xử lý".
-async function resolveClearedDtcOnServer(vehicleId: number, codes: string[]): Promise<void> {
-  const res = await obdApi.dtcEvents(vehicleId);
-  const records = (res.data as any)?.data ?? [];
-  const matches = records.filter(
-    (r: any) => r && typeof r.id === 'number' && codes.includes(r.code) && !r.resolved_at,
-  );
-  await Promise.all(matches.map((r: any) => obdApi.resolveDtc(r.id).catch(() => {})));
-}
-
 async function refreshDtcState(): Promise<void> {
   const codes = await readDtcCodes();
   lastConfirmedDtc = codes;
@@ -519,7 +508,10 @@ async function refreshDtcState(): Promise<void> {
     }
     if (fresh.length > 0 && activeVehicleId) {
       fresh.forEach((c) => reportedCodes.add(c.code));
-      obdApi.reportDtc(activeVehicleId, fresh).catch(() => {});
+      enqueueDtcReport({ vehicle_id: activeVehicleId, codes: fresh })
+        .then(() => flushPendingDtcReports())
+        .then(() => refreshPendingSyncCount())
+        .catch(() => {});
     }
   }
   // Thông báo đẩy mã lỗi mới - dùng bộ nhớ BỀN VỮNG riêng (không phải
@@ -913,7 +905,10 @@ export const obdLiveMonitor = {
       // forget, KHÔNG chặn kết quả trả về UI: Mode 04 trên xe đã thành công
       // thật, lỗi mạng lúc đồng bộ server không nên khiến user tưởng xoá thất bại.
       if (activeVehicleId && clearedCodes.length > 0) {
-        resolveClearedDtcOnServer(activeVehicleId, clearedCodes.map((c) => c.code)).catch(() => {});
+        enqueueDtcResolve({ vehicle_id: activeVehicleId, codes: clearedCodes.map((c) => c.code) })
+          .then(() => flushPendingDtcResolves())
+          .then(() => refreshPendingSyncCount())
+          .catch(() => {});
       }
     }
     return ok;
@@ -973,6 +968,7 @@ bleService.addDisconnectListener(() => {
       summary,
     })
       .then(() => flushPendingObdSessions())
+      .then(() => refreshPendingSyncCount())
       .catch(() => {});
   }
 

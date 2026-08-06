@@ -84,10 +84,10 @@ describe('ObdSessionSyncQueue', () => {
     expect(await q.pendingObdSessionCount()).toBe(1);
   });
 
-  it('cap 30 item: enqueue thứ 31 đẩy item cũ nhất ra', async () => {
+  it('cap 100 item: enqueue thứ 101 đẩy item cũ nhất ra', async () => {
     const q = freshModule();
-    for (let i = 1; i <= 31; i++) await q.enqueueObdSession(payload(i));
-    expect(await q.pendingObdSessionCount()).toBe(30);
+    for (let i = 1; i <= 101; i++) await q.enqueueObdSession(payload(i));
+    expect(await q.pendingObdSessionCount()).toBe(100);
 
     mockReportSession.mockResolvedValue({});
     await q.flushPendingObdSessions();
@@ -105,6 +105,33 @@ describe('ObdSessionSyncQueue', () => {
     });
 
     await q.flushPendingObdSessions();
+    expect(await q.pendingObdSessionCount()).toBe(0);
+  });
+
+  it('clearObdSessionQueue giữa enqueue (AsyncStorage.setItem hoàn tất SAU removeItem) -> item KHÔNG hồi sinh', async () => {
+    const q = freshModule();
+    // freshModule() vừa jest.resetModules() -> require lại AsyncStorage NGAY SAU
+    // đó để lấy đúng instance module mà q (và syncQueue.ts bên trong nó) đang
+    // dùng - import tĩnh ở đầu file này đã resolve TRƯỚC mọi resetModules() nên
+    // là 1 instance khác, spy lên nó sẽ không có tác dụng gì với q.
+    const AsyncStorageForQ = require('@react-native-async-storage/async-storage');
+    // Mô phỏng: enqueue() đang ghi (setItem) thì logout() xen vào gọi clear()
+    // (bump epoch + removeItem) TRƯỚC KHI setItem thật sự ghi xong - tức setItem
+    // "thắng", hoàn tất SAU removeItem() -> đúng kịch bản hồi sinh key vừa bị xoá
+    // mà rà soát phát hiện (rò rỉ chéo tài khoản khi logout đúng lúc BLE disconnect
+    // đang enqueue phiên dở).
+    // Chỉ mock setItem (removeItem bên trong clearObdSessionQueue() vẫn chạy
+    // thật) - ghi thẳng vào storage nội bộ của mock thay vì gọi lại setItem
+    // thật (tránh đệ quy vào chính spy này).
+    jest.spyOn(AsyncStorageForQ, 'setItem').mockImplementationOnce(
+      async (...args: unknown[]) => {
+        const [key, value] = args as [string, string];
+        await q.clearObdSessionQueue();
+        AsyncStorageForQ.__INTERNAL_MOCK_STORAGE__[key] = value;
+      },
+    );
+
+    await q.enqueueObdSession(payload());
     expect(await q.pendingObdSessionCount()).toBe(0);
   });
 });

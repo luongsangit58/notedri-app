@@ -6,9 +6,9 @@
  * hành) nên đây là bổ sung thuần tuý, không thay hành vi bất kỳ module nào.
  */
 
-export type LogGroup = 'ble' | 'elm' | 'pid' | 'scheduler' | 'dtc' | 'knowledge' | 'performance';
+export type LogGroup = 'ble' | 'elm' | 'pid' | 'scheduler' | 'dtc' | 'knowledge' | 'performance' | 'sync';
 
-const ALL_GROUPS: LogGroup[] = ['ble', 'elm', 'pid', 'scheduler', 'dtc', 'knowledge', 'performance'];
+const ALL_GROUPS: LogGroup[] = ['ble', 'elm', 'pid', 'scheduler', 'dtc', 'knowledge', 'performance', 'sync'];
 
 // Mặc định: bật ở dev, tắt ở production build (tránh console noise/leak dữ
 // liệu xe thật trong bản release). __DEV__ là global có sẵn của React Native.

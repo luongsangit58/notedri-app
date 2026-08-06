@@ -6,7 +6,7 @@ import { initializeElm327, readSnapshot, setActivePidWhitelist, ObdSnapshot } fr
 import { getCachedCapability, discoverCapability, clearCapability, readCurrentVin, VehicleCapability } from '../services/obd/capabilityService';
 import { obdLiveMonitor, FastSnapshot } from '../services/obd/obdLiveMonitor';
 import { obdSessionStateMachine } from '../services/obd/obdSessionStateMachine';
-import { flushPendingObdSessions } from '../services/obd/ObdSessionSyncQueue';
+import { flushObdQueuesAndRefreshCount } from '../services/obd/obdSyncStatus';
 import { autoArmIfReady } from '../services/gps/GpsTripTracker';
 import { Finding } from '../services/obd/diagnosticEngine';
 import { savePairing } from '../services/obd/pairedDevices';
@@ -334,7 +334,7 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
     // E2: đẩy nốt phiên còn tồn trong hàng đợi (rút cáp lúc offline lần trước).
     // Điểm nghiệp vụ chắc chắn có mạng-hoạt-động-lại gần nhất, mirror cách GPS
     // flush trong GpsTripTracker sau khi chốt chuyến.
-    flushPendingObdSessions().catch(() => {});
+    flushObdQueuesAndRefreshCount().catch(() => {});
 
     const snap = await readSnapshot();
     if (isAborted()) {

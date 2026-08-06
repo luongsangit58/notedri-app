@@ -9,7 +9,9 @@ import { useI18nStore } from '../i18n';
 import { clearGpsQueue } from '../services/gps/GpsTripSyncQueue';
 import { clearObdQueue } from '../services/obd/TripSyncQueue';
 import { clearObdSessionQueue } from '../services/obd/ObdSessionSyncQueue';
+import { clearDtcReportQueue, clearDtcResolveQueue } from '../services/obd/ObdDtcSyncQueue';
 import { clearPairings } from '../services/obd/pairedDevices';
+import { useObdSessionStore } from './obdSessionStore';
 
 interface User {
   id: number;
@@ -178,6 +180,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await clearGpsQueue();
       await clearObdQueue();
       await clearObdSessionQueue();
+      await clearDtcReportQueue();
+      await clearDtcResolveQueue();
+      useObdSessionStore.getState().patch({ pendingSyncCount: 0 });
       // Xoá luôn pairing OBD local để user khác trên cùng máy không bị auto-connect
       // hoặc state "đang ghép" của người dùng trước bám lại.
       await clearPairings();

@@ -11,7 +11,7 @@ import { findingCostLabel } from '../../services/obd/findingCost';
 import { refreshRulesFromServer } from '../../services/obd/diagnosticRulesStore';
 import { groupSessionsByDay, TrendMetric } from '../../services/obd/sessionTrend';
 import { obdLiveMonitor } from '../../services/obd/obdLiveMonitor';
-import { flushPendingObdSessions } from '../../services/obd/ObdSessionSyncQueue';
+import { flushObdQueuesAndRefreshCount } from '../../services/obd/obdSyncStatus';
 import ObdTrendChart from './ObdTrendChart';
 import CorrelatedGpsTrips from './CorrelatedGpsTrips';
 import AppBgPattern from '../../components/AppBgPattern';
@@ -127,8 +127,8 @@ export default function ObdReportScreen() {
   useEffect(() => {
     (async () => {
       await obdLiveMonitor.recoverPendingCheckpoint().catch(() => {});
-      const { synced } = await flushPendingObdSessions().catch(() => ({ synced: 0 }));
-      if (synced > 0) queryClient.invalidateQueries({ queryKey: ['obd', 'sessions-recent', vehicleId] });
+      const { sessionsSynced } = await flushObdQueuesAndRefreshCount().catch(() => ({ sessionsSynced: 0 }));
+      if (sessionsSynced > 0) queryClient.invalidateQueries({ queryKey: ['obd', 'sessions-recent', vehicleId] });
     })();
   }, [vehicleId]);
 

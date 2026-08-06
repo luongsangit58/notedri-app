@@ -37,8 +37,8 @@ client.interceptors.response.use(
     // LÚC NÀY - tranh thủ đẩy nốt, không cần thêm thư viện theo dõi kết nối
     // mạng (netinfo) hay rebuild native. Dynamic import (không import tĩnh):
     // client.ts <- ObdSessionSyncQueue.ts <- api/obd.ts -> client.ts sẽ vòng lặp.
-    import('../services/obd/ObdSessionSyncQueue')
-      .then(({ flushPendingObdSessions }) => flushPendingObdSessions())
+    import('../services/obd/obdSyncStatus')
+      .then(({ flushObdQueuesAndRefreshCount }) => flushObdQueuesAndRefreshCount())
       .catch(() => {});
     return response;
   },

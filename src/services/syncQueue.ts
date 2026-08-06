@@ -8,6 +8,9 @@ export function createSyncQueue<TItem extends object>(opts: {
   key: string;
   cap: number;
   send: (item: TItem & { retries: number; queuedAt: string }) => Promise<unknown>;
+  // Gọi ngay trước khi rớt item cũ nhất do đầy cap - queue dùng chung này không
+  // tự kéo logger vào, để mỗi hàng đợi cụ thể tự quyết định có log hay không.
+  onDrop?: (item: TItem & { retries: number; queuedAt: string }) => void;
 }) {
   type QueuedItem = TItem & { retries: number; queuedAt: string };
 
@@ -32,10 +35,27 @@ export function createSyncQueue<TItem extends object>(opts: {
   }
 
   async function enqueue(item: TItem): Promise<void> {
+    // Rà soát: logout() gọi clear() có thể xen giữa lúc enqueue() đang đọc/ghi
+    // (vd disconnect BLE lúc logout -> enqueueObdSession() chạy dở, vài await
+    // sau logout mới tới lượt clearObdSessionQueue()). AsyncStorage không đảm
+    // bảo thứ tự HOÀN TẤT giữa 2 lời gọi native độc lập (setItem của ta có thể
+    // "thắng", hoàn tất SAU removeItem() của clear()) -> item hồi sinh dưới tài
+    // khoản MỚI vừa đăng nhập = rò rỉ chéo tài khoản. Chụp epoch trước khi đọc,
+    // kiểm tra lại sau đọc (bỏ luôn nếu đã bị clear() trong lúc đọc) VÀ sau khi
+    // ghi (nếu epoch đổi trong lúc ghi, có thể vừa hồi sinh key đã bị xoá -> xoá
+    // lại ngay) - đối xứng với cách flush() đã tự bảo vệ ở dưới.
+    const epochAtStart = clearEpoch;
     const queue = await readQueue();
-    if (queue.length >= opts.cap) queue.shift();
+    if (clearEpoch !== epochAtStart) return;
+    if (queue.length >= opts.cap) {
+      const dropped = queue.shift();
+      if (dropped) opts.onDrop?.(dropped);
+    }
     queue.push({ ...item, retries: 0, queuedAt: new Date().toISOString() } as QueuedItem);
     await writeQueue(queue);
+    if (clearEpoch !== epochAtStart) {
+      await AsyncStorage.removeItem(opts.key).catch(() => {});
+    }
   }
 
   async function flush(): Promise<{ synced: number; failed: number }> {

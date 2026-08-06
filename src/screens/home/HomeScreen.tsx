@@ -430,7 +430,24 @@ export default function HomeScreen() {
               }}
               style={{ padding: 18, flexDirection: 'row', alignItems: 'center', gap: 16 }}>
               <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: '#ffffff22', alignItems: 'center', justifyContent: 'center' }}>
-                <FontAwesome5 name="microchip" size={26} color="#fff" solid />
+                <View style={{ position: 'relative' }}>
+                  <FontAwesome5 name="microchip" size={26} color="#fff" solid />
+                  {obdSession.pendingSyncCount > 0 && (
+                    <View style={{
+                      position: 'absolute', top: -5, right: -6,
+                      backgroundColor: '#F59E0B', borderRadius: 9,
+                      minWidth: 18, height: 18,
+                      alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4,
+                    }}>
+                      <Text
+                        allowFontScaling={false}
+                        numberOfLines={1}
+                        style={{ color: '#fff', fontSize: 10, fontWeight: '800' }}>
+                        {obdSession.pendingSyncCount > 9 ? '9+' : String(obdSession.pendingSyncCount)}
+                      </Text>
+                    </View>
+                  )}
+                </View>
               </View>
               <View style={{ flex: 1 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
