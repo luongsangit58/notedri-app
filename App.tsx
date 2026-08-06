@@ -10,6 +10,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import RootNavigator from './src/navigation/RootNavigator';
 import { navigationRef } from './src/navigation/navigationRef';
 import ObdSessionBanner from './src/components/ObdSessionBanner';
+import NetworkStatusToast from './src/components/NetworkStatusToast';
 import ObdAutoConnect from './src/components/ObdAutoConnect';
 import AppOpenAdManager from './src/components/AppOpenAdManager';
 import NoriFloatingButton from './src/components/nori/NoriFloatingButton';
@@ -164,6 +165,7 @@ export default function App() {
               <NavigationContainer ref={navigationRef}>
                 <RootNavigator />
                 <ObdSessionBanner />
+                <NetworkStatusToast />
                 <ObdAutoConnect />
                 <AppOpenAdManager />
                 <NoriFloatingButton />

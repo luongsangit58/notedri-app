@@ -113,7 +113,14 @@ export default function GaugeCluster({
   // tiền cảnh" y hệt). Trước khi thu nhỏ, đảm bảo keep-alive đang chạy - nếu
   // chưa có quyền, xin ngay lúc này (đúng thời điểm user cần, thay vì đợi lần
   // nhắc chung 1-lần/xe mà có thể họ đã bỏ qua trước đó).
+  // Rà soát 6/8 (user báo trên đầu Android ô tô: bấm nút vuông vào PiP được
+  // nhưng "treo", không thấy số chạy) - nút này trước đây không hề kiểm tra
+  // isConnected, nên bấm được cả lúc CHƯA/KHÔNG CÒN kết nối OBD2: khung PiP mở
+  // ra nhưng speedKmh/rpm mãi mãi null (không có phiên BLE nào đang chạy để
+  // cấp dữ liệu) - đúng cảm giác "đơ", không phải do thiếu keep-alive. Chỉ hiện
+  // nút khi đang thực sự kết nối, chặn thêm 1 lớp phòng thủ ngay trong hàm.
   async function handlePressPip() {
+    if (!isConnected) return;
     const perm = await Location.getBackgroundPermissionsAsync().catch(() => null);
     if (perm?.status !== 'granted') {
       const granted = await requestKeepAlivePermissions();
@@ -261,7 +268,7 @@ export default function GaugeCluster({
         </View>
 
         <View style={styles.toolbarBtns}>
-          {pipSupported && (
+          {pipSupported && isConnected && (
             <TouchableOpacity
               onPress={handlePressPip}
               style={[styles.styleBtn, { backgroundColor: toolbarAccent + '33', borderColor: toolbarAccent + '77' }]}

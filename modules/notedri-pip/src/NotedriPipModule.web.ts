@@ -2,6 +2,7 @@
 const stub = {
   isPipSupported: async () => false,
   setPipParams: async () => {},
+  clearPipParams: async () => {},
   enterPipMode: async () => {},
   addListener: () => ({ remove: () => {} }),
   removeListener: () => {},

@@ -11,7 +11,8 @@ import { useNavigation } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useVehicles } from '../../hooks/useVehicles';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useVehicles, VEHICLES_OFFLINE_CACHE_KEY } from '../../hooks/useVehicles';
 import { useColors } from '../../utils/theme';
 import { useT } from '../../i18n';
 import { vehicleIcon } from '../../utils/vehicleIcon';
@@ -161,8 +162,42 @@ export default function HomeScreen() {
   const user = useAuthStore(s => s.user);
 
   const { data: vehiclesRaw, refetch: refetchVehicles, isFetching, isLoading: vehiclesLoading, isError: vehiclesError } = useVehicles();
-  const vehicles: any[] = Array.isArray(vehiclesRaw?.data) ? vehiclesRaw.data
+  const liveVehicles: any[] = Array.isArray(vehiclesRaw?.data) ? vehiclesRaw.data
     : Array.isArray(vehiclesRaw) ? vehiclesRaw : [];
+
+  // Rà soát 6/8 (user báo: mất mạng thì Home không hiện xe, dù vẫn có xe từ
+  // trước) - đọc lại cache dự phòng lưu trên đĩa (xem VEHICLES_OFFLINE_CACHE_KEY
+  // trong useVehicles.ts, tự ghi mỗi lần fetch /vehicles thành công). CHỈ đọc 1
+  // lần lúc mount - không cần theo dõi thay đổi, cache này chỉ dùng làm phương
+  // án dự phòng khi CHƯA có dữ liệu sống (đang tải hoặc đã lỗi hẳn - xem
+  // isUsingCachedVehicles/isUsingOfflineVehicles bên dưới).
+  const [offlineVehicles, setOfflineVehicles] = useState<any[]>([]);
+  useEffect(() => {
+    AsyncStorage.getItem(VEHICLES_OFFLINE_CACHE_KEY).then((raw) => {
+      if (!raw) return;
+      try {
+        const parsed = JSON.parse(raw);
+        const list = Array.isArray(parsed?.data) ? parsed.data : Array.isArray(parsed) ? parsed : [];
+        setOfflineVehicles(list);
+      } catch {}
+    }).catch(() => {});
+  }, []);
+  // Rơi về cache đĩa (cho MẢNG XE hiện lên) khi CHƯA CÓ dữ liệu sống - gộp cả
+  // "đang tải" LẪN "đã lỗi hẳn" (không chỉ lúc lỗi) để tránh 1 khoảng nhấp nháy
+  // "Chưa có xe nào, thêm xe ngay" sai trong lúc fetch còn đang chờ (booting đã
+  // tắt sớm hơn ở dưới nhờ có cache, nhưng vehiclesError vẫn còn false cho tới
+  // khi fetch thật sự thất bại). Dữ liệu sống luôn THẮNG ngay khi về tới
+  // (liveVehicles.length > 0 tắt cờ này), không cần chờ thêm thao tác từ user.
+  const isUsingCachedVehicles = liveVehicles.length === 0 && offlineVehicles.length > 0;
+  const vehicles: any[] = isUsingCachedVehicles ? offlineVehicles : liveVehicles;
+  // Rà soát (tự phát hiện lúc soát lại): banner "mất mạng" KHÔNG được dùng
+  // chung điều kiện với vehicles ở trên - user CÒN ONLINE mở app có cache từ
+  // phiên trước vẫn đi qua đúng nhánh isUsingCachedVehicles (vehiclesLoading
+  // còn true trong lúc chờ fetch mới), nếu gộp cả vehiclesLoading vào đây thì
+  // banner "Đang mất mạng" sẽ NHÁY SAI trên máy đang có mạng bình thường mỗi
+  // lần mở app. Chỉ hiện banner khi ĐÃ XÁC NHẬN lỗi (vehiclesError), không phải
+  // lúc còn đang chờ kết quả.
+  const isUsingOfflineVehicles = isUsingCachedVehicles && vehiclesError;
 
   // Lưu TOÀN CỤC (không phải state riêng của Home) - để Lời nhắc/ODO/Đổ xăng mở
   // qua tab bar/FAB (không có route.params.vehicleId) vẫn hiểu đúng xe đang xem
@@ -237,7 +272,11 @@ export default function HomeScreen() {
   // không mở app) có thể treo spinner toàn màn hình gần 1-2 phút (phản hồi 15/7).
   // Đánh đổi: banner "Nổi bật" + khối "Sắp tới" (phụ thuộc reminders) giờ pop-in
   // sau khi vehicles đã hiện - chấp nhận được, tốt hơn nhiều so với treo cả màn.
-  const booting = vehiclesLoading;
+  // Rà soát 6/8: vẫn còn đúng vấn đề trên khi offline - fetch /vehicles chờ hết
+  // timeout (30s, xem client.ts) + 1 lần retry mới chuyển isLoading -> false,
+  // trong lúc đó offlineVehicles (đọc từ đĩa, chỉ mất vài ms) đã sẵn sàng từ lâu.
+  // Có cache dự phòng để hiện thì không cần chờ mạng nữa - bỏ chặn ngay khi có.
+  const booting = vehiclesLoading && offlineVehicles.length === 0;
   if (booting) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'left', 'right']}>
@@ -315,6 +354,24 @@ export default function HomeScreen() {
           </View>
         </View>
 
+        {/* Rà soát 6/8 (user báo: mất mạng thì Home không hiện xe dù vẫn có xe từ
+            trước) - đang hiện DỮ LIỆU CŨ đã lưu (offlineVehicles), không phải dữ
+            liệu tươi từ server. Banner nhẹ, không chặn thao tác (khác hẳn thẻ lỗi
+            toàn màn bên dưới - thẻ đó CHỈ hiện khi không có cả dữ liệu cũ để dùng). */}
+        {isUsingOfflineVehicles && (
+          <TouchableOpacity
+            onPress={() => refetchVehicles()}
+            style={{
+              flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.warning + '22',
+              borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 12,
+              borderWidth: 1, borderColor: colors.warning + '55',
+            }}>
+            <FontAwesome5 name="wifi" size={13} color={colors.warning} solid />
+            <Text style={{ color: colors.text, fontSize: 12.5, flex: 1 }}>{t('home.vehicles_offline_banner')}</Text>
+            <Text style={{ color: colors.warning, fontSize: 12.5, fontWeight: '700' }}>{t('common.retry')}</Text>
+          </TouchableOpacity>
+        )}
+
         {/* Vehicle selector */}
         {vehicles.length > 0 && (
           <View style={{ marginBottom: 16 }}>
@@ -326,7 +383,11 @@ export default function HomeScreen() {
             user: có xe rồi mà mất mạng thì Home hiện y hệt "chưa có xe", dẫn
             thẳng qua nút Thêm xe). vehicles rỗng vì fetch LỖI khác hẳn vehicles
             rỗng vì user THẬT SỰ chưa có xe nào - phải tách 2 case, y như
-            VehiclesScreen.tsx đã làm đúng, không dùng chung 1 khối UI. */}
+            VehiclesScreen.tsx đã làm đúng, không dùng chung 1 khối UI.
+            Rà soát 6/8: giờ chỉ còn rơi vào đây khi KHÔNG CÓ cả cache dự phòng
+            trên đĩa (lần đầu offline, chưa từng fetch thành công) - có cache thì
+            đã hiện banner nhẹ + xe thật ở trên (isUsingOfflineVehicles), không
+            còn chặn hẳn màn hình như trước. */}
         {vehicles.length === 0 && vehiclesError && (
           <View style={{ backgroundColor: colors.surface, borderRadius: 18, padding: 28, alignItems: 'center', borderWidth: 1, borderColor: colors.border, marginTop: 8 }}>
             <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: colors.error + '1f', alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>

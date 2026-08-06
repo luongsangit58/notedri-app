@@ -19,6 +19,14 @@ declare class NotedriPipModule extends NativeModule<NotedriPipEvents> {
   setPipParams(): Promise<void>;
 
   /**
+   * Dọn cờ "đủ điều kiện PiP" + tắt auto-enter - gọi khi rời màn Đồng hồ, mất
+   * kết nối OBD2, hoặc unmount hẳn màn OBD2. PictureInPictureParams thuộc CẤP
+   * ACTIVITY (app 1-Activity), không tự dọn theo unmount màn hình RN - thiếu
+   * bước này, màn khác (vd Trang chủ) sẽ bị đẩy nhầm vào PiP lúc bấm Home.
+   */
+  clearPipParams(): Promise<void>;
+
+  /**
    * Chủ động thu nhỏ Activity vào khung PiP NGAY BÂY GIỜ. An toàn khi gọi
    * trên máy không hỗ trợ hoặc gọi nhiều lần - tự bỏ qua, không throw. Dùng
    * cho cả nút bấm tường minh lẫn fallback tự gọi lúc rời màn (API 26-30, xem

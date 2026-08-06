@@ -40,10 +40,32 @@ class NotedriPipModule : Module() {
       activeModule?.sendEvent("onPipModeChanged", mapOf("isInPip" to isInPip))
     }
 
-    fun buildParams(): PictureInPictureParams {
+    // Rà soát 6/8 (user báo: Trang chủ CHƯA kết nối OBD2 mà bấm Home vẫn bị đẩy
+    // vào PiP) - cờ TĨNH, JS điều khiển qua setPipParams()/clearPipParams(),
+    // dùng CHUNG cho 2 đường vào PiP:
+    //  1. Auto-enter API 31+: setAutoEnterEnabled() trên PictureInPictureParams
+    //     của chính Activity - nhưng đó là state CẤP ACTIVITY (app 1-Activity
+    //     RN), không tự dọn theo unmount màn hình JS, nên setPipParams() ở màn
+    //     Đồng hồ mà không có clearPipParams() tương ứng lúc rời màn sẽ để cờ
+    //     đó "dính" sang mọi màn khác (Trang chủ...) cho tới khi bị ghi đè.
+    //  2. Fallback onUserLeaveHint() API 26-30 (không có setAutoEnterEnabled) -
+    //     NotedriPipLifecycleListener không có cách nào tự biết màn hình
+    //     JS/React hiện tại có phải Đồng hồ OBD2 đã kết nối hay không, phải tự
+    //     đọc cờ tĩnh này trước khi gọi enterPictureInPictureMode().
+    // Mặc định false: KHÔNG được tự vào PiP ở bất kỳ đâu cho tới khi JS chủ
+    // động báo "đủ điều kiện" (xem OBDDashboardScreen.tsx).
+    @Volatile
+    var pipEligible: Boolean = false
+      private set
+
+    fun setEligible(eligible: Boolean) {
+      pipEligible = eligible
+    }
+
+    fun buildParams(autoEnter: Boolean = true): PictureInPictureParams {
       val builder = PictureInPictureParams.Builder().setAspectRatio(PIP_ASPECT_RATIO)
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-        builder.setAutoEnterEnabled(true)
+        builder.setAutoEnterEnabled(autoEnter)
       }
       return builder.build()
     }
@@ -82,11 +104,31 @@ class NotedriPipModule : Module() {
     // biên dịch). Bọc runOnUiThread() để chắc chắn đúng luồng bất kể
     // AsyncFunction đang chạy trên hàng đợi nào.
     AsyncFunction("setPipParams") {
+      setEligible(true)
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
         appContext.currentActivity?.let { activity ->
           activity.runOnUiThread {
             try {
-              activity.setPictureInPictureParams(buildParams())
+              activity.setPictureInPictureParams(buildParams(autoEnter = true))
+            } catch (_: Exception) {}
+          }
+        }
+      }
+    }
+
+    // Dọn cờ "đủ điều kiện" + tắt auto-enter (API 31+) - gọi khi rời màn Đồng
+    // hồ, mất kết nối OBD2, hoặc unmount hẳn màn OBD2 (xem OBDDashboardScreen.tsx).
+    // Bắt buộc phải có hàm đối xứng với setPipParams(): PictureInPictureParams
+    // là state CẤP ACTIVITY, không tự dọn theo unmount màn hình RN - thiếu bước
+    // này, cờ auto-enter true "dính" từ lần ghé Đồng hồ trước sẽ khiến màn khác
+    // (vd Trang chủ) bị đẩy nhầm vào PiP lúc user bấm Home (rà soát 6/8).
+    AsyncFunction("clearPipParams") {
+      setEligible(false)
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        appContext.currentActivity?.let { activity ->
+          activity.runOnUiThread {
+            try {
+              activity.setPictureInPictureParams(buildParams(autoEnter = false))
             } catch (_: Exception) {}
           }
         }
@@ -101,7 +143,7 @@ class NotedriPipModule : Module() {
         appContext.currentActivity?.let { activity ->
           activity.runOnUiThread {
             try {
-              activity.enterPictureInPictureMode(buildParams())
+              activity.enterPictureInPictureMode(buildParams(autoEnter = true))
             } catch (_: Exception) {
               // Activity không ở trạng thái cho phép vào PiP (vd đang ở nền sẵn) -
               // bỏ qua lặng lẽ, không có gì để JS xử lý thêm.

@@ -21,10 +21,19 @@ import expo.modules.core.interfaces.ReactActivityLifecycleListener
  * sang chèn thẳng override vào MainActivity.kt sinh ra qua withPictureInPicture.js
  * (kỹ thuật withMainActivity + mergeContents, vẫn an toàn với CNG vì tự chèn
  * lại mỗi lần prebuild, không phải sửa tay 1 lần).
+ *
+ * Rà soát 6/8 (user báo: rời Trang chủ - CHƯA hề mở/kết nối OBD2 - vẫn bị đẩy
+ * vào PiP trên máy Android 8-11): trước đây gọi enterPictureInPictureMode() VÔ
+ * ĐIỀU KIỆN mỗi lần onUserLeaveHint(), bất kể đang ở màn nào. Listener này sống
+ * ở CẤP ACTIVITY (đăng ký qua expo-module.config.json, không phải component
+ * RN) nên không tự có state "đang ở màn Đồng hồ + đã kết nối" - phải đọc cờ
+ * tĩnh NotedriPipModule.pipEligible do JS bật/tắt qua setPipParams()/
+ * clearPipParams() (xem OBDDashboardScreen.tsx) trước khi được phép vào PiP.
  */
 class NotedriPipLifecycleListener : ReactActivityLifecycleListener {
   override fun onUserLeaveHint(activity: Activity) {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+      if (!NotedriPipModule.pipEligible) return
       try {
         activity.enterPictureInPictureMode(NotedriPipModule.buildParams())
       } catch (_: Exception) {}

@@ -171,16 +171,36 @@ export default function OBDDashboardScreen() {
   // app"). setPipParams() chỉ đăng ký, hệ thống tự quyết định lúc nào chuyển
   // (đúng lúc bấm Home, Android 12+) - xem NotedriPipModule.kt.
   // Rà soát 29/7 (user báo: bấm nút PiP thủ công thu nhỏ được, nhưng bấm Home
-  // thiết bị để thoát thì KHÔNG tự thu nhỏ) - trước đây chỉ đăng ký
-  // setPipParams() khi isConnected === true. BLE hay có khoảng "reconnecting"
-  // thoáng qua (mất sóng, xe rung lắc...) - đúng lúc đó nếu user bấm Home thì
-  // cờ auto-enter (API 31+) chưa từng được đăng ký -> Android không tự vào
-  // PiP. Nút bấm thủ công (handlePressPip) không hề kiểm tra isConnected, nên
-  // đường tự động cũng không nên khắt khe hơn - chỉ cần đang ở màn Đồng hồ.
+  // thiết bị để thoát thì KHÔNG tự thu nhỏ) - từng thử bỏ hẳn điều kiện
+  // isConnected (chỉ cần viewMode === 'gauge') để né khoảng "reconnecting"
+  // thoáng qua (mất sóng, xe rung lắc...).
+  // Rà soát 6/8 (user báo: Trang chủ CHƯA kết nối OBD2 vẫn bị đẩy vào PiP, đầu
+  // Android ô tô thì bấm thoát lại KHÔNG vào PiP) - bỏ hẳn isConnected ở trên
+  // đã đi quá xa: setPipParams() bật cờ auto-enter ở CẤP ACTIVITY (app
+  // 1-Activity RN), không tự tắt theo unmount màn hình - hễ user ghé màn Đồng
+  // hồ 1 lần (kể cả chưa/không còn kết nối) là cờ đó dính mãi, khiến Trang chủ
+  // hay bất kỳ màn nào khác bấm Home sau đó cũng bị đẩy vào PiP nhầm.
+  // Sửa đúng gốc: coi (isConnected || isReconnecting) là điều kiện CẦN (chấp
+  // nhận khoảng reconnecting thoáng qua, không chấp nhận "chưa từng kết nối"
+  // hay "đã ngắt hẳn"), và LUÔN dọn cờ (clearPipParams) khi điều kiện không
+  // còn đúng - đối xứng với setPipParams(), không để cờ "mồ côi" ở cấp Activity.
   useEffect(() => {
-    if (Platform.OS !== 'android' || viewMode !== 'gauge') return;
-    NotedriPip.setPipParams().catch(() => {});
-  }, [viewMode]);
+    if (Platform.OS !== 'android') return;
+    const eligible = viewMode === 'gauge' && (isConnected || isReconnecting);
+    if (eligible) {
+      NotedriPip.setPipParams().catch(() => {});
+    } else {
+      NotedriPip.clearPipParams().catch(() => {});
+    }
+  }, [viewMode, isConnected, isReconnecting]);
+
+  // Rời hẳn màn OBD2 (unmount, vd back về Trang chủ) - luôn dọn cờ PiP bất kể
+  // trạng thái lúc rời, phòng trường hợp effect trên chưa kịp chạy lại (unmount
+  // cắt ngang mọi effect kế tiếp) mà cờ auto-enter vẫn còn true ở cấp Activity.
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    return () => { NotedriPip.clearPipParams().catch(() => {}); };
+  }, []);
 
   // Đổi qua PipCompactView khi Android vừa thu nhỏ Activity vào khung PiP -
   // nội dung khung PiP CHÍNH LÀ UI Activity lúc đó (không phải 1 view riêng),
