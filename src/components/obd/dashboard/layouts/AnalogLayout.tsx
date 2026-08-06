@@ -97,7 +97,7 @@ export default function AnalogLayout({ metrics, size, isPortrait, animate }: Coc
   // vòng tua vẫn giữ nguyên cặp warn/crit cũ.
 
   return (
-    <View style={[styles.root, { backgroundColor: p.bg, borderColor: p.border }]}>
+    <View style={[styles.root, { backgroundColor: p.bg }]}>
       <View style={[styles.gaugesRow, isPortrait && styles.gaugesCol]}>
         <ArcGauge
           value={speed?.value ?? null} min={0} max={220} size={size}
@@ -124,7 +124,10 @@ export default function AnalogLayout({ metrics, size, isPortrait, animate }: Coc
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, borderRadius: 18, borderWidth: 1, padding: 16, gap: 14, width: '100%', alignItems: 'center', justifyContent: 'center' },
+  // Rà soát 6/8: bỏ borderRadius/borderWidth - nền theme (p.bg) giờ tràn hết
+  // màn Đồng hồ thay vì "đóng khung" cách mép (xem GaugeCluster.tsx). Giữ
+  // nguyên padding 16 - vẫn cần khoảng cách cho 2 đồng hồ kim không sát mép.
+  root: { flex: 1, padding: 16, gap: 14, width: '100%', alignItems: 'center', justifyContent: 'center' },
   gaugesRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 20 },
   gaugesCol: { flexDirection: 'column' },
   sideStack: { flexDirection: 'row', gap: 10, width: '100%' },

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, RefreshControl, TouchableOpacity, Modal, FlatList, Pressable, Image, ActivityIndicator,
+  useWindowDimensions,
 } from 'react-native';
 import * as Location from 'expo-location';
 import { PermissionManager } from '../../services/permissions/PermissionManager';
@@ -126,6 +127,16 @@ export default function HomeScreen() {
   const nav = useNavigation<any>();
   const colors = useColors();
   const t = useT();
+  // Rà soát 6/8 (góp ý user: màn hình ngang/đầu Android ô tô bị thừa 2 bên khá
+  // nhiều) - cap 720 hợp lý cho điện thoại DỌC (nội dung chủ yếu là hàng đơn
+  // cột icon+chữ+mũi tên, nới rộng ra sẽ kéo dài xấu - đã thử contentWide
+  // chung 1024 cho MỌI hướng và bị đúng lỗi này). Chỉ nới cap khi THẬT SỰ ngang
+  // (điện thoại xoay ngang / đầu xe) - đi kèm xếp lại 2 khối "Bảo dưỡng" +
+  // "Số liệu nhanh" thành 2 cột ở dưới (thay vì 2 hàng đơn xếp chồng) để tận
+  // dụng đúng bề ngang thêm ra thay vì để trống hoặc kéo dài từng box.
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
+  const contentMaxWidth = isLandscape ? 1024 : 720;
 
   // Rà soát 22/7 (user phản hồi: "mới vào app đã hiện xin quyền GPS" gây khó
   // chịu) - widget thời tiết/AQI chỉ là tiện ích PHỤ, không đáng để chủ động
@@ -292,7 +303,7 @@ export default function HomeScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'left', 'right']}>
       <AppBgPattern />
       <ScrollView
-        contentContainerStyle={{ padding: 16, paddingBottom: 40, width: '100%', maxWidth: 720, alignSelf: 'center' }}
+        contentContainerStyle={{ padding: 16, paddingBottom: 40, width: '100%', maxWidth: contentMaxWidth, alignSelf: 'center' }}
         refreshControl={<RefreshControl refreshing={isFetching} onRefresh={onRefresh} tintColor={colors.primary} />}>
 
         {/* Header */}
@@ -656,63 +667,75 @@ export default function HomeScreen() {
 
         </View>
 
-        {/* Bảo dưỡng - Nhật ký thứ 3 (gọn hơn, 1 hàng) */}
-        <TouchableOpacity
-          activeOpacity={0.85}
-          onPress={() => nav.navigate('Services')}
-          style={{
-            flexDirection: 'row', alignItems: 'center', gap: 12,
-            backgroundColor: colors.surface, borderRadius: 14, padding: 12, marginBottom: 12,
-            borderWidth: 1, borderColor: colors.border,
-          }}>
-          <View style={{
-            width: 36, height: 36, borderRadius: 10,
-            backgroundColor: '#10b98122', alignItems: 'center', justifyContent: 'center',
-          }}>
-            <FontAwesome5 name="wrench" size={15} color="#10b981" solid />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={{ color: colors.text, fontWeight: '700', fontSize: 13 }}>{t('home.service_title')}</Text>
-            <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 1 }}>{t('home.service_subtitle')}</Text>
-          </View>
-          <FontAwesome5 name="chevron-right" size={12} color={colors.textSecondary} />
-        </TouchableOpacity>
-
-        {/* So lieu nhanh (stats strip) */}
-        {vehicleId && dashRaw && (
+        {/* Bảo dưỡng + Số liệu nhanh (rà soát 6/8, góp ý user: màn ngang/đầu
+            Android ô tô bị thừa 2 bên, 2 box đơn hàng này kéo dài xấu nếu chỉ
+            nới rộng container) - ghép thành 2 CỘT khi thật sự ngang (isLandscape)
+            thay vì xếp chồng 2 hàng đơn - tận dụng đúng bề ngang thêm ra, mỗi
+            box vẫn giữ tỉ lệ vừa mắt. Chỉ ghép khi CẢ 2 box cùng hiện diện -
+            "Bảo dưỡng" đứng 1 mình (chưa có dashRaw/vehicleId) vẫn giữ hàng đơn
+            full-width như cũ, tránh 1 box lẻ bị flex:1 kéo dài hết hàng trống trơn. */}
+        <View style={{
+          flexDirection: isLandscape && vehicleId && dashRaw ? 'row' : 'column',
+          gap: 12, marginBottom: 12,
+        }}>
           <TouchableOpacity
             activeOpacity={0.85}
-            onPress={() => nav.navigate('Stats', { tab: 1 })}
+            onPress={() => nav.navigate('Services')}
             style={{
-              flexDirection: 'row', backgroundColor: colors.surface, borderRadius: 14,
-              paddingVertical: 14, marginBottom: 12, borderWidth: 1, borderColor: colors.border,
+              flex: isLandscape && vehicleId && dashRaw ? 1 : undefined,
+              flexDirection: 'row', alignItems: 'center', gap: 12,
+              backgroundColor: colors.surface, borderRadius: 14, padding: 12,
+              borderWidth: 1, borderColor: colors.border,
             }}>
-            <View style={{ flex: 1, alignItems: 'center', paddingHorizontal: 4 }}>
-              <Text style={{ color: colors.textSecondary, fontSize: 10, marginBottom: 3 }}>
-                {t('home.stat_this_month')}
-              </Text>
-              <Text style={{ color: colors.text, fontWeight: '800', fontSize: 13 }} numberOfLines={1}>
-                {thisMonth ? formatVND(Number(thisMonth.tong_tien ?? 0)) : '-'}
-              </Text>
+            <View style={{
+              width: 36, height: 36, borderRadius: 10,
+              backgroundColor: '#10b98122', alignItems: 'center', justifyContent: 'center',
+            }}>
+              <FontAwesome5 name="wrench" size={15} color="#10b981" solid />
             </View>
-            <View style={{ width: 1, backgroundColor: colors.border, marginVertical: 4 }} />
-            <View style={{ flex: 1, alignItems: 'center', paddingHorizontal: 4 }}>
-              <Text style={{ color: colors.textSecondary, fontSize: 10, marginBottom: 3 }}>L/100KM</Text>
-              <Text style={{ color: colors.text, fontWeight: '800', fontSize: 13 }}>
-                {consumption != null ? `${Number(consumption).toFixed(1)}` : '-'}
-              </Text>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: colors.text, fontWeight: '700', fontSize: 13 }}>{t('home.service_title')}</Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 1 }}>{t('home.service_subtitle')}</Text>
             </View>
-            <View style={{ width: 1, backgroundColor: colors.border, marginVertical: 4 }} />
-            <View style={{ flex: 1, alignItems: 'center', paddingHorizontal: 4 }}>
-              <Text style={{ color: colors.textSecondary, fontSize: 10, marginBottom: 3 }}>
-                {t('home.stat_total')}
-              </Text>
-              <Text style={{ color: colors.text, fontWeight: '800', fontSize: 13 }} numberOfLines={1}>
-                {allTime ? formatVND(Number(allTime.tong_tien ?? 0)) : '-'}
-              </Text>
-            </View>
+            <FontAwesome5 name="chevron-right" size={12} color={colors.textSecondary} />
           </TouchableOpacity>
-        )}
+
+          {/* So lieu nhanh (stats strip) */}
+          {vehicleId && dashRaw && (
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => nav.navigate('Stats', { tab: 1 })}
+              style={[
+                { flexDirection: 'row', backgroundColor: colors.surface, borderRadius: 14, paddingVertical: 14, borderWidth: 1, borderColor: colors.border },
+                isLandscape ? { flex: 1 } : null,
+              ]}>
+              <View style={{ flex: 1, alignItems: 'center', paddingHorizontal: 4 }}>
+                <Text style={{ color: colors.textSecondary, fontSize: 10, marginBottom: 3 }}>
+                  {t('home.stat_this_month')}
+                </Text>
+                <Text style={{ color: colors.text, fontWeight: '800', fontSize: 13 }} numberOfLines={1}>
+                  {thisMonth ? formatVND(Number(thisMonth.tong_tien ?? 0)) : '-'}
+                </Text>
+              </View>
+              <View style={{ width: 1, backgroundColor: colors.border, marginVertical: 4 }} />
+              <View style={{ flex: 1, alignItems: 'center', paddingHorizontal: 4 }}>
+                <Text style={{ color: colors.textSecondary, fontSize: 10, marginBottom: 3 }}>L/100KM</Text>
+                <Text style={{ color: colors.text, fontWeight: '800', fontSize: 13 }}>
+                  {consumption != null ? `${Number(consumption).toFixed(1)}` : '-'}
+                </Text>
+              </View>
+              <View style={{ width: 1, backgroundColor: colors.border, marginVertical: 4 }} />
+              <View style={{ flex: 1, alignItems: 'center', paddingHorizontal: 4 }}>
+                <Text style={{ color: colors.textSecondary, fontSize: 10, marginBottom: 3 }}>
+                  {t('home.stat_total')}
+                </Text>
+                <Text style={{ color: colors.text, fontWeight: '800', fontSize: 13 }} numberOfLines={1}>
+                  {allTime ? formatVND(Number(allTime.tong_tien ?? 0)) : '-'}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          )}
+        </View>
 
         {/* Upcoming reminders */}
         {upcoming.length > 0 && (

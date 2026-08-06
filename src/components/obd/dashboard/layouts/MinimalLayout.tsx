@@ -52,7 +52,7 @@ export default function MinimalLayout({ metrics, size, heroSize, isPortrait, ani
   const featured = pickFeaturedSecondary(secondary);
 
   return (
-    <View style={[styles.root, { backgroundColor: PALETTE.bg, borderColor: PALETTE.border }, isPortrait && { paddingVertical: 28 }]}>
+    <View style={[styles.root, { backgroundColor: PALETTE.bg }, isPortrait && { paddingVertical: 28 }]}>
       <ArcGauge
         value={speed?.value ?? null} min={0} max={220} size={heroSize}
         label={t('obd.stat_speed')} unit="km/h"
@@ -79,7 +79,9 @@ export default function MinimalLayout({ metrics, size, heroSize, isPortrait, ani
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, borderRadius: 18, borderWidth: 1, width: '100%', minHeight: 220, alignItems: 'center', justifyContent: 'center', paddingVertical: 20 },
+  // Rà soát 6/8: bỏ borderRadius/borderWidth - nền theme (PALETTE.bg) giờ
+  // tràn hết màn Đồng hồ thay vì "đóng khung" cách mép (xem GaugeCluster.tsx).
+  root: { flex: 1, width: '100%', minHeight: 220, alignItems: 'center', justifyContent: 'center', paddingVertical: 20 },
   secondaryRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 22, flexWrap: 'wrap', justifyContent: 'center' },
   secondaryText: { fontSize: 11, letterSpacing: 0.2 },
   dot: { width: 3, height: 3, borderRadius: 1.5 },

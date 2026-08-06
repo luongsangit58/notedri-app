@@ -58,7 +58,7 @@ export default function RetroLayout({ metrics, size, isPortrait, animate }: Cock
   };
 
   return (
-    <View style={[styles.root, { borderColor: PALETTE.chrome }, isPortrait && { paddingVertical: 20 }]} onLayout={onRootLayout}>
+    <View style={[styles.root, isPortrait && { paddingVertical: 20 }]} onLayout={onRootLayout}>
       {bg.w > 0 && bg.h > 0 && (
         <Svg width={bg.w} height={bg.h} style={StyleSheet.absoluteFillObject}>
           <Defs>
@@ -100,7 +100,11 @@ export default function RetroLayout({ metrics, size, isPortrait, animate }: Cock
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, borderRadius: 18, borderWidth: 3, overflow: 'hidden', width: '100%', minHeight: 220, paddingVertical: 20, paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center', gap: 14 },
+  // Rà soát 6/8 (user xác nhận bỏ luôn khung chrome dù là chủ ý thẩm mỹ Retro) -
+  // bỏ borderRadius/borderWidth, nền kem (cream gradient SVG) giờ tràn hết màn
+  // Đồng hồ thay vì đóng khung cách mép (xem GaugeCluster.tsx). Giữ
+  // overflow:'hidden' - vẫn cần để clip SVG nền đúng khung chữ nhật.
+  root: { flex: 1, overflow: 'hidden', width: '100%', minHeight: 220, paddingVertical: 20, paddingHorizontal: 14, alignItems: 'center', justifyContent: 'center', gap: 14 },
   gaugesRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 18, flexWrap: 'wrap' },
   gaugesCol: { flexDirection: 'column' },
   secondaryRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap', justifyContent: 'center' },

@@ -142,7 +142,11 @@ export default function RacingLayout({ metrics, size, heroSize, isPortrait, anim
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, borderRadius: 18, overflow: 'hidden', width: '100%', minHeight: 220, paddingVertical: 24, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center', gap: 14 },
+  // Rà soát 6/8: bỏ borderRadius - nền theme (PALETTE.bg + hoạ tiết carbon
+  // fiber SVG) giờ tràn hết màn Đồng hồ thay vì bo góc cách mép (xem
+  // GaugeCluster.tsx). Giữ overflow:'hidden' - vẫn cần để clip hoạ tiết SVG
+  // đúng khung chữ nhật, không liên quan tới việc bo góc.
+  root: { flex: 1, overflow: 'hidden', width: '100%', minHeight: 220, paddingVertical: 24, paddingHorizontal: 16, alignItems: 'center', justifyContent: 'center', gap: 14 },
   // Góc trên-trái (không phải trên-phải) - nút đổi style của GaugeCluster luôn
   // nằm cố định trên-phải, đặt speedBadge cùng góc sẽ bị nút đó đè lên.
   speedBadge: { position: 'absolute', top: 14, left: 16, alignItems: 'flex-start' },

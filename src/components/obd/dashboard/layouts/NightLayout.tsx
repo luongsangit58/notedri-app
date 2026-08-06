@@ -54,7 +54,7 @@ export default function NightLayout({ metrics, size, heroSize, isPortrait, anima
   const miniValSize = Math.max(15, Math.min(24, size * 0.08));
 
   return (
-    <View style={[styles.root, { backgroundColor: PALETTE.bg, borderColor: PALETTE.border }, isPortrait && { paddingVertical: 28 }]}>
+    <View style={[styles.root, { backgroundColor: PALETTE.bg }, isPortrait && { paddingVertical: 28 }]}>
       <ArcGauge
         value={speed?.value ?? null} min={0} max={220} size={heroSize}
         label={t('obd.stat_speed')} unit="km/h" valueFontFamily={monoFontFamily}
@@ -77,7 +77,9 @@ export default function NightLayout({ metrics, size, heroSize, isPortrait, anima
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, borderRadius: 18, borderWidth: 1, width: '100%', minHeight: 220, alignItems: 'center', justifyContent: 'center', paddingVertical: 20, gap: 2 },
+  // Rà soát 6/8: bỏ borderRadius/borderWidth - nền theme (PALETTE.bg) giờ
+  // tràn hết màn Đồng hồ thay vì "đóng khung" cách mép (xem GaugeCluster.tsx).
+  root: { flex: 1, width: '100%', minHeight: 220, alignItems: 'center', justifyContent: 'center', paddingVertical: 20, gap: 2 },
   secondaryRow: { flexDirection: 'row', gap: 10, flexWrap: 'wrap', justifyContent: 'center', marginTop: 22 },
   mini: { alignItems: 'center' },
   miniLabel: { fontSize: 9, letterSpacing: 0.6, textTransform: 'uppercase' },

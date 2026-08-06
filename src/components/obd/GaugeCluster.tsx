@@ -312,7 +312,15 @@ export default function GaugeCluster({
 }
 
 const styles = StyleSheet.create({
-  root: { flexGrow: 1, padding: 8 },
+  // Rà soát 6/8 (góp ý user: viền bo góc của từng theme nằm sát mép màn hình
+  // thay vì tràn hết 1 màu) - padding 8 ở đây tạo khoảng hở lộ màu nền chung
+  // của app (colors.background) khác với màu nền riêng của theme (p.bg/PALETTE.bg)
+  // đang chọn, cộng viền bo góc của chính Layout tạo cảm giác "đóng khung". Bỏ
+  // hẳn padding ngoài này - nền của theme (đã bỏ luôn border, xem các Layout.tsx)
+  // giờ tràn tới đúng mép ScrollView, đúng tinh thần "full màn thật" của chế độ
+  // Đồng hồ (xem OBDDashboardScreen.tsx). Khoảng cách cho nội dung bên trong (kim
+  // đồng hồ, mini-stat...) vẫn do padding riêng của từng Layout đảm nhiệm.
+  root: { flexGrow: 1 },
   clockPill: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     borderRadius: 20, borderWidth: 1, paddingHorizontal: 16, paddingVertical: 8,
