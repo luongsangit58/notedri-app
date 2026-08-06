@@ -643,12 +643,12 @@ function Chip({ icon, label }: { icon: string; label: string }) {
 }
 
 // Rà soát 29/7 (góp ý user: "máy A vẫn hiện primary dù máy B đang thực sự ghi
-// hành trình xe này" - is_gps_primary là Ý ĐỊNH user chọn, per-USER, không
-// theo xe; còn trackingLock là SỰ THẬT per-VEHICLE). Banner này giờ đọc
-// gpsTripsApi.trackingLock.status() - đúng máy đang giữ lock CHO XE ĐANG XEM -
-// thay vì is_gps_primary, để không còn lệch hiển thị giữa 2 khái niệm khác nhau.
-// "Đặt máy chính" (is_gps_primary, DevicesScreen) vẫn giữ nguyên là preference
-// riêng, KHÔNG đổi ở đây - chỉ đổi nguồn dữ liệu banner để phản ánh đúng thực tế.
+// hành trình xe này" - is_gps_primary khi đó là Ý ĐỊNH user chọn, per-USER,
+// không theo xe; còn trackingLock là SỰ THẬT per-VEHICLE). Banner này đọc
+// gpsTripsApi.trackingLock.status() - đúng máy đang giữ lock CHO XE ĐANG XEM.
+// Rà soát 6/8: is_gps_primary ("Đặt máy chính" ở DevicesScreen) đã bỏ hẳn -
+// không có logic ghi hành trình nào (GpsTripTracker.ts) từng đọc cờ này, chỉ
+// còn 1 nút bấm không tác dụng thật + dễ gây hiểu lầm với banner dưới đây.
 function GpsPrimaryBanner({ vehicleId }: { vehicleId: number }) {
   const colors = useColors();
   const t = useT();

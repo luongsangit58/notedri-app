@@ -38,11 +38,6 @@ export default function DevicesScreen() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['device-sessions'] }),
   });
 
-  const setPrimaryMut = useMutation({
-    mutationFn: (id: number) => devicesApi.setPrimary(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['device-sessions'] }),
-  });
-
   const t = useT();
 
   function confirmLogout(session: DeviceSession) {
@@ -135,9 +130,6 @@ export default function DevicesScreen() {
                         <Text style={{ color: colors.primary, fontSize: 10, fontWeight: '700' }}>{t('devices.this_device')}</Text>
                       </View>
                     )}
-                    {session.is_gps_primary && (
-                      <FontAwesome5 name="star" size={11} color="#f59e0b" solid />
-                    )}
                   </View>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 }}>
                     <View style={[styles.dot, { backgroundColor: session.is_online ? '#10b981' : colors.border }]} />
@@ -150,15 +142,6 @@ export default function DevicesScreen() {
 
               {/* Actions */}
               <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
-                {!session.is_gps_primary && (
-                  <TouchableOpacity
-                    onPress={() => setPrimaryMut.mutate(session.id)}
-                    style={[styles.actionBtn, { borderColor: '#f59e0b' }]}
-                    disabled={setPrimaryMut.isPending}>
-                    <FontAwesome5 name="star" size={11} color="#f59e0b" />
-                    <Text style={{ color: '#f59e0b', fontSize: 11, fontWeight: '600', marginLeft: 4 }}>{t('devices.gps_primary')}</Text>
-                  </TouchableOpacity>
-                )}
                 {!session.is_current && (
                   <TouchableOpacity
                     onPress={() => confirmLogout(session)}
