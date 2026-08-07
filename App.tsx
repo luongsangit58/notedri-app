@@ -29,6 +29,13 @@ import { sendDeviceHeartbeat } from './src/api/devices';
 import { useAuthStore } from './src/store/authStore';
 import { initializeAdMob } from './src/services/ads/admob';
 import { recoverPendingGoogleAuthIfAny } from './src/services/googleAuthRecovery';
+import AppErrorBoundary from './src/components/AppErrorBoundary';
+import { installGlobalErrorHandler, readLastFatalError } from './src/services/crashLog';
+
+// Rà soát crash 7/8: đăng ký NGAY lúc module này load (không phải trong
+// useEffect/component) - crash có thể xảy ra trước khi component đầu tiên
+// kịp mount (xem crashLog.ts).
+installGlobalErrorHandler();
 
 async function tryAutoArmGpsTracking(): Promise<void> {
   try {
@@ -69,6 +76,11 @@ function AppLoader({ children }: { children: React.ReactNode }) {
     // ở đây để dọn nốt thông báo đã lỡ lên lịch trên máy đã cài bản build đó, tránh nó
     // cứ bắn mãi dù code lên lịch đã không còn.
     Notifications.cancelScheduledNotificationAsync('nori-daily-digest').catch(() => {});
+    // Rà soát crash 7/8: không có crash reporter nào gắn ngoài - in ra lỗi
+    // fatal gần nhất (nếu có) để còn cách tra khi máy nối debugger/logcat.
+    readLastFatalError().then((e) => {
+      if (e) console.warn('[crashLog] previous session ended with a fatal error:', e.at, e.message);
+    });
   }, []);
 
   // Ép tạo BleManager sớm - bắt buộc để restoreStateIdentifier (iOS background BLE
@@ -149,31 +161,33 @@ function AppLoader({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      {/* Rà soát 2026-07-28 (bàn phím vẫn che input NoriChatScreen dù đã dựa vào
-          android:windowSoftInputMode="adjustResize" - user báo "vẫn lỗi" sau khi test thật):
-          adjustResize + KeyboardAvoidingView thuần react-native không đủ tin cậy trên nhiều
-          ROM/Android version (đặc biệt với edge-to-edge ngày càng phổ biến, xem
-          docs/nori-agent-plan.md) - chuyển sang `react-native-keyboard-controller` (thư viện
-          hiện tại Expo khuyến nghị cho đúng use-case này, xem AGENTS.md + tài liệu Expo bản app
-          đang dùng). `KeyboardProvider` PHẢI bọc ở gốc app để mọi component con (KeyboardStickyView
-          ở NoriChatScreen, và bất kỳ màn hình nào dùng sau này) hoạt động được. */}
-      <KeyboardProvider>
-        <SafeAreaProvider>
-          <QueryClientProvider client={queryClient}>
-            <AppLoader>
-              <NavigationContainer ref={navigationRef}>
-                <RootNavigator />
-                <ObdSessionBanner />
-                <NetworkStatusToast />
-                <ObdAutoConnect />
-                <AppOpenAdManager />
-                <NoriFloatingButton />
-              </NavigationContainer>
-            </AppLoader>
-          </QueryClientProvider>
-        </SafeAreaProvider>
-      </KeyboardProvider>
-    </GestureHandlerRootView>
+    <AppErrorBoundary>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        {/* Rà soát 2026-07-28 (bàn phím vẫn che input NoriChatScreen dù đã dựa vào
+            android:windowSoftInputMode="adjustResize" - user báo "vẫn lỗi" sau khi test thật):
+            adjustResize + KeyboardAvoidingView thuần react-native không đủ tin cậy trên nhiều
+            ROM/Android version (đặc biệt với edge-to-edge ngày càng phổ biến, xem
+            docs/nori-agent-plan.md) - chuyển sang `react-native-keyboard-controller` (thư viện
+            hiện tại Expo khuyến nghị cho đúng use-case này, xem AGENTS.md + tài liệu Expo bản app
+            đang dùng). `KeyboardProvider` PHẢI bọc ở gốc app để mọi component con (KeyboardStickyView
+            ở NoriChatScreen, và bất kỳ màn hình nào dùng sau này) hoạt động được. */}
+        <KeyboardProvider>
+          <SafeAreaProvider>
+            <QueryClientProvider client={queryClient}>
+              <AppLoader>
+                <NavigationContainer ref={navigationRef}>
+                  <RootNavigator />
+                  <ObdSessionBanner />
+                  <NetworkStatusToast />
+                  <ObdAutoConnect />
+                  <AppOpenAdManager />
+                  <NoriFloatingButton />
+                </NavigationContainer>
+              </AppLoader>
+            </QueryClientProvider>
+          </SafeAreaProvider>
+        </KeyboardProvider>
+      </GestureHandlerRootView>
+    </AppErrorBoundary>
   );
 }

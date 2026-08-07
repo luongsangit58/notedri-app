@@ -207,11 +207,17 @@ function runSerialized<T>(fn: () => Promise<T>): Promise<T> {
 }
 
 // Background task - registered at module load time
+// Rà soát (cùng lớp bug với handleIncomingChunk BLE - crash 7/8): callback này
+// chạy mỗi lần có fix GPS mới (~5s lúc đang ghi chuyến), kể cả lúc app ở nền/
+// bị OS coi là headless - 1 lỗi ném ra (AsyncStorage, i18n...) không ai bắt
+// trước đây, khác với RECOVERY_TASK_NAME bên dưới đã có try/catch từ đầu.
 TaskManager.defineTask(GPS_TASK_NAME, async ({ data, error }: any) => {
-  if (error) return;
-  const locations: Location.LocationObject[] = data?.locations ?? [];
-  if (!locations.length) return;
-  await runSerialized(() => handleLocation(locations[locations.length - 1]));
+  try {
+    if (error) return;
+    const locations: Location.LocationObject[] = data?.locations ?? [];
+    if (!locations.length) return;
+    await runSerialized(() => handleLocation(locations[locations.length - 1]));
+  } catch {}
 });
 
 // Rà soát 27/7 (user báo: đầu Android ô tô mất điện đột ngột giữa chuyến, tắt

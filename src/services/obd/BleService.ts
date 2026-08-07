@@ -136,6 +136,20 @@ class BleService {
     return () => this.reconnectedListeners.delete(fn);
   }
 
+  // Rà soát (cùng lớp bug với handleIncomingChunk - crash 7/8): các forEach gọi
+  // listener bên dưới chạy TRỰC TIẾP trong callback native mất kết nối
+  // (device.onDisconnected()/onClassicDisconnected) - nhiều bên cùng đăng ký
+  // (obdLiveMonitor, useObd.ts, capabilityService.ts), 1 listener ném lỗi sẽ
+  // chặn luôn các listener còn lại chạy VÀ lan ngược ra ngoài callback native,
+  // crash cả app không dấu vết. Cô lập từng listener bằng try/catch riêng.
+  private notifyListeners<T extends unknown[]>(listeners: Set<(...args: T) => void>, ...args: T): void {
+    listeners.forEach((fn) => {
+      try {
+        fn(...args);
+      } catch {}
+    });
+  }
+
   private reconnecting = false;
   private intentionalDisconnect = false;
   // Rà soát 1/8: user bấm X ở Dashboard -> disconnect() clear connectedDevice/
@@ -310,18 +324,26 @@ class BleService {
   // responseBuffer và resolve lệnh đang chờ khi thấy dấu '>' (ELM327 kết thúc
   // mọi phản hồi bằng ký tự này, xem readUntilPrompt() phía native Classic).
   private handleIncomingChunk(base64: string): void {
-    const chunk = atob(base64);
-    this.responseBuffer += chunk;
+    // Rà soát (crash 7/8, phiên KW906): hàm này chạy trực tiếp trong callback
+    // native (BLE monitorCharacteristicForService / Classic onClassicData),
+    // NGOÀI try/catch của poll() - atob() ném lỗi nếu adapter gửi 1 chunk
+    // không phải base64 hợp lệ (nhiễu sóng BT trong xe) sẽ crash cả app ở bản
+    // release (không ErrorBoundary/global handler nào bắt được), không để lại
+    // dấu vết gì trong sessionLog. Bọc try/catch, bỏ qua chunk lỗi thay vì chết.
+    try {
+      const chunk = atob(base64);
+      this.responseBuffer += chunk;
 
-    if (this.responseBuffer.includes('>')) {
-      const response = this.responseBuffer.replace('>', '').trim();
-      this.responseBuffer = '';
-      if (this.responseResolver) {
-        this.responseResolver(response);
-        this.responseResolver = null;
-        this.responseRejecter = null;
+      if (this.responseBuffer.includes('>')) {
+        const response = this.responseBuffer.replace('>', '').trim();
+        this.responseBuffer = '';
+        if (this.responseResolver) {
+          this.responseResolver(response);
+          this.responseResolver = null;
+          this.responseRejecter = null;
+        }
       }
-    }
+    } catch {}
   }
 
   // Đăng ký nghe dữ liệu/mất-kết-nối từ module Classic - tương đương
@@ -385,7 +407,7 @@ class BleService {
     if (!id) {
       // Không có địa chỉ/id để thử lại (không nên xảy ra trong luồng bình
       // thường) - báo mất kết nối hẳn thay vì gọi attemptReconnect(null).
-      this.disconnectListeners.forEach((fn) => fn());
+      this.notifyListeners(this.disconnectListeners);
       useObdSessionStore.getState().clear();
       return;
     }
@@ -401,7 +423,7 @@ class BleService {
   private finalizeIntentionalDisconnect(): void {
     if (this.disconnectFinalized) return;
     this.disconnectFinalized = true;
-    this.disconnectListeners.forEach((fn) => fn());
+    this.notifyListeners(this.disconnectListeners);
     useObdSessionStore.getState().clear();
   }
 
@@ -411,7 +433,7 @@ class BleService {
 
     for (let attempt = 1; attempt <= RECONNECT_DELAYS_MS.length; attempt++) {
       useObdSessionStore.getState().patch({ connected: false, reconnecting: true });
-      this.reconnectingListeners.forEach((fn) => fn(attempt));
+      this.notifyListeners(this.reconnectingListeners, attempt);
       await delay(RECONNECT_DELAYS_MS[attempt - 1]);
 
       // User có thể đã chủ động ngắt trong lúc chờ backoff
@@ -457,7 +479,7 @@ class BleService {
         this.reconnecting = false;
         this.logSession('#reconnect', `ok attempt ${attempt}`);
         useObdSessionStore.getState().patch({ connected: true, reconnecting: false });
-        this.reconnectedListeners.forEach((fn) => fn());
+        this.notifyListeners(this.reconnectedListeners);
         return;
       } catch {
         this.logSession('#reconnect', `attempt ${attempt} failed`);
@@ -466,7 +488,7 @@ class BleService {
 
     this.reconnecting = false;
     // Fire listener TRƯỚC khi clear store (telemetry đọc vehicleId từ store)
-    this.disconnectListeners.forEach((fn) => fn());
+    this.notifyListeners(this.disconnectListeners);
     useObdSessionStore.getState().clear();
   }
 

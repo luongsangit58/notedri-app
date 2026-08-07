@@ -94,7 +94,12 @@ export function useGpsTripState() {
   useEffect(() => {
     const sub = AppState.addEventListener('change', async (next: AppStateStatus) => {
       if (next === 'active') {
-        await handleForeground();
+        // handleForeground() chuỗi nhiều bước AsyncStorage/API - 1 bước lỗi (vd
+        // mất mạng đúng lúc quay lại app) không được để rớt thành unhandled
+        // rejection (listener native không có ai await/catch promise trả về).
+        try {
+          await handleForeground();
+        } catch {}
       }
     });
     return () => sub.remove();
