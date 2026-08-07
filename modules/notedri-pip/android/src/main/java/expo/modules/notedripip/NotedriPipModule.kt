@@ -1,7 +1,9 @@
 package expo.modules.notedripip
 
 import android.app.PictureInPictureParams
+import android.content.Context
 import android.os.Build
+import android.os.PowerManager
 import android.util.Rational
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
@@ -84,6 +86,27 @@ class NotedriPipModule : Module() {
 
     AsyncFunction("isPipSupported") {
       Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+    }
+
+    // Rà soát 7/8 (GPS hành trình bị cắt ngang trên đầu Android ô tô - user báo
+    // đi 10km chỉ ghi được ~4,5km): màn GpsTripsScreen trước đây hiển thị dòng
+    // "chưa tắt tối ưu pin" LUÔN đỏ (ok={false} cứng, không có cách nào tự kiểm
+    // tra) - không phân biệt được máy đã cấp miễn trừ hay chưa, chỉ là lời nhắc
+    // suông. Hàm này gọi thẳng PowerManager để biết TRẠNG THÁI THẬT, cho phép
+    // UI tắt cảnh báo khi user đã cấp quyền, và tiếp tục cảnh báo đúng lúc nếu
+    // chưa - đây là 1 trong các nguyên nhân khiến foreground service bị hệ
+    // thống/ROM giết giữa chuyến trên phần cứng RAM thấp (đầu Android ô tô).
+    // Không có PowerManager (context null, hoặc getSystemService trả null - lý
+    // thuyết không xảy ra trên Android thật) -> coi như "đã ổn" (true) để
+    // không chặn oan UI vì lỗi không xác định được, chỉ dùng advisory hiển thị.
+    AsyncFunction("isIgnoringBatteryOptimizations") {
+      val context = appContext.reactContext
+      if (context == null) {
+        true
+      } else {
+        val pm = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
+        pm?.isIgnoringBatteryOptimizations(context.packageName) ?: true
+      }
     }
 
     // Rà soát: KHÔNG được gọi enterPictureInPictureMode() ngay lúc vào màn

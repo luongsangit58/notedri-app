@@ -135,11 +135,11 @@ function CheckRow({ ok, label, fixLabel, onFix, advisory }: {
   );
 }
 
-function ReadinessChecklist({ r }: { r: { foreground: boolean; background: boolean; locationEnabled: boolean } }) {
+function ReadinessChecklist({ r }: { r: { foreground: boolean; background: boolean; locationEnabled: boolean; batteryOptimized: boolean } }) {
   const colors = useColors();
   const t = useT();
-  // Đủ điều kiện ghi tốt nhất = quyền vị trí + định vị bật + quyền nền
-  const allGood = r.foreground && r.locationEnabled && r.background;
+  // Đủ điều kiện ghi tốt nhất = quyền vị trí + định vị bật + quyền nền + đã miễn trừ tối ưu pin
+  const allGood = r.foreground && r.locationEnabled && r.background && r.batteryOptimized;
 
   if (allGood) {
     return (
@@ -156,7 +156,7 @@ function ReadinessChecklist({ r }: { r: { foreground: boolean; background: boole
       <CheckRow ok={r.foreground} label={t('gps_trips.check_location_perm')} fixLabel={t('gps_trips.grant')} onFix={() => Linking.openSettings()} />
       <CheckRow ok={r.locationEnabled} label={t('gps_trips.check_location_enabled')} fixLabel={t('gps_trips.turn_on')} onFix={() => openLocationSettings()} />
       <CheckRow ok={r.background} advisory label={t('gps_trips.check_always_allow')} fixLabel={t('gps_trips.grant')} onFix={() => Linking.openSettings()} />
-      <CheckRow ok={false} advisory label={t('gps_trips.check_battery_opt')} fixLabel={t('gps_trips.open')} onFix={() => openBatterySettings()} />
+      <CheckRow ok={r.batteryOptimized} advisory label={t('gps_trips.check_battery_opt')} fixLabel={t('gps_trips.open')} onFix={() => openBatterySettings()} />
     </View>
   );
 }

@@ -28,12 +28,12 @@ import { getDeviceId } from '../utils/deviceId';
 const POLL_INTERVAL_MS = 4_000;
 
 export type PermissionStatus = { foreground: boolean; background: boolean };
-export type ReadinessState = { foreground: boolean; background: boolean; locationEnabled: boolean };
+export type ReadinessState = { foreground: boolean; background: boolean; locationEnabled: boolean; batteryOptimized: boolean };
 
 export function useGpsTripState() {
   const [tripState, setTripState] = useState<GpsTripState | null>(null);
   const [tracking, setTracking] = useState(false);
-  const [permission, setPermission] = useState<ReadinessState>({ foreground: false, background: false, locationEnabled: true });
+  const [permission, setPermission] = useState<ReadinessState>({ foreground: false, background: false, locationEnabled: true, batteryOptimized: true });
   const [routePoints, setRoutePoints] = useState<RoutePoint[]>([]);
   const [interruptedInfo, setInterruptedInfo] = useState<InterruptedTripInfo | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);

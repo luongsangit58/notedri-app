@@ -19,7 +19,11 @@ const KEY_ROUTE = 'gps_trip_route';
 const SPEED_START_KMPH = 5;
 const SPEED_STOP_KMPH = 3;
 const WAITING_START_MS = 12_000;   // drive 12s before trip "commits" (responsive)
-const WAITING_STOP_MS = 180_000;   // must stop 3 min before trip ends
+// Rà soát 7/8 (user báo: kẹt xe/tắc đường hay vượt quá mốc cũ 3 phút -> 1
+// chuyến bị cắt thành nhiều chuyến ngắn rời rạc): tăng lên 5 phút để chịu được
+// đèn đỏ ngã tư lớn/kẹt xe giờ cao điểm phổ biến ở VN mà vẫn coi là 1 chuyến,
+// không phải chờ quá lâu tới mức trễ lúc dừng hẳn thật sự (đỗ xe, về nhà).
+const WAITING_STOP_MS = 300_000;   // must stop 5 min before trip ends
 const MIN_TRIP_DISTANCE_KM = 0.3;
 const MAX_ROUTE_POINTS = 500;
 const MAX_TRIP_MS = 6 * 3_600_000;       // auto-finalize a trip after 6h (anti-hang)
@@ -743,20 +747,43 @@ export async function getPermissionStatus(): Promise<{ foreground: boolean; back
   return { foreground: fg.granted, background: bg.granted };
 }
 
-export type Readiness = { foreground: boolean; background: boolean; locationEnabled: boolean };
+export type Readiness = {
+  foreground: boolean;
+  background: boolean;
+  locationEnabled: boolean;
+  // true = app đã được miễn trừ tối ưu pin (hoặc không xác định được -> coi là ổn để
+  // không cảnh báo oan). Chỉ có ý nghĩa thật trên Android - xem isIgnoringBatteryOptimizations().
+  batteryOptimized: boolean;
+};
+
+// Rà soát 7/8: trước đây dòng "chưa tắt tối ưu pin" ở GpsTripsScreen luôn hiện
+// đỏ cứng (không có cách kiểm tra thật) - giờ hỏi thẳng PowerManager qua module
+// native notedri-pip (xem NotedriPipModule.kt). Chỉ Android mới có khái niệm
+// này; nền tảng khác coi như đã "ổn" (true).
+async function checkBatteryOptimized(): Promise<boolean> {
+  if (Platform.OS !== 'android') return true;
+  try {
+    const NotedriPip = (await import('../../../modules/notedri-pip/src/NotedriPipModule')).default;
+    return await NotedriPip.isIgnoringBatteryOptimizations();
+  } catch {
+    return true;
+  }
+}
 
 // Trạng thái sẵn sàng - gọi KHÔNG thường xuyên (mount + khi quay lại app), không
 // poll mỗi giây để tránh app nặng.
 export async function getReadiness(): Promise<Readiness> {
-  const [fg, bg, enabled] = await Promise.all([
+  const [fg, bg, enabled, batteryOptimized] = await Promise.all([
     PermissionManager.getLocationForegroundStatus().catch(() => ({ granted: false, canAskAgain: true })),
     PermissionManager.getLocationBackgroundStatus().catch(() => ({ granted: false, canAskAgain: true })),
     Location.hasServicesEnabledAsync().catch(() => true),
+    checkBatteryOptimized(),
   ]);
   return {
     foreground: fg.granted,
     background: bg.granted,
     locationEnabled: enabled,
+    batteryOptimized,
   };
 }
 

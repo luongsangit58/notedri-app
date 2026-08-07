@@ -33,6 +33,14 @@ declare class NotedriPipModule extends NativeModule<NotedriPipEvents> {
    * NotedriPipLifecycleListener.kt).
    */
   enterPipMode(): Promise<void>;
+
+  /**
+   * true nếu app đã được miễn trừ tối ưu pin (PowerManager.isIgnoringBatteryOptimizations) -
+   * false nghĩa là hệ thống/ROM có thể giết service nền (GPS hành trình) bất cứ lúc nào,
+   * đặc biệt trên đầu Android ô tô RAM thấp. Dùng để hiển thị đúng trạng thái ở
+   * GpsTripsScreen thay vì luôn cảnh báo "chưa tắt" dù user đã cấp quyền.
+   */
+  isIgnoringBatteryOptimizations(): Promise<boolean>;
 }
 
 // This call loads the native module object from the JSI.
