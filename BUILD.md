@@ -97,10 +97,10 @@ Vào Play Console → app **NoteDri** → **Kiểm thử và phát hành → Ph�
 ## 6. Phát hành APK cho user không vào được CH Play (vd màn hình Android ô tô)
 
 Sau khi build APK ở bước 3 (`android/app/build/outputs/apk/release/app-release.apk`), upload thủ
-công qua cPanel File Manager (hoặc FTP/SFTP) lên `public/downloads/app-release.apk` trên server
-notedri.com - **không** dùng GitHub Releases (repo app cần giữ kín mã nguồn). Kèm sửa
-`public/downloads/version.txt` (nội dung 1 dòng vd `1.1.6 (52)`) để trang web hiện đúng số phiên
-bản. Chi tiết đầy đủ xem `build-win.md`.
+công qua cPanel File Manager (hoặc FTP/SFTP) lên `public/downloads/notedri.apk` trên server
+notedri.com (**đổi tên** từ `app-release.apk` thành `notedri.apk` khi upload) - **không** dùng
+GitHub Releases (repo app cần giữ kín mã nguồn). Kèm sửa `public/downloads/version.txt` (nội dung
+1 dòng vd `1.1.6 (53)`) để trang web hiện đúng số phiên bản. Chi tiết đầy đủ xem `build-win.md`.
 
 Trang `/download` trên notedri.com (`notedri` repo, `resources/views/garage/download.blade.php`)
 tự đọc file trực tiếp từ `public/downloads/` - không cần sửa gì thêm trên web mỗi lần phát hành.

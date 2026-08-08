@@ -52,10 +52,12 @@ FTP/SFTP client) sau mỗi lần build:
 
 1. Đăng nhập cPanel → File Manager → vào thư mục `public_html/public/downloads/`
    (tạo thư mục này nếu chưa có, lần đầu setup)
-2. Upload đè `android/app/build/outputs/apk/release/app-release.apk` lên đó (giữ nguyên tên file)
+2. Upload đè `android/app/build/outputs/apk/release/app-release.apk` lên đó, **đổi tên thành
+   `notedri.apk`** khi upload (web đọc đúng tên này - xem route `download` trong
+   `notedri/routes/garage.php`)
 3. Sửa file `version.txt` trong cùng thư mục (tạo mới nếu chưa có), nội dung 1 dòng dạng:
    ```
-   1.1.6 (52)
+   1.1.6 (53)
    ```
    (versionName + versionCode trong `app.json`) - hiện lên cạnh nút tải trên trang notedri.com/download.
 
