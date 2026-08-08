@@ -25,6 +25,16 @@ export const useRecentGarages = () =>
     staleTime: 5 * 60 * 1000,
   });
 
+// Danh mục tên hạng mục gợi ý theo xe (mirror datalist "svc-items" trên web) - gõ
+// đúng tên catalog để AddService tự khớp & đề xuất lời nhắc liên quan (suggested_reminder).
+export const useServiceCatalog = (vehicleId?: number) =>
+  useQuery({
+    queryKey: ['services', 'catalog', vehicleId],
+    queryFn: () => servicesApi.catalog(vehicleId).then(r => r.data.data as string[]),
+    enabled: !!vehicleId,
+    staleTime: 5 * 60 * 1000,
+  });
+
 export const useCreateService = () => {
   const qc = useQueryClient();
   return useMutation({

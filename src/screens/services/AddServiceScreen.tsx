@@ -11,7 +11,7 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import { maybeShowInterstitialAfterSave } from '../../services/ads/admob';
 import dayjs from 'dayjs';
 import { useVehicles } from '../../hooks/useVehicles';
-import { useCreateService, useRecentGarages } from '../../hooks/useServices';
+import { useCreateService, useRecentGarages, useServiceCatalog } from '../../hooks/useServices';
 import { useColors } from '../../utils/theme';
 import { useT } from '../../i18n';
 import MoneyInput from '../../components/MoneyInput';
@@ -136,6 +136,7 @@ export default function AddServiceScreen() {
   const defaultVehicle = vehicles.find((v: any) => v.is_default) ?? vehicles[0];
 
   const [vehicleId, setVehicleId] = useState<number | null>(paramVehicleId ?? defaultVehicle?.id ?? null);
+  const { data: catalogNames } = useServiceCatalog(vehicleId ?? undefined);
   const [loai, setLoai] = useState('bao_duong');
   const [showMoreLoai, setShowMoreLoai] = useState(false);
   const [hangMuc, setHangMuc] = useState(paramHangMuc ?? '');
@@ -298,8 +299,28 @@ export default function AddServiceScreen() {
             )}
           </ScrollView>
 
-          {/* Hang muc */}
+          {/* Hang muc - gợi ý catalog theo xe (mirror datalist "svc-items" trên web) để
+              app cũng chọn được đúng tên chuẩn thay vì gõ tay lệch, tránh mất mapping
+              với lời nhắc (xem ReminderService::catalogNames, ServiceReminderMatcher). */}
           <FieldLabel>{t('services.item_label')}</FieldLabel>
+          {!!catalogNames?.length && (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
+              {catalogNames.map((name) => (
+                <TouchableOpacity
+                  key={name}
+                  onPress={() => setHangMuc(name)}
+                  style={{
+                    paddingHorizontal: 12, paddingVertical: 7, borderRadius: 8, marginRight: 8,
+                    backgroundColor: hangMuc === name ? colors.primary : colors.surface,
+                    borderWidth: 1, borderColor: hangMuc === name ? colors.primary : colors.border,
+                  }}>
+                  <Text style={{ color: hangMuc === name ? '#fff' : colors.text, fontSize: 13, fontWeight: '600' }} numberOfLines={1}>
+                    {name}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          )}
           <TextInput
             value={hangMuc}
             onChangeText={setHangMuc}

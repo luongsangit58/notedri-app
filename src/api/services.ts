@@ -32,4 +32,6 @@ export const servicesApi = {
   guide: (vehicleId?: number) =>
     client.get('/services/guide', { params: vehicleId ? { vehicle: vehicleId } : undefined }),
   garages: () => client.get('/services/garages'),
+  catalog: (vehicleId?: number) =>
+    client.get('/services/catalog', { params: vehicleId ? { vehicle: vehicleId } : undefined }),
 };

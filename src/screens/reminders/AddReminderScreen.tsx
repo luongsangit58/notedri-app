@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import AppBgPattern from '../../components/AppBgPattern';
 import DatePickerField from '../../components/DatePickerField';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import { useCreateReminder } from '../../hooks/useReminders';
+import { useCreateReminder, useReminders } from '../../hooks/useReminders';
 import { useVehicles } from '../../hooks/useVehicles';
 import { useColors } from '../../utils/theme';
 import { useT } from '../../i18n';
@@ -62,6 +62,12 @@ export default function AddReminderScreen() {
     if (!paramVehicleId && vehicleId && selectedVehicleId === null) setSelectedVehicleId(vehicleId);
   }, [vehicleId]);
   const effectiveVehicleId = paramVehicleId ?? selectedVehicleId ?? vehicleId;
+
+  // Gợi ý hạng mục theo xe (mirror datalist "rmd-items" trên web) - lấy lại
+  // meta.suggestions đã có sẵn từ danh sách lời nhắc (đã lọc bỏ mục đã tạo rồi),
+  // bấm chọn điền sẵn cả loại/chu kỳ/mốc đã làm thay vì chỉ tên.
+  const { data: remindersData } = useReminders(effectiveVehicleId ?? 0);
+  const catalogSuggestions: any[] = remindersData?.meta?.suggestions ?? [];
 
   const [hang_muc, setHangMuc] = useState(paramItem ?? '');
   const [loai, setLoai] = useState<Loai>(paramLoai ?? 'bao_duong');
@@ -180,8 +186,35 @@ export default function AddReminderScreen() {
             </View>
           )}
 
-          {/* Hạng mục */}
+          {/* Hạng mục - gợi ý catalog theo xe (mirror datalist "rmd-items" trên web);
+              bấm chọn điền sẵn cả loại/chu kỳ/mốc đã làm luôn, không chỉ mỗi tên. */}
           <FieldLabel>{t('reminders.item_label')}</FieldLabel>
+          {!!catalogSuggestions.length && (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
+              {catalogSuggestions.map((s: any, i: number) => (
+                <TouchableOpacity
+                  key={i}
+                  onPress={() => {
+                    setHangMuc(s.hang_muc);
+                    if (s.loai) setLoai(s.loai);
+                    setCheĐo(s.che_do ?? 'chu_ky');
+                    setIntervalKm(s.interval_km != null ? String(s.interval_km) : '');
+                    setIntervalThang(s.interval_thang != null ? String(s.interval_thang) : '');
+                    setLastDoneOdo(s.last_done_odo != null ? String(s.last_done_odo) : '');
+                    setLastDoneDate(s.last_done_date ?? '');
+                  }}
+                  style={{
+                    paddingHorizontal: 12, paddingVertical: 7, borderRadius: 8, marginRight: 8,
+                    backgroundColor: hang_muc === s.hang_muc ? colors.primary : colors.surface,
+                    borderWidth: 1, borderColor: hang_muc === s.hang_muc ? colors.primary : colors.border,
+                  }}>
+                  <Text style={{ color: hang_muc === s.hang_muc ? '#fff' : colors.text, fontSize: 13, fontWeight: '600' }} numberOfLines={1}>
+                    {s.hang_muc_label ?? s.hang_muc}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          )}
           <TextInput
             value={hang_muc}
             onChangeText={setHangMuc}
