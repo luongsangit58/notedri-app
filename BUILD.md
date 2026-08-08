@@ -94,6 +94,27 @@ unzip -p build-<timestamp>.aab META-INF/*.RSA | keytool -printcert | grep SHA1
 
 Vào Play Console → app **NoteDri** → **Kiểm thử và phát hành → Phát hành công khai** (hoặc kênh test phù hợp: alpha/internal) → tạo bản phát hành mới → tải file `.aab` ở bước 4 lên.
 
+## 6. Phát hành APK cho user không vào được CH Play (vd màn hình Android ô tô)
+
+Sau khi build APK ở bước 3 (`android/app/build/outputs/apk/release/app-release.apk`), đẩy lên
+GitHub Releases (repo public, không tốn chi phí) để có link tải trực tiếp:
+
+```bash
+gh auth login          # chỉ cần 1 lần / khi hết hạn
+scripts/release-apk.sh
+```
+
+Script tự kiểm tra chữ ký khớp keystore Google Play rồi tạo release mới, đính kèm APK với tên cố
+định `app-release.apk`. Link tải công khai **không đổi qua các lần release**, luôn tự trỏ về bản
+mới nhất:
+
+```
+https://github.com/luongsangit58/notedri-app/releases/latest/download/app-release.apk
+```
+
+Link này được dùng ở trang `/download` trên notedri.com (`notedri` repo,
+`resources/views/garage/download.blade.php`).
+
 ## Lưu ý
 
 - Lần build đầu tiên khá lâu vì Gradle phải tải dependencies.
