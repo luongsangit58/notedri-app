@@ -44,6 +44,24 @@ Mất ~5-8 phút (lâu hơn nếu chưa có cache Gradle).
 ```
 So khớp `SHA1:` với vân tay khoá thật trong Play Console → Phát hành → Tính toàn vẹn ứng dụng.
 
+## Phát hành APK cho user không vào được CH Play (màn hình Android ô tô)
+
+```bash
+gh auth login          # chỉ cần 1 lần / khi hết hạn (kiểm tra: gh auth status)
+scripts/release-apk.sh
+```
+
+Script tự kiểm tra chữ ký khớp keystore Google Play rồi tạo 1 GitHub Release mới, đính kèm
+`app-release.apk` (đường dẫn mặc định đúng như file build ra ở bước 3). Link tải công khai
+**không đổi qua các lần phát hành** - luôn tự trỏ về bản mới nhất:
+
+```
+https://github.com/luongsangit58/notedri-app/releases/latest/download/app-release.apk
+```
+
+Trang `/download` trên notedri.com đã trỏ sẵn vào link này - không cần sửa gì thêm ở web mỗi
+lần phát hành, chỉ cần chạy lệnh trên sau khi build xong.
+
 ## Sự cố thường gặp
 
 - **Ký sai khoá** ("sai vân tay chữ ký" trên Play Console): thiếu
