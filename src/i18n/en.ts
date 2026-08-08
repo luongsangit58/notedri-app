@@ -28,6 +28,7 @@ const en = {
   "common.warning": "Note",
   "common.select_vehicle_required": "Please select a vehicle",
   "common.save_failed": "Could not save",
+  "common.later": "Later",
 
   // Auth
   "auth.app_tagline": "Smart vehicle management",
@@ -188,6 +189,9 @@ const en = {
   "services.total_cost": "Total cost",
   "services.type_all": "All",
   "services.search_placeholder": "Search services...",
+  "services.suggest_reminder_title": "Create a reminder?",
+  "services.suggest_reminder_message": "You just logged \"{{item}}\". Create a reminder so you don't miss the next one?",
+  "services.suggest_reminder_cta": "Create reminder",
 
   // Odometer
   "odometer.title": "Odometer history",
@@ -211,6 +215,8 @@ const en = {
   "reminders.item_label": "Item *",
   "reminders.item_placeholder": "E.g. Oil change, Registration...",
   "reminders.save_button": "Save reminder",
+  "reminders.log_service_cta": "Log service",
+  "reminders.log_service_hint": "Log this service - the reminder date will update automatically after saving",
   "reminders.done_button": "Mark done",
   "reminders.delete_confirm_title": "Delete reminder",
   "reminders.delete_confirm_message": "Delete reminder \"{{name}}\"?",

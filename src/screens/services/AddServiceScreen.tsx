@@ -6,7 +6,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AppBgPattern from '../../components/AppBgPattern';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { maybeShowInterstitialAfterSave } from '../../services/ads/admob';
 import dayjs from 'dayjs';
@@ -118,6 +118,11 @@ export default function AddServiceScreen() {
   });
 
   const navigation = useNavigation<any>();
+  const route = useRoute<any>();
+  // Nhận prefill từ CTA "Ghi bảo dưỡng" ở thẻ lời nhắc (xem RemindersScreen) - mở form
+  // điền sẵn xe + hạng mục, ghi xong tự cập nhật lại mốc lời nhắc qua syncReminders() BE.
+  const { vehicleId: paramVehicleId, hang_muc: paramHangMuc } =
+    (route.params ?? {}) as { vehicleId?: number; hang_muc?: string };
   const { data: vehiclesData } = useVehicles();
   const createService = useCreateService();
   const { data: recentGarages } = useRecentGarages();
@@ -130,10 +135,10 @@ export default function AddServiceScreen() {
 
   const defaultVehicle = vehicles.find((v: any) => v.is_default) ?? vehicles[0];
 
-  const [vehicleId, setVehicleId] = useState<number | null>(defaultVehicle?.id ?? null);
+  const [vehicleId, setVehicleId] = useState<number | null>(paramVehicleId ?? defaultVehicle?.id ?? null);
   const [loai, setLoai] = useState('bao_duong');
   const [showMoreLoai, setShowMoreLoai] = useState(false);
-  const [hangMuc, setHangMuc] = useState('');
+  const [hangMuc, setHangMuc] = useState(paramHangMuc ?? '');
   const [chiPhi, setChiPhi] = useState('');
   const [odometer, setOdometer] = useState('');
   const [odoPrefilled, setOdoPrefilled] = useState(false);
@@ -177,7 +182,7 @@ export default function AddServiceScreen() {
       return;
     }
     try {
-      await createService.mutateAsync({
+      const result = await createService.mutateAsync({
         data: {
           vehicle_id: vehicleId,
           hang_muc: hangMuc.trim(),
@@ -191,7 +196,33 @@ export default function AddServiceScreen() {
         photo: photo ?? undefined,
       });
       void maybeShowInterstitialAfterSave();
-      navigation.goBack();
+
+      // Chưa có lời nhắc nào khớp hạng mục vừa ghi -> gợi ý tạo luôn (mapping bảo dưỡng <-> lời nhắc).
+      const suggestion = result?.meta?.suggested_reminder;
+      if (suggestion) {
+        Alert.alert(
+          t('services.suggest_reminder_title'),
+          t('services.suggest_reminder_message', { item: suggestion.hang_muc }),
+          [
+            { text: t('common.later'), style: 'cancel', onPress: () => navigation.goBack() },
+            {
+              text: t('services.suggest_reminder_cta'),
+              onPress: () => navigation.replace('AddReminder', {
+                vehicleId,
+                hang_muc: suggestion.hang_muc,
+                loai: suggestion.loai,
+                che_do: suggestion.che_do,
+                interval_km: suggestion.interval_km,
+                interval_thang: suggestion.interval_thang,
+                last_done_odo: suggestion.last_done_odo,
+                last_done_date: suggestion.last_done_date,
+              }),
+            },
+          ],
+        );
+      } else {
+        navigation.goBack();
+      }
     } catch (err: any) {
       const msg = err.response?.data?.message ?? t('common.save_failed');
       const errs = err.response?.data?.errors;

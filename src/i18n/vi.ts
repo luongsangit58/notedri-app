@@ -28,6 +28,7 @@ const vi = {
   "common.warning": "Lưu ý",
   "common.select_vehicle_required": "Vui lòng chọn xe",
   "common.save_failed": "Không lưu được",
+  "common.later": "Để sau",
 
   // Auth
   "auth.app_tagline": "Quản lý xe thông minh",
@@ -189,6 +190,9 @@ const vi = {
   "services.total_cost": "Tổng chi phí",
   "services.type_all": "Tất cả",
   "services.search_placeholder": "Tìm kiếm bảo dưỡng...",
+  "services.suggest_reminder_title": "Tạo lời nhắc?",
+  "services.suggest_reminder_message": "Bạn vừa ghi \"{{item}}\". Tạo lời nhắc để không quên lần bảo dưỡng tiếp theo?",
+  "services.suggest_reminder_cta": "Tạo lời nhắc",
 
   // Odometer
   "odometer.title": "Lịch sử ODO",
@@ -212,6 +216,8 @@ const vi = {
   "reminders.item_label": "Hạng mục *",
   "reminders.item_placeholder": "VD: Thay nhớt, Đăng kiểm...",
   "reminders.save_button": "Lưu lời nhắc",
+  "reminders.log_service_cta": "Ghi bảo dưỡng",
+  "reminders.log_service_hint": "Ghi bảo dưỡng - tự cập nhật lại mốc lời nhắc sau khi lưu",
   "reminders.done_button": "Đã làm",
   "reminders.delete_confirm_title": "Xác nhận xoá",
   "reminders.delete_confirm_message": "Bạn có chắc muốn xoá lời nhắc \"{{name}}\" không?",

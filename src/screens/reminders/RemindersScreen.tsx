@@ -65,11 +65,13 @@ function ReminderCard({
   onDone,
   onDelete,
   onEdit,
+  onLogService,
 }: {
   item: Reminder;
   onDone: (id: number, che_do: Reminder['che_do']) => void;
   onDelete: (id: number) => void;
   onEdit: (id: number) => void;
+  onLogService: (hangMuc: string) => void;
 }) {
   const t = useT();
   const colors = useColors();
@@ -238,6 +240,18 @@ function ReminderCard({
             {item.hang_muc_label ?? item.hang_muc}
           </Text>
         </View>
+        {item.loai === 'bao_duong' && (
+          // CTA nhanh: mở form Bảo dưỡng điền sẵn hạng mục - ghi xong tự cập nhật lại
+          // mốc lời nhắc (mapping bảo dưỡng <-> lời nhắc, mirror nút cờ-lê ở web).
+          <TouchableOpacity
+            onPress={() => onLogService(item.hang_muc)}
+            style={styles.deleteBtn}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            accessibilityLabel={t('reminders.log_service_hint')}
+          >
+            <FontAwesome5 name="wrench" size={14} color={colors.textSecondary} solid />
+          </TouchableOpacity>
+        )}
         <TouchableOpacity onPress={() => onEdit(item.id)} style={styles.deleteBtn} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
           <FontAwesome5 name="pen" size={14} color={colors.textSecondary} solid />
         </TouchableOpacity>
@@ -529,7 +543,13 @@ export default function RemindersScreen() {
         data={reminders}
         keyExtractor={(item) => String(item.id)}
         renderItem={({ item }) => (
-          <ReminderCard item={item} onDone={(id, che_do) => openDoneModal(id, che_do)} onDelete={handleDelete} onEdit={handleEdit} />
+          <ReminderCard
+            item={item}
+            onDone={(id, che_do) => openDoneModal(id, che_do)}
+            onDelete={handleDelete}
+            onEdit={handleEdit}
+            onLogService={(hangMuc) => navigation.navigate('AddService', { vehicleId: resolvedVehicleId, hang_muc: hangMuc })}
+          />
         )}
         contentContainerStyle={[styles.listContent, contentWide]}
         refreshControl={
