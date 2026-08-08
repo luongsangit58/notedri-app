@@ -46,18 +46,20 @@ So khớp `SHA1:` với vân tay khoá thật trong Play Console → Phát hành
 
 ## Phát hành APK cho user không vào được CH Play (màn hình Android ô tô)
 
-```bash
-gh auth login          # chỉ cần 1 lần / khi hết hạn (kiểm tra: gh auth status)
-scripts/release-apk.sh
-```
+Host thẳng trên server notedri.com (KHÔNG dùng GitHub Releases - repo app cần giữ kín, xem lý do
+ở `notedri/routes/garage.php` route `download`). Upload thủ công qua cPanel File Manager (hoặc
+FTP/SFTP client) sau mỗi lần build:
 
-Script tự kiểm tra chữ ký khớp keystore Google Play rồi tạo 1 GitHub Release mới, đính kèm
-`app-release.apk` (đường dẫn mặc định đúng như file build ra ở bước 3). Link tải công khai
-**không đổi qua các lần phát hành** - luôn tự trỏ về bản mới nhất:
+1. Đăng nhập cPanel → File Manager → vào thư mục `public_html/public/downloads/`
+   (tạo thư mục này nếu chưa có, lần đầu setup)
+2. Upload đè `android/app/build/outputs/apk/release/app-release.apk` lên đó (giữ nguyên tên file)
+3. Sửa file `version.txt` trong cùng thư mục (tạo mới nếu chưa có), nội dung 1 dòng dạng:
+   ```
+   1.1.6 (52)
+   ```
+   (versionName + versionCode trong `app.json`) - hiện lên cạnh nút tải trên trang notedri.com/download.
 
-```
-https://github.com/luongsangit58/notedri-app/releases/latest/download/app-release.apk
-```
+Không cần sửa gì thêm trên web - trang `/download` tự đọc file trực tiếp từ `public/downloads/`.
 
 Trang `/download` trên notedri.com đã trỏ sẵn vào link này - không cần sửa gì thêm ở web mỗi
 lần phát hành, chỉ cần chạy lệnh trên sau khi build xong.
