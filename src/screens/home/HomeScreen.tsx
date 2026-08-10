@@ -29,6 +29,8 @@ import { useObdSessionStore } from '../../store/obdSessionStore';
 import { useSelectedVehicleStore } from '../../store/selectedVehicleStore';
 import client from '../../api/client';
 
+const HOME_HIGHLIGHT_DISMISS_KEY = 'home_highlight_dismissed_v1';
+
 function VehicleSelector({ vehicles, selectedId, onSelect }: {
   vehicles: any[]; selectedId?: number; onSelect: (id: number) => void;
 }) {
@@ -274,6 +276,28 @@ export default function HomeScreen() {
   const topHighlight = upcomingAll.find((r) => r.remaining_days != null && r.remaining_days <= 30) ?? null;
   const upcoming = upcomingAll.slice(0, 3);
 
+  // Cho tắt thẻ "Nổi bật" (user báo chiếm nhiều diện tích màn hình) - chỉ ẩn
+  // ĐÚNG mục nhắc nhở + đúng số ngày còn lại lúc tắt. Nếu số ngày đổi (qua
+  // ngày mới, hoặc chuyển sang "quá hạn") thẻ tự hiện lại - tránh việc user
+  // quên hẳn 1 mục sắp/đã quá hạn chỉ vì từng bấm tắt lúc còn 30 ngày.
+  const [dismissedHighlight, setDismissedHighlight] = useState<{ id: number; remaining_days: number } | null>(null);
+  useEffect(() => {
+    AsyncStorage.getItem(HOME_HIGHLIGHT_DISMISS_KEY).then((raw) => {
+      if (raw) { try { setDismissedHighlight(JSON.parse(raw)); } catch {} }
+    });
+  }, []);
+  const showHighlight = !!topHighlight && !(
+    dismissedHighlight
+    && dismissedHighlight.id === topHighlight.id
+    && dismissedHighlight.remaining_days === topHighlight.remaining_days
+  );
+  function dismissHighlight() {
+    if (!topHighlight) return;
+    const entry = { id: topHighlight.id, remaining_days: topHighlight.remaining_days };
+    setDismissedHighlight(entry);
+    AsyncStorage.setItem(HOME_HIGHLIGHT_DISMISS_KEY, JSON.stringify(entry)).catch(() => {});
+  }
+
   const onRefresh = () => { refetchVehicles(); refetchRem(); refetchDash(); };
 
   // Chỉ chặn màn hình chờ DUY NHẤT /vehicles (dữ liệu tối thiểu để dựng UI: chọn
@@ -439,7 +463,7 @@ export default function HomeScreen() {
         {vehicles.length > 0 && (
         <>
         {/* Noi bat - viec gap nhat */}
-        {topHighlight && (
+        {showHighlight && topHighlight && (
           <TouchableOpacity
             activeOpacity={0.85}
             onPress={() => nav.navigate('Management', { tab: 0, vehicleId, _ts: Date.now() })}
@@ -465,7 +489,12 @@ export default function HomeScreen() {
                   : t('dashboard.days_remaining', { days: topHighlight.remaining_days })}
               </Text>
             </View>
-            <FontAwesome5 name="chevron-right" size={14} color="#94a3b8" />
+            <TouchableOpacity
+              onPress={dismissHighlight}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              style={{ padding: 2 }}>
+              <FontAwesome5 name="times" size={16} color="#94a3b8" />
+            </TouchableOpacity>
           </LinearGradient>
           </TouchableOpacity>
         )}

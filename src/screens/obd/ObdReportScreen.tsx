@@ -164,7 +164,7 @@ export default function ObdReportScreen() {
   const sessionsByDay = useMemo(() => {
     const groups = new Map<string, typeof sessions>();
     for (const s of sessions) {
-      const key = dayjs(s.connected_at).format('DD/MM/YYYY');
+      const key = dayjs(s.connected_at).format('YYYY-MM-DD');
       groups.set(key, [...(groups.get(key) ?? []), s]);
     }
     return Array.from(groups.entries());
@@ -249,10 +249,10 @@ export default function ObdReportScreen() {
               <View key={day}>
                 <View style={styles.dayHeaderRow}>
                   <Text style={[styles.dayHeaderLabel, { color: colors.text }]}>
-                    {day === dayjs().format('DD/MM/YYYY') ? t('gps_trips.day_today')
-                      : day === dayjs().subtract(1, 'day').format('DD/MM/YYYY') ? t('gps_trips.day_yesterday')
-                      : dayjs(day, 'DD/MM/YYYY').format('dddd')}
-                    <Text style={{ color: colors.textSecondary, fontWeight: '400' }}> · {day}</Text>
+                    {day === dayjs().format('YYYY-MM-DD') ? t('gps_trips.day_today')
+                      : day === dayjs().subtract(1, 'day').format('YYYY-MM-DD') ? t('gps_trips.day_yesterday')
+                      : dayjs(day).format('dddd')}
+                    <Text style={{ color: colors.textSecondary, fontWeight: '400' }}> · {dayjs(day).format('DD/MM/YYYY')}</Text>
                   </Text>
                   <Text style={[styles.dayHeaderMeta, { color: colors.textSecondary }]}>
                     {t('obd.report_history_duration_day', { n: daySessions.length })}

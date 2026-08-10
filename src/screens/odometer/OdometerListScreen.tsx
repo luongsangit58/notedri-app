@@ -60,6 +60,7 @@ function OdoCard({ item, onPress }: { item: OdoItem; onPress: () => void }) {
     leftCol: {
       width: 80,
       marginRight: 10,
+      flexShrink: 0,
     },
     centerCol: {
       flex: 1,
@@ -104,7 +105,7 @@ function OdoCard({ item, onPress }: { item: OdoItem; onPress: () => void }) {
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.75}>
       <View style={styles.cardRow}>
         <View style={styles.leftCol}>
-          <Text style={styles.dateText}>{formatDate(item.ngay)}</Text>
+          <Text style={styles.dateText} numberOfLines={1}>{formatDate(item.ngay)}</Text>
         </View>
 
         <View style={styles.centerCol}>
