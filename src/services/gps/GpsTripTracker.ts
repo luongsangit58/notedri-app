@@ -481,6 +481,8 @@ export type StartResult = {
   reason?: 'foreground_denied' | 'background_denied' | 'location_off' | 'start_failed' | 'vehicle_locked';
   error?: string;
   backgroundGranted: boolean;
+  /** device_id đang giữ lock (chỉ có khi reason === 'vehicle_locked') - để dedupe thông báo, xem notifyVehicleLockedOnce(). */
+  lockedByDeviceId?: string | null;
 };
 
 // Thông tin hành trình bị gián đoạn (app bị kill khi đang ghi)
@@ -555,7 +557,7 @@ export async function requestPermissionsAndStart(
     await gpsTripsApi.trackingLock.claim(vehicleId, deviceId);
   } catch (err: any) {
     if (err?.response?.status === 409) {
-      return { ok: false, reason: 'vehicle_locked', backgroundGranted: false };
+      return { ok: false, reason: 'vehicle_locked', backgroundGranted: false, lockedByDeviceId: err?.response?.data?.holder ?? null };
     }
     // Network error -> tiếp tục (offline-first)
   }
@@ -789,7 +791,41 @@ export async function getReadiness(): Promise<Readiness> {
 
 export type AutoArmResult =
   | { armed: true }
-  | { armed: false; reason: 'already_active' | 'missing_permission' | 'error' };
+  | { armed: false; reason: 'already_active' | 'missing_permission' | 'error' | 'vehicle_locked' };
+
+const LOCKED_NOTIFIED_KEY_PREFIX = 'gps_trip_locked_notified_';
+
+/**
+ * Rà soát (user báo: có popup "xe đang được ghi hành trình ở máy khác" nhưng
+ * không rõ việc này có chặn ghi hành trình không) - CÓ, requestPermissionsAndStart()
+ * trả về sớm ngay ở bước claim() lock, trước cả bước xin quyền, nên hành trình
+ * KHÔNG được ghi trên máy này chừng nào máy kia còn giữ lock. Nhưng autoArmIfReady()
+ * (gọi tự động, im lặng, từ App.tsx lúc mở app và useObd.ts lúc OBD2 vừa kết nối)
+ * trước đây gộp phăng lý do này vào 'error' và CẢ 2 lối gọi đều .catch(() => {})
+ * bỏ luôn kết quả - user mất trắng chuyến đi mà không có bất kỳ dấu hiệu nào,
+ * trừ khi tự mở tab "Hành trình GPS" (chỉ hiện Alert ở đó, xem GpsPrimaryBanner).
+ * Giữ nguyên chi tiết đơn giản: bắn 1 thông báo cục bộ (giống autoShutdown() ở
+ * trên) ngay khi phát hiện bị chặn - dedupe theo device_id đang giữ lock (lưu
+ * AsyncStorage) để không bắn lại thông báo mỗi lần OBD2 reconnect trong lúc
+ * cùng 1 máy kia vẫn đang giữ lock.
+ */
+async function notifyVehicleLockedOnce(vehicleId: number, holderDeviceId: string | null | undefined): Promise<void> {
+  const key = LOCKED_NOTIFIED_KEY_PREFIX + vehicleId;
+  const lastNotified = await AsyncStorage.getItem(key).catch(() => null);
+  if (holderDeviceId && lastNotified === holderDeviceId) return;
+
+  try {
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: useI18nStore.getState().t('gps_trips.vehicle_locked_title'),
+        body: useI18nStore.getState().t('gps_trips.vehicle_locked_short'),
+      },
+      trigger: null,
+    });
+  } catch { /* notifications non-critical */ }
+
+  if (holderDeviceId) await AsyncStorage.setItem(key, holderDeviceId).catch(() => {});
+}
 
 /**
  * Rà soát 16/7 (góp ý user: GPS nên "âm thầm" tự ghi nếu đã đủ điều kiện, chỉ
@@ -829,7 +865,12 @@ export async function autoArmIfReady(vehicleId: number): Promise<AutoArmResult> 
     }
 
     const result = await requestPermissionsAndStart(vehicleId);
-    return result.ok ? { armed: true } : { armed: false, reason: 'error' };
+    if (result.ok) return { armed: true };
+    if (result.reason === 'vehicle_locked') {
+      await notifyVehicleLockedOnce(vehicleId, result.lockedByDeviceId);
+      return { armed: false, reason: 'vehicle_locked' };
+    }
+    return { armed: false, reason: 'error' };
   } catch {
     return { armed: false, reason: 'error' };
   }
