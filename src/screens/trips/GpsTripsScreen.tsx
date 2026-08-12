@@ -548,8 +548,9 @@ function TripRow({ trip, expanded, onToggle, onDelete, onEditNote }: {
   // xem _bmad-output/driving-score-design-proposal-2026-07-14.md.
   const drivingScore = useMemo(() => {
     if (points.length < 2) return null;
-    const events = detectDrivingEvents(points.map((p) => ({ ts: p.ts, speedKmh: p.spd })));
-    return computeDrivingScoreByDistance(events, distanceKm);
+    const samples = points.map((p) => ({ ts: p.ts, speedKmh: p.spd }));
+    const events = detectDrivingEvents(samples);
+    return computeDrivingScoreByDistance(events, distanceKm, samples);
   }, [points, distanceKm]);
 
   return (

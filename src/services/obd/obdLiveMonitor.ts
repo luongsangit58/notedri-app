@@ -27,7 +27,7 @@ import {
 import { ReadinessStatus } from './obdParser';
 import { evaluate, Finding } from './diagnosticEngine';
 import { getActiveRules, refreshRulesFromServer } from './diagnosticRulesStore';
-import { detectDrivingEvents, scoreFromCounts, SpeedSample } from '../drivingScore/drivingScoreEngine';
+import { detectDrivingEvents, computeSessionScore, isNightHour, SpeedSample } from '../drivingScore/drivingScoreEngine';
 import { useObdSessionStore } from '../../store/obdSessionStore';
 import { startObdKeepAlive, stopObdKeepAlive } from './obdKeepAliveService';
 import { syncDtcNotifications } from './dtcNotificationStore';
@@ -146,6 +146,10 @@ let engineRunSeconds = 0;
 // Giây "đang lái" (rpm>0 VÀ speed>0) - phần con của engineRunSeconds; idle suy
 // ra được ở tầng đọc (engineRunSeconds - drivingSeconds), không cần đếm riêng.
 let drivingSeconds = 0;
+// Phần con của drivingSeconds rơi vào khung giờ đêm (isNightHour) - rà soát bổ
+// sung sau Giai đoạn G: dùng để phạt nhẹ điểm lái đêm mà không cần giữ mảng
+// mẫu thô, cùng cách tích luỹ dần như drivingSeconds/engineRunSeconds ở trên.
+let nightDrivingSeconds = 0;
 let currentPhase: SessionPhase = 'engine_off';
 
 // Pending DTC (mode 07): đếm mã đang hình thành trong phiên, KHÔNG cộng vào
@@ -252,7 +256,7 @@ function resetSessionStats(): void {
   aggRpmAll = newAgg(); aggIdleThrottle = newAgg();
   aggFuelRate = newAgg(); fuelUsedLiters = 0; lastFuelRateAt = null;
   maxSpeed = null; sessionDtcCount = 0; sessionFindingIds = new Set();
-  lastSpeedSample = null; harshBrakeCount = 0; harshAccelCount = 0;
+  lastSpeedSample = null; harshBrakeCount = 0; harshAccelCount = 0; nightDrivingSeconds = 0;
   smoothedRpm = null; smoothedSpeedKmh = null; smoothedEngineLoadPct = null;
   smoothedCoolantTempC = null; smoothedThrottlePct = null; smoothedControlModuleVoltage = null;
   engineRunSeconds = 0; drivingSeconds = 0; currentPhase = 'engine_off';
@@ -322,7 +326,15 @@ export function buildSessionSummary(): Record<string, unknown> | null {
     background_gap_seconds_total: backgroundGapSecondsTotal,
     // Thời lượng phiên (không phải quãng đường - OBD live-monitor không theo dõi
     // quãng đường, GPS là nguồn chuyến duy nhất) làm đơn vị chuẩn hoá mật độ.
-    driving_score: scoreFromCounts(harshBrakeCount, harshAccelCount, bleService.getSessionAgeSeconds() / 60),
+    // Ngoài harsh brake/accel còn trừ thêm phạt lái đêm (nightDrivingSeconds) và
+    // idle vượt ngưỡng (engineRunSeconds - drivingSeconds) - xem computeSessionScore.
+    driving_score: computeSessionScore({
+      harshBrakeCount, harshAccelCount,
+      unitsTravelled: bleService.getSessionAgeSeconds() / 60,
+      nightDrivingRatio: drivingSeconds > 0 ? nightDrivingSeconds / drivingSeconds : 0,
+      idleSeconds: Math.max(0, engineRunSeconds - drivingSeconds),
+      drivingSeconds,
+    }),
     // Chuẩn hoá cho Vehicle Timeline (mục 8 yêu cầu cải tiến) - CHỈ chuẩn hoá dữ
     // liệu, chưa dựng UI/Timeline đầy đủ.
     start_time: sessionStartedAtMs ? new Date(sessionStartedAtMs).toISOString() : null,
@@ -650,6 +662,7 @@ async function poll(): Promise<void> {
       engineRunSeconds += POLL_INTERVAL_MS / 1000;
       if (snapshot.speedKmh !== null && snapshot.speedKmh > 0) {
         drivingSeconds += POLL_INTERVAL_MS / 1000;
+        if (isNightHour(new Date().getHours())) nightDrivingSeconds += POLL_INTERVAL_MS / 1000;
         currentPhase = 'driving';
       } else {
         currentPhase = 'idle';
