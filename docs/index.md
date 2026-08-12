@@ -22,6 +22,8 @@ Master navigation index for all project documentation.
 | Set up local development | [development-guide.md](development-guide.md) |
 | Build and release to stores | [deployment-guide.md](deployment-guide.md) |
 | Xem kế hoạch triển khai Nori Agent (AI Agent, chưa xong) | [nori-agent-plan.md](nori-agent-plan.md) |
+| Knowledge (từ điển DTC + rule chẩn đoán) đang phủ tới đâu, còn thiếu gì | [knowledge-coverage.md](knowledge-coverage.md) |
+| So sánh tính năng app vs web (notedri.com), còn thiếu gì | [feature-parity-vs-web.md](feature-parity-vs-web.md) |
 
 ---
 
@@ -111,6 +113,14 @@ Step-by-step local development setup. Includes:
 ### [nori-agent-plan.md](nori-agent-plan.md)
 
 Kế hoạch triển khai **Nori Agent** — trợ lý AI điều khiển tính năng NoteDri qua Tool Calling (không phải chatbot). Bản nháp kiến trúc, khảo sát hiện trạng codebase, danh sách Tool, việc cần làm ở cả app và backend Laravel, roadmap theo phase, và câu hỏi còn mở. Đọc file này trước khi bắt tay code phần Nori/AI.
+
+### [knowledge-coverage.md](knowledge-coverage.md)
+
+Hiện trạng **Knowledge** (từ điển DTC `dtc_dictionary.json` + rule chẩn đoán sống `diagnostic_rules.json`, cả hai ở backend `notedri`): số lượng, độ phủ theo tiền tố/hệ, lịch sử tăng trưởng, giới hạn kỹ thuật (vd mã Chassis/Body không đọc được qua ELM327 phổ thông), cách ưu tiên mở rộng tiếp theo qua báo cáo "misses" thật. Thay thế vai trò tài liệu tầm nhìn ban đầu `OBD2/*.md` (đã xoá vì lỗi thời).
+
+### [feature-parity-vs-web.md](feature-parity-vs-web.md)
+
+Đối chiếu tính năng app vs web (`notedri.com`) — tính năng nào app đã có, đã tương đương, hay còn thiếu so với web, kèm đề xuất ưu tiên xử lý và trạng thái đã làm/chưa làm.
 
 ### [deployment-guide.md](deployment-guide.md)
 
