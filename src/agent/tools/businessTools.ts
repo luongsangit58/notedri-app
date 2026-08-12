@@ -90,6 +90,34 @@ export function buildBusinessTools(): ToolDefinition[] {
       },
     },
     {
+      // MỚI (rà soát tài liệu 2026-08-12): backend đã có sẵn `/vehicles/{id}/day-summary` từ
+      // trước, viết riêng cho đúng câu hỏi này (xem comment VehicleController::daySummary), nhưng
+      // chưa tool nào gọi tới - agent phải chắp vá từ vehicle.getTripToday/expense.summary rời
+      // rạc. `day` giới hạn 'today'/'yesterday' (không phải chuỗi ngày tự do) để LLM không tự
+      // tính/bịa ngày sai múi giờ.
+      name: 'vehicle.getDaySummary',
+      description: 'Tổng kết hoạt động của xe trong 1 NGÀY cụ thể (hôm nay hoặc hôm qua): chi phí xăng/bảo dưỡng, số chuyến và quãng đường GPS, điểm lái xe OBD2 (nếu Premium) - dùng cho câu hỏi kiểu "hôm qua xe tôi thế nào", "hôm nay xe chạy sao rồi". Khác vehicle.getTripToday (chỉ có GPS) và expense.summary (chỉ có chi phí xăng theo tháng) - tool này gộp đủ trong đúng 1 ngày.',
+      authority: 'read-only',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          day: {
+            type: 'string',
+            enum: ['today', 'yesterday'],
+            description: 'Ngày cần tổng kết: "today" (hôm nay) hoặc "yesterday" (hôm qua). Mặc định "yesterday" khi user không nói rõ.',
+          },
+        },
+        additionalProperties: false,
+      },
+      async execute(input, ctx) {
+        if (!ctx.vehicleId) return { status: 'unavailable', reason: 'no_active_vehicle' };
+        const day: 'today' | 'yesterday' = (input as any)?.day === 'today' ? 'today' : 'yesterday';
+        const data = await NoteDriApi.getDaySummary(ctx.vehicleId, day);
+        if (!data) return { status: 'unavailable', reason: 'no_data' };
+        return { status: 'ok', day, ...data, age_seconds: 0 };
+      },
+    },
+    {
       name: 'vehicle.getRecentIssues',
       description: 'Xe có vấn đề gì đáng chú ý gần đây không, và so sánh tình trạng lái xe tuần này với tuần trước - dùng cho câu hỏi kiểu "hôm qua/tuần qua xe tôi có vấn đề gì không", "xe tôi dạo này thế nào". TÁI DÙNG đúng logic "tâm trạng Nori" hiển thị ở Trang chủ (mood/organ nổi bật nhất), không phải nguồn riêng.',
       authority: 'read-only',

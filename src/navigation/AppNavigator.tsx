@@ -30,6 +30,7 @@ import QuanLyScreen from '../screens/management/QuanLyScreen';
 import EditRefuelScreen from '../screens/refuels/EditRefuelScreen';
 import NearbyStationsScreen from '../screens/refuels/NearbyStationsScreen';
 import NearbyGaragesScreen from '../screens/services/NearbyGaragesScreen';
+import TrafficFinesScreen from '../screens/services/TrafficFinesScreen';
 import RefuelsListScreen from '../screens/refuels/RefuelsListScreen';
 import OdometerListScreen from '../screens/odometer/OdometerListScreen';
 import EditServiceScreen from '../screens/services/EditServiceScreen';
@@ -301,6 +302,8 @@ export default function AppNavigator() {
       <RootStack.Screen name="NfcSetup" component={NfcSetupScreen}
         options={{ headerShown: false }} />
       <RootStack.Screen name="DtcLookup" component={DtcLookupScreen}
+        options={{ headerShown: false }} />
+      <RootStack.Screen name="TrafficFines" component={TrafficFinesScreen}
         options={{ headerShown: false }} />
       <RootStack.Screen name="ObdReport" component={ObdReportScreen}
         options={{ headerShown: false }} />

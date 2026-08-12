@@ -259,6 +259,11 @@ const en = {
   "year_review.service_cost": "Service cost",
   "year_review.total_cost": "Total annual cost",
   "year_review.top_station": "Top fuel station",
+  "year_review.share_header": "NoteDri - {{year}} in Review",
+  "year_review.share_km": "Drove {{km}} km",
+  "year_review.share_fuel": "Spent {{cost}} on fuel ({{liters}}, {{count}} fill-ups)",
+  "year_review.share_service": "Spent {{cost}} on maintenance ({{count}} times)",
+  "year_review.share_station": "Favorite station: {{station}}",
 
   // Timeline
   "timeline.title": "Log",
@@ -837,6 +842,24 @@ const en = {
   "nearby_garages.filter_rua_xe": "Car wash",
   "nearby_garages.filter_lop_xe": "Tires",
 
+  // Traffic Fines (traffic fine rate lookup)
+  "traffic_fines.title": "Traffic fine lookup",
+  "traffic_fines.entry_subtitle": "Fines under Decree 168/2024",
+  "traffic_fines.hint": "Reference fines under Decree 168/2024/NĐ-CP. Filter by vehicle type/violation group or type a keyword.",
+  "traffic_fines.search_placeholder": "Search by violation...",
+  "traffic_fines.loai_oto": "Car",
+  "traffic_fines.loai_xe_may": "Motorbike",
+  "traffic_fines.nhom_toc_do": "Speed",
+  "traffic_fines.nhom_nong_do_con": "Alcohol level",
+  "traffic_fines.nhom_den_bien_bao": "Traffic lights/signs",
+  "traffic_fines.nhom_lan_duong": "Lane",
+  "traffic_fines.nhom_dung_do": "Parking/stopping",
+  "traffic_fines.nhom_re_nhuong_duong": "Turning/yielding",
+  "traffic_fines.nhom_khac": "Other",
+  "traffic_fines.points_deducted": "Deducts {{n}} license points",
+  "traffic_fines.no_results": "No matching violations found.",
+  "traffic_fines.disclaimer": "Reference data only, not a substitute for the official legal text. Actual fines are decided by authorities at the time of enforcement.",
+
   // FuelPrices (new)
   "fuel_prices.subtitle": "Current rates in Vietnam",
   "fuel_prices.no_current_data": "No price data available.",
@@ -1225,6 +1248,7 @@ const en = {
   "home.stat_this_month": "THIS MONTH",
   "home.stat_total": "TOTAL SPENT",
   "home.see_all": "See all →",
+  "home.suggestions_title": "Today's suggestions",
   "home.overview_report": "Overview & reports",
   // i18n audit - hardcoded strings wrapped
   "common.notice": "Notice",

@@ -16,6 +16,14 @@ import client from '../api/client';
  * 2 endpoint sau đã RÀ LẠI (2026-07-27) đối chiếu trực tiếp code backend
  * (DashboardController@index, GpsTripController@index) - không còn TODO:
  */
+/** Ngày cục bộ (theo giờ máy user, KHÔNG qua toISOString() - lệch ngày quanh nửa đêm giờ VN
+ *  UTC+7 vì toISOString() luôn quy về UTC) cách hôm nay `daysAgo` ngày, dạng YYYY-MM-DD. */
+function localDateOffset(daysAgo: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() - daysAgo);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 export const NoteDriApi = {
   async getHealthScore(vehicleId: number) {
     const res = await vehiclesApi.health(vehicleId);
@@ -66,6 +74,20 @@ export const NoteDriApi = {
   async getFuelPrediction(vehicleId?: number) {
     const res = await dashboardApi.get(vehicleId);
     return res.data?.data?.prediction ?? null;
+  },
+
+  /**
+   * `/vehicles/{id}/day-summary?at=YYYY-MM-DD` (VehicleController::daySummary, backend) - viết
+   * riêng CHO Nori Agent trả lời "hôm qua/hôm nay xe tôi thế nào" (chi phí + chuyến GPS + sức
+   * khoẻ + OBD2 nếu Premium, tính SỐNG mỗi lần gọi). Trước đây (rà soát tài liệu 2026-08-12)
+   * endpoint này tồn tại ở backend nhưng KHÔNG tool nào gọi tới - agent phải chắp vá câu trả lời
+   * từ getTripToday/expense.summary rời rạc. `day` chỉ nhận 'today'/'yesterday' (không phải
+   * chuỗi ngày tự do) - tránh LLM tự tính/bịa ngày sai lệch múi giờ.
+   */
+  async getDaySummary(vehicleId: number, day: 'today' | 'yesterday' = 'yesterday') {
+    const at = localDateOffset(day === 'yesterday' ? 1 : 0);
+    const res = await vehiclesApi.daySummary(vehicleId, at);
+    return res.data?.data ?? null;
   },
 
   async getUpcomingReminders(vehicleId: number) {

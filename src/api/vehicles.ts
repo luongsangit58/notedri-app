@@ -36,6 +36,8 @@ export const vehiclesApi = {
       { params: { scope: 'lifetime' } },
     ),
   reminders: (id: number) => client.get(`/vehicles/${id}/reminders`),
+  daySummary: (id: number, at?: string) =>
+    client.get(`/vehicles/${id}/day-summary`, { params: at ? { at } : {} }),
   setDefault: (id: number) => client.post(`/vehicles/${id}/default`),
   toggleRest: (id: number) => client.post(`/vehicles/${id}/rest`),
 };

@@ -260,6 +260,11 @@ const vi = {
   "year_review.service_cost": "Bảo dưỡng",
   "year_review.total_cost": "Tổng chi phí cả năm",
   "year_review.top_station": "Điểm tiếp nhiên liệu chính",
+  "year_review.share_header": "NoteDri - Nhìn lại {{year}}",
+  "year_review.share_km": "Đã đi {{km}} km",
+  "year_review.share_fuel": "Chi {{cost}} tiền xăng ({{liters}}, {{count}} lần đổ)",
+  "year_review.share_service": "Chi {{cost}} bảo dưỡng ({{count}} lần)",
+  "year_review.share_station": "Trạm quen: {{station}}",
 
   // Timeline
   "timeline.title": "Nhật ký",
@@ -837,6 +842,24 @@ const vi = {
   "nearby_garages.filter_rua_xe": "Rửa xe",
   "nearby_garages.filter_lop_xe": "Lốp xe",
 
+  // Traffic Fines (tra cứu mức phạt giao thông)
+  "traffic_fines.title": "Tra cứu mức phạt giao thông",
+  "traffic_fines.entry_subtitle": "Mức phạt theo Nghị định 168/2024",
+  "traffic_fines.hint": "Mức phạt tham khảo theo Nghị định 168/2024/NĐ-CP. Lọc theo loại xe/nhóm vi phạm hoặc gõ từ khoá.",
+  "traffic_fines.search_placeholder": "Tìm theo hành vi vi phạm...",
+  "traffic_fines.loai_oto": "Ô tô",
+  "traffic_fines.loai_xe_may": "Xe máy",
+  "traffic_fines.nhom_toc_do": "Tốc độ",
+  "traffic_fines.nhom_nong_do_con": "Nồng độ cồn",
+  "traffic_fines.nhom_den_bien_bao": "Đèn tín hiệu/biển báo",
+  "traffic_fines.nhom_lan_duong": "Làn đường",
+  "traffic_fines.nhom_dung_do": "Dừng đỗ",
+  "traffic_fines.nhom_re_nhuong_duong": "Rẽ/nhường đường",
+  "traffic_fines.nhom_khac": "Khác",
+  "traffic_fines.points_deducted": "Trừ {{n}} điểm GPLX",
+  "traffic_fines.no_results": "Không tìm thấy hành vi vi phạm nào khớp.",
+  "traffic_fines.disclaimer": "Dữ liệu chỉ mang tính tham khảo, không thay thế văn bản pháp luật chính thức. Mức phạt thực tế do cơ quan chức năng quyết định tại thời điểm xử lý.",
+
   // FuelPrices (new)
   "fuel_prices.subtitle": "Giá hiện hành tại Việt Nam",
   "fuel_prices.no_current_data": "Chưa có dữ liệu giá.",
@@ -1225,6 +1248,7 @@ const vi = {
   "home.stat_this_month": "THÁNG NÀY",
   "home.stat_total": "TỔNG CHI",
   "home.see_all": "Xem tất cả →",
+  "home.suggestions_title": "Gợi ý hôm nay",
   "home.overview_report": "Tổng quan & báo cáo",
   // i18n audit - bổ sung chuỗi hardcode (wrap t())
   "common.notice": "Thông báo",

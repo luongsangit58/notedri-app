@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, ScrollView, StyleSheet, useWindowDimensions } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, useWindowDimensions, TouchableOpacity, Share } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -89,6 +89,25 @@ export default function YearReviewScreen() {
 
   const totalCost = (Number(fuelCost ?? 0) + Number(serviceCost ?? 0)) || null;
 
+  // "Nhìn lại năm" trên web được gọi là "thẻ tổng kết chia sẻ được" (routes/garage.php,
+  // reports/recap.blade.php) - bản app trước đây chỉ hiển thị, không có cách nào chia sẻ ra
+  // ngoài. Chia sẻ dạng văn bản (không có public link riêng cho recap, khác dossier).
+  function handleShare() {
+    const lines: string[] = [t('year_review.share_header', { year })];
+    if (km != null) lines.push(t('year_review.share_km', { km: fmt(km) }));
+    if (fuelCost != null) {
+      lines.push(t('year_review.share_fuel', {
+        cost: formatVND(fuelCost), liters: fmtLit(liters), count: fillCount ?? 0,
+      }));
+    }
+    if (serviceCost != null) {
+      lines.push(t('year_review.share_service', { cost: formatVND(serviceCost), count: serviceCount ?? 0 }));
+    }
+    if (topStation) lines.push(t('year_review.share_station', { station: topStation }));
+    lines.push(t('year_review.footer'));
+    Share.share({ message: lines.join('\n') }).catch(() => {});
+  }
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: NAVY }} edges={['bottom', 'left', 'right']}>
       <RecapBackground />
@@ -163,8 +182,20 @@ export default function YearReviewScreen() {
           </View>
         )}
 
+        {/* Chia sẻ */}
+        <TouchableOpacity
+          onPress={handleShare}
+          activeOpacity={0.85}
+          style={{
+            marginTop: 24, backgroundColor: AMBER, borderRadius: 14, paddingVertical: 14,
+            flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+          }}>
+          <FontAwesome5 name="share-alt" size={14} color={NAVY} solid />
+          <Text style={{ color: NAVY, fontWeight: '800', fontSize: 14 }}>{t('common.share')}</Text>
+        </TouchableOpacity>
+
         {/* Footer */}
-        <Text style={{ color: SLATE, fontSize: 11, textAlign: 'center', marginTop: 28, letterSpacing: 0.3 }}>
+        <Text style={{ color: SLATE, fontSize: 11, textAlign: 'center', marginTop: 16, letterSpacing: 0.3 }}>
           {t('year_review.footer')}
         </Text>
       </ScrollView>

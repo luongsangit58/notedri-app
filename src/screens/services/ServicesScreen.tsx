@@ -277,6 +277,26 @@ export default function ServicesScreen() {
               <FontAwesome5 name="chevron-right" size={11} color={colors.primary} />
             </TouchableOpacity>
 
+            {/* Tra cứu mức phạt giao thông - cùng nhóm "an toàn/pháp lý" như gara/đăng kiểm ở
+                trên, API đã có sẵn (`/traffic-fines`) nhưng trước đây app chưa có màn hình nào
+                gọi tới dù web đã có trang công khai tương ứng. */}
+            <TouchableOpacity
+              onPress={() => navigation.navigate('TrafficFines')}
+              style={{
+                flexDirection: 'row', alignItems: 'center', gap: 8,
+                backgroundColor: colors.primary + '15', borderRadius: 10, padding: 12, marginBottom: 12,
+                borderWidth: 1, borderColor: colors.primary + '33',
+              }}>
+              <FontAwesome5 name="gavel" size={14} color={colors.primary} solid />
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 13 }}>{t('traffic_fines.title')}</Text>
+                <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 1 }}>
+                  {t('traffic_fines.entry_subtitle')}
+                </Text>
+              </View>
+              <FontAwesome5 name="chevron-right" size={11} color={colors.primary} />
+            </TouchableOpacity>
+
             {/* Stats */}
             {totalCost > 0 && (
               <View style={{ flexDirection: 'row', gap: 8, paddingBottom: 12 }}>

@@ -94,6 +94,21 @@ const FA5_ICON_MAP: Record<string, string> = {
   'cloud-showers-heavy': 'cloud-rain',
 };
 
+// "Gợi ý hôm nay" (SuggestionEngine, backend) đặt icon theo tên FontAwesome 6 (`fa-xxx`) - map
+// sang tên tương đương trong bộ FA5 Free đóng gói trong @expo/vector-icons (không có gói FA6).
+const SUGGESTION_ICON_MAP: Record<string, string> = {
+  'arrow-trend-up': 'chart-line',
+  'gauge-high': 'tachometer-alt',
+  gifts: 'gift',
+  'list-check': 'tasks',
+  'pen-to-square': 'edit',
+  'screwdriver-wrench': 'tools',
+  'triangle-exclamation': 'exclamation-triangle',
+};
+const SUGGESTION_SEVERITY_ICON: Record<string, string> = {
+  urgent: 'exclamation-triangle', warn: 'exclamation-circle', info: 'info-circle', good: 'thumbs-up',
+};
+
 function WeatherCard({ data, loading }: { data: any; loading: boolean }) {
   const colors = useColors();
   if (loading) {
@@ -262,6 +277,10 @@ export default function HomeScreen() {
   const thisMonth = dash.this_month;
   const allTime = dash.all_time;
   const consumption = dash.consumption;
+  // "Gợi ý hôm nay" (App\Services\SuggestionEngine, backend) - đã có sẵn trong response
+  // /dashboard từ lâu (dùng để dựng bong bóng Nori trên web) nhưng app chưa từng đọc field
+  // này. Xếp hạng/độ khẩn đã tính sẵn ở server, chỉ hiển thị lại, không tự suy luận thêm.
+  const suggestions: any[] = Array.isArray(dash.suggestions) ? dash.suggestions : [];
 
   // Upcoming reminders
   const { data: remRaw, refetch: refetchRem, isFetching: remFetching } = useQuery({
@@ -765,6 +784,59 @@ export default function HomeScreen() {
             </TouchableOpacity>
           )}
         </View>
+
+        {/* Gợi ý hôm nay (SuggestionEngine) - tương đương bong bóng "Nori hôm nay" trên
+            dashboard web (garage/_nori_today.blade.php), rút thẳng từ field `suggestions` API
+            /dashboard đã trả sẵn. cta.url của backend là link trang WEB (route('garage.*')) nên
+            không dùng được trong app - chỉ suy ra điều hướng nội bộ hợp lý theo `covers`, còn
+            lại chỉ hiển thị thông tin (không có hành động bấm). */}
+        {suggestions.length > 0 && (
+          <View style={{ backgroundColor: colors.surface, borderRadius: 14, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: colors.border }}>
+            <Text style={{ color: colors.text, fontWeight: '700', fontSize: 15, marginBottom: 10 }}>
+              {t('home.suggestions_title')}
+            </Text>
+            {suggestions.map((sug: any, i: number) => {
+              const severity: string = sug.severity ?? 'info';
+              const severityColor = severity === 'urgent' ? colors.error
+                : severity === 'warn' ? colors.warning
+                : severity === 'good' ? colors.success
+                : colors.primary;
+              const rawIcon = (sug.icon ?? '').replace(/^fa-/, '');
+              // "||" (không phải "??"): rawIcon rỗng khi sug.icon thiếu/rỗng - "??" chỉ fallback
+              // trên null/undefined nên sẽ giữ nguyên chuỗi rỗng, khiến FontAwesome5 không hiện icon.
+              const icon = SUGGESTION_ICON_MAP[rawIcon] || rawIcon || SUGGESTION_SEVERITY_ICON[severity] || 'lightbulb';
+              const covers: string = sug.covers ?? '';
+              const onPress = covers.startsWith('legal') || covers.startsWith('maint')
+                ? () => nav.navigate('Management', { tab: 0, vehicleId, _ts: Date.now() })
+                : covers === 'consumption'
+                ? () => nav.navigate('Management', { tab: 1, vehicleId, _ts: Date.now() })
+                : covers === 'odo'
+                ? () => nav.navigate('OdometerList', { vehicleId })
+                : undefined;
+              const Row = onPress ? TouchableOpacity : View;
+              return (
+                <Row
+                  key={sug.key ?? i}
+                  {...(onPress ? { activeOpacity: 0.6, onPress } : {})}
+                  style={{
+                    flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingVertical: 8,
+                    borderTopWidth: i > 0 ? 1 : 0, borderTopColor: colors.border,
+                  }}>
+                  <FontAwesome5 name={icon} size={13} color={severityColor} solid style={{ marginTop: 2 }} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: colors.text, fontSize: 13.5, fontWeight: '600' }}>{sug.title}</Text>
+                    {!!sug.why && (
+                      <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2, lineHeight: 17 }}>
+                        {sug.why}
+                      </Text>
+                    )}
+                  </View>
+                  {onPress && <FontAwesome5 name="chevron-right" size={11} color={colors.textSecondary} />}
+                </Row>
+              );
+            })}
+          </View>
+        )}
 
         {/* Upcoming reminders */}
         {upcoming.length > 0 && (
