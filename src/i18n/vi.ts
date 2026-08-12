@@ -1333,6 +1333,8 @@ const vi = {
   "gps_trips.notif_autosaved_stale": "Đã tự lưu hành trình {{km}} km (GPS mất tín hiệu quá lâu).",
   "gps_trips.notif_autosaved_interrupted": "Đã tự lưu hành trình {{km}} km bị gián đoạn (app bị hệ thống tắt nền). Hãy tắt tối ưu pin cho NoteDri trong Cài đặt để tránh lặp lại.",
   "gps_trips.notif_discarded_short": "Hành trình bị gián đoạn đã bị xoá (quãng đường quá ngắn để lưu).",
+  "gps_trips.notif_autosaved_obd_disconnect": "Đã lưu hành trình {{km}} km (xe đã dừng khi tắt kết nối OBD2). Nhấn để xem chi tiết.",
+  "gps_trips.notif_still_recording_after_obd_disconnect": "Đã ngắt OBD2 nhưng xe có vẻ vẫn di chuyển - hành trình GPS vẫn đang được ghi. Nhấn để mở và tự dừng nếu cần.",
   "route_map.load_error": "Không tải được bản đồ",
   "route_map.loading": "Đang tải bản đồ...",
   "tab_bar.quick_add": "Thêm nhanh",

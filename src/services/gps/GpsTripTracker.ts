@@ -1049,6 +1049,72 @@ export async function checkInterruptedTrip(): Promise<InterruptedTripInfo> {
   };
 }
 
+const STILL_MOVING_NOTIFIED_KEY_PREFIX = 'gps_trip_still_moving_notified_';
+const STILL_MOVING_NOTIFY_COOLDOWN_MS = 10 * 60_000; // tránh spam nếu user bấm X/kết nối lại OBD2 nhiều lần liên tiếp
+
+/**
+ * Gọi khi user CHỦ ĐỘNG bấm "X ngắt kết nối" OBD2 (useObd.ts disconnect(), chỉ
+ * đường vào duy nhất set intentionalDisconnect=true trong BleService - KHÔNG
+ * bao giờ chạy khi Bluetooth tự rớt giữa đường, vì nhánh đó đi qua
+ * attemptReconnect() riêng, không gọi tới disconnect() này). An toàn để coi
+ * đây là tín hiệu Ý ĐỊNH của user, không phải sự cố kết nối.
+ *
+ * User góp ý (sau khi hỏi vì sao chuyến hôm qua mãi sáng nay mới thấy): OBD2
+ * disconnect và hành trình GPS là 2 hệ thống tách biệt CÓ CHỦ ĐÍCH (GPS luôn là
+ * nguồn CHUYẾN ĐI duy nhất, không phụ thuộc OBD2 - tránh mất nửa chuyến nếu
+ * Bluetooth rớt giữa đường) - nhưng khi user bấm X ĐÚNG LÚC xe đã dừng hẳn
+ * (dấu hiệu mạnh nhất "đã xong chuyến"), chờ thêm tới 5 phút nữa (WAITING_STOP_MS)
+ * mới tự chốt là không cần thiết, và làm mốc ODO tự động (cập nhật ngay lúc
+ * BE nhận trip - xem GpsTripController::store()) bị trễ oan theo.
+ *
+ * Chỉ tự chốt khi tốc độ GPS gần nhất < SPEED_STOP_KMPH (xe đã dừng thật) -
+ * nếu vẫn đang di chuyển (OBD2 rớt vì lý do khác, không phải hết chuyến), CỐ
+ * TÌNH không đụng tới hành trình đang ghi, chỉ báo cho user biết để họ tự
+ * kiểm soát (Tạm dừng/Dừng theo dõi ở màn Hành trình GPS) - tránh lặp lại lỗi
+ * "kẹt xe cắt chuyến" mà rà soát 7/8 đã sửa (WAITING_STOP_MS tăng lên 5 phút),
+ * lần này qua đường disconnect thay vì qua đường tốc độ.
+ */
+export async function handleObdDisconnected(vehicleId: number): Promise<void> {
+  try {
+    const state = await readState();
+    const inTrip = state.status === 'active' || state.status === 'waiting_stop';
+    if (!inTrip || state.vehicleId !== vehicleId) return;
+
+    if (state.lastSpeedKmh < SPEED_STOP_KMPH) {
+      const summary = await stopTracking(true);
+      if (summary) {
+        try {
+          await Notifications.scheduleNotificationAsync({
+            content: {
+              title: 'NoteDri',
+              body: useI18nStore.getState().t('gps_trips.notif_autosaved_obd_disconnect', { km: summary.distanceKm }),
+              data: { type: 'gps_trip_saved', vehicleId },
+            },
+            trigger: null,
+          });
+        } catch { /* notifications non-critical */ }
+      }
+      return;
+    }
+
+    // Vẫn đang di chuyển - không đụng tới trip, chỉ báo 1 lần/cooldown để user tự kiểm soát.
+    const key = STILL_MOVING_NOTIFIED_KEY_PREFIX + vehicleId;
+    const lastNotifiedAt = Number(await AsyncStorage.getItem(key).catch(() => null)) || 0;
+    if (Date.now() - lastNotifiedAt < STILL_MOVING_NOTIFY_COOLDOWN_MS) return;
+    try {
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: 'NoteDri',
+          body: useI18nStore.getState().t('gps_trips.notif_still_recording_after_obd_disconnect'),
+          data: { type: 'gps_trip_still_recording', vehicleId },
+        },
+        trigger: null,
+      });
+    } catch { /* notifications non-critical */ }
+    await AsyncStorage.setItem(key, String(Date.now())).catch(() => {});
+  } catch { /* non-critical - không được làm hỏng luồng disconnect OBD2 */ }
+}
+
 // Tiếp tục hành trình bị gián đoạn: khởi động lại GPS service với cùng xe.
 // Backend claim() cho phép same device_id claim lại → không cần release trước.
 export async function resumeInterruptedTrip(): Promise<StartResult> {

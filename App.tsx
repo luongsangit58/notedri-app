@@ -152,6 +152,14 @@ function AppLoader({ children }: { children: React.ReactNode }) {
       if (data?.type === 'dtc_alert' && data.vehicleId && navigationRef.isReady()) {
         navigationRef.navigate('ObdReport', { vehicleId: data.vehicleId });
       }
+      // Chạm thông báo "đã lưu hành trình"/"vẫn đang ghi" (ngắt OBD2) -> mở thẳng
+      // màn Hành trình GPS của đúng xe để xem/kiểm soát (Tạm dừng/Dừng theo dõi).
+      if (
+        (data?.type === 'gps_trip_saved' || data?.type === 'gps_trip_still_recording')
+        && data.vehicleId && navigationRef.isReady()
+      ) {
+        navigationRef.navigate('GpsTrips', { vehicleId: data.vehicleId });
+      }
     });
     return () => sub.remove();
   }, []);

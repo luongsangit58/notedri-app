@@ -1333,6 +1333,8 @@ const en = {
   "gps_trips.notif_autosaved_stale": "Auto-saved a {{km}} km trip (GPS signal lost too long).",
   "gps_trips.notif_autosaved_interrupted": "Auto-saved an interrupted {{km}} km trip (the system killed the background app). Turn off battery optimization for NoteDri in Settings to avoid this happening again.",
   "gps_trips.notif_discarded_short": "The interrupted trip was discarded (too short to save).",
+  "gps_trips.notif_autosaved_obd_disconnect": "Saved a {{km}} km trip (vehicle was stopped when OBD2 disconnected). Tap to view details.",
+  "gps_trips.notif_still_recording_after_obd_disconnect": "OBD2 disconnected but the vehicle still seems to be moving - GPS trip recording is still ongoing. Tap to open and stop it if needed.",
   "route_map.load_error": "Couldn't load the map",
   "route_map.loading": "Loading map...",
   "tab_bar.quick_add": "Quick add",

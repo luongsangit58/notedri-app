@@ -7,7 +7,7 @@ import { getCachedCapability, discoverCapability, clearCapability, readCurrentVi
 import { obdLiveMonitor, FastSnapshot } from '../services/obd/obdLiveMonitor';
 import { obdSessionStateMachine } from '../services/obd/obdSessionStateMachine';
 import { flushObdQueuesAndRefreshCount } from '../services/obd/obdSyncStatus';
-import { autoArmIfReady } from '../services/gps/GpsTripTracker';
+import { autoArmIfReady, handleObdDisconnected } from '../services/gps/GpsTripTracker';
 import { Finding } from '../services/obd/diagnosticEngine';
 import { savePairing } from '../services/obd/pairedDevices';
 import { useAuthStore } from '../store/authStore';
@@ -452,6 +452,12 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
     setLiveSnapshot(null);
     useObdSessionStore.getState().patch({ sharedByOtherDevice: null });
     getDeviceId().then((appDeviceId) => obdApi.deviceLock.release(vehicleId, appDeviceId).catch(() => {}));
+    // Rà soát (user hỏi: ngắt OBD2 xong sao hành trình GPS không chốt luôn) -
+    // nếu xe đã dừng hẳn lúc bấm X, chốt ngay thay vì chờ tới 5 phút nữa (xem
+    // comment đầy đủ ở handleObdDisconnected()). Chỉ chạy khi NGẮT CHỦ ĐỘNG -
+    // không đụng gì khi Bluetooth tự rớt giữa đường (đi qua attemptReconnect(),
+    // không qua disconnect() này).
+    handleObdDisconnected(vehicleId).catch(() => {});
   }, [vehicleId]);
 
   // Heartbeat khoá mềm (29/7, đổi endpoint 30/7 - xem comment claimDeviceLock()
