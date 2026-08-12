@@ -9,6 +9,8 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -226,6 +228,9 @@ export default function EditVehicleScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom']}>
       <AppBgPattern />
+      {/* Rà soát UX 2026-08-12 (#2): khớp AddVehicleScreen - mọi màn Thêm/Sửa khác trong app đều
+          có KeyboardAvoidingView, riêng 2 màn xe này trước đây thiếu. */}
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       {/* Rà soát 20/7 (car head-unit landscape): cap 720 khớp AddVehicleScreen
           (form dày chữ, cùng ý tưởng contentWide của HomeScreen nhưng hẹp hơn). */}
       <ScrollView
@@ -245,7 +250,7 @@ export default function EditVehicleScreen() {
           </View>
         ) : null}
 
-        <Text style={labelStyle}>{t('vehicles.name_label')}</Text>
+        <Text style={labelStyle}>{t('vehicles.name_label')} <Text style={{ color: colors.error }}>*</Text></Text>
         <TextInput
           style={inputStyle}
           placeholder={t('vehicles.name_placeholder')}
@@ -474,6 +479,7 @@ export default function EditVehicleScreen() {
           )}
         </TouchableOpacity>
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

@@ -12,6 +12,8 @@ import {
   Image,
   Modal,
   Pressable,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -168,7 +170,12 @@ export default function AddVehicleScreen() {
   const allBrands: Brand[]  = Array.isArray(cascadeQuery.data?.brands) ? cascadeQuery.data.brands : [];
   const allModels: VModel[] = Array.isArray(cascadeQuery.data?.models) ? cascadeQuery.data.models : [];
   const allSpecs:  Spec[]   = Array.isArray(cascadeQuery.data?.specs) ? cascadeQuery.data.specs : [];
-  const hasCascade = allBrands.length > 0;
+  // Rà soát UX 2026-08-12: trước đây hasCascade chỉ nhìn allBrands.length, không phân biệt
+  // "đang tải" với "catalog rỗng thật" - mạng chậm/lỗi khiến user rơi thẳng vào màn gõ tay như
+  // thể app không có sẵn hãng xe nào, không có cách quay lại/thử lại. cascadeSettled đánh dấu
+  // đã CÓ KẾT QUẢ chắc chắn (không còn loading, không lỗi) trước khi kết luận catalog rỗng.
+  const cascadeSettled = !cascadeQuery.isLoading && !cascadeQuery.isError;
+  const hasCascade = cascadeSettled && allBrands.length > 0;
 
   // ── Form state ────────────────────────────────────────────────────────────
   const [ten, setTen]               = useState('');
@@ -197,7 +204,9 @@ export default function AddVehicleScreen() {
   // phải gõ tay"): 2 ô Hãng/Model chữ luôn hiện NGAY DƯỚI picker khiến người dùng
   // tưởng phải gõ tay - giờ ẩn đi, chỉ hiện khi bấm "Nhập tay" hoặc khi DB rỗng.
   const [manualOverride, setManualOverride] = useState(false);
-  const showManualMakeModel = !hasCascade || manualOverride;
+  // Chỉ rơi về "gõ tay" khi ĐÃ XÁC ĐỊNH catalog rỗng thật (cascadeSettled + không có hãng nào)
+  // hoặc user CHỦ ĐỘNG bấm "Nhập tay" - không phải trong lúc đang tải/lỗi tạm thời.
+  const showManualMakeModel = (cascadeSettled && !hasCascade) || manualOverride;
 
   // ── Derived cascade data ──────────────────────────────────────────────────
   const brandsForType = useMemo(() => {
@@ -362,6 +371,11 @@ export default function AddVehicleScreen() {
         onClose={() => setShowModelPicker(false)}
       />
 
+      {/* Rà soát UX 2026-08-12 (#2): form dài nhất app (nhiều ô số: ODO, dung tích bình, tiêu
+          hao...) nhưng trước đây thiếu KeyboardAvoidingView - khác mọi màn Thêm/Sửa khác trong
+          app (AddRefuelScreen, AddOdometerScreen, AddReminderScreen, AddServiceScreen đều có),
+          khiến bàn phím iOS có thể che ô đang nhập mà không tự cuộn lên. */}
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       {/* Rà soát 20/7 (car head-unit landscape): form full-bleed chỉ padding trên
           màn rộng khiến các ô nhập kéo dài hết cỡ, khó đọc - cap 720 (form dày chữ,
           giống HomeScreen) thay vì 1024 (dùng cho danh sách/thẻ). */}
@@ -376,8 +390,10 @@ export default function AddVehicleScreen() {
           </View>
         ) : null}
 
-        {/* Tên xe */}
-        <Text style={labelStyle}>{t('vehicles.name_label')}</Text>
+        {/* Tên xe - trường bắt buộc duy nhất (xem handleSubmit). Dấu * khớp web
+            (vehicles/_form.blade.php: "Tên gọi xe *") - trước đây app chỉ báo qua Alert SAU khi
+            bấm Lưu, không đánh dấu trước (rà soát UX 2026-08-12, #4). */}
+        <Text style={labelStyle}>{t('vehicles.name_label')} <Text style={{ color: colors.error }}>*</Text></Text>
         <TextInput
           style={inputStyle}
           placeholder={t('vehicles.name_placeholder')}
@@ -395,104 +411,132 @@ export default function AddVehicleScreen() {
         />
 
         {/* ── Cascade: chọn hãng ── */}
-        {hasCascade ? (
+        {cascadeQuery.isLoading ? (
+          /* Rà soát UX 2026-08-12 (#1): trước đây "đang tải" bị coi như "catalog rỗng" và rơi
+             thẳng vào màn gõ tay bên dưới - giờ tách riêng, không hiện gì khác trong lúc chờ. */
+          <View style={[inputStyle, { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 }]}>
+            <ActivityIndicator size="small" color={colors.primary} />
+            <Text style={{ color: colors.textSecondary, fontSize: 13 }}>{t('add_vehicle.cascade_loading')}</Text>
+          </View>
+        ) : cascadeQuery.isError ? (
+          <View style={[inputStyle, { marginBottom: 12 }]}>
+            <Text style={{ color: colors.error, fontSize: 13, marginBottom: 8 }}>{t('add_vehicle.cascade_load_error')}</Text>
+            <View style={{ flexDirection: 'row', gap: 20 }}>
+              <TouchableOpacity onPress={() => cascadeQuery.refetch()}>
+                <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 13 }}>{t('common.retry')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setManualOverride(true)}>
+                <Text style={{ color: colors.textSecondary, fontWeight: '600', fontSize: 13 }}>{t('add_vehicle.cascade_retry_manual')}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : hasCascade ? (
           <>
-            <Text style={labelStyle}>{t('vehicles.make_label')}</Text>
-            <TouchableOpacity
-              onPress={() => brandsForType.length > 0 ? setShowBrandPicker(true) : null}
-              style={[inputStyle, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 0 }]}>
-              <Text style={{ color: selectedBrand ? colors.text : colors.textSecondary, fontSize: 15, flex: 1 }}>
-                {selectedBrand ? selectedBrand.name : (cascadeQuery.isLoading ? t('common.loading') : t('add_vehicle.select_brand_placeholder'))}
-              </Text>
-              {cascadeQuery.isLoading
-                ? <ActivityIndicator size="small" color={colors.primary} />
-                : <FontAwesome5 name="chevron-down" size={13} color={colors.textSecondary} />}
-            </TouchableOpacity>
-
-            {/* Model picker */}
-            {selectedBrand && (
+            {!manualOverride ? (
               <>
-                <View style={{ height: 1, backgroundColor: colors.border, marginVertical: 10 }} />
-                <Text style={labelStyle}>{t('vehicles.model_label')}</Text>
+                <Text style={labelStyle}>{t('vehicles.make_label')}</Text>
                 <TouchableOpacity
-                  onPress={() => modelsForBrand.length > 0 ? setShowModelPicker(true) : null}
+                  onPress={() => brandsForType.length > 0 ? setShowBrandPicker(true) : null}
                   style={[inputStyle, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 0 }]}>
-                  <Text style={{ color: selectedModel ? colors.text : colors.textSecondary, fontSize: 15, flex: 1 }}>
-                    {selectedModel ? selectedModel.name : (modelsForBrand.length === 0 ? t('add_vehicle.no_model_in_db') : t('add_vehicle.select_model_placeholder'))}
+                  <Text style={{ color: selectedBrand ? colors.text : colors.textSecondary, fontSize: 15, flex: 1 }}>
+                    {selectedBrand ? selectedBrand.name : t('add_vehicle.select_brand_placeholder')}
                   </Text>
-                  {modelsForBrand.length > 0 && <FontAwesome5 name="chevron-down" size={13} color={colors.textSecondary} />}
+                  <FontAwesome5 name="chevron-down" size={13} color={colors.textSecondary} />
+                </TouchableOpacity>
+
+                {/* Model picker */}
+                {selectedBrand && (
+                  <>
+                    <View style={{ height: 1, backgroundColor: colors.border, marginVertical: 10 }} />
+                    <Text style={labelStyle}>{t('vehicles.model_label')}</Text>
+                    <TouchableOpacity
+                      onPress={() => modelsForBrand.length > 0 ? setShowModelPicker(true) : null}
+                      style={[inputStyle, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 0 }]}>
+                      <Text style={{ color: selectedModel ? colors.text : colors.textSecondary, fontSize: 15, flex: 1 }}>
+                        {selectedModel ? selectedModel.name : (modelsForBrand.length === 0 ? t('add_vehicle.no_model_in_db') : t('add_vehicle.select_model_placeholder'))}
+                      </Text>
+                      {modelsForBrand.length > 0 && <FontAwesome5 name="chevron-down" size={13} color={colors.textSecondary} />}
+                    </TouchableOpacity>
+                  </>
+                )}
+
+                {/* Spec version chips - khi có nhiều phiên bản */}
+                {selectedModel && specsForModel.length > 1 && (
+                  <>
+                    <View style={{ height: 1, backgroundColor: colors.border, marginVertical: 10 }} />
+                    <Text style={labelStyle}>{t('add_vehicle.version_label')}</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }} contentContainerStyle={{ gap: 8 }}>
+                      {specsForModel.map(sp => {
+                        const label = sp.version
+                          ? (sp.year_from ? `${sp.version} (${sp.year_from}${sp.year_to && sp.year_to !== sp.year_from ? '-' + sp.year_to : ''})` : sp.version)
+                          : sp.year_from
+                            ? `${sp.year_from}${sp.year_to && sp.year_to !== sp.year_from ? '-' + sp.year_to : ''}`
+                            : t('add_vehicle.unknown_year');
+                        const active = selectedSpec?.id === sp.id;
+                        return (
+                          <TouchableOpacity
+                            key={sp.id}
+                            onPress={() => applySpec(sp, selectedBrand, selectedModel)}
+                            style={{
+                              paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10,
+                              backgroundColor: active ? colors.primary : colors.surface,
+                              borderWidth: 1, borderColor: active ? colors.primary : colors.border,
+                            }}>
+                            <Text style={{ color: active ? colors.primaryText : colors.textSecondary, fontSize: 13, fontWeight: active ? '700' : '400' }}>
+                              {label}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </ScrollView>
+                  </>
+                )}
+
+                {/* Spec info card - khi đã chọn spec */}
+                {selectedSpec && (
+                  <View style={{
+                    backgroundColor: colors.primary + '15', borderRadius: 12,
+                    padding: 12, marginTop: 8, marginBottom: 4,
+                    borderWidth: 1, borderColor: colors.primary + '44',
+                    flexDirection: 'row', flexWrap: 'wrap', gap: 12,
+                  }}>
+                    <FontAwesome5 name="check-circle" size={13} color={colors.primary} solid style={{ marginTop: 1 }} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 13, marginBottom: 4 }}>
+                        {t('add_vehicle.spec_filled')}
+                      </Text>
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+                        {selectedSpec.tank && (
+                          <Text style={{ color: colors.text, fontSize: 12 }}>{t('add_vehicle.spec_tank', { value: selectedSpec.tank })}</Text>
+                        )}
+                        {selectedSpec.comb && (
+                          <Text style={{ color: colors.text, fontSize: 12 }}>{t('add_vehicle.spec_consumption', { value: selectedSpec.comb })}</Text>
+                        )}
+                        {selectedSpec.battery && (
+                          <Text style={{ color: colors.text, fontSize: 12 }}>{t('add_vehicle.spec_battery', { value: selectedSpec.battery })}</Text>
+                        )}
+                        {selectedSpec.range_km && (
+                          <Text style={{ color: colors.text, fontSize: 12 }}>{t('add_vehicle.spec_range', { value: selectedSpec.range_km })}</Text>
+                        )}
+                      </View>
+                    </View>
+                  </View>
+                )}
+
+                {/* Link "Nhập tay" - bấm sẽ ẨN hẳn khối chọn Hãng/Model ở trên (xem nhánh
+                    manualOverride bên dưới), không hiện chồng 2 cặp Hãng/Model cùng lúc như
+                    trước (rà soát UX 2026-08-12, #3) - đỡ nhầm giữa 2 nơi hiển thị giá trị khác
+                    nhau cho cùng 1 trường. */}
+                <TouchableOpacity onPress={() => setManualOverride(true)} style={{ marginTop: 12, marginBottom: 4 }}>
+                  <Text style={{ color: colors.primary, fontSize: 12, textAlign: 'center', fontWeight: '600' }}>
+                    {t('add_vehicle.manual_fallback_hint')}
+                  </Text>
                 </TouchableOpacity>
               </>
-            )}
-
-            {/* Spec version chips - khi có nhiều phiên bản */}
-            {selectedModel && specsForModel.length > 1 && (
-              <>
-                <View style={{ height: 1, backgroundColor: colors.border, marginVertical: 10 }} />
-                <Text style={labelStyle}>{t('add_vehicle.version_label')}</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }} contentContainerStyle={{ gap: 8 }}>
-                  {specsForModel.map(sp => {
-                    const label = sp.version
-                      ? (sp.year_from ? `${sp.version} (${sp.year_from}${sp.year_to && sp.year_to !== sp.year_from ? '-' + sp.year_to : ''})` : sp.version)
-                      : sp.year_from
-                        ? `${sp.year_from}${sp.year_to && sp.year_to !== sp.year_from ? '-' + sp.year_to : ''}`
-                        : t('add_vehicle.unknown_year');
-                    const active = selectedSpec?.id === sp.id;
-                    return (
-                      <TouchableOpacity
-                        key={sp.id}
-                        onPress={() => applySpec(sp, selectedBrand, selectedModel)}
-                        style={{
-                          paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10,
-                          backgroundColor: active ? colors.primary : colors.surface,
-                          borderWidth: 1, borderColor: active ? colors.primary : colors.border,
-                        }}>
-                        <Text style={{ color: active ? colors.primaryText : colors.textSecondary, fontSize: 13, fontWeight: active ? '700' : '400' }}>
-                          {label}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </ScrollView>
-              </>
-            )}
-
-            {/* Spec info card - khi đã chọn spec */}
-            {selectedSpec && (
-              <View style={{
-                backgroundColor: colors.primary + '15', borderRadius: 12,
-                padding: 12, marginTop: 8, marginBottom: 4,
-                borderWidth: 1, borderColor: colors.primary + '44',
-                flexDirection: 'row', flexWrap: 'wrap', gap: 12,
-              }}>
-                <FontAwesome5 name="check-circle" size={13} color={colors.primary} solid style={{ marginTop: 1 }} />
-                <View style={{ flex: 1 }}>
-                  <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 13, marginBottom: 4 }}>
-                    {t('add_vehicle.spec_filled')}
-                  </Text>
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
-                    {selectedSpec.tank && (
-                      <Text style={{ color: colors.text, fontSize: 12 }}>{t('add_vehicle.spec_tank', { value: selectedSpec.tank })}</Text>
-                    )}
-                    {selectedSpec.comb && (
-                      <Text style={{ color: colors.text, fontSize: 12 }}>{t('add_vehicle.spec_consumption', { value: selectedSpec.comb })}</Text>
-                    )}
-                    {selectedSpec.battery && (
-                      <Text style={{ color: colors.text, fontSize: 12 }}>{t('add_vehicle.spec_battery', { value: selectedSpec.battery })}</Text>
-                    )}
-                    {selectedSpec.range_km && (
-                      <Text style={{ color: colors.text, fontSize: 12 }}>{t('add_vehicle.spec_range', { value: selectedSpec.range_km })}</Text>
-                    )}
-                  </View>
-                </View>
-              </View>
-            )}
-
-            {/* Divider + manual fallback link - bấm mới hiện 2 ô gõ tay bên dưới */}
-            {!manualOverride && (
-              <TouchableOpacity onPress={() => setManualOverride(true)} style={{ marginTop: 12, marginBottom: 4 }}>
+            ) : (
+              <TouchableOpacity onPress={() => setManualOverride(false)} style={{ marginBottom: 4 }}>
                 <Text style={{ color: colors.primary, fontSize: 12, textAlign: 'center', fontWeight: '600' }}>
-                  {t('add_vehicle.manual_fallback_hint')}
+                  {t('add_vehicle.back_to_list')}
                 </Text>
               </TouchableOpacity>
             )}
@@ -521,7 +565,12 @@ export default function AddVehicleScreen() {
                     </Text>
                   </TouchableOpacity>
                 ))}
-                {!specSearch.isLoading && specResults.length === 0 && specQuery.length >= 2 && (
+                {/* #6 (rà soát UX 2026-08-12): phân biệt "lỗi mạng" với "gõ đủ 2 ký tự nhưng
+                    không khớp gì" - trước đây cả 2 case đều hiện y hệt "không tìm thấy". */}
+                {!specSearch.isLoading && specSearch.isError && (
+                  <Text style={{ color: colors.error, padding: 12, fontSize: 13 }}>{t('common.error_load')}</Text>
+                )}
+                {!specSearch.isLoading && !specSearch.isError && specResults.length === 0 && specQuery.length >= 2 && (
                   <Text style={{ color: colors.textSecondary, padding: 12, fontSize: 13 }}>{t('add_vehicle.not_found_manual')}</Text>
                 )}
               </View>
@@ -707,6 +756,7 @@ export default function AddVehicleScreen() {
             : <Text style={{ color: colors.primaryText, fontSize: 16, fontWeight: '700' }}>{t('vehicles.submit_add')}</Text>}
         </TouchableOpacity>
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
