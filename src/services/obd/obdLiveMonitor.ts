@@ -112,6 +112,11 @@ let aggIdleThrottle = newAgg(); // throttle khi xe đứng yên - cho rule high-
 let aggFuelRate = newAgg();
 let fuelUsedLiters = 0;
 let lastFuelRateAt: number | null = null;
+// Rà soát 12/8 (mở rộng Knowledge - rule engine-oil-overheat-suspect): pollSlowTier()
+// chỉ PHÁT oilTempC qua slowSnapshotListeners (pub/sub), không lưu lại đâu cả - rule
+// engine cần đọc được giá trị MỚI NHẤT tại thời điểm evaluate() chạy (tầng medium, vòng
+// lặp khác hẳn tầng slow), nên phải cache riêng ở đây.
+let lastOilTempC: number | null = null;
 let maxSpeed: number | null = null;
 let sessionDtcCount = 0;
 let sessionFindingIds = new Set<string>();
@@ -254,7 +259,7 @@ function feed(agg: Agg, v: number | null): void {
 function resetSessionStats(): void {
   aggCoolant = newAgg(); aggVoltage = newAgg(); aggLoad = newAgg(); aggIdleRpm = newAgg();
   aggRpmAll = newAgg(); aggIdleThrottle = newAgg();
-  aggFuelRate = newAgg(); fuelUsedLiters = 0; lastFuelRateAt = null;
+  aggFuelRate = newAgg(); fuelUsedLiters = 0; lastFuelRateAt = null; lastOilTempC = null;
   maxSpeed = null; sessionDtcCount = 0; sessionFindingIds = new Set();
   lastSpeedSample = null; harshBrakeCount = 0; harshAccelCount = 0; nightDrivingSeconds = 0;
   smoothedRpm = null; smoothedSpeedKmh = null; smoothedEngineLoadPct = null;
@@ -467,6 +472,7 @@ async function pollSlowTier(): Promise<void> {
   ]);
   const now = Date.now();
   slowSnapshotListeners.forEach((fn) => fn({ fuelLevelPct, oilTempC, ambientAirTempC, fuelRateLPerHour, timestamp: now }));
+  lastOilTempC = oilTempC;
 
   feed(aggFuelRate, fuelRateLPerHour);
   // Chỉ tích luỹ lít khi có 2 mốc LIÊN TIẾP đều đọc được rate - 1 lần null xen
@@ -702,6 +708,7 @@ async function poll(): Promise<void> {
       coolantTempC: snapshot.coolantTempC,
       throttlePct: snapshot.throttlePct,
       controlModuleVoltage: snapshot.controlModuleVoltage,
+      oilTempC: lastOilTempC,
       engineRunSeconds,
     })));
     findingListeners.forEach((fn) => fn(findings));

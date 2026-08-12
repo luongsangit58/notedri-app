@@ -18,6 +18,9 @@ export type VehicleSnapshot = {
   coolantTempC: number | null;
   throttlePct: number | null;
   controlModuleVoltage: number | null;
+  /** Tín hiệu tầng "slow" (pollSlowTier, PID 0x5C) - KHÔNG phải xe nào cũng hỗ trợ
+   *  (rule dùng field này tự bỏ qua qua required_signals khi null). */
+  oilTempC: number | null;
   /**
    * Giây MÁY ĐÃ CHẠY (rpm>0), KHÔNG phải giây kể từ khi BLE kết nối (sửa 14/7
    * theo rà soát): adapter cắm cổng OBD luôn có điện có thể connect trước khi

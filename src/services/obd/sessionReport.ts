@@ -21,6 +21,10 @@ export function evaluateSession(summary: ObdSessionSummary, durationSeconds: num
     engineLoadPct: summary.load_avg,
     coolantTempC: summary.coolant_max, // cực trị: đủ cho cả 2 chiều (quá nhiệt / không đạt nhiệt)
     throttlePct: summary.throttle_idle_avg ?? null,
+    // ObdSessionSummary KHÔNG có cực trị oilTemp tích luỹ cả phiên (chỉ obdLiveMonitor mới có
+    // giá trị tức thời) - rule engine-oil-overheat-suspect vì vậy chỉ kích ở live monitor,
+    // không đánh giá được trong Daily Report tới khi summary có thêm trường này.
+    oilTempC: null,
     engineRunSeconds,
   };
   // Base "máy đang nổ" (mọi tốc độ, không riêng lúc đứng yên) - cho rule chỉ cần
@@ -35,6 +39,7 @@ export function evaluateSession(summary: ObdSessionSummary, durationSeconds: num
     engineLoadPct: summary.load_avg,
     coolantTempC: summary.coolant_max,
     throttlePct: null,
+    oilTempC: null, // xem giải thích ở idleBase
     engineRunSeconds,
   };
   const rules = getActiveRules();

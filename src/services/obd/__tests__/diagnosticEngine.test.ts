@@ -15,6 +15,7 @@ const healthyIdle: VehicleSnapshot = {
   coolantTempC: 55,
   throttlePct: 16,
   controlModuleVoltage: 14.34, // giá trị thật từ ảnh Car Scanner 13/7
+  oilTempC: 90, // giữa dải bình thường 80-110°C (xem source rule engine-oil-overheat-suspect)
   engineRunSeconds: 120,
 };
 
@@ -106,5 +107,16 @@ describe('evaluate - hàm thuần', () => {
       engineRunSeconds: 300,
     });
     expect(findings.map((f) => f.ruleId)).toEqual(['high-idle-warm']);
+  });
+
+  it('nhiệt độ dầu 121°C liên tục → nghi dầu xuống cấp nhanh', () => {
+    const findings = evaluate(RULES, { ...healthyIdle, oilTempC: 121, engineRunSeconds: 130 });
+    expect(findings.map((f) => f.ruleId)).toEqual(['engine-oil-overheat-suspect']);
+    expect(findings[0].can_drive).toBe('caution');
+  });
+
+  it('xe không hỗ trợ đọc nhiệt độ dầu (oilTempC null) → rule bị BỎ QUA, không phán bừa', () => {
+    const findings = evaluate(RULES, { ...healthyIdle, oilTempC: null });
+    expect(findings.map((f) => f.ruleId)).not.toContain('engine-oil-overheat-suspect');
   });
 });

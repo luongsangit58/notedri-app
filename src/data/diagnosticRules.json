@@ -1,8 +1,8 @@
 {
  "_generated": "sync-diagnostic-rules.mjs - DO NOT EDIT BY HAND (offline fallback only)",
- "source_hash": "6a55f1b2a7bc",
- "synced_at": "2026-07-14T09:08:28.053Z",
- "version": 2,
+ "source_hash": "2964db1c64ae",
+ "synced_at": "2026-08-12T07:49:36.943Z",
+ "version": 3,
  "rules": [
   {
    "id": "charging-voltage-low",
@@ -172,6 +172,26 @@
    ],
    "source": "Vòng tua không tải chuẩn khi máy ấm 650-850 rpm (xe phổ thông, sổ tay Honda City ~700±50); ngưỡng chẩn P0507 thường +200 rpm so với mục tiêu ECU",
    "related_dtc": "P0507",
+   "beta": true
+  },
+  {
+   "id": "engine-oil-overheat-suspect",
+   "title_vi": "Nhiệt độ dầu máy cao bất thường - nghi dầu xuống cấp nhanh",
+   "action_vi": "Nhiệt độ dầu máy vượt 120°C liên tục: dầu bắt đầu xuống cấp/oxy hoá nhanh hơn, giảm khả năng bôi trơn, tăng mài mòn động cơ. Kiểm tra mức dầu, hệ thống làm mát dầu (nếu có), tránh chạy tải nặng/kéo kéo dài cho tới khi kiểm tra. Không phải hư hỏng tức thời như quá nhiệt nước làm mát.",
+   "severity": "warn",
+   "can_drive": "caution",
+   "required_signals": [
+    "oilTempC"
+   ],
+   "min_session_seconds": 120,
+   "conditions": [
+    {
+     "signal": "oilTempC",
+     "op": "gte",
+     "value": 120
+    }
+   ],
+   "source": "Rà soát 12/8 (mở rộng Knowledge, khai thác tín hiệu oilTempC đã đọc được nhưng chưa dùng ở rule nào). Nhiệt độ dầu vận hành bình thường ~80-110°C, dầu bắt đầu oxy hoá/xuống cấp nhanh hơn rõ rệt và các bài kỹ thuật khuyến nghị kiểm tra khi vượt 120°C, hư hại rõ khi vượt 130-140°C (nhiều nguồn phổ thông hội tụ: AutoTechIQ - oil temperature warning light; engineoiljournal.com; shieldoils.com - oil breakdown temperature; ScienceDirect - high temperature oxidation của dầu gốc động cơ). LƯU Ý NGUỒN YẾU HƠN các rule khác trong file này (không tìm được tài liệu chuẩn SAE/hãng xe cụ thể riêng cho ngưỡng cảnh báo oilTemp, chỉ có các bài kỹ thuật phổ thông hội tụ) - giữ beta lâu hơn, ưu tiên hiệu chỉnh khi có fixture thật. PID 0x5C (oil temp) KHÔNG phải xe nào cũng hỗ trợ, một số ECU giới hạn báo tối đa ~95°C (carhack/Wikipedia OBD-II PIDs) - rule tự bỏ qua trên xe không có tín hiệu này (required_signals).",
    "beta": true
   }
  ]
