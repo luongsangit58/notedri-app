@@ -7,7 +7,7 @@ import AppBgPattern from '../../components/AppBgPattern';
 import AdMobBanner from '../../components/AdMobBanner';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { useVehicles } from '../../hooks/useVehicles';
 import client from '../../api/client';
 import LoadingView from '../../components/LoadingView';
@@ -988,7 +988,8 @@ export default function ReportsScreen() {
   const colors = useColors();
   const t = useT();
   const navigation = useNavigation<any>();
-  const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(null);
+  const route = useRoute<any>();
+  const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(route.params?.vehicleId ?? null);
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
   // Khởi tạo với năm hiện tại để YearChips hiển thị ngay, không giật khi data về
   const [availableYears, setAvailableYears] = useState<number[]>([new Date().getFullYear()]);

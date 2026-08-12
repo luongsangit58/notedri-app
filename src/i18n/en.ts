@@ -326,6 +326,10 @@ const en = {
   "notification_settings.level_all": "All",
   "notification_settings.level_urgent": "Urgent only",
   "notification_settings.level_off": "Off",
+  "notification_settings.reports_toggle_label": "Periodic reports (email)",
+  "notification_settings.reports_toggle_desc": "Get monthly and quarterly cost/usage summary emails",
+  "notification_settings.driving_safety_toggle_label": "Unsafe driving alerts (push)",
+  "notification_settings.driving_safety_toggle_desc": "Push notification when unsafe driving is detected from your Premium driving score",
   "notification_settings.save_button": "Save settings",
   "notification_settings.save_success": "Notification settings updated.",
 

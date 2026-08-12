@@ -9,6 +9,7 @@ import client from '../../api/client';
 import { useColors } from '../../utils/theme';
 import { useT } from '../../i18n';
 import AppBgPattern from '../../components/AppBgPattern';
+import { useAuthStore } from '../../store/authStore';
 
 type ReminderLevel = 'all' | 'urgent' | 'off';
 
@@ -16,6 +17,7 @@ export default function NotificationSettingsScreen() {
   const colors = useColors();
   const t = useT();
   const qc = useQueryClient();
+  const isPremium = useAuthStore(s => s.user?.is_premium) ?? false;
 
   const LEVEL_OPTIONS: { key: ReminderLevel; label: string; desc: string }[] = [
     { key: 'all',    label: t('notification_settings.level_all'),    desc: t('notification_settings.level_all_desc') },
@@ -31,12 +33,16 @@ export default function NotificationSettingsScreen() {
 
   const [notifyReminders, setNotifyReminders] = useState<boolean>(true);
   const [reminderLevel, setReminderLevel] = useState<ReminderLevel>('all');
+  const [notifyReports, setNotifyReports] = useState<boolean>(true);
+  const [notifyDrivingSafety, setNotifyDrivingSafety] = useState<boolean>(true);
   const [dirty, setDirty] = useState(false);
 
   useEffect(() => {
     if (data) {
       setNotifyReminders(data.notify_reminders ?? true);
       setReminderLevel(data.reminder_level ?? 'all');
+      setNotifyReports(data.notify_reports ?? true);
+      setNotifyDrivingSafety(data.notify_driving_safety ?? true);
       setDirty(false);
     }
   }, [data]);
@@ -46,6 +52,8 @@ export default function NotificationSettingsScreen() {
       client.put('/profile/notification-settings', {
         notify_reminders: notifyReminders,
         reminder_level: reminderLevel,
+        notify_reports: notifyReports,
+        notify_driving_safety: notifyDrivingSafety,
       }),
     onSuccess: () => {
       setDirty(false);
@@ -125,6 +133,56 @@ export default function NotificationSettingsScreen() {
                 </TouchableOpacity>
               ))}
             </View>
+          </View>
+        )}
+
+        {/* Toggle báo cáo định kỳ (email) */}
+        <View style={{
+          backgroundColor: colors.surface, borderRadius: 14, padding: 16,
+          flexDirection: 'row', alignItems: 'center', marginBottom: 20,
+        }}>
+          <View style={{ marginRight: 14 }}>
+            <FontAwesome5 name="file-alt" size={20} color={colors.primary} solid />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: colors.text, fontWeight: '700', fontSize: 15 }}>
+              {t('notification_settings.reports_toggle_label')}
+            </Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>
+              {t('notification_settings.reports_toggle_desc')}
+            </Text>
+          </View>
+          <Switch
+            value={notifyReports}
+            onValueChange={v => { setNotifyReports(v); setDirty(true); }}
+            trackColor={{ false: '#3A3A3A', true: colors.primary }}
+            thumbColor="#fff"
+          />
+        </View>
+
+        {/* Toggle cảnh báo lái không an toàn (push) - chỉ Premium, điểm lái xe là dữ liệu Premium */}
+        {isPremium && (
+          <View style={{
+            backgroundColor: colors.surface, borderRadius: 14, padding: 16,
+            flexDirection: 'row', alignItems: 'center', marginBottom: 20,
+          }}>
+            <View style={{ marginRight: 14 }}>
+              <FontAwesome5 name="shield-alt" size={20} color={colors.primary} solid />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: colors.text, fontWeight: '700', fontSize: 15 }}>
+                {t('notification_settings.driving_safety_toggle_label')}
+              </Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>
+                {t('notification_settings.driving_safety_toggle_desc')}
+              </Text>
+            </View>
+            <Switch
+              value={notifyDrivingSafety}
+              onValueChange={v => { setNotifyDrivingSafety(v); setDirty(true); }}
+              trackColor={{ false: '#3A3A3A', true: colors.primary }}
+              thumbColor="#fff"
+            />
           </View>
         )}
 

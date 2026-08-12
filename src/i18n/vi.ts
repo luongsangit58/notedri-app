@@ -327,6 +327,10 @@ const vi = {
   "notification_settings.level_all": "Tất cả",
   "notification_settings.level_urgent": "Khẩn cấp",
   "notification_settings.level_off": "Tắt hết",
+  "notification_settings.reports_toggle_label": "Báo cáo định kỳ (email)",
+  "notification_settings.reports_toggle_desc": "Nhận email tổng kết chi phí/vận hành theo tháng và quý",
+  "notification_settings.driving_safety_toggle_label": "Cảnh báo lái không an toàn (push)",
+  "notification_settings.driving_safety_toggle_desc": "Thông báo đẩy khi phát hiện lái ẩu/mất an toàn từ điểm lái xe Premium",
   "notification_settings.save_button": "Lưu cài đặt",
   "notification_settings.save_success": "Cài đặt thông báo đã được cập nhật.",
 
