@@ -1,3 +1,5 @@
+import { useSelectedVehicleStore } from '../store/selectedVehicleStore';
+
 /**
  * Parses a web URL (from notification.url or suggestion.cta.url) and navigates
  * to the corresponding mobile screen.
@@ -12,6 +14,11 @@
  *   /services/create            → AddService
  *   /services/guide             → GarageGuide
  *   /refuels/create             → AddRefuel
+ *   /reports                    → Reports
+ *   /achievements               → Achievements
+ *   /obd2-history/{sessionId}   → ObdReport (no vehicle id in this URL — falls
+ *                                  back to the vehicle selected on Home, see
+ *                                  selectedVehicleStore.ts)
  */
 export function navigateFromUrl(navigation: any, url: string, vehicleId?: number): void {
   if (!url) return;
@@ -42,6 +49,13 @@ export function navigateFromUrl(navigation: any, url: string, vehicleId?: number
     navigation.navigate('Premium');
   } else if (url.includes('/feedback')) {
     navigation.navigate('Feedback');
+  } else if (url.includes('/reports')) {
+    navigation.navigate('Reports', vid ? { vehicleId: vid } : undefined);
+  } else if (url.includes('/achievements')) {
+    navigation.navigate('Achievements');
+  } else if (url.includes('/obd2-history')) {
+    const obdVehicleId = vid ?? useSelectedVehicleStore.getState().selectedVehicleId ?? undefined;
+    navigation.navigate('ObdReport', obdVehicleId ? { vehicleId: obdVehicleId } : undefined);
   }
 }
 
