@@ -63,8 +63,9 @@ export type DtcSuggestion = { code: string; title_vi: string; severity: RawEntry
 /**
  * Gợi ý mã theo tiền tố khi đang gõ (vd "P03" -> P0300, P0301, ...) - lọc thẳng trên
  * Map đã dựng sẵn trong bộ nhớ (lookupDtcOffline ở trên), KHÔNG gọi mạng: cùng nguồn
- * dữ liệu offline, chi phí chỉ là 1 lượt duyệt ~300 mã trong RAM (dưới 1ms), không có
- * chi phí mạng/debounce nào để lo về hiệu năng.
+ * dữ liệu offline. Rà soát 12/8 (từ điển tăng 285->3382 mã): duyệt hết rồi sort thay vì
+ * break sớm theo thứ tự Map vẫn dưới vài ms cho 3382 mã (không phải nguồn cần lo hiệu năng),
+ * KHÔNG gọi mạng/debounce.
  *
  * Rà soát 22/7 (user báo gõ chữ hệ thống "P" trước không ăn thua, phải gõ số mới
  * bắt đầu search): ngưỡng cũ yêu cầu prefix >= 2 ký tự. Gõ SỐ trước luôn đạt 2 ký
@@ -73,6 +74,13 @@ export type DtcSuggestion = { code: string; title_vi: string; severity: RawEntry
  * dài 1 (chưa có "P" nào để cộng thêm) -> không hiện gợi ý gì, tạo cảm giác màn
  * hình "đứng" đúng lúc người dùng gõ chữ. Hạ ngưỡng còn 1 ký tự để gõ riêng "P",
  * "C", "B" hay "U" cũng hiện ngay các mã thuộc hệ đó, đối xứng với đường gõ số.
+ *
+ * Rà soát 12/8 (bug bắt được khi mở rộng từ điển): trước đây `break` NGAY khi đủ
+ * `limit` theo thứ tự duyệt Map (= thứ tự chèn/thứ tự file), không phải thứ tự mã -
+ * mã CŨ (nằm đầu file) luôn "thắng" mã MỚI thêm sau cho mọi tiền tố có đủ `limit` kết
+ * quả, khiến phần lớn mã mới KHÔNG BAO GIỜ xuất hiện trong gợi ý (vd gõ "P00" chỉ ra
+ * P0011+ - mất hẳn P0001-P0010 mới thêm) dù vẫn tra tay được bình thường qua
+ * lookupDtcOffline(). Phải duyệt hết rồi SẮP XẾP theo mã trước khi cắt limit.
  */
 export function suggestDtcOffline(prefix: string, limit = 8): DtcSuggestion[] {
   const p = prefix.trim().toUpperCase();
@@ -84,12 +92,12 @@ export function suggestDtcOffline(prefix: string, limit = 8): DtcSuggestion[] {
     );
   }
 
-  const out: DtcSuggestion[] = [];
+  const matches: DtcSuggestion[] = [];
   for (const [code, e] of byCode) {
     if (code.startsWith(p)) {
-      out.push({ code, title_vi: e.vi, severity: e.severity });
-      if (out.length >= limit) break;
+      matches.push({ code, title_vi: e.vi, severity: e.severity });
     }
   }
-  return out;
+  matches.sort((a, b) => a.code.localeCompare(b.code));
+  return matches.slice(0, limit);
 }

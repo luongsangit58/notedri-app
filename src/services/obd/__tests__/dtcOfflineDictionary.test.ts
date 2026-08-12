@@ -72,4 +72,18 @@ describe('suggestDtcOffline', () => {
   it('returns [] when nothing matches the prefix', () => {
     expect(suggestDtcOffline('ZZ99')).toEqual([]);
   });
+
+  // Rà soát 12/8 (bug bắt được khi mở rộng từ điển 285->3382 mã): trước đây kết quả trả về
+  // theo thứ tự duyệt Map (= thứ tự chèn/thứ tự file trong dtc_dictionary.json), không phải
+  // thứ tự mã - mã CŨ (đầu file) luôn "thắng" mã MỚI thêm sau cho mọi tiền tố có đủ `limit`
+  // kết quả, khiến phần lớn mã mới không bao giờ lọt vào top gợi ý dù vẫn tra tay được bình
+  // thường qua lookupDtcOffline(). Gợi ý PHẢI sắp theo mã.
+  it('sorts suggestions by code, not by insertion/file order', () => {
+    const results = suggestDtcOffline('P00', 8);
+    const codes = results.map((r) => r.code);
+    expect(codes).toEqual([...codes].sort());
+    // P0001 nằm trong đợt mở rộng 12/8 (thêm SAU trong file) - phải xuất hiện trước P0011
+    // (mã cũ, nằm đầu file) đúng theo thứ tự mã, không bị mã cũ che khuất.
+    expect(codes).toContain('P0001');
+  });
 });
