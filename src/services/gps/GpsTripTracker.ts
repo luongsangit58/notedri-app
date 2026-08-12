@@ -557,7 +557,7 @@ export async function requestPermissionsAndStart(
     await gpsTripsApi.trackingLock.claim(vehicleId, deviceId);
   } catch (err: any) {
     if (err?.response?.status === 409) {
-      return { ok: false, reason: 'vehicle_locked', backgroundGranted: false, lockedByDeviceId: err?.response?.data?.holder ?? null };
+      return { ok: false, reason: 'vehicle_locked', backgroundGranted: false, lockedByDeviceId: err?.response?.data?.holder_device_id ?? null };
     }
     // Network error -> tiếp tục (offline-first)
   }
