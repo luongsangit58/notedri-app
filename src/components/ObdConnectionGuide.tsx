@@ -219,7 +219,6 @@ export default function ObdConnectionGuide({ mode = 'ble' }: { mode?: 'ble' | 'c
     <View style={{ marginTop: 24 }}>
       {/* Tiêu đề */}
       <Text style={[styles.title, { color: colors.text }]}>{t('obd.guide_title')}</Text>
-      <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{t('obd.guide_subtitle')}</Text>
 
       {/* Cần chuẩn bị - rà soát 16/7 (user: dòng "Cần: X · Y · Z" nối bằng dấu
           chấm đọc dài dòng, trình bày không chuyên nghiệp) - đổi 3 mục thành 3
@@ -280,8 +279,7 @@ export default function ObdConnectionGuide({ mode = 'ble' }: { mode?: 'ble' | 'c
 }
 
 const styles = StyleSheet.create({
-  title: { fontSize: 17, fontWeight: '700', marginBottom: 4 },
-  subtitle: { fontSize: 13, lineHeight: 19, marginBottom: 10 },
+  title: { fontSize: 17, fontWeight: '700', marginBottom: 12 },
   needChipsRow: { flexDirection: 'row', flexWrap: 'nowrap', gap: 6, marginBottom: 16 },
   needChip: {
     flex: 1, minWidth: 0,

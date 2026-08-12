@@ -46,6 +46,15 @@ function gpsTripNudgeKey(vehicleId: number): string {
   return `obd_gps_trip_nudge_shown_${vehicleId}`;
 }
 
+// Nhớ chế độ hiển thị (Lưới/Đồng hồ) THEO TỪNG XE (góp ý user 12/8: đã từng
+// chuyển sang "Đồng hồ" cho xe này thì lần kết nối sau nên tự vào thẳng, đỡ
+// phải bấm lại mỗi lần) - style của riêng chế độ Đồng hồ (Analog/Racing...)
+// đã lưu theo xe ở dashboardStyles.ts, đây là khái niệm khác (chọn MÀN HÌNH
+// nào, không phải theme) nên tách khoá lưu riêng.
+function viewModeKey(vehicleId: number): string {
+  return `obd_view_mode_${vehicleId}`;
+}
+
 export default function OBDDashboardScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
@@ -157,7 +166,19 @@ export default function OBDDashboardScreen() {
   // vì useObdConnection chỉ đồng bộ trạng thái qua listener sự kiện lúc mount
   // (không có bước đọc trạng thái hiện tại) - mount lại hook ở 1 route riêng có
   // thể hiện sai "đã ngắt kết nối" cho tới khi có sự kiện tiếp theo.
-  const [viewMode, setViewMode] = useState<'grid' | 'gauge'>('grid');
+  const [viewMode, setViewModeState] = useState<'grid' | 'gauge'>('grid');
+  // Đọc lại chế độ đã lưu cho ĐÚNG xe này ngay khi màn hình mount (vd vừa kết
+  // nối lại) - không đổi hành vi cho xe CHƯA từng lưu gì (giữ mặc định 'grid').
+  useEffect(() => {
+    if (!vehicleId) return;
+    AsyncStorage.getItem(viewModeKey(vehicleId))
+      .then((saved) => { if (saved === 'gauge' || saved === 'grid') setViewModeState(saved); })
+      .catch(() => {});
+  }, [vehicleId]);
+  function setViewMode(mode: 'grid' | 'gauge') {
+    setViewModeState(mode);
+    if (vehicleId) AsyncStorage.setItem(viewModeKey(vehicleId), mode).catch(() => {});
+  }
   useEffect(() => {
     if (viewMode !== 'gauge') return;
     const tag = 'obd-gauge-dashboard';
@@ -353,7 +374,7 @@ export default function OBDDashboardScreen() {
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           <TouchableOpacity
-            onPress={() => setViewMode((m) => (m === 'grid' ? 'gauge' : 'grid'))}
+            onPress={() => setViewMode(viewMode === 'grid' ? 'gauge' : 'grid')}
             style={[styles.disconnectBtn, { backgroundColor: colors.card }]}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           >

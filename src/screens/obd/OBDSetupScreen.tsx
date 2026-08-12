@@ -482,8 +482,11 @@ export default function OBDSetupScreen() {
           </>
         ) : (
         <>
-        {/* Status indicator */}
-        <View style={[styles.statusCard, { backgroundColor: colors.card }]}>
+        {/* Status indicator. Nền dùng colors.surface (khác colors.card của khối
+            modeToggle phía trên) - phản hồi user: 2 khối liền kề cùng màu card
+            trông như dính làm 1, mất phân tách khi khoanh vùng thực tế đây là
+            2 card riêng biệt. */}
+        <View style={[styles.statusCard, { backgroundColor: colors.surface }]}>
           <FontAwesome5
             name="bluetooth-b"
             size={32}
