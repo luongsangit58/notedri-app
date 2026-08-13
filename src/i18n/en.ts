@@ -359,7 +359,7 @@ const en = {
   "about.title": "About NoteDri",
   "about.version": "Version {{version}}",
   "about.tagline": "Smart vehicle management",
-  "about.slogan": "Track costs, optimize every drive",
+  "about.slogan": "Drive Smarter, Optimize Costs",
   "about.mission": "Understand your car better with every kilometer. Manage fuel, costs and service history with automatic stats and smart reminders.",
   "about.website": "Website",
   "about.privacy_policy": "Privacy policy",
@@ -1631,7 +1631,7 @@ const en = {
   // ==== i18n audit: hardcoded strings wrapped ====
   "auth.login_google_failed": "Google sign-in failed",
   "auth.login_apple_failed": "Apple sign-in failed",
-  "auth.slogan": "Track costs, optimize every drive",
+  "auth.slogan": "Drive Smarter, Optimize Costs",
   "management.tab_health": "Vehicle check",
   "management.tab_reminders": "Reminders",
   "management.tab_obd": "OBD2",

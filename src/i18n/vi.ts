@@ -360,7 +360,7 @@ const vi = {
   "about.title": "Về NoteDri",
   "about.version": "Phiên bản {{version}}",
   "about.tagline": "Quản lý xe thông minh",
-  "about.slogan": "Quản lý chi phí, tối ưu vận hành",
+  "about.slogan": "Chủ động vận hành, tối ưu chi phí",
   "about.mission": "Hiểu chiếc xe của bạn hơn sau mỗi kilomet. Quản lý nhiên liệu, chi phí và lịch sử bảo dưỡng với thống kê tự động và nhắc nhở thông minh.",
   "about.website": "Website",
   "about.privacy_policy": "Chính sách bảo mật",
@@ -1637,7 +1637,7 @@ const vi = {
   // ==== i18n audit: hardcoded strings wrapped ====
   "auth.login_google_failed": "Đăng nhập Google thất bại",
   "auth.login_apple_failed": "Đăng nhập Apple thất bại",
-  "auth.slogan": "Quản lý chi phí, tối ưu vận hành",
+  "auth.slogan": "Chủ động vận hành, tối ưu chi phí",
   "management.tab_health": "Kiểm tra xe",
   "management.tab_reminders": "Lời nhắc",
   "management.tab_obd": "OBD2",
