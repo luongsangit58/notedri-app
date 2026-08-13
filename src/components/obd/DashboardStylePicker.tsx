@@ -7,7 +7,7 @@ import { useColors } from '../../utils/theme';
 import { useCockpitPalette } from '../../theme/cockpitPalettes';
 import { useT } from '../../i18n';
 import { useAuthStore } from '../../store/authStore';
-import { DASHBOARD_STYLES, DashboardStyleDef } from '../../constants/dashboardStyles';
+import { ASK_EVERY_TIME, DASHBOARD_STYLES, DashboardStyleDef } from '../../constants/dashboardStyles';
 import { OBD_METRICS } from '../../constants/obdMetrics';
 import { useCockpitLayout } from '../../hooks/useCockpitLayout';
 
@@ -68,6 +68,15 @@ export default function DashboardStylePicker({
     // Rà soát 24/7 (góp ý user: bấm "Dùng theme này" xong vẫn chưa ra OBD2
     // Live ngay, phải bấm thêm 1 lần ra ngoài modal mới thấy) - đóng hẳn modal
     // luôn (close(), không chỉ reset previewStyle) để quay thẳng về Dashboard.
+    close();
+  };
+
+  // Rà soát (góp ý user: chọn 1 style xong dính mãi, không có đường quay lại
+  // trạng thái "chưa chọn gì") - ghi sentinel ASK_EVERY_TIME thay vì 1 style id
+  // thật; GaugeCluster đọc thấy giá trị này sẽ tự mở lại picker này ở lần vào
+  // Dashboard kế tiếp thay vì âm thầm áp style cũ.
+  const resetToAsk = () => {
+    onSelect(ASK_EVERY_TIME);
     close();
   };
 
@@ -204,6 +213,27 @@ export default function DashboardStylePicker({
                     </TouchableOpacity>
                   );
                 })}
+                {selectedId !== ASK_EVERY_TIME && (
+                  <TouchableOpacity
+                    onPress={resetToAsk}
+                    activeOpacity={0.8}
+                    style={{
+                      flexDirection: 'row', alignItems: 'center', gap: 12,
+                      padding: 12, borderRadius: 12, marginBottom: 8,
+                      backgroundColor: colors.card, borderWidth: 1, borderStyle: 'dashed', borderColor: colors.border,
+                    }}>
+                    <View style={{
+                      width: 44, height: 44, borderRadius: 10, backgroundColor: colors.background,
+                      alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      <FontAwesome5 name="undo" size={16} color={colors.textSecondary} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: colors.text, fontSize: 15, fontWeight: '600' }}>{t('obd.dashboard_style_ask_name')}</Text>
+                      <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 1 }}>{t('obd.dashboard_style_ask_desc')}</Text>
+                    </View>
+                  </TouchableOpacity>
+                )}
                 <TouchableOpacity onPress={close} style={{ marginTop: 4, alignItems: 'center', padding: 8 }}>
                   <Text style={{ color: colors.textSecondary }}>{t('common.close')}</Text>
                 </TouchableOpacity>

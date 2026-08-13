@@ -9,7 +9,7 @@ import { useMarkVehicleSold } from '../../hooks/useVehicleTransfer';
 import { getPairingForVehicle } from '../../services/obd/pairedDevices';
 import { getCachedCapability } from '../../services/obd/capabilityService';
 import { useObdSessionStore } from '../../store/obdSessionStore';
-import { getSelectedDashboardStyleId, setSelectedDashboardStyleId, pickDashboardStyle, isStyleUsable } from '../../constants/dashboardStyles';
+import { getSelectedDashboardStyleId, setSelectedDashboardStyleId, pickDashboardStyle, isStyleUsable, ASK_EVERY_TIME } from '../../constants/dashboardStyles';
 import DashboardStylePicker from '../../components/obd/DashboardStylePicker';
 import LoadingView from '../../components/LoadingView';
 import ErrorView from '../../components/ErrorView';
@@ -580,7 +580,7 @@ export default function VehicleDetailScreen() {
           <View style={{ flex: 1 }}>
             <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14 }}>{t('obd.gauge_theme_entry_title')}</Text>
             <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 1 }}>
-              {t(effectiveDashboardStyle.nameKey)}
+              {dashboardStyleId === ASK_EVERY_TIME ? t('obd.dashboard_style_ask_name') : t(effectiveDashboardStyle.nameKey)}
             </Text>
           </View>
           <FontAwesome5 name="chevron-right" size={13} color={colors.textSecondary} />

@@ -8,7 +8,7 @@ import { ObdSnapshot } from '../../services/obd/ObdReader';
 import { FastSnapshot } from '../../services/obd/obdLiveMonitor';
 import { VehicleCapability } from '../../services/obd/capabilityService';
 import { OBD_METRICS, filterSupportedMetrics, readMetricValue, quantizeValue } from '../../constants/obdMetrics';
-import { pickDashboardStyle, getSelectedDashboardStyleId, setSelectedDashboardStyleId, isStyleUsable, DASHBOARD_STYLES } from '../../constants/dashboardStyles';
+import { pickDashboardStyle, getSelectedDashboardStyleId, setSelectedDashboardStyleId, isStyleUsable, DASHBOARD_STYLES, ASK_EVERY_TIME } from '../../constants/dashboardStyles';
 import { useCockpitLayout } from '../../hooks/useCockpitLayout';
 import { useAuthStore } from '../../store/authStore';
 import { requestKeepAlivePermissions, startObdKeepAlive } from '../../services/obd/obdKeepAliveService';
@@ -132,8 +132,16 @@ export default function GaugeCluster({
   // Style chọn lưu ở AsyncStorage THEO TỪNG XE - đọc lại mỗi khi vehicleId đổi;
   // đổi style trong DashboardStylePicker cập nhật cả state lẫn storage của xe này.
   const [styleId, setStyleId] = useState(DASHBOARD_STYLES[0].id as string);
+  const [pickerVisible, setPickerVisible] = useState(false);
   useEffect(() => {
-    getSelectedDashboardStyleId(vehicleId).then(setStyleId);
+    getSelectedDashboardStyleId(vehicleId).then((id) => {
+      setStyleId(id);
+      // User bấm "Luôn hỏi lại" trong DashboardStylePicker (sentinel ASK_EVERY_TIME)
+      // - lần vào Dashboard này tự mở lại picker thay vì âm thầm áp style cũ. Nếu
+      // user đóng picker mà không chọn gì, styleId vẫn giữ ASK_EVERY_TIME nên lần
+      // sau lại tự mở lại - đúng nghĩa "hỏi MỖI LẦN" cho tới khi chọn 1 style cụ thể.
+      if (id === ASK_EVERY_TIME) setPickerVisible(true);
+    });
   }, [vehicleId]);
   // Kiểm tra lại is_premium NGAY LÚC HIỂN THỊ, không chỉ lúc chọn - Premium hết
   // hạn/bị huỷ sau khi đã chọn style khoá, hoặc storage bị chỉnh tay, đều phải
@@ -141,7 +149,6 @@ export default function GaugeCluster({
   const isPremium = useAuthStore((s) => s.user?.is_premium ?? false);
   const selectedStyle = pickDashboardStyle(styleId);
   const style = isStyleUsable(selectedStyle, isPremium) ? selectedStyle : DASHBOARD_STYLES[0];
-  const [pickerVisible, setPickerVisible] = useState(false);
 
   // Ẩn/hiện toolbar chạm-màn-hình + tự ẩn sau AUTO_HIDE_MS - xem comment đầu file.
   const [controlsVisible, setControlsVisible] = useState(true);

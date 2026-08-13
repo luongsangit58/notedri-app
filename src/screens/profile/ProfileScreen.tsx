@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Alert, ScrollView, Modal, TextInput, ActivityIndicator, Image, Switch } from 'react-native';
+import { View, Text, TouchableOpacity, Alert, ScrollView, Modal, TextInput, ActivityIndicator, Image, Switch, Linking } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AppBgPattern from '../../components/AppBgPattern';
@@ -17,6 +17,7 @@ import { BASE_URL } from '../../utils/api';
 import { useColors, useThemeStore } from '../../utils/theme';
 import { useI18nStore, useLang, useT } from '../../i18n';
 import { markGooglePending, clearGooglePending } from '../../services/googleAuthRecovery';
+import { PLAY_STORE_URL } from './FeedbackScreen';
 import { safeFaIcon } from '../../utils/faIcon';
 
 function MenuItem({ icon, label, onPress, danger, right }: { icon: React.ReactNode; label: string; onPress?: () => void; danger?: boolean; right?: React.ReactNode }) {
@@ -334,6 +335,15 @@ export default function ProfileScreen() {
             icon={<FontAwesome5 name="comment-alt" size={16} color={colors.textSecondary} solid />}
             label={t('profile.feedback')}
             onPress={() => navigation.navigate('Feedback')}
+          />
+          {/* Rà soát: FeedbackScreen.tsx chỉ TỰ mời đánh giá Play Store 1 LẦN DUY NHẤT (4-5 sao
+              lần đầu) rồi khoá vĩnh viễn (store_review_prompted) - user lỡ bấm "Để sau" hoặc
+              chỉ hài lòng thật sự ở lần dùng sau thì không còn đường nào để đánh giá nữa. Thêm
+              lối vào THỦ CÔNG, luôn hiện, không phụ thuộc cờ đó. */}
+          <MenuItem
+            icon={<FontAwesome5 name="star" size={16} color="#F59E0B" solid />}
+            label={t('profile.rate_app')}
+            onPress={() => Linking.openURL(PLAY_STORE_URL)}
           />
           {/* Nori Agent - Phase 1 text chat, đang test (chưa i18n, xem docs/nori-agent-plan.md) */}
           <MenuItem

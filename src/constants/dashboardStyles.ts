@@ -50,6 +50,14 @@ export function pickDashboardStyle(id?: string | null): DashboardStyleDef {
   return DASHBOARD_STYLES.find((s) => s.id === id) ?? DASHBOARD_STYLES[0];
 }
 
+// Sentinel lưu vào ĐÚNG key style bình thường (không phải xoá key) - phân biệt
+// được với "chưa từng chọn gì" (key rỗng, vẫn im lặng rơi về Analog như cũ,
+// hành vi lần đầu kết nối giữ nguyên không đổi). Chỉ khi user CHỦ ĐỘNG bấm
+// "Luôn hỏi lại" (DashboardStylePicker) mới ghi giá trị này - lần kết nối sau
+// GaugeCluster sẽ tự mở lại picker thay vì âm thầm áp style cũ, y hệt yêu cầu
+// "chọn 1 lần rồi dính mãi, muốn quay lại thì sao" của user.
+export const ASK_EVERY_TIME = '__ask_every_time__';
+
 // Style ẨN (Fleet) không có luồng B2B thật để tự chọn/thanh toán - coi như
 // "chưa mở khoá" bất kể is_premium, y hệt cách xử lý style Premium chưa mua.
 // Không lọc thẳng trong `pickDashboardStyle` (vẫn cần trả đúng Layout nếu 1

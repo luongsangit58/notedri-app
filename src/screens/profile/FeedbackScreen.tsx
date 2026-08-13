@@ -16,7 +16,7 @@ import AppBgPattern from '../../components/AppBgPattern';
 type LoaiKey = 'loi' | 'y_tuong' | 'khac';
 
 const STARS = [1, 2, 3, 4, 5];
-const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.notedri';
+export const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.notedri';
 const STORE_REVIEW_PROMPTED_KEY = 'store_review_prompted';
 
 /**
