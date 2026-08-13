@@ -50,7 +50,7 @@ export default function AddReminderScreen() {
   };
   const { mutate, isPending } = useCreateReminder();
 
-  // If no vehicleId param (e.g. from QuickAddFAB), pick the default vehicle
+  // If no vehicleId param, pick the default vehicle
   const { data: vehiclesData } = useVehicles();
   const vehicles: any[] = Array.isArray(vehiclesData?.data)
     ? vehiclesData.data

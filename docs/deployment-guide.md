@@ -62,7 +62,8 @@ Produces an **APK** for Android (direct install, no Play Store). Used for intern
 ```json
 "preview": {
   "android": {
-    "buildType": "apk"
+    "buildType": "apk",
+    "gradleCommand": ":app:assembleRelease"
   },
   "distribution": "internal"
 }
@@ -89,8 +90,7 @@ Produces an **AAB** (Android App Bundle) for Play Store, with Proguard minificat
 ```json
 "production": {
   "android": {
-    "buildType": "app-bundle",
-    "gradleCommand": ":app:bundleRelease"
+    "buildType": "app-bundle"
   },
   "autoIncrement": true
 }

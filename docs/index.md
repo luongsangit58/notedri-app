@@ -52,12 +52,13 @@ gợi ý cho BE.
 System architecture reference. Includes:
 - Architecture pattern diagram (feature-based screens + Zustand + TanStack Query + Axios)
 - Navigation structure (full tree: RootNavigator → AuthNavigator / AppNavigator → tabs + stacks)
-- State management: Zustand stores (authStore, themeStore, i18nStore) + TanStack Query cache
+- State management: 7 Zustand stores (authStore, networkStatusStore, cockpitThemeStore, obdSessionStore, selectedVehicleStore, noriAgentStore, obdAutoConnectSettingsStore) + TanStack Query cache
 - API integration layer (Axios interceptors, token injection, 401 auto-logout)
 - Hardware integration layer (BLE OBD2, GPS, OCR, Voice, Push)
-- Background service state machines (OBD TripSession, GPS GpsTripTracker)
+- Nori AI agent (tool-calling loop) and OBD cockpit dashboard / auto-connect / device-lock systems
+- Background service state machines (OBD obdLiveMonitor, GPS GpsTripTracker)
 - Source tree summary
-- Testing note (no automated tests; recommendations for adding them)
+- Testing note (Jest configured, 33 test files)
 
 ### [source-tree-analysis.md](source-tree-analysis.md)
 
@@ -65,15 +66,15 @@ Annotated directory tree of the entire project. Every folder and key file explai
 
 ### [component-inventory.md](component-inventory.md)
 
-All 13 shared components in `src/components/` plus `CustomTabBar` from `src/navigation/`. For each component: path, type, purpose, dependencies, and which screens use it. Includes a component dependency map.
+All 48 component files in `src/components/` (including the `obd/` and `nori/` subfolders) plus `CustomTabBar` from `src/navigation/`. For each component: path, type, purpose, dependencies, and which screens use it. Includes a component dependency map and a root-mounted-vs-screen-local breakdown.
 
 ### [screens-inventory.md](screens-inventory.md)
 
-All 44 screens organized by feature group. For each screen: file path, navigation location (tab / stack / auth), purpose description, and Premium-gating status. Includes a Premium-gated feature summary table.
+All 59 screens organized by feature group. For each screen: file path, navigation location (tab / stack / auth), purpose description, and Premium-gating status. Includes a Premium-gated feature summary table.
 
 ### [services-guide.md](services-guide.md)
 
-Deep-dive documentation for all 6 service classes. Each service includes:
+Deep-dive documentation for the ~44 service files across 11 folders in `src/services/`. Each major service includes:
 - Purpose and role in the stack
 - Key TypeScript types
 - State machine diagram (where applicable)
@@ -175,15 +176,16 @@ EAS Build and store distribution. Includes:
 | Navigation | React Navigation v7 |
 | State (global) | Zustand v5 |
 | State (server) | TanStack React Query v5 |
-| Screens | 44 total |
-| Shared components | 13 + CustomTabBar |
-| Service classes | 6 (BleService, ObdReader, TripSession, TripSyncQueue, GpsTripTracker, GpsTripSyncQueue) |
+| Screens | 59 total (see screens-inventory.md) |
+| Shared components | 48 files across src/components/ (top-level + obd/ + nori/ subfolders) |
+| Zustand stores | 7 (authStore, networkStatusStore, cockpitThemeStore, obdSessionStore, selectedVehicleStore, noriAgentStore, obdAutoConnectSettingsStore) |
+| Service files | 30+ across src/services/ (obd/, gps/, nori/, permissions/, vehicles/, vin/, nfc/, drivingScore/, ads/, network/) — see services-guide.md |
 | API base | https://notedri.com/api/v1 |
 | EAS project ID | 92c0bda5-b744-47c5-b06d-12bff12b13f9 |
 | Android package | com.notedri |
 | Default language | Vietnamese (vi) |
 | Premium features | OBD2 (all 3 screens), 3+ vehicles, full history |
-| Automated tests | None currently |
+| Automated tests | Jest configured (jest-expo preset); 33 `*.test.ts` files under src/agent, src/services, src/constants, src/utils |
 | Expo docs to use | https://docs.expo.dev/versions/v56.0.0/ |
 
 ---
@@ -199,5 +201,4 @@ EAS Build and store distribution. Includes:
 | `tsconfig.json` | TypeScript config |
 | `AGENTS.md` | **Read this first** - AI agent instructions |
 | `CLAUDE.md` | Imports AGENTS.md |
-| `J16 protocol.pdf` | ELM327 OBD2 AT command reference (hardware spec) |
 | `patches/` | patch-package diffs (react-native-ble-plx build fix) |
