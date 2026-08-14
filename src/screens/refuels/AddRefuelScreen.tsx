@@ -24,6 +24,7 @@ import { formatVND, formatKm } from '../../utils/format';
 import { useT } from '../../i18n';
 import { refuelsApi } from '../../api/refuels';
 import { PermissionManager } from '../../services/permissions/PermissionManager';
+import { fuelTypeMeta } from '../../utils/fuelType';
 
 // Chuẩn hoá số lít: bàn phím VN cho "12,5" -> parseFloat("12,5")=12 (mất 0.5L).
 // Đổi dấu phẩy thành chấm trước khi parse.
@@ -135,10 +136,15 @@ export default function AddRefuelScreen() {
     return () => { if (voiceFeedbackTimer.current) clearTimeout(voiceFeedbackTimer.current); };
   }, []);
 
-  // Set default fuel type when fuel types load; instant price fill from gia_hien_tai
+  // Set default fuel type when fuel types load; instant price fill from gia_hien_tai.
+  // Rà soát 14/8 (góp ý user): xe đã khai "Dầu" thì nên mặc định chọn loại dầu thay vì luôn
+  // nhảy về xăng (loại đầu danh sách) - đồng bộ RefuelController::defaultFuelTypeId() bên web.
   useEffect(() => {
     if (fuelTypes.length > 0 && fuelTypeId === null) {
-      const first = fuelTypes[0];
+      const vehicle = vehicles.find((v: any) => v.id === vehicleId);
+      const wantGroup = vehicle ? fuelTypeMeta(vehicle).key : 'xang';
+      const matched = wantGroup === 'dau' ? fuelTypes.find((ft: any) => ft.nhom === 'dau') : null;
+      const first = matched ?? fuelTypes[0];
       setFuelTypeId(first.id);
       if (giaLit === '' && first.gia_hien_tai != null) {
         const p = String(Math.round(Number(first.gia_hien_tai)));
@@ -146,7 +152,7 @@ export default function AddRefuelScreen() {
         setGiaLit(p);
       }
     }
-  }, [fuelTypes]);
+  }, [fuelTypes, vehicleId]);
 
   // Instant fill when fuel type changes (gia_hien_tai from cached data)
   useEffect(() => {

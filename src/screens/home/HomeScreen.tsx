@@ -252,6 +252,12 @@ export default function HomeScreen() {
   // hybrid cũ ghép 2 dòng riêng "Cây xăng"/"Trạm sạc" trông rối).
   const energyColors = (isEv ? ['#10b981', '#047857'] : isHybrid ? ['#10b981', '#f59e0b'] : ['#fcd34d', '#d97706']) as [string, string];
   const energyText = (isEv || isHybrid) ? '#ffffff' : '#1c1917';
+  // Nhãn nút đổ nhiên liệu theo ĐÚNG loại xe (đồng bộ Vehicle::refuelLabel() bên web) - trước
+  // đây luôn cứng "Đổ xăng/dầu" dù xe chạy xăng/dầu thuần cũng hiện chung 1 nhãn.
+  const refuelFuelKey = fuelTypeMeta(vehicle).key;
+  const refuelShortKey = refuelFuelKey === 'dau' ? 'home.refuel_short_dau'
+    : (refuelFuelKey === 'xang' || refuelFuelKey === 'hybrid') ? 'home.refuel_short_xang'
+    : 'home.refuel_short';
   const energySub = (isEv || isHybrid) ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.55)';
 
   // Thẻ OBD quick-connect (C4): CHỈ hiện khi user có thiết bị đã ghép - user chưa
@@ -671,7 +677,7 @@ export default function HomeScreen() {
                 <FontAwesome5 name={isEv ? 'charging-station' : 'gas-pump'} size={16} color={energyText} solid />
               </View>
               <Text style={{ color: energyText, fontWeight: '800', fontSize: 14 }}>
-                {isEv ? t('home.charging_short') : t('home.refuel_short')}
+                {isEv ? t('home.charging_short') : t(refuelShortKey)}
               </Text>
               <Text style={{ color: energySub, fontSize: 11, marginTop: 2 }}>
                 {isEv ? t('home.charging_hint') : t('home.refuel_subtitle')}
