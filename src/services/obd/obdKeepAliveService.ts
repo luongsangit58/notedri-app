@@ -37,6 +37,15 @@ TaskManager.defineTask(OBD_KEEPALIVE_TASK_NAME, async () => {});
 
 let startedByUs = false;
 
+// Rà soát adversarial-review 13/8: `startedByUs` chỉ chặn được lệnh gọi THỨ 2
+// SAU KHI lệnh đầu đã set xong cờ - nếu 2 lệnh gọi khởi động gần như đồng thời
+// (vd lệnh gọi lúc connect và tick đầu tiên của task "core-keepalive-guard" ở
+// obdLiveMonitor.ts, cách nhau chỉ ~250ms), cả 2 có thể cùng đọc thấy
+// `startedByUs === false` rồi cùng gọi Location.startLocationUpdatesAsync()
+// song song. Giữ 1 promise ĐANG CHẠY DỞ (nếu có) - lệnh gọi tới sau đợi chung
+// kết quả của lệnh đang chạy thay vì tự chạy thêm 1 lần song song.
+let inFlight: Promise<KeepAliveStatus> | null = null;
+
 // Lý do dừng/bỏ qua - trước đây hàm trả void nên khi có khoảng lặng dài bất
 // thường trong log (rà soát 20/7) không cách nào xác nhận keep-alive có chạy
 // hay đã âm thầm bỏ qua vì thiếu quyền. Giờ caller (obdLiveMonitor) ghi lý do
@@ -58,37 +67,46 @@ export type KeepAliveStatus =
 export async function startObdKeepAlive(platformOS: string = Platform.OS): Promise<KeepAliveStatus> {
   if (platformOS !== 'android') return 'skipped_ios';
   if (startedByUs) return 'already_running';
+  if (inFlight) return inFlight;
+
+  inFlight = (async (): Promise<KeepAliveStatus> => {
+    try {
+      // Đã có foreground service thật từ 1 chuyến GPS đang chạy song song -> khỏi
+      // cần khởi thêm task nữa, tiến trình JS đã được bảo vệ rồi.
+      const gpsRunning = await Location.hasStartedLocationUpdatesAsync(GPS_TASK_NAME).catch(() => false);
+      if (gpsRunning) return 'skipped_gps_active';
+
+      const perm = await PermissionManager.getLocationBackgroundStatus();
+      if (!perm.granted) return 'skipped_no_permission';
+
+      const already = await Location.hasStartedLocationUpdatesAsync(OBD_KEEPALIVE_TASK_NAME).catch(() => false);
+      if (already) { startedByUs = true; return 'already_running'; }
+
+      await Location.startLocationUpdatesAsync(OBD_KEEPALIVE_TASK_NAME, {
+        accuracy: Location.Accuracy.Lowest,
+        timeInterval: 60_000,
+        distanceInterval: 0,
+        showsBackgroundLocationIndicator: false,
+        foregroundService: {
+          notificationTitle: useI18nStore.getState().t('obd.fg_notif_title'),
+          notificationBody: useI18nStore.getState().t('obd.fg_notif_body'),
+          notificationColor: '#2563EB',
+        },
+        pausesUpdatesAutomatically: false,
+      });
+      startedByUs = true;
+      return 'started';
+    } catch {
+      // Thiếu permission/API không sẵn sàng - bỏ qua, quay lại hành vi cũ (không
+      // giữ được nền), không được để lỗi ở đây làm gãy luồng kết nối OBD2 chính.
+      return 'error';
+    }
+  })();
 
   try {
-    // Đã có foreground service thật từ 1 chuyến GPS đang chạy song song -> khỏi
-    // cần khởi thêm task nữa, tiến trình JS đã được bảo vệ rồi.
-    const gpsRunning = await Location.hasStartedLocationUpdatesAsync(GPS_TASK_NAME).catch(() => false);
-    if (gpsRunning) return 'skipped_gps_active';
-
-    const perm = await PermissionManager.getLocationBackgroundStatus();
-    if (!perm.granted) return 'skipped_no_permission';
-
-    const already = await Location.hasStartedLocationUpdatesAsync(OBD_KEEPALIVE_TASK_NAME).catch(() => false);
-    if (already) { startedByUs = true; return 'already_running'; }
-
-    await Location.startLocationUpdatesAsync(OBD_KEEPALIVE_TASK_NAME, {
-      accuracy: Location.Accuracy.Lowest,
-      timeInterval: 60_000,
-      distanceInterval: 0,
-      showsBackgroundLocationIndicator: false,
-      foregroundService: {
-        notificationTitle: useI18nStore.getState().t('obd.fg_notif_title'),
-        notificationBody: useI18nStore.getState().t('obd.fg_notif_body'),
-        notificationColor: '#2563EB',
-      },
-      pausesUpdatesAutomatically: false,
-    });
-    startedByUs = true;
-    return 'started';
-  } catch {
-    // Thiếu permission/API không sẵn sàng - bỏ qua, quay lại hành vi cũ (không
-    // giữ được nền), không được để lỗi ở đây làm gãy luồng kết nối OBD2 chính.
-    return 'error';
+    return await inFlight;
+  } finally {
+    inFlight = null;
   }
 }
 

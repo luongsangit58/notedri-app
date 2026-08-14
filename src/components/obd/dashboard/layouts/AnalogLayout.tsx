@@ -49,8 +49,12 @@ function MiniStat({ item, size, animate }: { item: CockpitMetricValue; size: num
   const display = useCountingNumber(value, 1, animate);
   // Rà soát 24/7 (góp ý user: chữ quá nhỏ, khó đọc) - cỡ chữ tỉ lệ theo
   // gaugeSize thay vì cố định 15/10, cùng nhịp phóng to với 2 đồng hồ chính.
-  const labelSize = Math.max(10, Math.min(18, size * 0.065));
-  const valSize = Math.max(15, Math.min(26, size * 0.11));
+  // Rà soát 13/8 (góp ý user: khối 3 ô phụ nhìn nặng/thô, muốn gọn gàng tinh tế
+  // hơn) - hạ trần labelSize (18->16) để nhãn không phình to cạnh tranh với số
+  // liệu chính trên màn lớn, nâng sàn valSize (15->16) để số liệu không quá bé
+  // trên màn nhỏ - rõ tôn ti giữa nhãn phụ và số liệu chính hơn.
+  const labelSize = Math.max(10, Math.min(16, size * 0.065));
+  const valSize = Math.max(16, Math.min(26, size * 0.11));
   return (
     <View style={[styles.mini, { backgroundColor: p.surface, borderColor: p.border }]}>
       {/* Rà soát (góp ý user: nhãn dài như "Nhiệt độ nước"/"Tải động cơ" bị cắt
@@ -130,8 +134,12 @@ const styles = StyleSheet.create({
   root: { flex: 1, padding: 16, gap: 14, width: '100%', alignItems: 'center', justifyContent: 'center' },
   gaugesRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 20 },
   gaugesCol: { flexDirection: 'column' },
-  sideStack: { flexDirection: 'row', gap: 10, width: '100%' },
-  mini: { borderRadius: 10, borderWidth: 1, paddingVertical: 9, paddingHorizontal: 10, flex: 1, alignItems: 'center' },
-  miniLabel: { fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.4, textAlign: 'center' },
-  miniVal: { fontSize: 15, fontWeight: '700', marginTop: 3 },
+  sideStack: { flexDirection: 'row', gap: 12, width: '100%' },
+  // Rà soát 13/8 (góp ý user: 3 ô phụ nhìn nặng/thô, muốn gọn gàng tinh tế
+  // hơn) - bo góc rộng hơn (10->14, đồng bộ cảm giác "viên thuốc" mềm mại thay
+  // vì hộp vuông vức) + nới padding dọc (9->12) cho nhãn/số liệu có khoảng
+  // thở, không còn cảm giác chật/ép sát viền.
+  mini: { borderRadius: 14, borderWidth: 1, paddingVertical: 12, paddingHorizontal: 8, flex: 1, alignItems: 'center' },
+  miniLabel: { fontSize: 10, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.3, textAlign: 'center' },
+  miniVal: { fontSize: 15, fontWeight: '800', marginTop: 4 },
 });

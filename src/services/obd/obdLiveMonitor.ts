@@ -796,6 +796,37 @@ export const obdLiveMonitor = {
     // Checkpoint mỗi 60s (không cần nhanh như slow tier fuel/oil-temp) - xem
     // persistCheckpoint() ở trên.
     obdPollingScheduler.register({ id: 'core-checkpoint', tier: 'slow', intervalMs: 60000, run: persistCheckpoint });
+    // Rà soát 13/8 (user báo PiP đơ số km/h/vòng tua khi xe đang chạy): gọi
+    // startObdKeepAlive() 1 LẦN lúc connect (dưới đây) không đủ - 2 kẽ hở khiến
+    // JS timer vẫn bị Android đóng băng dù permission đã cấp từ đầu phiên:
+    // (1) lúc connect có 1 chuyến GPS song song đang chạy -> startObdKeepAlive()
+    // trả 'skipped_gps_active' (dựa hẳn vào foreground service CỦA GPS), nhưng
+    // nếu chuyến đó tự dừng (GpsTripTracker, WAITING_STOP_MS) trong khi phiên
+    // OBD/PiP vẫn còn sống thì không ai khởi lại foreground service cho OBD
+    // nữa; (2) 1 lần gọi bị lỗi thoáng qua ('error', vd Location API chưa sẵn
+    // sàng) không có cơ hội thử lại. Đăng ký thêm task tầng slow gọi lại đúng
+    // hàm này mỗi nhịp - an toàn gọi lặp lại (tự kiểm tra trạng thái GPS/quyền/
+    // service hiện tại mỗi lần, xem obdKeepAliveService.ts), tự "vá" lại cả 2
+    // kẽ hở trên mà không cần theo dõi state riêng ở đây.
+    // Rà soát adversarial-review 13/8: nhịp mặc định tầng slow (45s) để lại 1
+    // khoảng trống - nếu ROM ô tô đóng băng tiến trình nền nhanh hơn 45s ngay
+    // sau khi service của GPS dừng, task này chưa kịp chạy lại thì JS đã bị
+    // đóng băng, tự triệt tiêu chính cơ chế "vá" này. Rút xuống bằng đúng
+    // BACKGROUND_GAP_THRESHOLD_MS (15s, đã dùng để phát hiện gap nền thật ở
+    // nơi khác trong file này) - không loại bỏ hoàn toàn cửa sổ rủi ro (không
+    // gì làm được nếu ROM đóng băng nhanh hơn 15s) nhưng thu hẹp đáng kể so
+    // với 45s mặc định.
+    obdPollingScheduler.register({
+      id: 'core-keepalive-guard',
+      tier: 'slow',
+      intervalMs: BACKGROUND_GAP_THRESHOLD_MS,
+      run: async () => {
+        const status = await startObdKeepAlive();
+        // Chỉ ghi log khi có CHUYỂN BIẾN thật (mới khởi service) - tránh log
+        // rác mỗi 45s với 'already_running'/'skipped_gps_active' bình thường.
+        if (status === 'started') bleService.logDiagnostic('#keepalive', 'restarted');
+      },
+    });
     obdPollingScheduler.start();
     running = true;
 
@@ -815,6 +846,7 @@ export const obdLiveMonitor = {
     obdPollingScheduler.unregister('core-fast');
     obdPollingScheduler.unregister('core-slow');
     obdPollingScheduler.unregister('core-checkpoint');
+    obdPollingScheduler.unregister('core-keepalive-guard');
     running = false;
     activeVehicleId = null;
     stopObdKeepAlive().catch(() => {});

@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, Pressable, Animated } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
-import * as Location from 'expo-location';
+import { PermissionManager } from '../../services/permissions/PermissionManager';
 import { useCockpitThemeStore } from '../../store/cockpitThemeStore';
 import { ObdSnapshot } from '../../services/obd/ObdReader';
 import { FastSnapshot } from '../../services/obd/obdLiveMonitor';
@@ -119,13 +119,21 @@ export default function GaugeCluster({
   // ra nhưng speedKmh/rpm mãi mãi null (không có phiên BLE nào đang chạy để
   // cấp dữ liệu) - đúng cảm giác "đơ", không phải do thiếu keep-alive. Chỉ hiện
   // nút khi đang thực sự kết nối, chặn thêm 1 lớp phòng thủ ngay trong hàm.
+  // Rà soát 13/8 (user vẫn báo PiP đơ dù đã có bản vá 24/7): bản cũ chỉ gọi
+  // startObdKeepAlive() khi permission MỚI được cấp ở đây, coi như phiên đã
+  // đủ điều kiện chạy nền từ lúc connect - sai giả định, vì startObdKeepAlive()
+  // lúc connect có thể đã 'skipped_gps_active' (nhường cho foreground service
+  // của 1 chuyến GPS song song) rồi chuyến đó tự dừng giữa chừng, hoặc lỗi
+  // thoáng qua ('error') không có lượt thử lại nào trước đó. Gọi lại hàm này
+  // KHÔNG ĐIỀU KIỆN mỗi lần bấm PiP - an toàn gọi lặp lại (tự re-check trạng
+  // thái GPS/quyền/service, xem obdKeepAliveService.ts), đảm bảo chắc chắn
+  // đang chạy đúng lúc user chuẩn bị rời tiền cảnh, không chỉ dựa vào lần
+  // chạy tự động lúc connect.
   async function handlePressPip() {
     if (!isConnected) return;
-    const perm = await Location.getBackgroundPermissionsAsync().catch(() => null);
-    if (perm?.status !== 'granted') {
-      const granted = await requestKeepAlivePermissions();
-      if (granted) await startObdKeepAlive().catch(() => {});
-    }
+    const perm = await PermissionManager.getLocationBackgroundStatus().catch(() => ({ granted: false, canAskAgain: true }));
+    if (!perm.granted) await requestKeepAlivePermissions();
+    await startObdKeepAlive().catch(() => {});
     NotedriPip.enterPipMode().catch(() => {});
   }
 
@@ -336,9 +344,16 @@ const styles = StyleSheet.create({
     position: 'absolute',
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
   },
+  // Rà soát 13/8 (góp ý user: toolbar nhìn "thụt thò", không cân bằng) - chip
+  // bên trái trước đây cao theo nội dung (~39px, paddingVertical:8) trong khi
+  // 4 nút chức năng bên phải cao CỐ ĐỊNH 46px - 2 khối cùng 1 hàng nhưng lệch
+  // nhau ~7px, mép trên/dưới không thẳng hàng dù đã canh giữa. Khoá `height`
+  // của chip bằng ĐÚNG chiều cao nút tròn (46) - cả hàng giờ cao đều tuyệt
+  // đối, borderRadius cũng đổi thành 23 (= height/2) để chip là 1 viên thuốc
+  // "tròn trọn" đúng chuẩn thay vì bo góc ước lượng theo nội dung.
   chip: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    borderRadius: 22, borderWidth: 1, paddingHorizontal: 12, paddingVertical: 8,
+    height: 46, borderRadius: 23, borderWidth: 1, paddingHorizontal: 12,
   },
   iconBtn: { padding: 2 },
   brandText: { fontSize: 15, fontWeight: '800', letterSpacing: 0.3, color: '#FFFFFF' },
