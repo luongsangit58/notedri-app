@@ -507,38 +507,44 @@ export default function HomeScreen() {
 
         {vehicles.length > 0 && (
         <>
-        {/* Noi bat - viec gap nhat */}
+        {/* Noi bat - viec gap nhat. Rà soát 14/8 (góp ý user: box chiếm quá nhiều diện
+            tích - icon to, đệm rộng, tên hạng mục + số ngày còn lại tách 2 dòng riêng)
+            - thu gọn: icon nhỏ lại, đệm giảm, gộp tên hạng mục và số ngày còn lại
+            thành 1 dòng duy nhất (vẫn đủ thông tin, chỉ đỡ tốn chiều cao). */}
         {showHighlight && topHighlight && (
           <TouchableOpacity
             activeOpacity={0.85}
             onPress={() => nav.navigate('Management', { tab: 0, vehicleId, _ts: Date.now() })}
             style={{
-              borderRadius: 16, marginBottom: 12, overflow: 'hidden',
+              borderRadius: 14, marginBottom: 12, overflow: 'hidden',
               borderWidth: 1, borderColor: topHighlight.remaining_days <= 0 ? '#ef4444' : colors.warning,
             }}>
           <LinearGradient
             colors={topHighlight.remaining_days <= 0 ? ['#991b1b', '#7f1d1d'] : ['#334155', '#1e293b']}
             start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-            style={{ padding: 16, flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-            <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: '#ffffff1a', alignItems: 'center', justifyContent: 'center' }}>
-              <FontAwesome5 name="exclamation-circle" size={20} color={topHighlight.remaining_days <= 0 ? '#fca5a5' : colors.warning} solid />
+            style={{ paddingVertical: 11, paddingHorizontal: 13, flexDirection: 'row', alignItems: 'center', gap: 11 }}>
+            <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: '#ffffff1a', alignItems: 'center', justifyContent: 'center' }}>
+              <FontAwesome5 name="exclamation-circle" size={15} color={topHighlight.remaining_days <= 0 ? '#fca5a5' : colors.warning} solid />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700', letterSpacing: 1, marginBottom: 2 }}>
+              <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700', letterSpacing: 1, marginBottom: 1 }}>
                 {t('home.highlight')}
               </Text>
-              <Text style={{ color: '#fff', fontSize: 15, fontWeight: '700' }} numberOfLines={1}>{topHighlight.hang_muc}</Text>
-              <Text style={{ color: '#cbd5e1', fontSize: 13, marginTop: 1 }}>
-                {topHighlight.remaining_days <= 0
-                  ? t('dashboard.overdue')
-                  : t('dashboard.days_remaining', { days: topHighlight.remaining_days })}
+              <Text style={{ fontSize: 13.5 }} numberOfLines={1}>
+                <Text style={{ color: '#fff', fontWeight: '700' }}>{topHighlight.hang_muc}</Text>
+                <Text style={{ color: '#cbd5e1', fontWeight: '600' }}>
+                  {'  ·  '}
+                  {topHighlight.remaining_days <= 0
+                    ? t('dashboard.overdue')
+                    : t('dashboard.days_remaining', { days: topHighlight.remaining_days })}
+                </Text>
               </Text>
             </View>
             <TouchableOpacity
               onPress={dismissHighlight}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               style={{ padding: 2 }}>
-              <FontAwesome5 name="times" size={16} color="#94a3b8" />
+              <FontAwesome5 name="times" size={15} color="#94a3b8" />
             </TouchableOpacity>
           </LinearGradient>
           </TouchableOpacity>

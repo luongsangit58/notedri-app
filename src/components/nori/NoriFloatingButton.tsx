@@ -278,20 +278,29 @@ export default function NoriFloatingButton() {
               </View>
             </View>
           ) : (
-            // Hiện đầy đủ - quầng sáng mờ dần (radial gradient, không viền)
-            // khớp đúng hiệu ứng web (rà soát 24/7, góp ý user: app trước đó
-            // bọc icon trong 1 vòng tròn viền cứng + chấm màu, không giống web).
+            // Hiện đầy đủ - quầng sáng mờ dần (radial gradient) + viền cam mỏng
+            // quanh icon. Rà soát 14/8 (góp ý user: quầng sáng cũ dùng ĐÚNG màu nền
+            // (colors.background) nên khi Nori nổi trên 1 card cùng tông (vd thẻ
+            // "Gợi ý hôm nay") thì gần như vô hình, hòa hẳn vào nền - viền cứng đã
+            // bỏ ở rà soát 24/7 để giống web hoá ra lại cần thiết để tách bạch khỏi
+            // nền bận rộn phía sau). Đổi quầng sáng sang màu cam thương hiệu (khác
+            // hẳn mọi tông nền tối/sáng, không còn lệ thuộc theme) + thêm viền cam
+            // mảnh quanh icon - vẫn mềm mại hơn hẳn bản "viền cứng" cũ user từng
+            // chê, nhưng đủ để không còn hòa mất vào nền ở bất kỳ theme nào.
             <>
               <Svg width={boxSize} height={boxSize} style={StyleSheet.absoluteFillObject}>
                 <Defs>
                   <RadialGradient id="noriGlow" cx="50%" cy="50%" r="50%">
-                    <Stop offset="0%" stopColor={colors.background} stopOpacity={0.9} />
-                    <Stop offset="100%" stopColor={colors.background} stopOpacity={0} />
+                    <Stop offset="0%" stopColor="#F59E0B" stopOpacity={0.4} />
+                    <Stop offset="100%" stopColor="#F59E0B" stopOpacity={0} />
                   </RadialGradient>
                 </Defs>
                 <Circle cx={boxSize / 2} cy={boxSize / 2} r={boxSize / 2} fill="url(#noriGlow)" />
               </Svg>
-              <View style={{ margin: BACKDROP_PAD }}>
+              <View style={{
+                margin: BACKDROP_PAD, borderRadius: SIZE / 2,
+                borderWidth: 1.5, borderColor: '#F59E0B',
+              }}>
                 <NoriAvatar mood={mood} size={SIZE} />
               </View>
               {/* Huy hiệu nhấp nháy khi có điều đáng chú ý CHƯA XEM (cải thiện UX 2026-07-28) -
