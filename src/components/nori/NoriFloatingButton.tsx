@@ -38,7 +38,11 @@ import NoriQuickPopover from './NoriQuickPopover';
 // PanResponder + Animated đều có sẵn trong react-native core).
 const SIZE = 52;
 const BACKDROP_PAD = 6;
-const DOCK_PEEK = 16; // số px còn lộ ra khi đã gạt vào sát cạnh màn hình
+// Rà soát 14/8 (góp ý user: phần lồi ra màu cam khi đã gạt Nori vào cạnh màn
+// hình to/lấn ra quá mức, trông lạc quẻ với viền các box khác) - thu nhỏ lại
+// (10px, trước là 16) và bớt cao/bớt bo tròn (xem style "tay cầm" bên dưới)
+// cho gọn, gần khớp độ dày viền các thẻ card khác trên Home thay vì nổi cộm.
+const DOCK_PEEK = 10; // số px còn lộ ra khi đã gạt vào sát cạnh màn hình
 const TAP_MOVE_THRESHOLD = 6; // dx/dy dưới ngưỡng này -> coi là bấm, không phải kéo
 const EDGE_MARGIN = 12;
 const DEFAULT_BOTTOM_OFFSET = 140; // tránh đè lên pill kết nối OBD2 (ObdSessionBanner, bottom:96)
@@ -245,9 +249,9 @@ export default function NoriFloatingButton() {
             <View style={{ flex: 1, alignItems: dockUi.side === 'left' ? 'flex-end' : 'flex-start' }}>
               <View
                 style={{
-                  width: DOCK_PEEK + 10,
-                  height: SIZE * 0.85,
-                  borderRadius: 14,
+                  width: DOCK_PEEK + 6,
+                  height: SIZE * 0.65,
+                  borderRadius: 10,
                   backgroundColor: NORI_MOOD_COLOR[mood],
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -256,7 +260,7 @@ export default function NoriFloatingButton() {
                   shadowRadius: 4,
                   elevation: 6,
                 }}>
-                <View style={{ width: 3, height: 22, borderRadius: 2, backgroundColor: '#fff8' }} />
+                <View style={{ width: 2.5, height: 16, borderRadius: 2, backgroundColor: '#fff8' }} />
               </View>
             </View>
           ) : (

@@ -300,26 +300,25 @@ export default function HomeScreen() {
   const topHighlight = upcomingAll.find((r) => r.remaining_days != null && r.remaining_days <= 30) ?? null;
   const upcoming = upcomingAll.slice(0, 3);
 
-  // Cho tắt thẻ "Nổi bật" (user báo chiếm nhiều diện tích màn hình) - chỉ ẩn
-  // ĐÚNG mục nhắc nhở + đúng số ngày còn lại lúc tắt. Nếu số ngày đổi (qua
-  // ngày mới, hoặc chuyển sang "quá hạn") thẻ tự hiện lại - tránh việc user
-  // quên hẳn 1 mục sắp/đã quá hạn chỉ vì từng bấm tắt lúc còn 30 ngày.
-  const [dismissedHighlight, setDismissedHighlight] = useState<{ id: number; remaining_days: number } | null>(null);
+  // Cho tắt thẻ "Nổi bật" (user báo chiếm nhiều diện tích màn hình) - rà soát
+  // 14/8 (góp ý user: bấm X phải ẩn HẲN đúng mục đó, không tự hiện lại khi số
+  // ngày đổi qua hôm sau). Chỉ khớp theo `id` của mục nhắc nhở - KHÔNG còn kèm
+  // remaining_days như bản cũ (bản cũ vô tình chỉ ẩn đúng 1 ngày vì hôm sau
+  // remaining_days giảm 1, hết khớp, thẻ lại tự bật lên). Mục này vẫn ẩn tới
+  // khi nó không còn là topHighlight nữa (đã xong việc / có mục khác cấp bách
+  // hơn lên thay) - lúc đó mục MỚI chưa từng bị tắt nên hiện lại đúng như cũ.
+  const [dismissedHighlightId, setDismissedHighlightId] = useState<number | null>(null);
   useEffect(() => {
     AsyncStorage.getItem(HOME_HIGHLIGHT_DISMISS_KEY).then((raw) => {
-      if (raw) { try { setDismissedHighlight(JSON.parse(raw)); } catch {} }
+      if (!raw) return;
+      try { setDismissedHighlightId(JSON.parse(raw)?.id ?? null); } catch {}
     });
   }, []);
-  const showHighlight = !!topHighlight && !(
-    dismissedHighlight
-    && dismissedHighlight.id === topHighlight.id
-    && dismissedHighlight.remaining_days === topHighlight.remaining_days
-  );
+  const showHighlight = !!topHighlight && topHighlight.id !== dismissedHighlightId;
   function dismissHighlight() {
     if (!topHighlight) return;
-    const entry = { id: topHighlight.id, remaining_days: topHighlight.remaining_days };
-    setDismissedHighlight(entry);
-    AsyncStorage.setItem(HOME_HIGHLIGHT_DISMISS_KEY, JSON.stringify(entry)).catch(() => {});
+    setDismissedHighlightId(topHighlight.id);
+    AsyncStorage.setItem(HOME_HIGHLIGHT_DISMISS_KEY, JSON.stringify({ id: topHighlight.id })).catch(() => {});
   }
 
   // Thu gọn/mở rộng box "Gợi ý hôm nay" - nhớ lựa chọn qua các lần mở app sau
@@ -692,21 +691,6 @@ export default function HomeScreen() {
                 {isHybrid ? t('home.find_station_hybrid') : t('home.find_station')}
               </Text>
             </TouchableOpacity>
-            {/* Rà soát 14/8 (audit menu: RefuelsListScreen không có lối vào nào
-                trong app ngoài deep-link từ thông báo web - "màn mồ côi" - trong
-                khi ô ODO cạnh bên đã có sẵn link "Lịch sử ODO" tương tự). Thêm
-                link lịch sử đổ xăng cho đối xứng, tự quản lý chọn xe/trang nên
-                không cần truyền vehicleId. */}
-            <View style={{ height: 1, backgroundColor: isHybrid ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.12)' }} />
-            <TouchableOpacity
-              activeOpacity={0.85}
-              onPress={() => nav.navigate('RefuelsList')}
-              style={{ paddingHorizontal: 12, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-              <FontAwesome5 name="history" size={9} color={isHybrid ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.65)'} solid />
-              <Text style={{ color: isHybrid ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.65)', fontSize: 11, fontWeight: '600' }}>
-                {t('home.refuel_history')}
-              </Text>
-            </TouchableOpacity>
             </>
             )}
           </LinearGradient>
@@ -835,14 +819,27 @@ export default function HomeScreen() {
                 flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
                 marginBottom: suggestionsCollapsed ? 0 : 10,
               }}>
-              <Text style={{ color: colors.text, fontWeight: '700', fontSize: 15 }}>
-                {t('home.suggestions_title')}
-              </Text>
-              <FontAwesome5
-                name={suggestionsCollapsed ? 'chevron-down' : 'chevron-up'}
-                size={13}
-                color={colors.textSecondary}
-              />
+              {/* Rà soát 14/8 (góp ý user: tiêu đề box lẫn với nội dung bên dưới, nút
+                  toggle dễ nhầm với mấy chevron ">" của từng dòng con) - thanh màu +
+                  chữ tô màu primary đậm để tách rõ khối tiêu đề, nút toggle bọc trong
+                  1 khối tròn nền màu thay vì icon trần giống hệt chevron của item con. */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <View style={{ width: 4, height: 16, borderRadius: 2, backgroundColor: colors.primary }} />
+                <Text style={{ color: colors.primary, fontWeight: '800', fontSize: 15 }}>
+                  {t('home.suggestions_title')}
+                </Text>
+              </View>
+              <View style={{
+                width: 26, height: 26, borderRadius: 13,
+                backgroundColor: colors.primary + '1a',
+                alignItems: 'center', justifyContent: 'center',
+              }}>
+                <FontAwesome5
+                  name={suggestionsCollapsed ? 'chevron-down' : 'chevron-up'}
+                  size={11}
+                  color={colors.primary}
+                />
+              </View>
             </TouchableOpacity>
             {!suggestionsCollapsed && suggestions.map((sug: any, i: number) => {
               const severity: string = sug.severity ?? 'info';
@@ -891,9 +888,12 @@ export default function HomeScreen() {
         {upcoming.length > 0 && (
           <View style={{ backgroundColor: colors.surface, borderRadius: 14, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: colors.border }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-              <Text style={{ color: colors.text, fontWeight: '700', fontSize: 15 }}>{t('vehicles.upcoming_reminders')}</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <View style={{ width: 4, height: 16, borderRadius: 2, backgroundColor: colors.primary }} />
+                <Text style={{ color: colors.primary, fontWeight: '800', fontSize: 15 }}>{t('vehicles.upcoming_reminders')}</Text>
+              </View>
               <TouchableOpacity onPress={() => nav.navigate('Management', { tab: 0, vehicleId, _ts: Date.now() })}>
-                <Text style={{ color: colors.primary, fontSize: 13 }}>
+                <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '600' }}>
                   {t('home.see_all')}
                 </Text>
               </TouchableOpacity>

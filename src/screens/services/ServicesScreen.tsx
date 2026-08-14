@@ -71,9 +71,16 @@ function GridTile({ icon, label, onPress }: { icon: string; label: string; onPre
       }}>
         <FontAwesome5 name={icon} size={16} color={colors.primary} solid />
       </View>
-      <Text numberOfLines={2} style={{ color: colors.primary, fontWeight: '700', fontSize: 12, textAlign: 'center' }}>
-        {label}
-      </Text>
+      {/* Rà soát 14/8 (góp ý user: 3 ô cùng hàng cao lệch nhau khi CHỈ 1 nhãn dài
+          xuống 2 dòng, mấy ô còn lại 1 dòng - trông lệch). Luôn CHỪA SẴN đúng chỗ
+          cho 2 dòng (kể cả khi label thật chỉ 1 dòng, canh giữa trong khoảng chừa
+          đó) - chiều cao khối chữ luôn giống nhau ở cả 3 ô, không phụ thuộc nhãn
+          ngắn/dài, thay vì trông chờ layout tự co giãn theo đúng số dòng thật. */}
+      <View style={{ height: 30, justifyContent: 'center' }}>
+        <Text numberOfLines={2} style={{ color: colors.primary, fontWeight: '700', fontSize: 12, textAlign: 'center', lineHeight: 15 }}>
+          {label}
+        </Text>
+      </View>
     </TouchableOpacity>
   );
 }

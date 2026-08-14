@@ -190,28 +190,45 @@ export default function PremiumScreen() {
           </View>
         ) : null}
 
-        {/* Premium features */}
-        <View style={{ backgroundColor: colors.surface, borderRadius: 14, padding: 16, marginBottom: 20 }}>
-          <Text style={{ color: AMBER, fontWeight: '800', fontSize: 14, marginBottom: 12, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-            {t('premium.includes_title')}
-          </Text>
+        {/* Premium features - rà soát 14/8 (góp ý user: chữ mô tả dài tràn ra ngoài viền
+            thẻ, trình bày sơ sài) - Text thiếu `flex:1` trong hàng flexDirection:row là
+            nguyên nhân tràn viền (RN không tự bọc chữ khi phần tử không co giãn được);
+            thêm flex:1 + lineHeight, đồng thời bọc icon trong khối tròn màu để đồng bộ
+            ngôn ngữ thiết kế với các thẻ CTA khác trên Home thay vì icon trần đơn điệu. */}
+        <View style={{ backgroundColor: colors.surface, borderRadius: 14, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: AMBER + '40' }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+            <View style={{ width: 4, height: 16, borderRadius: 2, backgroundColor: AMBER }} />
+            <Text style={{ color: AMBER, fontWeight: '800', fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+              {t('premium.includes_title')}
+            </Text>
+          </View>
           {PREMIUM_FEATURES.map((f, i) => (
-            <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-              <FontAwesome5 name={f.icon} size={14} color={AMBER} solid style={{ width: 18 }} />
-              <Text style={{ color: colors.text, fontSize: 14 }}>{f.text}</Text>
+            <View
+              key={i}
+              style={{
+                flexDirection: 'row', alignItems: 'flex-start', gap: 12, paddingVertical: 9,
+                borderTopWidth: i > 0 ? 1 : 0, borderTopColor: colors.border,
+              }}>
+              <View style={{
+                width: 30, height: 30, borderRadius: 15,
+                backgroundColor: AMBER + '22', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <FontAwesome5 name={f.icon} size={13} color={AMBER} solid />
+              </View>
+              <Text style={{ color: colors.text, fontSize: 14, lineHeight: 19, flex: 1, marginTop: 5 }}>{f.text}</Text>
             </View>
           ))}
         </View>
 
         {/* Free plan */}
-        <View style={{ backgroundColor: colors.surface, borderRadius: 14, padding: 16, marginBottom: 24 }}>
-          <Text style={{ color: colors.textSecondary, fontWeight: '700', fontSize: 13, marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+        <View style={{ backgroundColor: colors.surface, borderRadius: 14, padding: 16, marginBottom: 24, borderWidth: 1, borderColor: colors.border }}>
+          <Text style={{ color: colors.textSecondary, fontWeight: '700', fontSize: 12, marginBottom: 10, textTransform: 'uppercase', letterSpacing: 0.5 }}>
             {t('premium.free_title')}
           </Text>
           {FREE_FEATURES.map((f, i) => (
-            <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-              <FontAwesome5 name="check" size={12} color={colors.textSecondary} />
-              <Text style={{ color: colors.textSecondary, fontSize: 13 }}>{f}</Text>
+            <View key={i} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginBottom: 8 }}>
+              <FontAwesome5 name="check" size={12} color={colors.textSecondary} solid style={{ marginTop: 3 }} />
+              <Text style={{ color: colors.textSecondary, fontSize: 13, lineHeight: 18, flex: 1 }}>{f}</Text>
             </View>
           ))}
         </View>

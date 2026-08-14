@@ -24,6 +24,7 @@ import {
   setAutoConnect,
   removePairingForVehicle,
 } from '../../services/obd/pairedDevices';
+import { useObdAutoConnectSettingsStore } from '../../store/obdAutoConnectSettingsStore';
 import AppBgPattern from '../../components/AppBgPattern';
 import { useColors } from '../../utils/theme';
 import { useAuthStore } from '../../store/authStore';
@@ -362,7 +363,23 @@ export default function OBDSetupScreen() {
     getPairingForDevice(autoConnectDeviceId).then((p) => setNfcTransport(p?.transport ?? 'ble'));
   }, [autoConnectDeviceId]);
 
-  const autoTargetId = autoConnectDeviceId ?? (suppressAutoConnect ? null : pairedDeviceId);
+  // Rà soát 14/8 (bug thật user báo: bấm X ngắt kết nối ở màn Đồng hồ (gauge) ->
+  // quay ra Home -> bấm lại "Kết nối OBD2" -> app ÂM THẦM tự nối lại rồi nhảy
+  // thẳng vào Dashboard, y hệt không hề có bước ngắt - user không bao giờ thấy
+  // lại màn chọn thiết bị/kết quả kết nối). Gốc lỗi: `suppressAutoConnect` (route
+  // param) CHỈ có tác dụng cho đúng 1 instance màn hình được điều hướng trực tiếp
+  // từ handleDisconnect (OBDDashboardScreen) - lần vào OBDSetup TIẾP THEO (từ Home,
+  // tab bar...) là 1 instance mới, không mang theo param đó nên lại tự nối như
+  // chưa từng ngắt. `sessionSuppressed` (obdAutoConnectSettingsStore) đã ĐÚNG Ý
+  // ĐỊNH này (chặn tới khi user tự kết nối lại thành công hoặc tắt hẳn app) nhưng
+  // trước đây chỉ được ObdAutoConnect.tsx (popup toàn cục) đọc - chưa gate luôn
+  // nhánh tự kết nối theo pairedDeviceId NGAY TẠI màn OBDSetup này. Gộp cả 2 cờ:
+  // sessionSuppressed giờ cũng chặn foreground auto-connect ở đây, cho tới khi
+  // user CHỦ ĐỘNG chạm vào thiết bị 1 lần nữa (connect() tự clearSessionSuppression
+  // ở useObd.ts). NFC (autoConnectDeviceId) vẫn LUÔN ưu tiên bỏ qua cờ này - quét
+  // thẻ NFC là hành động chủ động ngay lúc đó, không tính là "tự động" âm thầm.
+  const sessionSuppressed = useObdAutoConnectSettingsStore((s) => s.sessionSuppressed);
+  const autoTargetId = autoConnectDeviceId ?? ((suppressAutoConnect || sessionSuppressed) ? null : pairedDeviceId);
   const autoTargetTransport = autoConnectDeviceId ? nfcTransport : pairedTransport;
 
   // Tự chuyển sang mode Classic khi thiết bị nhớ được lại là Classic - tránh
@@ -503,8 +520,10 @@ export default function OBDSetupScreen() {
           </Text>
           {/* Chỉ hiện gợi ý "đang tự kết nối" khi pairing nhớ được ĐÚNG là BLE -
               pairing Classic sẽ không bao giờ xuất hiện trong foundDevices (quét
-              BLE), hiện gợi ý này lúc đó là hứa suông. */}
-          {isScanning && pairedDeviceId && pairedTransport === 'ble' && !autoConnectDeviceId && (
+              BLE), hiện gợi ý này lúc đó là hứa suông. Cũng ẩn khi sessionSuppressed
+              (user vừa chủ động ngắt) - autoTargetId đã bị null hoá ở trên nên KHÔNG
+              còn tự kết nối thật, hiện gợi ý này lúc đó là hứa suông tương tự. */}
+          {isScanning && pairedDeviceId && pairedTransport === 'ble' && !autoConnectDeviceId && !sessionSuppressed && (
             <Text style={{ color: colors.textSecondary, fontSize: 12, textAlign: 'center' }}>
               {t('obd.auto_connect_hint')}
             </Text>

@@ -151,8 +151,23 @@ export default function AppNavigator() {
       <RootStack.Screen name="Tabs" component={ThemedTabNavigator} />
 
       {/* Refuel & ODO */}
+      {/* headerRight -> RefuelsList (rà soát 14/8, góp ý user: bỏ link "Lịch sử đổ xăng/dầu"
+          khỏi thẻ Đổ xăng trên Home cho gọn) - giữ lại 1 lối vào trong app (không chỉ deep-link
+          từ web) ngay tại màn ghi đổ xăng, chỗ hợp lý nhất để tra lại lịch sử vừa ghi. */}
       <RootStack.Screen name="AddRefuel" component={AddRefuelScreen}
-        options={{ headerShown: true, ...headerOpts, title: t('refuels.add_title') }} />
+        options={({ navigation }: any) => ({
+          headerShown: true,
+          ...headerOpts,
+          title: t('refuels.add_title'),
+          headerRight: () => (
+            <TouchableOpacity
+              onPress={() => navigation.navigate('RefuelsList')}
+              style={{ marginRight: 16 }}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+              <FontAwesome5 name="history" size={18} color={colors.primary} solid />
+            </TouchableOpacity>
+          ),
+        })} />
       <RootStack.Screen name="AddOdometer" component={AddOdometerScreen}
         options={{ headerShown: true, ...headerOpts, title: t('odometer.add_title') }} />
       <RootStack.Screen name="EditOdometer" component={EditOdometerScreen}
