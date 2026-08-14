@@ -1,8 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Animated, Dimensions, PanResponder, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, Dimensions, PanResponder, Text, TouchableOpacity, View } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { FontAwesome5 } from '@expo/vector-icons';
-import Svg, { Defs, RadialGradient, Stop, Circle } from 'react-native-svg';
 import { navigationRef } from '../../navigation/navigationRef';
 import { useAuthStore } from '../../store/authStore';
 import { useVehicles } from '../../hooks/useVehicles';
@@ -186,6 +185,18 @@ export default function NoriFloatingButton() {
     setDockUi({ docked: false, side });
   };
 
+  // Rà soát 15/8 (góp ý user, kèm ảnh chụp widget Nori bên web): web có nút X
+  // ngay trên icon để thu gọn Nori vào cạnh - dùng chuột nên không kéo-thả tự
+  // nhiên như cảm ứng. Thêm nút X tương đương cho mobile - CÙNG HÀNH ĐỘNG với
+  // thả tay sau khi kéo vào cạnh gần nhất (dockTo), KHÔNG PHẢI ẩn vĩnh viễn (rà
+  // soát 24/7 đã bỏ hẳn cờ ẩn không lối quay lại) - chỉ thêm 1 cách bấm nhanh
+  // thay vì bắt buộc phải kéo bằng ngón tay.
+  const collapseToEdge = () => {
+    const { width } = Dimensions.get('window');
+    const side = posValue.current.x < width / 2 ? 'left' : 'right';
+    dockTo(side, posValue.current.y);
+  };
+
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
@@ -209,9 +220,21 @@ export default function NoriFloatingButton() {
         const clampedY = Math.max(60, Math.min(height - boxSize - 60, rawY));
 
         if (isTap) {
-          // Bấm: nếu đang gạt vào cạnh -> hiện ra trước, CHƯA mở popup ngay (đỡ
-          // bấm nhầm khi chỉ định kéo icon ra để dùng lại). Nếu đã hiện đầy đủ
-          // -> mở NoriQuickPopover (popup nổi tại chỗ, xem chú thích đầu file).
+          // Bấm đúng nút X (góc trên-phải icon, chỉ tồn tại lúc hiện đầy đủ) -
+          // thu gọn vào cạnh, GIỐNG HỆT thả tay sau khi kéo, không mở popup.
+          // Dò theo toạ độ chạm ban đầu (gesture.x0/y0, gần bằng lúc thả vì đây
+          // là tap) quy về hệ toạ độ cục bộ của icon - PanResponder gắn trên cả
+          // khối Animated.View nên 1 TouchableOpacity con lồng bên trong sẽ bị
+          // panResponder ở cha "nuốt" mất sự kiện chạm, không bắn onPress được.
+          if (!dockedRef.current) {
+            const localX = gesture.x0 - posValue.current.x;
+            const localY = gesture.y0 - posValue.current.y;
+            const inCloseZone = localX > boxSize - 30 && localY < 30;
+            if (inCloseZone) { collapseToEdge(); return; }
+          }
+          // Bấm chỗ khác: nếu đang gạt vào cạnh -> hiện ra trước, CHƯA mở popup
+          // ngay (đỡ bấm nhầm khi chỉ định kéo icon ra để dùng lại). Nếu đã hiện
+          // đầy đủ -> mở NoriQuickPopover (popup nổi tại chỗ, xem chú thích đầu file).
           const side = posValue.current.x < width / 2 ? 'left' : 'right';
           if (dockedRef.current) undockTo(side, posValue.current.y);
           else setShowPopup(true);
@@ -278,40 +301,48 @@ export default function NoriFloatingButton() {
               </View>
             </View>
           ) : (
-            // Hiện đầy đủ - quầng sáng mờ dần (radial gradient) + viền cam mỏng
-            // quanh icon. Rà soát 14/8 (góp ý user: quầng sáng cũ dùng ĐÚNG màu nền
-            // (colors.background) nên khi Nori nổi trên 1 card cùng tông (vd thẻ
-            // "Gợi ý hôm nay") thì gần như vô hình, hòa hẳn vào nền - viền cứng đã
-            // bỏ ở rà soát 24/7 để giống web hoá ra lại cần thiết để tách bạch khỏi
-            // nền bận rộn phía sau). Đổi quầng sáng sang màu cam thương hiệu (khác
-            // hẳn mọi tông nền tối/sáng, không còn lệ thuộc theme) + thêm viền cam
-            // mảnh quanh icon - vẫn mềm mại hơn hẳn bản "viền cứng" cũ user từng
-            // chê, nhưng đủ để không còn hòa mất vào nền ở bất kỳ theme nào.
+            // Hiện đầy đủ - nền khối bo góc mềm (không phải vòng tròn) + nút X thu
+            // gọn ở góc trên-phải. Rà soát 15/8 (user gửi ảnh chụp widget Nori bên
+            // web tham chiếu trực tiếp): bản viền cam tròn trước đó (rà soát 14/8)
+            // vẫn là 1 dạng "vòng tròn" không giống web - đổi hẳn sang khối nền tối
+            // bán trong suốt bo góc mềm + đổ bóng, tách khỏi MỌI nền phía sau mà
+            // không cần lệ thuộc theme (khác quầng sáng dùng colors.background cũ,
+            // vốn vô hình khi nổi trên card cùng tông màu).
             <>
-              <Svg width={boxSize} height={boxSize} style={StyleSheet.absoluteFillObject}>
-                <Defs>
-                  <RadialGradient id="noriGlow" cx="50%" cy="50%" r="50%">
-                    <Stop offset="0%" stopColor="#F59E0B" stopOpacity={0.4} />
-                    <Stop offset="100%" stopColor="#F59E0B" stopOpacity={0} />
-                  </RadialGradient>
-                </Defs>
-                <Circle cx={boxSize / 2} cy={boxSize / 2} r={boxSize / 2} fill="url(#noriGlow)" />
-              </Svg>
               <View style={{
-                margin: BACKDROP_PAD, borderRadius: SIZE / 2,
-                borderWidth: 1.5, borderColor: '#F59E0B',
-              }}>
+                position: 'absolute', margin: BACKDROP_PAD,
+                width: SIZE, height: SIZE, borderRadius: 16,
+                backgroundColor: '#0f172ad9',
+                shadowColor: '#000', shadowOpacity: 0.35, shadowRadius: 8, shadowOffset: { width: 0, height: 3 },
+                elevation: 6,
+              }} />
+              <View style={{ margin: BACKDROP_PAD }}>
                 <NoriAvatar mood={mood} size={SIZE} />
               </View>
+              {/* Chỉ mang tính HIỂN THỊ - việc bắt chạm thật nằm trong inCloseZone ở
+                  onPanResponderRelease (panResponder gắn trên cả khối cha sẽ nuốt mất
+                  sự kiện của 1 Touchable con lồng bên trong, không thể dùng onPress
+                  bình thường ở đây - xem collapseToEdge/inCloseZone phía trên). */}
+              <View
+                pointerEvents="none"
+                style={{
+                  position: 'absolute', top: 0, right: 0,
+                  width: 20, height: 20, borderRadius: 10,
+                  backgroundColor: colors.surface,
+                  alignItems: 'center', justifyContent: 'center',
+                  borderWidth: 1, borderColor: colors.border,
+                }}>
+                <FontAwesome5 name="times" size={9} color={colors.textSecondary} />
+              </View>
               {/* Huy hiệu nhấp nháy khi có điều đáng chú ý CHƯA XEM (cải thiện UX 2026-07-28) -
-                  chỉ hiện ở dạng đầy đủ (không hiện ở "tay cầm" lúc đã gạt vào cạnh, đủ nhỏ để
-                  không đáng thêm 1 lớp phức tạp cho trạng thái đã thu gọn). */}
+                  chỉ hiện ở dạng đầy đủ. Chuyển sang góc trên-TRÁI (rà soát 15/8) - góc
+                  trên-phải giờ là nút X thu gọn ở trên. */}
               {showAlertBadge && (
                 <Animated.View
                   style={{
                     position: 'absolute',
                     top: 2,
-                    right: 2,
+                    left: 2,
                     width: 14,
                     height: 14,
                     borderRadius: 7,
