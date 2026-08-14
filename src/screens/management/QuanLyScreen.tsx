@@ -72,13 +72,22 @@ export default function QuanLyScreen() {
             </TouchableOpacity>
           );
         })}
-        {/* Mục OBD2 (shortcut, không phải tab nội dung - xem goToObd() ở trên) */}
-        <TouchableOpacity onPress={goToObd} style={styles.tabItem} activeOpacity={0.75}>
+        {/* Rà soát 14/8 (audit menu: mục OBD2 dùng CHUNG style tabItem với 2 tab
+            nội dung thật ở trên, chỉ khác 1 icon external-link 8px giấu trong
+            góc - nhìn như tab thứ 3 nhưng bấm vào lại điều hướng đi hẳn, dễ
+            gây hiểu nhầm). Thêm vạch phân cách + đổi icon external-link sang
+            đứng cạnh nhãn (rõ ràng hơn overlay góc), giảm flex để không chiếm
+            tỉ trọng ngang bằng 2 tab thật - tín hiệu thị giác "đây là lối tắt,
+            không phải tab" rõ hơn mà không cần đổi hành vi/điều hướng. */}
+        <View style={{ width: 1, backgroundColor: colors.border, marginVertical: 10 }} />
+        <TouchableOpacity onPress={goToObd} style={[styles.tabItem, { flex: 0.75 }]} activeOpacity={0.75}>
           <FontAwesome5 name="microchip" size={13} color={colors.textSecondary} solid />
-          <Text style={[styles.tabLabel, { color: colors.textSecondary }]}>
-            {t('management.tab_obd')}
-          </Text>
-          <FontAwesome5 name="external-link-alt" size={8} color={colors.textSecondary} style={{ position: 'absolute', top: 10, right: '28%' }} />
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+            <Text style={[styles.tabLabel, { color: colors.textSecondary }]}>
+              {t('management.tab_obd')}
+            </Text>
+            <FontAwesome5 name="external-link-alt" size={9} color={colors.textSecondary} />
+          </View>
         </TouchableOpacity>
       </View>
 

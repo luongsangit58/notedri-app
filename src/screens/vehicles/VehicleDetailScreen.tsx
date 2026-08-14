@@ -18,6 +18,7 @@ import AdMobBanner from '../../components/AdMobBanner';
 import { useColors } from '../../utils/theme';
 import { contentWide } from '../../utils/layout';
 import { flattenReminders } from '../../utils/reminders';
+import { fuelTypeMeta } from '../../utils/fuelType';
 import { formatKm } from '../../utils/format';
 import { useAuthStore } from '../../store/authStore';
 import { useT } from '../../i18n';
@@ -179,6 +180,11 @@ function HealthBreakdownCard({ health, vehicleId, navigation }: { health: Health
   const critical = scoreData?.critical ?? false;
 
   const visibleOrgans = organs.filter(o => o.status !== 'na');
+  // Rà soát 14/8 (góp ý user: danh sách organ ở đây luôn hiện hết, trong khi
+  // ngay bên dưới đã có link "xem chi tiết" dẫn thẳng sang màn Sức khoẻ đầy đủ
+  // - trùng lặp nội dung) - thu gọn được, mặc định MỞ nếu có cảnh báo
+  // (urgent/warn, đúng warnCount đã tính sẵn ở trên), ĐÓNG khi mọi thứ ổn.
+  const [showOrgans, setShowOrgans] = useState(warnCount > 0);
 
   const confidenceLabel = (c?: string) => {
     switch (c) {
@@ -273,9 +279,22 @@ function HealthBreakdownCard({ health, vehicleId, navigation }: { health: Health
       )}
 
       {/* Organ rows */}
-      {visibleOrgans.map(organ => (
-        <OrganRow key={organ.key} organ={organ} vehicleId={vehicleId} navigation={navigation} />
-      ))}
+      {visibleOrgans.length > 0 && (
+        <>
+          <TouchableOpacity
+            onPress={() => setShowOrgans(v => !v)}
+            activeOpacity={0.7}
+            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingBottom: showOrgans ? 8 : 0 }}>
+            <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+              {t('health.organs_title')} ({visibleOrgans.length})
+            </Text>
+            <FontAwesome5 name={showOrgans ? 'chevron-up' : 'chevron-down'} size={12} color={colors.textSecondary} />
+          </TouchableOpacity>
+          {showOrgans && visibleOrgans.map(organ => (
+            <OrganRow key={organ.key} organ={organ} vehicleId={vehicleId} navigation={navigation} />
+          ))}
+        </>
+      )}
     </View>
   );
 }
@@ -356,6 +375,12 @@ export default function VehicleDetailScreen() {
 
   const v = vehicle?.data ?? vehicle;
   const showVinPrefill = !!obdDecodedVin && !v?.vin;
+  // Rà soát 14/8 (góp ý user: nút "Đổ xăng" ở đây không phân biệt xe điện, khác
+  // với HomeScreen.tsx đã có nhánh isEv riêng) - AddRefuelScreen tự lọc BỎ xe
+  // điện khỏi danh sách chọn xe (isEvV filter), nên bấm thẳng vào đây với 1 xe
+  // điện trước đây sẽ dẫn tới màn ghi đổ xăng không có xe này trong danh sách -
+  // đồng bộ hành vi với Home: xe điện đi thẳng tới trạm sạc gần đây.
+  const isRefuelEv = fuelTypeMeta(v).key === 'dien';
 
   // API returns { data: { vehicle, overall, warn_count, organs, score } }
   // useVehicleHealth does .then(r => r.data), so health = the axios response body = { data: {...} }
@@ -434,10 +459,14 @@ export default function VehicleDetailScreen() {
         <SectionHeader>{t('vehicle_detail.section_quick')}</SectionHeader>
         <View style={{ flexDirection: 'row', gap: 10, marginBottom: 8 }}>
           <TouchableOpacity
-            onPress={() => navigation.navigate('AddRefuel', { vehicleId })}
+            onPress={() => isRefuelEv
+              ? navigation.navigate('NearbyStations', { standalone: true, mode: 'charging' })
+              : navigation.navigate('AddRefuel', { vehicleId })}
             style={{ flex: 1, backgroundColor: colors.primary, padding: 14, borderRadius: 10, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6 }}>
-            <FontAwesome5 name="gas-pump" size={14} color={colors.primaryText} solid />
-            <Text style={{ color: colors.primaryText, fontWeight: '700' }}>{t('vehicles.detail_add_refuel')}</Text>
+            <FontAwesome5 name={isRefuelEv ? 'charging-station' : 'gas-pump'} size={14} color={colors.primaryText} solid />
+            <Text style={{ color: colors.primaryText, fontWeight: '700' }}>
+              {isRefuelEv ? t('home.charging_short') : t('vehicles.detail_add_refuel')}
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => navigation.navigate('AddOdometer', { vehicleId })}

@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, RefreshControl, ActivityIndicator, FlatList,
 } from 'react-native';
@@ -287,6 +287,13 @@ function HealthCard({ vehicle, health, loading, onAddReminder, onCta, history, h
 
   const borderClr = total != null ? scoreColor(total) : colors.border;
 
+  // Rà soát 14/8 (góp ý user: danh sách organ (5-9 mục) luôn hiện hết, lặp lại
+  // MỖI xe - user nhiều xe thì màn Sức khoẻ rất dài) - thu gọn được. Mặc định
+  // MỞ nếu có organ cần chú ý (urgent/warn) - không giấu cảnh báo quan trọng;
+  // mặc định ĐÓNG khi mọi thứ đều ổn (organs.length>0 nhưng needsAttention=false)
+  // vì lúc đó chi tiết từng organ ít giá trị hơn, chỉ cần biết "ổn" là đủ.
+  const [showOrgans, setShowOrgans] = useState(needsAttention);
+
   return (
     <View style={{
       backgroundColor: colors.surface, borderRadius: 14, padding: 16, marginBottom: 14,
@@ -383,7 +390,16 @@ function HealthCard({ vehicle, health, loading, onAddReminder, onCta, history, h
       {organs.length > 0 && (
         <View style={{ marginTop: pillars ? 6 : 0, marginBottom: 4 }}>
           <View style={{ height: 1, backgroundColor: colors.border, marginBottom: 10 }} />
-          {organs.map(o => (
+          <TouchableOpacity
+            onPress={() => setShowOrgans(v => !v)}
+            activeOpacity={0.7}
+            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingBottom: showOrgans ? 8 : 0 }}>
+            <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+              {t('health.organs_title')} ({organs.length})
+            </Text>
+            <FontAwesome5 name={showOrgans ? 'chevron-up' : 'chevron-down'} size={12} color={colors.textSecondary} />
+          </TouchableOpacity>
+          {showOrgans && organs.map(o => (
             <OrganRow key={o.key} organ={o as any} onCta={onCta} />
           ))}
         </View>

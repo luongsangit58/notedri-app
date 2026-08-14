@@ -266,7 +266,13 @@ export default function ProfileScreen() {
           );
         })()}
 
-        {/* Menu items */}
+        {/* Rà soát 14/8 (audit menu: 15 dòng phẳng không phân nhóm, khó quét mắt -
+            VehicleDetailScreen.tsx đã dọn đúng kiểu này trước đây bằng nhãn nhóm
+            nhỏ phía trên từng khối, áp dụng lại đúng pattern đó ở đây). Chia 4
+            nhóm theo Ý NGHĨA: Tài khoản / Ứng dụng & thông báo / Tính năng /
+            Hỗ trợ - không đổi bất kỳ hành vi/điều hướng nào, chỉ thêm nhãn +
+            tách thành các card riêng thay vì 1 card liền mạch. */}
+        <Text style={{ color: colors.textSecondary, fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, marginHorizontal: 16, marginBottom: 8 }}>{t('profile.group_account')}</Text>
         <View style={{ backgroundColor: colors.surface, borderRadius: 14, marginHorizontal: 16, overflow: 'hidden', marginBottom: 16 }}>
           <MenuItem
             icon={<FontAwesome5 name="pen" size={16} color={colors.textSecondary} solid />}
@@ -290,6 +296,10 @@ export default function ProfileScreen() {
             label={t('devices.title')}
             onPress={() => navigation.navigate('Devices')}
           />
+        </View>
+
+        <Text style={{ color: colors.textSecondary, fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, marginHorizontal: 16, marginBottom: 8 }}>{t('profile.group_app')}</Text>
+        <View style={{ backgroundColor: colors.surface, borderRadius: 14, marginHorizontal: 16, overflow: 'hidden', marginBottom: 16 }}>
           {/* Công tắc TOÀN CỤC (30/7, xem obdAutoConnectSettingsStore.ts) - tách
               biệt hẳn với autoConnect bật/tắt theo TỪNG xe ở OBDSetupScreen.
               Tắt ở đây là user chủ động không muốn app tự mời kết nối mỗi lần
@@ -316,6 +326,10 @@ export default function ProfileScreen() {
             label={t('profile.notification_settings')}
             onPress={() => navigation.navigate('NotificationSettings')}
           />
+        </View>
+
+        <Text style={{ color: colors.textSecondary, fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, marginHorizontal: 16, marginBottom: 8 }}>{t('profile.group_features')}</Text>
+        <View style={{ backgroundColor: colors.surface, borderRadius: 14, marginHorizontal: 16, overflow: 'hidden', marginBottom: 16 }}>
           <MenuItem
             icon={<FontAwesome5 name="chart-bar" size={16} color={colors.textSecondary} solid />}
             label={t('profile.reports')}
@@ -331,6 +345,21 @@ export default function ProfileScreen() {
             label={t('profile.premium')}
             onPress={() => navigation.navigate('Premium')}
           />
+          {/* Nori Agent - Phase 1 text chat, đang test (xem docs/nori-agent-plan.md) */}
+          <MenuItem
+            icon={<FontAwesome5 name="robot" size={16} color={colors.textSecondary} solid />}
+            label={t('profile.nori_experimental')}
+            onPress={() => navigation.navigate('NoriChat')}
+          />
+          <MenuItem
+            icon={<FontAwesome5 name="download" size={16} color={colors.textSecondary} solid />}
+            label={t('profile.export')}
+            onPress={() => navigation.navigate('ExportData')}
+          />
+        </View>
+
+        <Text style={{ color: colors.textSecondary, fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, marginHorizontal: 16, marginBottom: 8 }}>{t('profile.group_support')}</Text>
+        <View style={{ backgroundColor: colors.surface, borderRadius: 14, marginHorizontal: 16, overflow: 'hidden', marginBottom: 16 }}>
           <MenuItem
             icon={<FontAwesome5 name="comment-alt" size={16} color={colors.textSecondary} solid />}
             label={t('profile.feedback')}
@@ -344,17 +373,6 @@ export default function ProfileScreen() {
             icon={<FontAwesome5 name="star" size={16} color="#F59E0B" solid />}
             label={t('profile.rate_app')}
             onPress={() => Linking.openURL(PLAY_STORE_URL)}
-          />
-          {/* Nori Agent - Phase 1 text chat, đang test (chưa i18n, xem docs/nori-agent-plan.md) */}
-          <MenuItem
-            icon={<FontAwesome5 name="robot" size={16} color={colors.textSecondary} solid />}
-            label="Nori (thử nghiệm)"
-            onPress={() => navigation.navigate('NoriChat')}
-          />
-          <MenuItem
-            icon={<FontAwesome5 name="download" size={16} color={colors.textSecondary} solid />}
-            label={t('profile.export')}
-            onPress={() => navigation.navigate('ExportData')}
           />
           <MenuItem
             icon={<FontAwesome5 name="info-circle" size={16} color={colors.textSecondary} solid />}

@@ -64,7 +64,6 @@ const vi = {
 
   // Dashboard
   "dashboard.title": "Tổng quan",
-  "dashboard.add_refuel": "Đổ xăng",
   "dashboard.add_odo": "Cập nhật ODO",
   "dashboard.health": "Sức khỏe xe",
   "dashboard.no_vehicle": "Chưa có xe nào. Vào tab Xe để thêm.",
@@ -147,7 +146,7 @@ const vi = {
   "vehicles.detail_service": "Bảo dưỡng",
   "vehicles.rest_toggle": "Xe đang nghỉ",
   "vehicles.rest_toggle_hint": "Tắt cảnh báo ODO và nhắc nhở khi xe không sử dụng",
-  "vehicles.detail_add_refuel": "Đổ xăng",
+  "vehicles.detail_add_refuel": "Đổ xăng/dầu",
 
   // Refuels
   "refuels.title": "Lịch sử đổ xăng",
@@ -232,6 +231,7 @@ const vi = {
 
   // Health
   "health.title": "Kiểm tra sức khỏe xe",
+  "health.organs_title": "Chi tiết từng hạng mục",
   "health.no_vehicles": "Chưa có xe nào",
   "health.no_vehicles_subtitle": "Thêm xe vào NoteDri để xem sức khỏe xe.",
   "health.trend_title": "Xu hướng điểm sức khỏe",
@@ -297,6 +297,11 @@ const vi = {
   "profile.free_plan_desc": "1 xe • Lịch sử 12 tháng",
   "profile.premium_plan": "Premium",
   "profile.premium_plan_desc": "Không giới hạn lịch sử",
+  "profile.group_account": "Tài khoản",
+  "profile.group_app": "Ứng dụng & thông báo",
+  "profile.group_features": "Tính năng",
+  "profile.group_support": "Hỗ trợ",
+  "profile.nori_experimental": "Nori (thử nghiệm)",
   "profile.edit": "Chỉnh sửa hồ sơ",
   "profile.change_password": "Đổi mật khẩu",
   "profile.notifications": "Thông báo",
@@ -391,6 +396,7 @@ const vi = {
   "dossier.title": "Sổ tay xe",
   "dossier.service_history_title": "Lịch sử bảo dưỡng",
   "dossier.service_history_empty": "Chưa có lịch sử bảo dưỡng nào.",
+  "dossier.service_history_show_more": "Xem thêm {{n}} mục",
   "dossier.share": "Chia sẻ sổ tay xe",
 
   // Auth (new)
@@ -921,6 +927,8 @@ const vi = {
   "services.press_plus_add": "Nhấn + để thêm",
   "services.paid_count": "Lần có chi phí",
   "services.garage_desc": "Danh sách câu hỏi nên hỏi kỹ thuật viên",
+  "services.nearby_group_title": "Tìm địa điểm gần đây",
+  "services.legal_group_title": "Pháp lý",
   "services.garage_prev_service": "lần trước - {{month}}",
   "services.garage_ask_tech": "Nên hỏi thợ:",
   "services.garage_footer": "NoteDri không bán dịch vụ. Tất cả câu hỏi đều miễn phí.",
@@ -1244,11 +1252,14 @@ const vi = {
   "home.charging_hint": "Tìm trạm sạc quanh bạn",
   "home.odo_hint": "Ghi số km hiện tại",
   "home.odo_history": "Lịch sử ODO",
+  "home.refuel_history": "Lịch sử đổ xăng/dầu",
   "home.service_title": "Bảo dưỡng",
   "home.service_subtitle": "Ghi lịch sử sửa chữa",
   "home.gps_title": "Hành trình GPS",
   "home.obd_history_title": "Lịch sử OBD2",
   "home.gps_new": "MỚI",
+  "home.obd_card_title": "Kết nối OBD2 với xe",
+  "home.refuel_short": "Đổ xăng/dầu",
   "home.gps_subtitle": "Tự động ghi quãng đường di chuyển",
   "home.stat_this_month": "THÁNG NÀY",
   "home.stat_total": "TỔNG CHI",
@@ -1511,7 +1522,6 @@ const vi = {
   "health.band_check_needed": "Cần kiểm tra",
   "health.pillar_fair": "Khá",
   "health.check_subtitle": "Kiểm tra sức khoẻ {{count}} xe của bạn",
-  "dashboard.add_refuel_hint": "Ghi nhanh, tự động tính toán",
   "dashboard.no_reminders_tap": "Chưa có lời nhắc - nhấn để thêm",
   "dashboard.view_cta": "Xem",
   "dashboard.odo_update_hint": "Nhấn để nhập số ODO mới - giúp tính chính xác hơn",

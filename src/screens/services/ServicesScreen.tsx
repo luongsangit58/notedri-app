@@ -51,6 +51,33 @@ interface ServiceItem {
   dinh_kem_url?: string | null;
 }
 
+// Rà soát 14/8 (góp ý user: hàng dài icon-nhỏ + 2 dòng chữ chiếm nhiều chiều
+// cao, muốn dạng "ô vuông" gọn hơn cho nhóm "tìm địa điểm") - ô icon lớn nổi
+// bật + 1 nhãn ngắn, không kèm mô tả phụ (mô tả dài không hợp bố cục lưới hẹp).
+function GridTile({ icon, label, onPress }: { icon: string; label: string; onPress: () => void }) {
+  const colors = useColors();
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.8}
+      style={{
+        flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8,
+        backgroundColor: colors.primary + '15', borderRadius: 12, paddingVertical: 14, paddingHorizontal: 6,
+        borderWidth: 1, borderColor: colors.primary + '33', minHeight: 88,
+      }}>
+      <View style={{
+        width: 40, height: 40, borderRadius: 20,
+        backgroundColor: colors.primary + '22', alignItems: 'center', justifyContent: 'center',
+      }}>
+        <FontAwesome5 name={icon} size={16} color={colors.primary} solid />
+      </View>
+      <Text numberOfLines={2} style={{ color: colors.primary, fontWeight: '700', fontSize: 12, textAlign: 'center' }}>
+        {label}
+      </Text>
+    </TouchableOpacity>
+  );
+}
+
 function ServiceCard({ item, onPress }: { item: ServiceItem; onPress?: () => void }) {
   const colors = useColors();
   const t = useT();
@@ -179,6 +206,10 @@ export default function ServicesScreen() {
       borderRadius: 10, padding: 12, marginBottom: 8, fontSize: 14,
     },
     chipsContainer: { gap: 8, paddingBottom: 4 },
+    groupLabel: {
+      color: colors.textSecondary, fontSize: 11, fontWeight: '700',
+      textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8,
+    },
     chip: {
       paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20,
       backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
@@ -225,61 +256,28 @@ export default function ServicesScreen() {
         onEndReachedThreshold={0.3}
         ListHeaderComponent={
           <View style={{ paddingBottom: 8 }}>
-            {/* Garage guide quick link */}
-            <TouchableOpacity
-              onPress={() => navigation.navigate('GarageGuide')}
-              style={{
-                flexDirection: 'row', alignItems: 'center', gap: 8,
-                backgroundColor: colors.primary + '15', borderRadius: 10, padding: 12, marginBottom: 12,
-                borderWidth: 1, borderColor: colors.primary + '33',
-              }}>
-              <FontAwesome5 name="suitcase" size={14} color={colors.primary} solid />
-              <View style={{ flex: 1 }}>
-                <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 13 }}>{t('garage_guide.title')}</Text>
-                <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 1 }}>
-                  {t('services.garage_desc')}
-                </Text>
-              </View>
-              <FontAwesome5 name="chevron-right" size={11} color={colors.primary} />
-            </TouchableOpacity>
+            {/* Rà soát 14/8 (góp ý user: 4 hàng dài xếp chồng - Bỏ túi gara/Gara gần
+                đây/Đăng kiểm gần đây/Tra cứu mức phạt - quá nhiều, và mức phạt không
+                cùng nhóm ý nghĩa với 3 mục "tìm địa điểm" kia). Gộp 3 mục tìm địa điểm
+                thành lưới ô vuông gọn hơn, TÁCH RIÊNG "Tra cứu mức phạt" (pháp lý,
+                không phải tìm địa điểm) thành khu vực của chính nó bên dưới. */}
+            <Text style={styles.groupLabel}>{t('services.nearby_group_title')}</Text>
+            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
+              <GridTile
+                icon="suitcase" label={t('garage_guide.title')}
+                onPress={() => navigation.navigate('GarageGuide')}
+              />
+              <GridTile
+                icon="wrench" label={t('nearby_garages.title_garage')}
+                onPress={() => navigation.navigate('NearbyGarages', { mode: 'garage' })}
+              />
+              <GridTile
+                icon="clipboard-check" label={t('nearby_garages.title_dangkiem')}
+                onPress={() => navigation.navigate('NearbyGarages', { mode: 'dangkiem' })}
+              />
+            </View>
 
-            {/* Gara/Đăng kiểm gần đây - cùng nhóm "Gần đây" như bản web (Trạm/Gara/Đăng kiểm). */}
-            <TouchableOpacity
-              onPress={() => navigation.navigate('NearbyGarages', { mode: 'garage' })}
-              style={{
-                flexDirection: 'row', alignItems: 'center', gap: 8,
-                backgroundColor: colors.primary + '15', borderRadius: 10, padding: 12, marginBottom: 8,
-                borderWidth: 1, borderColor: colors.primary + '33',
-              }}>
-              <FontAwesome5 name="wrench" size={14} color={colors.primary} solid />
-              <View style={{ flex: 1 }}>
-                <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 13 }}>{t('nearby_garages.title_garage')}</Text>
-                <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 1 }}>
-                  {t('nearby_garages.empty_subtitle_garage')}
-                </Text>
-              </View>
-              <FontAwesome5 name="chevron-right" size={11} color={colors.primary} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => navigation.navigate('NearbyGarages', { mode: 'dangkiem' })}
-              style={{
-                flexDirection: 'row', alignItems: 'center', gap: 8,
-                backgroundColor: colors.primary + '15', borderRadius: 10, padding: 12, marginBottom: 12,
-                borderWidth: 1, borderColor: colors.primary + '33',
-              }}>
-              <FontAwesome5 name="clipboard-check" size={14} color={colors.primary} solid />
-              <View style={{ flex: 1 }}>
-                <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 13 }}>{t('nearby_garages.title_dangkiem')}</Text>
-                <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 1 }}>
-                  {t('nearby_garages.empty_subtitle_dangkiem')}
-                </Text>
-              </View>
-              <FontAwesome5 name="chevron-right" size={11} color={colors.primary} />
-            </TouchableOpacity>
-
-            {/* Tra cứu mức phạt giao thông - cùng nhóm "an toàn/pháp lý" như gara/đăng kiểm ở
-                trên, API đã có sẵn (`/traffic-fines`) nhưng trước đây app chưa có màn hình nào
-                gọi tới dù web đã có trang công khai tương ứng. */}
+            <Text style={styles.groupLabel}>{t('services.legal_group_title')}</Text>
             <TouchableOpacity
               onPress={() => navigation.navigate('TrafficFines')}
               style={{

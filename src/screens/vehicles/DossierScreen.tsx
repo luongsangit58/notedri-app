@@ -62,6 +62,8 @@ function serviceName(s: ServiceLog): string {
   return s.hang_muc ?? s.service_type ?? '—';
 }
 
+const SERVICE_PREVIEW_COUNT = 5;
+
 const LOAI_KEYS: Record<string, string> = {
   bao_duong: 'services.type_bao_duong',
   sua_chua: 'services.type_sua_chua',
@@ -131,6 +133,11 @@ export default function DossierScreen() {
   const [error, setError] = useState<string | null>(null);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [services, setServices] = useState<ServiceLog[]>([]);
+  // Rà soát 14/8 (audit menu: có thể tải tới 2 trang bảo dưỡng - ~15-40 dòng -
+  // hiện hết luôn trong 1 ScrollView không giới hạn). Chỉ hiện SERVICE_PREVIEW_COUNT
+  // dòng gần nhất trước, "Xem thêm" mới hiện hết - dossier là bản tóm tắt/chia
+  // sẻ, không cần liệt kê hết ngay như 1 màn lịch sử chuyên dụng.
+  const [showAllServices, setShowAllServices] = useState(false);
   const [health, setHealth] = useState<any>(null);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [shareLoading, setShareLoading] = useState(false);
@@ -422,7 +429,7 @@ export default function DossierScreen() {
               {t('dossier.service_history_empty')}
             </Text>
           ) : (
-            services.map((svc, idx) => {
+            (showAllServices ? services : services.slice(0, SERVICE_PREVIEW_COUNT)).map((svc, idx) => {
               const cost = serviceCost(svc);
               const odoVal = serviceOdo(svc);
               const rawType = serviceType(svc);
@@ -461,6 +468,16 @@ export default function DossierScreen() {
                 </TouchableOpacity>
               );
             })
+          )}
+          {!showAllServices && services.length > SERVICE_PREVIEW_COUNT && (
+            <TouchableOpacity
+              onPress={() => setShowAllServices(true)}
+              activeOpacity={0.7}
+              style={{ paddingVertical: 10, alignItems: 'center', borderTopWidth: 1, borderTopColor: colors.border }}>
+              <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '600' }}>
+                {t('dossier.service_history_show_more', { n: services.length - SERVICE_PREVIEW_COUNT })}
+              </Text>
+            </TouchableOpacity>
           )}
         </View>
       </ScrollView>

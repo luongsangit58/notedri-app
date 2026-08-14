@@ -64,7 +64,6 @@ const en = {
 
   // Dashboard
   "dashboard.title": "Dashboard",
-  "dashboard.add_refuel": "Add fuel",
   "dashboard.add_odo": "Update odometer",
   "dashboard.health": "Vehicle health",
   "dashboard.no_vehicle": "No vehicles yet. Go to Vehicles tab to add one.",
@@ -231,6 +230,7 @@ const en = {
 
   // Health
   "health.title": "Vehicle health check",
+  "health.organs_title": "Detail by category",
   "health.no_vehicles": "No vehicles yet",
   "health.no_vehicles_subtitle": "Add a vehicle to see health diagnostics.",
   "health.trend_title": "Health score trend",
@@ -296,6 +296,11 @@ const en = {
   "profile.free_plan_desc": "1 vehicle • 12-month history",
   "profile.premium_plan": "Premium",
   "profile.premium_plan_desc": "Unlimited history",
+  "profile.group_account": "Account",
+  "profile.group_app": "App & notifications",
+  "profile.group_features": "Features",
+  "profile.group_support": "Support",
+  "profile.nori_experimental": "Nori (experimental)",
   "profile.edit": "Edit profile",
   "profile.change_password": "Change password",
   "profile.notifications": "Notifications",
@@ -390,6 +395,7 @@ const en = {
   "dossier.title": "Vehicle notebook",
   "dossier.service_history_title": "Service history",
   "dossier.service_history_empty": "No service records yet.",
+  "dossier.service_history_show_more": "Show {{n}} more",
   "dossier.share": "Share vehicle notebook",
 
   // Auth (new)
@@ -921,6 +927,8 @@ const en = {
   "services.press_plus_add": "Tap + to add",
   "services.paid_count": "Paid records",
   "services.garage_desc": "Questions to ask your mechanic",
+  "services.nearby_group_title": "Find nearby",
+  "services.legal_group_title": "Legal",
   "services.garage_prev_service": "last time - {{month}}",
   "services.garage_ask_tech": "Ask the mechanic:",
   "services.garage_footer": "NoteDri does not sell services. All questions are free.",
@@ -1244,11 +1252,14 @@ const en = {
   "home.charging_hint": "Find charging nearby",
   "home.odo_hint": "Log current km",
   "home.odo_history": "Odometer history",
+  "home.refuel_history": "Refuel history",
   "home.service_title": "Maintenance",
   "home.service_subtitle": "Log repair history",
   "home.gps_title": "GPS trip",
   "home.obd_history_title": "OBD2 history",
   "home.gps_new": "NEW",
+  "home.obd_card_title": "Connect OBD2 to your car",
+  "home.refuel_short": "Fuel up",
   "home.gps_subtitle": "Auto-track your driving distance",
   "home.stat_this_month": "THIS MONTH",
   "home.stat_total": "TOTAL SPENT",
@@ -1505,7 +1516,6 @@ const en = {
   "health.band_check_needed": "Needs check",
   "health.pillar_fair": "Fair",
   "health.check_subtitle": "Health check for your {{count}} vehicles",
-  "dashboard.add_refuel_hint": "Quick log, auto-calculated",
   "dashboard.no_reminders_tap": "No reminders - tap to add",
   "dashboard.view_cta": "View",
   "dashboard.odo_update_hint": "Tap to enter a new odometer - improves accuracy",

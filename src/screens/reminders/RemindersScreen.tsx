@@ -473,6 +473,12 @@ export default function RemindersScreen() {
   const reminders: Reminder[] = flattenReminders(remindersData);
   const reminderMeta = remindersData?.meta ?? null;
   const suggestions: any[] = reminderMeta?.suggestions ?? [];
+  // Rà soát 14/8 (góp ý user: web đã có toggle thu gọn/mở rộng cho "Gợi ý thêm
+  // cho xe này", mặc định ĐÓNG - resources/views/garage/reminders/index.blade.php
+  // dùng thẻ <details>; app trước đây LUÔN mở hết, mỗi mục còn kèm mô tả/chu kỳ
+  // khá dài, xe có nhiều gợi ý (vd 17 mục) sẽ rất dài) - áp dụng đúng pattern đó
+  // cho app: mặc định đóng, hiện số đếm, bấm để mở.
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const canAdd: boolean = reminderMeta?.can_add_reminder ?? true;
   // Mốc "tạm tính" (seed tự tạo) đang chờ user xác nhận trước khi app nhắc.
   const pendingConfirmCount = reminders.filter(
@@ -617,17 +623,31 @@ export default function RemindersScreen() {
           <>
           {suggestions.length > 0 ? (
             <View style={{ paddingTop: 8, paddingBottom: 8 }}>
-              <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 10 }}>
-                {t('reminders.suggest_more')}
-              </Text>
-              {suggestions.map((s: any, i: number) => (
+              <TouchableOpacity
+                onPress={() => setShowSuggestions((v) => !v)}
+                activeOpacity={0.7}
+                style={{
+                  flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+                  paddingVertical: 4,
+                }}>
+                <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                  {t('reminders.suggest_more')} ({suggestions.length})
+                </Text>
+                <FontAwesome5
+                  name={showSuggestions ? 'chevron-up' : 'chevron-down'}
+                  size={12}
+                  color={colors.textSecondary}
+                />
+              </TouchableOpacity>
+              {showSuggestions && suggestions.map((s: any, i: number) => (
                 <TouchableOpacity
                   key={i}
                   disabled={!canAdd}
                   onPress={() => navigation.navigate('AddReminder', { vehicleId: resolvedVehicleId, hang_muc: s.hang_muc, loai: s.loai, interval_km: s.interval_km ?? undefined, interval_thang: s.interval_thang ?? undefined })}
                   style={{
                     flexDirection: 'row', alignItems: 'flex-start', gap: 10,
-                    backgroundColor: colors.surface, borderRadius: 10, padding: 12, marginBottom: 8,
+                    backgroundColor: colors.surface, borderRadius: 10, padding: 12,
+                    marginTop: i === 0 ? 10 : 0, marginBottom: 8,
                     borderWidth: 1, borderColor: colors.border, opacity: canAdd ? 1 : 0.5,
                   }}>
                   <FontAwesome5 name="plus-circle" size={16} color={colors.primary} solid style={{ marginTop: 2 }} />

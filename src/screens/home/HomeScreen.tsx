@@ -595,7 +595,7 @@ export default function HomeScreen() {
                   {obdSession.connected && (
                     <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#22C55E' }} />
                   )}
-                  <Text style={{ color: '#fff', fontSize: 18, fontWeight: '800' }}>{t('obd.setup_title')}</Text>
+                  <Text style={{ color: '#fff', fontSize: 18, fontWeight: '800' }}>{t('home.obd_card_title')}</Text>
                   <View style={{ backgroundColor: '#ffffff33', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 1 }}>
                     <Text style={{ color: '#fff', fontSize: 9, fontWeight: '800' }}>{t('home.gps_new')}</Text>
                   </View>
@@ -672,7 +672,7 @@ export default function HomeScreen() {
                 <FontAwesome5 name={isEv ? 'charging-station' : 'gas-pump'} size={16} color={energyText} solid />
               </View>
               <Text style={{ color: energyText, fontWeight: '800', fontSize: 14 }}>
-                {isEv ? t('home.charging_short') : t('dashboard.add_refuel')}
+                {isEv ? t('home.charging_short') : t('home.refuel_short')}
               </Text>
               <Text style={{ color: energySub, fontSize: 11, marginTop: 2 }}>
                 {isEv ? t('home.charging_hint') : t('home.refuel_subtitle')}
@@ -690,6 +690,21 @@ export default function HomeScreen() {
               <FontAwesome5 name="map-marker-alt" size={9} color={isHybrid ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.65)'} solid />
               <Text style={{ color: isHybrid ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.65)', fontSize: 11, fontWeight: '600' }}>
                 {isHybrid ? t('home.find_station_hybrid') : t('home.find_station')}
+              </Text>
+            </TouchableOpacity>
+            {/* Rà soát 14/8 (audit menu: RefuelsListScreen không có lối vào nào
+                trong app ngoài deep-link từ thông báo web - "màn mồ côi" - trong
+                khi ô ODO cạnh bên đã có sẵn link "Lịch sử ODO" tương tự). Thêm
+                link lịch sử đổ xăng cho đối xứng, tự quản lý chọn xe/trang nên
+                không cần truyền vehicleId. */}
+            <View style={{ height: 1, backgroundColor: isHybrid ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.12)' }} />
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => nav.navigate('RefuelsList')}
+              style={{ paddingHorizontal: 12, paddingVertical: 8, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+              <FontAwesome5 name="history" size={9} color={isHybrid ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.65)'} solid />
+              <Text style={{ color: isHybrid ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.65)', fontSize: 11, fontWeight: '600' }}>
+                {t('home.refuel_history')}
               </Text>
             </TouchableOpacity>
             </>
