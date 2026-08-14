@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
   KeyboardAvoidingView, Platform, Alert, ActivityIndicator, Switch,
@@ -12,7 +12,7 @@ import { maybeShowInterstitialAfterSave } from '../../services/ads/admob';
 import dayjs from 'dayjs';
 import { useVehicles } from '../../hooks/useVehicles';
 import { useSelectedVehicleStore } from '../../store/selectedVehicleStore';
-import { useCreateRefuel } from '../../hooks/useRefuels';
+import { useCreateRefuel, useRefuels } from '../../hooks/useRefuels';
 import { useFuelTypes } from '../../hooks/useFuelTypes';
 import OcrCamera, { ReceiptData } from '../../components/OcrCamera';
 import DatePickerField from '../../components/DatePickerField';
@@ -92,6 +92,27 @@ export default function AddRefuelScreen() {
   const [nearbyLoading, setNearbyLoading] = useState(false);
   // Tracks the last price we auto-filled so we don't override user's manual edits
   const autoFilledPriceRef = useRef<string>('');
+
+  // Rà soát 14/8 (góp ý user: chọn cây xăng chỉ có "Tìm gần đây" - GPS + gọi API
+  // - chứ không có gợi ý nhanh từ các cây xăng ĐÃ TỪNG đổ cho xe này) - tận dụng
+  // luôn trang đầu /refuels (đã có sẵn hook dùng chung với RefuelsListScreen,
+  // không cần API mới) để rút ra vài tên cây xăng gần nhất, khác nhau, không
+  // cần chạm gì cũng thấy ngay, khỏi phải xin quyền vị trí + gọi API chỉ để
+  // chọn lại đúng cây xăng quen thuộc mỗi lần đổ.
+  const { data: recentRefuelsRaw } = useRefuels(vehicleId ?? undefined, 1);
+  const recentStations = useMemo(() => {
+    const list: any[] = Array.isArray(recentRefuelsRaw?.data) ? recentRefuelsRaw.data : [];
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const r of list) {
+      const name = String(r?.cay_xang ?? '').trim();
+      if (!name || seen.has(name)) continue;
+      seen.add(name);
+      out.push(name);
+      if (out.length >= 5) break;
+    }
+    return out;
+  }, [recentRefuelsRaw]);
 
   // Nhận trạm xăng được chọn từ màn "Trạm xăng gần đây"
   useEffect(() => {
@@ -495,6 +516,88 @@ export default function AddRefuelScreen() {
 
           <DatePickerField label={t('refuels.date_label')} value={ngay} onChange={setNgay} />
 
+          {/* Rà soát 14/8 (góp ý user: ô Cây xăng nằm trong "Thêm chi tiết" thu gọn,
+              phải bấm mở ra mới nhập được, bất tiện) - đưa hẳn ra ngoài, luôn hiện
+              sẵn cùng các trường chính, không phải phụ thuộc showDetails nữa. */}
+          <FieldLabel>{t('refuels.station_label')}</FieldLabel>
+          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 4 }}>
+            <TextInput
+              value={cayXang}
+              onChangeText={v => { setCayXang(v); if (!v) setStationsDropdown([]); }}
+              placeholder={t('refuels.station_placeholder')}
+              placeholderTextColor={colors.textSecondary}
+              style={[input, { flex: 1 }]}
+            />
+            <TouchableOpacity
+              onPress={handleFindNearbyInline}
+              disabled={nearbyLoading}
+              style={{
+                flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5,
+                paddingHorizontal: 10, borderRadius: 10, backgroundColor: colors.surface,
+                borderWidth: 1, borderColor: colors.border,
+              }}>
+              {nearbyLoading
+                ? <ActivityIndicator size="small" color={colors.primary} />
+                : <FontAwesome5 name="location-arrow" size={12} color={colors.primary} solid />}
+              <Text style={{ color: colors.primary, fontSize: 11.5, fontWeight: '700' }}>{t('add_refuel.nearby_short')}</Text>
+            </TouchableOpacity>
+          </View>
+          {/* Gợi ý nhanh từ các cây xăng ĐÃ TỪNG đổ cho xe này - hiện sẵn, không cần
+              chạm gì (khác "Tìm gần đây" phải xin quyền vị trí + gọi API). Ẩn khi đang
+              hiện kết quả tìm gần đây để khỏi chồng 2 danh sách cùng lúc. */}
+          {stationsDropdown.length === 0 && recentStations.length > 0 && (
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+              {recentStations.map((name) => (
+                <TouchableOpacity
+                  key={name}
+                  onPress={() => setCayXang(name)}
+                  style={{
+                    flexDirection: 'row', alignItems: 'center', gap: 5,
+                    paddingHorizontal: 10, paddingVertical: 6, borderRadius: 16,
+                    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
+                  }}>
+                  <FontAwesome5 name="history" size={9} color={colors.textSecondary} solid />
+                  <Text style={{ color: colors.text, fontSize: 12, fontWeight: '600' }} numberOfLines={1}>{name}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+          {stationsDropdown.length > 0 && (
+            <View style={{
+              backgroundColor: colors.surface, borderRadius: 10, marginBottom: 8,
+              borderWidth: 1, borderColor: colors.border, overflow: 'hidden',
+            }}>
+              {stationsDropdown.map((s, i) => {
+                const dist = s.dist != null
+                  ? (s.dist >= 1000 ? `${(s.dist / 1000).toFixed(1)}km` : `${s.dist}m`)
+                  : null;
+                return (
+                  <TouchableOpacity
+                    key={i}
+                    onPress={() => { setCayXang(s.name ?? ''); setStationsDropdown([]); }}
+                    style={{
+                      paddingHorizontal: 14, paddingVertical: 10,
+                      borderBottomWidth: i < stationsDropdown.length - 1 ? 1 : 0,
+                      borderBottomColor: colors.border,
+                    }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <FontAwesome5 name="gas-pump" size={11} color={colors.textSecondary} solid />
+                      <Text style={{ color: colors.text, fontWeight: '600', flex: 1, fontSize: 13 }} numberOfLines={1}>
+                        {s.name}
+                      </Text>
+                      {dist && <Text style={{ color: colors.textSecondary, fontSize: 12 }}>{dist}</Text>}
+                    </View>
+                    {s.addr ? (
+                      <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 2, marginLeft: 17 }} numberOfLines={1}>
+                        {s.addr}
+                      </Text>
+                    ) : null}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
+
           <TouchableOpacity
             onPress={() => setShowDetails((v) => !v)}
             style={{
@@ -511,65 +614,6 @@ export default function AddRefuelScreen() {
 
           {showDetails && (
             <View style={{ marginBottom: 20 }}>
-              <FieldLabel>{t('refuels.station_label')}</FieldLabel>
-              <View style={{ flexDirection: 'row', gap: 8, marginBottom: 4 }}>
-                <TextInput
-                  value={cayXang}
-                  onChangeText={v => { setCayXang(v); if (!v) setStationsDropdown([]); }}
-                  placeholder={t('refuels.station_placeholder')}
-                  placeholderTextColor={colors.textSecondary}
-                  style={[input, { flex: 1 }]}
-                />
-                <TouchableOpacity
-                  onPress={handleFindNearbyInline}
-                  disabled={nearbyLoading}
-                  style={{
-                    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5,
-                    paddingHorizontal: 10, borderRadius: 10, backgroundColor: colors.surface,
-                    borderWidth: 1, borderColor: colors.border,
-                  }}>
-                  {nearbyLoading
-                    ? <ActivityIndicator size="small" color={colors.primary} />
-                    : <FontAwesome5 name="location-arrow" size={12} color={colors.primary} solid />}
-                  <Text style={{ color: colors.primary, fontSize: 11.5, fontWeight: '700' }}>{t('add_refuel.nearby_short')}</Text>
-                </TouchableOpacity>
-              </View>
-              {stationsDropdown.length > 0 && (
-                <View style={{
-                  backgroundColor: colors.surface, borderRadius: 10, marginBottom: 8,
-                  borderWidth: 1, borderColor: colors.border, overflow: 'hidden',
-                }}>
-                  {stationsDropdown.map((s, i) => {
-                    const dist = s.dist != null
-                      ? (s.dist >= 1000 ? `${(s.dist / 1000).toFixed(1)}km` : `${s.dist}m`)
-                      : null;
-                    return (
-                      <TouchableOpacity
-                        key={i}
-                        onPress={() => { setCayXang(s.name ?? ''); setStationsDropdown([]); }}
-                        style={{
-                          paddingHorizontal: 14, paddingVertical: 10,
-                          borderBottomWidth: i < stationsDropdown.length - 1 ? 1 : 0,
-                          borderBottomColor: colors.border,
-                        }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                          <FontAwesome5 name="gas-pump" size={11} color={colors.textSecondary} solid />
-                          <Text style={{ color: colors.text, fontWeight: '600', flex: 1, fontSize: 13 }} numberOfLines={1}>
-                            {s.name}
-                          </Text>
-                          {dist && <Text style={{ color: colors.textSecondary, fontSize: 12 }}>{dist}</Text>}
-                        </View>
-                        {s.addr ? (
-                          <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 2, marginLeft: 17 }} numberOfLines={1}>
-                            {s.addr}
-                          </Text>
-                        ) : null}
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              )}
-
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.surface, borderRadius: 10, padding: 14, marginBottom: 8 }}>
                 <View>
                   <Text style={{ color: colors.text, fontWeight: '600' }}>{t('refuels.full_tank_label')}</Text>
