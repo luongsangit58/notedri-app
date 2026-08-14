@@ -30,6 +30,11 @@ import { useSelectedVehicleStore } from '../../store/selectedVehicleStore';
 import client from '../../api/client';
 
 const HOME_HIGHLIGHT_DISMISS_KEY = 'home_highlight_dismissed_v1';
+// Rà soát 14/8 (góp ý user: box "Gợi ý hôm nay" luôn hiện, chiếm 1 phần màn hình) -
+// nhớ trạng thái thu gọn/mở rộng QUA CÁC LẦN MỞ APP (không chỉ tắt riêng lần này) -
+// mặc định mở (giữ giá trị hiện có cho user chưa từng đụng vào) để không giấu mất
+// thông tin của user mới, chỉ thu gọn khi user CHỦ ĐỘNG bấm.
+const HOME_SUGGESTIONS_COLLAPSED_KEY = 'home_suggestions_collapsed_v1';
 
 function VehicleSelector({ vehicles, selectedId, onSelect }: {
   vehicles: any[]; selectedId?: number; onSelect: (id: number) => void;
@@ -315,6 +320,22 @@ export default function HomeScreen() {
     const entry = { id: topHighlight.id, remaining_days: topHighlight.remaining_days };
     setDismissedHighlight(entry);
     AsyncStorage.setItem(HOME_HIGHLIGHT_DISMISS_KEY, JSON.stringify(entry)).catch(() => {});
+  }
+
+  // Thu gọn/mở rộng box "Gợi ý hôm nay" - nhớ lựa chọn qua các lần mở app sau
+  // (xem giải thích HOME_SUGGESTIONS_COLLAPSED_KEY ở trên).
+  const [suggestionsCollapsed, setSuggestionsCollapsed] = useState(false);
+  useEffect(() => {
+    AsyncStorage.getItem(HOME_SUGGESTIONS_COLLAPSED_KEY).then((v) => {
+      if (v === '1') setSuggestionsCollapsed(true);
+    });
+  }, []);
+  function toggleSuggestionsCollapsed() {
+    setSuggestionsCollapsed((prev) => {
+      const next = !prev;
+      AsyncStorage.setItem(HOME_SUGGESTIONS_COLLAPSED_KEY, next ? '1' : '0').catch(() => {});
+      return next;
+    });
   }
 
   const onRefresh = () => { refetchVehicles(); refetchRem(); refetchDash(); };
@@ -792,10 +813,23 @@ export default function HomeScreen() {
             lại chỉ hiển thị thông tin (không có hành động bấm). */}
         {suggestions.length > 0 && (
           <View style={{ backgroundColor: colors.surface, borderRadius: 14, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: colors.border }}>
-            <Text style={{ color: colors.text, fontWeight: '700', fontSize: 15, marginBottom: 10 }}>
-              {t('home.suggestions_title')}
-            </Text>
-            {suggestions.map((sug: any, i: number) => {
+            <TouchableOpacity
+              onPress={toggleSuggestionsCollapsed}
+              activeOpacity={0.7}
+              style={{
+                flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+                marginBottom: suggestionsCollapsed ? 0 : 10,
+              }}>
+              <Text style={{ color: colors.text, fontWeight: '700', fontSize: 15 }}>
+                {t('home.suggestions_title')}
+              </Text>
+              <FontAwesome5
+                name={suggestionsCollapsed ? 'chevron-down' : 'chevron-up'}
+                size={13}
+                color={colors.textSecondary}
+              />
+            </TouchableOpacity>
+            {!suggestionsCollapsed && suggestions.map((sug: any, i: number) => {
               const severity: string = sug.severity ?? 'info';
               const severityColor = severity === 'urgent' ? colors.error
                 : severity === 'warn' ? colors.warning

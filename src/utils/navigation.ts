@@ -32,7 +32,21 @@ export function navigateFromUrl(navigation: any, url: string, vehicleId?: number
   } else if (url.includes('/health')) {
     navigation.navigate('Health', vid ? { vehicleId: vid } : undefined);
   } else if (url.includes('/reminders')) {
-    navigation.navigate('Management', vid ? { tab: 0, vehicleId: vid, _ts: Date.now() } : { tab: 0, _ts: Date.now() });
+    // Rà soát 14/8 (user báo: tap thông báo "Đăng kiểm còn N ngày" trong app
+    // không chuyển trang gì cả, dù web bấm vào vẫn qua đúng trang Lời nhắc) -
+    // "Management" chỉ tồn tại làm Tab.Screen NẰM TRONG Tab.Navigator lồng
+    // bên trong "Tabs" (AppNavigator.tsx), không phải route riêng của
+    // RootStack. Hành động navigate() của React Navigation chỉ dò NGƯỢC LÊN
+    // navigator cha, không bao giờ dò SANG NGANG/XUỐNG 1 nhánh lồng không
+    // liên quan - gọi thẳng navigate('Management', ...) từ 1 màn hình đứng
+    // NGANG HÀNG với "Tabs" (như NotificationsScreen, HealthScreen - đều là
+    // RootStack.Screen top-level) bị RootStack "nuốt" âm thầm (log warning
+    // dev-only "action not handled", không hiện gì ở bản release) vì
+    // RootStack không có "Management" trong routeNames của chính nó. Dùng cú
+    // pháp lồng (navigate vào "Tabs" trước, chỉ định screen/params bên trong)
+    // - hoạt động đúng dù gọi từ bên trong hay bên ngoài "Tabs".
+    const managementParams = vid ? { tab: 0, vehicleId: vid, _ts: Date.now() } : { tab: 0, _ts: Date.now() };
+    navigation.navigate('Tabs', { screen: 'Management', params: managementParams });
   } else if (url.includes('/odometer')) {
     navigation.navigate('OdometerList', vid ? { vehicleId: vid } : undefined);
   } else if (url.includes('/services/create') || url.includes('services.create')) {

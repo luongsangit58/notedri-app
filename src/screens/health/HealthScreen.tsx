@@ -134,13 +134,20 @@ function ctaScreenForKey(key?: string): string {
   if (key === 'chi_phi') return 'Stats';
   return 'Management'; // các organ nhắc nhở (bao_duong, giay_to, dang_kiem, bao_hiem...) → tab Nhắc nhở
 }
+// Rà soát 14/8: "Management"/"Stats" chỉ tồn tại làm Tab.Screen NẰM TRONG
+// Tab.Navigator lồng bên trong "Tabs" (AppNavigator.tsx) - không phải route
+// riêng của RootStack. HealthScreen là RootStack.Screen đứng NGANG HÀNG với
+// "Tabs", nên navigate() thẳng vào 2 tên này bị RootStack "nuốt" âm thầm
+// (dò route ngược lên navigator cha, không dò ngang sang nhánh lồng không
+// liên quan) - đúng bug đã gặp với thông báo "Đăng kiểm" (xem navigation.ts).
+// Dùng cú pháp lồng, hoạt động đúng dù gọi từ trong hay ngoài "Tabs".
 function navigateToCtaScreen(navigation: any, screen: string, vehicleId: number): void {
   if (screen === 'Management') {
-    navigation.navigate('Management', { tab: 0, vehicleId, _ts: Date.now() });
+    navigation.navigate('Tabs', { screen: 'Management', params: { tab: 0, vehicleId, _ts: Date.now() } });
   } else if (screen === 'Stats') {
     // chi_phi (cost) organ -> tab 1 = ReportsScreen, nơi có dữ liệu chi phí. Không
     // truyền tab sẽ rơi về mặc định tab 0 (Timeline), không phải nơi CTA hứa hẹn.
-    navigation.navigate('Stats', { tab: 1, vehicleId });
+    navigation.navigate('Tabs', { screen: 'Stats', params: { tab: 1, vehicleId } });
   } else {
     navigation.navigate(screen, { vehicleId });
   }

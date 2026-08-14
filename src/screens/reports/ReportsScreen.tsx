@@ -96,7 +96,7 @@ function VehicleChips({
       horizontal
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={{ gap: 8, paddingHorizontal: 16 }}
-      style={{ marginBottom: 16 }}>
+      style={{ marginBottom: 10 }}>
       {vehicles.map((v: any) => {
         const active = v.id === selectedId;
         return (
@@ -143,7 +143,7 @@ function YearChips({
       horizontal
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={{ gap: 8, paddingHorizontal: 16 }}
-      style={{ marginBottom: 16 }}>
+      style={{ marginBottom: 10 }}>
       {years.map((y) => {
         const active = y === selectedYear;
         return (
@@ -183,13 +183,17 @@ function PeriodTypeChips({
 }) {
   const colors = useColors();
   const t = useT();
+  // Rà soát 14/8 (góp ý user: thứ tự Năm/Tháng/Quý không hợp lý) - sắp theo
+  // ĐỘ CHI TIẾT tăng dần trái->phải (Tháng -> Quý -> Năm), đúng quy ước phổ
+  // biến (hầu hết app tài chính đọc từ đơn vị nhỏ tới lớn), thay vì nhảy từ
+  // Năm (lớn nhất) xuống Tháng rồi lại Quý.
   const options: { key: ReportPeriodType; label: string }[] = [
-    { key: 'year', label: t('reports.period_year') },
     { key: 'month', label: t('reports.period_month') },
     { key: 'quarter', label: t('reports.period_quarter') },
+    { key: 'year', label: t('reports.period_year') },
   ];
   return (
-    <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 16, marginBottom: 12 }}>
+    <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 16, marginBottom: 8 }}>
       {options.map((opt) => {
         const active = opt.key === value;
         return (
@@ -984,7 +988,16 @@ function ReportContent({
 }
 
 /* ─── screen ─── */
-export default function ReportsScreen() {
+// Rà soát 14/8 (góp ý user: khối cố định phía trên - tiêu đề + chip xe + chip
+// kỳ + chip năm - quá dày, ép phần nội dung báo cáo bên dưới bị ngắn lại):
+// màn này dùng ở 2 nơi khác nhau - (1) đứng riêng, push qua route "Reports"
+// (AppNavigator.tsx headerShown:true, đã có sẵn header gốc "← Báo cáo"), và
+// (2) nhúng làm 1 sub-tab bên trong ThongKeScreen (KHÔNG có header gốc nào).
+// Khối tiêu đề trong file này trước đây LUÔN hiện, lặp lại y hệt header gốc ở
+// trường hợp (1) - tốn ~70px chiều cao vô ích. Thêm prop `embedded` (đúng quy
+// ước đã dùng ở GpsTripsScreen.tsx) - chỉ hiện tiêu đề riêng khi nhúng (không
+// có header gốc để dựa vào), ẩn hẳn khi đứng riêng (header gốc đã đủ).
+export default function ReportsScreen({ embedded }: { embedded?: boolean } = {}) {
   const colors = useColors();
   const t = useT();
   const navigation = useNavigation<any>();
@@ -1020,24 +1033,29 @@ export default function ReportsScreen() {
       style={{ flex: 1, backgroundColor: colors.background }}
       edges={['bottom']}>
       <AppBgPattern />
-      {/* header */}
-      <View
-        style={{
-          paddingHorizontal: 16,
-          paddingTop: 16,
-          paddingBottom: 12,
-        }}>
-        <Text style={{ color: colors.text, fontWeight: '800', fontSize: 20 }}>
-          {t('reports.title')}
-        </Text>
-        <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 2 }}>
-          {t('reports.subtitle')}
-        </Text>
-      </View>
+      {/* header - chỉ hiện khi nhúng (không có header gốc "← Báo cáo" để dựa
+          vào); đứng riêng thì header gốc đã đủ, không lặp lại tiêu đề. */}
+      {embedded && (
+        <View
+          style={{
+            paddingHorizontal: 16,
+            paddingTop: 16,
+            paddingBottom: 8,
+          }}>
+          <Text style={{ color: colors.text, fontWeight: '800', fontSize: 20 }}>
+            {t('reports.title')}
+          </Text>
+          <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 2 }}>
+            {t('reports.subtitle')}
+          </Text>
+        </View>
+      )}
 
-      {/* vehicle + year chips — luôn chiếm chiều cao cố định, không gây layout shift */}
+      {/* vehicle + year chips — luôn chiếm chiều cao cố định, không gây layout shift.
+          Đứng riêng (không có khối tiêu đề ở trên) cần chút đệm trên để không dính
+          sát mép header gốc. */}
       {vehicles.length > 0 ? (
-        <View>
+        <View style={!embedded ? { paddingTop: 12 } : undefined}>
           <VehicleChips
             vehicles={vehicles}
             selectedId={effectiveId}
