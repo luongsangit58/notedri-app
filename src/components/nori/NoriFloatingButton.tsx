@@ -228,6 +228,19 @@ export default function NoriFloatingButton() {
 
   if (!token || !vehicleId) return null;
 
+  // Rà soát 14/8 (góp ý user: sau khi thu nhỏ "tay cầm" lồi ra cho gọn mắt, lại
+  // khó chạm/kéo ra lại vì vùng bắt chạm trước giờ vẫn đi đúng theo kích thước
+  // hình vẽ - chỉ đúng DOCK_PEEK px thật sự nằm trên màn hình). Tách riêng vùng
+  // NHÌN (nhỏ gọn, giữ nguyên) khỏi vùng CHẠM (rộng hơn hẳn, vô hình) bằng
+  // hitSlop - mở rộng đúng về phía CÒN NẰM TRONG MÀN HÌNH (trái nếu đang gạt
+  // sát cạnh phải, phải nếu đang gạt sát cạnh trái) - mở rộng ra phía ngoài màn
+  // hình vô nghĩa vì không có điểm chạm nào ở đó để bắt.
+  const dockHitSlop = dockUi.docked
+    ? (dockUi.side === 'left'
+        ? { top: 16, bottom: 16, left: 4, right: 28 }
+        : { top: 16, bottom: 16, left: 28, right: 4 })
+    : { top: 8, bottom: 8, left: 8, right: 8 };
+
   return (
     <>
       {/* Ẩn icon khi ĐANG Ở TRONG NoriChatScreen (bấm icon lúc đó thừa, dễ rối - bug thật bắt
@@ -236,6 +249,7 @@ export default function NoriFloatingButton() {
       {activeRouteName !== 'NoriChat' && !showPopup && (
         <Animated.View
           {...panResponder.panHandlers}
+          hitSlop={dockHitSlop}
           style={{
             position: 'absolute',
             transform: pos.getTranslateTransform(),

@@ -20,11 +20,15 @@ export default function OnboardingScreen({ navigation }: { navigation: any }) {
   const listRef = useRef<FlatList<Slide>>(null);
   const [index, setIndex] = useState(0);
 
-  // OBD2 mở màn (định vị chủ đạo của NoteDri), rồi mới tới các tiện ích khác
+  // OBD2 + Nori AI Agent mở màn (rà soát 14/8: 2 tính năng lớn nhất, khác biệt
+  // nhất của NoteDri - cùng kết luận đã áp dụng cho trang Premium cùng ngày),
+  // rồi mới tới các tiện ích khác. Slide 3 trước đây là "Sức khỏe xe & điểm
+  // lái" - vẫn là 1 lát cắt khác của chính OBD2 (trùng lặp với slide 1-2) và
+  // bỏ sót hẳn Nori, trợ lý AI riêng của app chưa hề xuất hiện trong onboarding.
   const slides: Slide[] = [
     { icon: 'microchip',   title: t('onboarding.s1_title'), desc: t('onboarding.s1_desc') },
     { icon: 'stethoscope', title: t('onboarding.s2_title'), desc: t('onboarding.s2_desc') },
-    { icon: 'heartbeat',   title: t('onboarding.s3_title'), desc: t('onboarding.s3_desc') },
+    { icon: 'robot',       title: t('onboarding.s3_title'), desc: t('onboarding.s3_desc') },
     { icon: 'route',       title: t('onboarding.s4_title'), desc: t('onboarding.s4_desc') },
     { icon: 'bolt',        title: t('onboarding.s5_title'), desc: t('onboarding.s5_desc') },
   ];
