@@ -37,21 +37,37 @@ export default function PremiumScreen() {
 
   const [redeemCode, setRedeemCode] = useState('');
 
+  // Rà soát 14/8 (góp ý user: rà lại cho khớp thực tế gói Premium + web) - đối
+  // chiếu config/plans.php (backend, nguồn xác thực duy nhất): "Tìm gần đây"
+  // (xăng/sạc/gara/đăng kiểm) đã BỎ GATE Premium từ lâu (miễn phí cho mọi
+  // user) - chuyển xuống danh sách Free thay vì quảng cáo nhầm thành quyền
+  // lợi Premium. Free cũng giới hạn RÕ 1 xe / tối đa 4 lời nhắc / chỉ xem báo
+  // cáo NĂM HIỆN TẠI (không phải "12 tháng gần nhất" như bản cũ - 2 cách tính
+  // khác nhau, vd tháng 1 "năm hiện tại" chỉ có ~1 tháng dữ liệu).
   const FREE_FEATURES = [
     t('premium.free_feature_2_vehicles'),
-    t('premium.free_feature_12months'),
+    t('premium.free_feature_current_year'),
     t('premium.free_feature_basic_reports'),
     t('premium.free_feature_reminders'),
     t('premium.free_feature_dossier'),
+    t('premium.free_feature_nearby'),
   ];
 
+  // Rà soát 14/8: bản cũ hoàn toàn không nhắc tới OBD2 (kết nối cảm biến/chẩn
+  // đoán ECU qua Bluetooth) và Nori AI Agent - 2 tính năng Premium ĐẮT GIÁ và
+  // khác biệt nhất của app (OBD2 chặn cứng ở OBDSetupScreen, Nori chặn cứng ở
+  // AiNoriController::chat() phía backend), lại chỉ liệt kê toàn "không giới
+  // hạn X" chung chung. Đưa 2 tính năng này lên ĐẦU danh sách - đúng chiến
+  // lược "dẫn bằng lợi ích cụ thể/hữu hình trước, giới hạn định lượng sau".
   const PREMIUM_FEATURES = [
+    { icon: 'microchip',        text: t('premium.feature_obd2') },
+    { icon: 'robot',            text: t('premium.feature_nori_agent') },
     { icon: 'crown',            text: t('premium.feature_unlimited_vehicles') },
     { icon: 'history',          text: t('premium.feature_unlimited_history') },
-    { icon: 'chart-line',       text: t('premium.feature_all_year_reports') },
-    { icon: 'search-location',  text: t('premium.feature_nearby_stations') },
+    { icon: 'bell',             text: t('premium.feature_unlimited_reminders') },
     { icon: 'envelope',         text: t('premium.feature_email_reminders') },
     { icon: 'file-export',      text: t('premium.feature_export') },
+    { icon: 'palette',          text: t('premium.feature_dashboard_styles') },
   ];
 
   const { data, isLoading, refetch, isFetching } = useQuery({
@@ -91,7 +107,10 @@ export default function PremiumScreen() {
   const canRequest: boolean = data?.can_request ?? false;
   const requestStatus: string | null = data?.request_status ?? null;
   const trialUsed: boolean = data?.trial_used ?? false;
-  const trialDays: number = data?.trial_days ?? 14;
+  // Rà soát 14/8: fallback khớp config/plans.php ("trial_days" => 30) thay vì
+  // 14 - chỉ dùng khi API không trả field này (fallback phòng hờ, không phải
+  // giá trị thật đang áp dụng).
+  const trialDays: number = data?.trial_days ?? 30;
   const planExpiresAt: string | null = data?.plan_expires_at ?? null;
 
   function statusLabel(s?: string | null): string {
