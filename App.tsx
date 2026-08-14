@@ -45,7 +45,15 @@ async function tryAutoArmGpsTracking(): Promise<void> {
     const defaultVehicle = vehicles.find((v) => v.is_default) ?? vehicles[0];
     if (!defaultVehicle?.id) return;
 
-    await autoArmIfReady(defaultVehicle.id);
+    // Rà soát 2026-08-14 (đào sâu case đa xe): đây là lối arm DUY NHẤT tự đoán xe
+    // (theo "mặc định"/xe đầu tiên) mà không có tín hiệu phần cứng/thao tác user
+    // nào xác nhận - tài khoản có >=2 xe thì guess này có thể sai (user sắp lái
+    // xe KHÁC, không phải xe mặc định). Đánh dấu guessed để GpsTripTracker biết
+    // KHÔNG được âm thầm giữ vehicleId này qua 1 lần dừng/tự finalize nếu không
+    // có gì xác nhận lại (xem isVehicleClaimConfirmed()) - tránh ghi nhầm quãng
+    // đường của xe khác vào xe được đoán. Tài khoản chỉ 1 xe thì không có gì để
+    // đoán sai -> vẫn tin tưởng như cũ.
+    await autoArmIfReady(defaultVehicle.id, { guessed: vehicles.length > 1 });
     // Không hiện Alert nhắc bật tự động ghi hành trình khi thiếu quyền: dễ chồng lấn
     // với các dialog xin quyền khác (thông báo, vị trí...) xuất hiện ngay sau login.
   } catch {
@@ -152,12 +160,9 @@ function AppLoader({ children }: { children: React.ReactNode }) {
       if (data?.type === 'dtc_alert' && data.vehicleId && navigationRef.isReady()) {
         navigationRef.navigate('ObdReport', { vehicleId: data.vehicleId });
       }
-      // Chạm thông báo "đã lưu hành trình"/"vẫn đang ghi" (ngắt OBD2) -> mở thẳng
-      // màn Hành trình GPS của đúng xe để xem/kiểm soát (Tạm dừng/Dừng theo dõi).
-      if (
-        (data?.type === 'gps_trip_saved' || data?.type === 'gps_trip_still_recording')
-        && data.vehicleId && navigationRef.isReady()
-      ) {
+      // Chạm thông báo "đã lưu hành trình" (ngắt OBD2) -> mở thẳng màn Hành
+      // trình GPS của đúng xe để xem/kiểm soát (Tạm dừng/Dừng theo dõi).
+      if (data?.type === 'gps_trip_saved' && data.vehicleId && navigationRef.isReady()) {
         navigationRef.navigate('GpsTrips', { vehicleId: data.vehicleId });
       }
     });

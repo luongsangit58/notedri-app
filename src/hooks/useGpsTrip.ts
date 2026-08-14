@@ -15,6 +15,7 @@ import {
   hasRecordableTrip,
   checkInterruptedTrip,
   resumeInterruptedTrip,
+  renewTrackingLock,
   GpsTripState,
   GpsTripSummary,
   RoutePoint,
@@ -72,9 +73,7 @@ export function useGpsTripState() {
     // Gia hạn lock khi user mở lại app (heartbeat thay thế background interval)
     const [s, active] = await Promise.all([getTripState(), isTrackingActive()]);
     if (active && s.vehicleId) {
-      getDeviceId().then((deviceId) =>
-        gpsTripsApi.trackingLock.renew(s.vehicleId!, deviceId).catch(() => {}),
-      );
+      getDeviceId().then((deviceId) => renewTrackingLock(s.vehicleId!, deviceId));
     }
     // Sau khi maybeAutoShutdownStale() xử lý, kiểm tra có trip bị gián đoạn cần resume
     const info = await checkInterruptedTrip();

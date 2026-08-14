@@ -20,7 +20,7 @@ import { useObdConnection } from '../../hooks/useObd';
 import { useObdAutoConnectSettingsStore } from '../../store/obdAutoConnectSettingsStore';
 import { bleService, LinkQuality } from '../../services/obd/BleService';
 import { requestKeepAlivePermissions, startObdKeepAlive } from '../../services/obd/obdKeepAliveService';
-import { getReadiness, requestPermissionsAndStart } from '../../services/gps/GpsTripTracker';
+import { getReadiness, requestPermissionsAndStart, maybeAutoShutdownStale } from '../../services/gps/GpsTripTracker';
 import { isNfcSupported } from '../../services/nfc/NfcService';
 import AppBgPattern from '../../components/AppBgPattern';
 import { useColors } from '../../utils/theme';
@@ -289,6 +289,12 @@ export default function OBDDashboardScreen() {
     const granted = await requestKeepAlivePermissions();
     if (granted) {
       await startObdKeepAlive().then((s) => bleService.logDiagnostic('#keepalive', s));
+      // Dọn chuyến mồ côi từ phiên trước (process bị kill giữa chừng) TRƯỚC khi
+      // start - nếu không, requestPermissionsAndStart() chỉ reset state khi đang
+      // 'idle', gặp state cũ không-idle sẽ GIỮ NGUYÊN và ghi đè lên chính chuyến
+      // đó, nối 2 chuyến cách nhau nhiều giờ thành 1 (cùng lớp bug autoArmIfReady()
+      // đã vá ở rà soát 27/7 - đường vào này lại không đi qua autoArmIfReady()).
+      await maybeAutoShutdownStale().catch(() => {});
       await requestPermissionsAndStart(vehicleId, { skipDisclosure: true }).catch(() => {});
     }
     await refreshGpsReadiness();

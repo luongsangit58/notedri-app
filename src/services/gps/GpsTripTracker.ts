@@ -8,6 +8,7 @@ import { gpsTripsApi } from '../../api/gpsTrips';
 import { getDeviceId } from '../../utils/deviceId';
 import { useI18nStore } from '../../i18n';
 import { PermissionManager } from '../permissions/PermissionManager';
+import { useObdSessionStore } from '../../store/obdSessionStore';
 
 export const GPS_TASK_NAME = 'GPS_TRIP_TRACKING';
 export const RECOVERY_TASK_NAME = 'GPS_TRIP_RECOVERY';
@@ -57,6 +58,14 @@ export type GpsTripState = {
   lastLat: number | null;
   lastLng: number | null;
   lastTs: number | null;
+  // Mốc tham chiếu RIÊNG cho tính quãng đường, chỉ cập nhật khi fix đủ chính xác
+  // (goodFix). Tách khỏi lastLat/lastLng (vốn cập nhật mỗi lần, kể cả fix xấu,
+  // để phục vụ diagnostics/tốc độ) - nếu dùng chung, 1 fix xấu (nhà xe/hầm) làm
+  // lastLat/lastLng lệch, rồi fix tốt kế tiếp tính đoạn khổng lồ so với điểm lệch
+  // đó và bị nhánh "mất tín hiệu" (dưới) cộng nhầm nguyên khối vào distanceKm.
+  lastGoodLat: number | null;
+  lastGoodLng: number | null;
+  lastGoodTs: number | null;
   speedStartTs: number | null;   // when we first saw speed > threshold
   idleStartTs: number | null;    // when speed dropped below threshold
   // Diagnostics surfaced to the UI so the user can see GPS is alive
@@ -67,6 +76,14 @@ export type GpsTripState = {
   hadGap: boolean;               // chuyến có đoạn mất tín hiệu được ước lượng
   paused: boolean;               // user TẠM DỪNG ghi -> bỏ qua quãng đường/điểm cho tới khi tiếp tục
   lastLockRenewTs: number | null; // timestamp lần cuối gia hạn GPS tracking lock
+  // Rà soát 2026-08-14 (user hỏi: tài khoản nhiều xe, ngắt OBD2/dừng chuyến xe A
+  // rồi lái NGAY xe B - có bị ghi nhầm quãng đường xe B vào xe A không?): true
+  // khi vehicleId ở trên là ĐOÁN (vd App.tsx tự bật theo "xe mặc định" lúc mở
+  // app, không có tín hiệu phần cứng nào xác nhận) thay vì XÁC NHẬN (OBD2 đang
+  // connect đúng xe này, hoặc user tự tay chọn/bấm Bắt đầu). Dùng ở mọi nhánh tự
+  // finalize (không phải user chủ động dừng) để quyết định có an toàn giữ
+  // vehicleId + để service sống tiếp hay không - xem isVehicleClaimConfirmed().
+  vehicleGuessed: boolean;
 };
 
 export type GpsTripSummary = {
@@ -95,6 +112,9 @@ const defaultState = (): GpsTripState => ({
   lastLat: null,
   lastLng: null,
   lastTs: null,
+  lastGoodLat: null,
+  lastGoodLng: null,
+  lastGoodTs: null,
   speedStartTs: null,
   idleStartTs: null,
   lastAccuracy: null,
@@ -104,6 +124,7 @@ const defaultState = (): GpsTripState => ({
   hadGap: false,
   paused: false,
   lastLockRenewTs: null,
+  vehicleGuessed: false,
 });
 
 async function readState(): Promise<GpsTripState> {
@@ -155,6 +176,22 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): nu
     Math.sin(dLat / 2) ** 2 +
     Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+/**
+ * An toàn để GIỮ vehicleId hiện tại + để service tiếp tục sống (tự bắt chuyến
+ * kế tiếp theo tốc độ) khi 1 chuyến tự finalize (không phải user chủ động dừng)?
+ * Chỉ an toàn khi KHÔNG phải đoán (vehicleGuessed=false - vd user tự bấm Bắt đầu,
+ * hoặc arm qua OBD2 vừa connect, đều là tín hiệu đáng tin), HOẶC OBD2 đang
+ * connect ĐÚNG xe này ngay lúc kiểm tra (tín hiệu phần cứng ghi đè được cả 1 lần
+ * đoán trước đó). Nếu không, phải xoá vehicleId (đợi 1 sự kiện arm mới, đáng tin
+ * hơn) - tránh chuyến TIẾP THEO (có thể là 1 xe khác hoàn toàn) bị âm thầm ghi
+ * nhầm vào xe này.
+ */
+function isVehicleClaimConfirmed(state: GpsTripState): boolean {
+  if (!state.vehicleGuessed) return true;
+  const obd = useObdSessionStore.getState();
+  return obd.connected && obd.vehicleId === state.vehicleId;
 }
 
 async function finalizeTrip(
@@ -277,8 +314,10 @@ async function handleLocation(loc: Location.LocationObject): Promise<void> {
       const summary = await finalizeTrip(state);
       if (summary) await enqueueTripFromTask(summary);
       await clearRoute();
+      const confirmed = isVehicleClaimConfirmed(state);
+      if (!confirmed) await Location.stopLocationUpdatesAsync(GPS_TASK_NAME).catch(() => {});
       const fresh = defaultState();
-      fresh.vehicleId = state.vehicleId;
+      fresh.vehicleId = confirmed ? state.vehicleId : null;
       await writeState(fresh);
       return;
     }
@@ -287,6 +326,14 @@ async function handleLocation(loc: Location.LocationObject): Promise<void> {
     state.lastTs = now;
     state.lastAccuracy = loc.coords.accuracy ?? null;
     state.lastSpeedKmh = 0;
+    // Cũng phải đẩy mốc TỐT ở đây (chỉ khi fix chính xác) - nếu không, lúc "Tiếp
+    // tục" sẽ so với mốc TỐT từ TRƯỚC lúc tạm dừng và tính nhầm đoạn di chuyển
+    // trong lúc tạm dừng thành quãng đường (đúng thứ lỗi mốc lastGood được thêm để tránh).
+    if ((loc.coords.accuracy ?? 999) <= MAX_ACCURACY_M) {
+      state.lastGoodLat = lat;
+      state.lastGoodLng = lng;
+      state.lastGoodTs = now;
+    }
     await writeState(state);
     return;
   }
@@ -312,13 +359,17 @@ async function handleLocation(loc: Location.LocationObject): Promise<void> {
   const accuracy = loc.coords.accuracy ?? 999;
   const goodFix = accuracy <= MAX_ACCURACY_M;
 
-  // Accumulate distance only when trip is active (not during waiting_start or idle)
+  // Accumulate distance only when trip is active (not during waiting_start or idle).
+  // So sánh với lastGoodLat/lastGoodLng (mốc TỐT gần nhất), KHÔNG phải lastLat/lastLng
+  // thô - lastLat/lastLng bị cập nhật mỗi lần kể cả fix xấu (xem dưới), nên dùng
+  // chung sẽ khiến 1 fix xấu (hầm/tầng hầm) trở thành mốc lệch, rồi fix tốt kế
+  // tiếp bị tính thành 1 đoạn "mất tín hiệu" khổng lồ dù xe không hề di chuyển vậy.
   if (
     (state.status === 'active' || state.status === 'waiting_stop') &&
-    state.lastLat !== null && state.lastLng !== null && goodFix
+    state.lastGoodLat !== null && state.lastGoodLng !== null && goodFix
   ) {
-    const seg = haversineKm(state.lastLat, state.lastLng, lat, lng);
-    const realGapSec = state.lastTs ? (now - state.lastTs) / 1000 : 0;
+    const seg = haversineKm(state.lastGoodLat, state.lastGoodLng, lat, lng);
+    const realGapSec = state.lastGoodTs ? (now - state.lastGoodTs) / 1000 : 0;
     const impliedKmh = realGapSec > 0 ? (seg / realGapSec) * 3600 : 0;
 
     if (seg >= MIN_SEGMENT_KM && seg < 0.5) {
@@ -359,6 +410,12 @@ async function handleLocation(loc: Location.LocationObject): Promise<void> {
   // Diagnostics: always update so the status panel shows GPS is alive even before a trip starts
   state.lastAccuracy = loc.coords.accuracy ?? null;
   state.lastSpeedKmh = Math.round(speedKmh);
+  // Chỉ đẩy mốc TỐT khi fix đủ chính xác - xem giải thích ở khối cộng dồn quãng đường trên.
+  if (goodFix) {
+    state.lastGoodLat = lat;
+    state.lastGoodLng = lng;
+    state.lastGoodTs = now;
+  }
 
   // State machine
   switch (state.status) {
@@ -397,8 +454,10 @@ async function handleLocation(loc: Location.LocationObject): Promise<void> {
         const summary = await finalizeTrip(state);
         if (summary) await enqueueTripFromTask(summary);
         await clearRoute();
+        const confirmed = isVehicleClaimConfirmed(state);
+        if (!confirmed) await Location.stopLocationUpdatesAsync(GPS_TASK_NAME).catch(() => {});
         const fresh = defaultState();
-        fresh.vehicleId = state.vehicleId;
+        fresh.vehicleId = confirmed ? state.vehicleId : null;
         await writeState(fresh);
         return;
       }
@@ -426,8 +485,10 @@ async function handleLocation(loc: Location.LocationObject): Promise<void> {
           await enqueueTripFromTask(summary);
         }
         await clearRoute();
+        const confirmed = isVehicleClaimConfirmed(state);
+        if (!confirmed) await Location.stopLocationUpdatesAsync(GPS_TASK_NAME).catch(() => {});
         const fresh = defaultState();
-        fresh.vehicleId = state.vehicleId;
+        fresh.vehicleId = confirmed ? state.vehicleId : null;
         await writeState(fresh);
         return;
       }
@@ -444,12 +505,71 @@ async function handleLocation(loc: Location.LocationObject): Promise<void> {
     (state.lastLockRenewTs === null || now - state.lastLockRenewTs >= LOCK_RENEW_INTERVAL_MS)
   ) {
     state.lastLockRenewTs = now;
-    getDeviceId().then(deviceId => {
-      gpsTripsApi.trackingLock.renew(state.vehicleId!, deviceId).catch(() => {});
-    });
+    getDeviceId().then(deviceId => renewTrackingLock(state.vehicleId!, deviceId));
   }
 
   await writeState(state);
+}
+
+/**
+ * Gia hạn khoá GPS tracking-lock (2 máy cùng theo dõi 1 xe - rà soát 14/8).
+ * Dùng claim() (không phải renew()) làm heartbeat: theo docs/api-contracts.md,
+ * PUT (renew) LUÔN trả 200 dù có đúng chủ hay không (no-op im lặng nếu không
+ * đúng chủ) - máy đã mất khoá sẽ không bao giờ biết qua đường renew(). claim()
+ * dùng Cache::add nguyên tử: đúng chủ (hoặc chưa ai giữ) -> 200 refresh TTL;
+ * máy KHÁC đang giữ -> 409 - đây là tín hiệu DUY NHẤT để phát hiện khoá đã bị
+ * máy khác giành mất giữa chừng (vd TTL 5 phút hết hạn vì mất tín hiệu GPS lâu
+ * hơn 5 phút trong hầm/tầng hầm, trong khi logic tính quãng đường ở trên lại
+ * CHỊU ĐƯỢC gap tới 10 phút - lệch giả định này là đúng lúc khoá có thể rơi
+ * vào tay máy khác mà máy này không biết).
+ */
+export async function renewTrackingLock(vehicleId: number, deviceId: string): Promise<void> {
+  try {
+    await gpsTripsApi.trackingLock.claim(vehicleId, deviceId);
+  } catch (err: any) {
+    if (err?.response?.status === 409) {
+      await handleLockLost(vehicleId);
+    }
+    // Lỗi khác (mất mạng...) -> bỏ qua, offline-first, thử lại chu kỳ sau.
+  }
+}
+
+/**
+ * Khoá GPS đã bị máy KHÁC giành mất giữa lúc đang ghi (xem renewTrackingLock).
+ * Tự chốt NGAY hành trình đang ghi trên máy này (lưu nếu đủ quãng đường tối
+ * thiểu, bỏ nếu quá ngắn) thay vì để 2 máy cùng ghi trùng cùng 1 chuyến lái ->
+ * 2 bản ghi GpsTrip riêng biệt (started_at khác nhau nên guard dedup
+ * vehicle_id+started_at của BE không bắt được) -> mốc ODO tự động bị cộng 2 lần.
+ */
+async function handleLockLost(vehicleId: number): Promise<void> {
+  // KHÔNG bọc runSerialized() ở đây - stopTracking() đã tự bọc read-modify-write
+  // của riêng nó bằng runSerialized; lồng thêm 1 lớp nữa sẽ deadlock (outer chờ
+  // stopTracking() xong, nhưng hàng đợi bên trong lại đứng sau chính outer đó).
+  const state = await readState();
+  if (state.vehicleId !== vehicleId) return;
+  const inTrip = state.status === 'active' || state.status === 'waiting_stop' || state.status === 'waiting_start';
+  if (!inTrip) return;
+
+  const summary = await stopTracking(true);
+  try {
+    if (summary) {
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: 'NoteDri',
+          body: useI18nStore.getState().t('gps_trips.notif_autosaved_lock_lost', { km: summary.distanceKm }),
+        },
+        trigger: null,
+      });
+    } else {
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: 'NoteDri',
+          body: useI18nStore.getState().t('gps_trips.notif_discarded_lock_lost'),
+        },
+        trigger: null,
+      });
+    }
+  } catch { /* notifications non-critical */ }
 }
 
 // Import here would create circular dependency, so we inline the enqueue logic.
@@ -548,7 +668,14 @@ async function autoShutdown(vehicleId: number | null): Promise<void> {
  */
 export async function requestPermissionsAndStart(
   vehicleId: number,
-  options?: { skipDisclosure?: boolean },
+  options?: {
+    skipDisclosure?: boolean;
+    // true khi vehicleId ở trên là ĐOÁN (vd App.tsx tự bật lúc mở app theo "xe
+    // mặc định", không phải OBD2 vừa connect hay user tự tay chọn/bấm) - xem
+    // isVehicleClaimConfirmed(). Mặc định false (tin tưởng) để không đổi hành vi
+    // các lối gọi hiện có (OBD2 connect, nút "Bắt đầu" thủ công - đều đáng tin).
+    guessed?: boolean;
+  },
 ): Promise<StartResult> {
   // 0) Kiểm tra lock: chỉ 1 thiết bị/xe cùng lúc.
   //    Nếu mạng lỗi -> offline-first: cho phép bật, tránh chặn oan.
@@ -601,11 +728,24 @@ export async function requestPermissionsAndStart(
     if (state.status === 'idle') {
       const fresh = defaultState();
       fresh.vehicleId = vehicleId;
+      fresh.vehicleGuessed = !!options?.guessed;
       await writeState(fresh);
       await clearRoute();
     } else if (state.vehicleId !== vehicleId) {
-      state.vehicleId = vehicleId;
-      await writeState(state);
+      // Rà soát 2026-08-14 (bug phát hiện lúc đào sâu case đa xe): trước đây chỉ
+      // đè state.vehicleId = vehicleId - quãng đường/route ĐANG TÍCH LUỸ cho xe
+      // CŨ bị "đổi tên" âm thầm sang xe MỚI ngay khi trip đó finalize (ghi nhầm
+      // km của xe cũ vào lịch sử/ODO xe mới). Phải chốt xong chuyến xe CŨ trước
+      // (lưu nếu đủ dài) rồi mới bắt đầu sạch cho xe MỚI.
+      if (state.status === 'active' || state.status === 'waiting_stop') {
+        const summary = await finalizeTrip(state);
+        if (summary) await enqueueTripFromTask(summary);
+      }
+      await clearRoute();
+      const fresh = defaultState();
+      fresh.vehicleId = vehicleId;
+      fresh.vehicleGuessed = !!options?.guessed;
+      await writeState(fresh);
     }
   });
 
@@ -680,7 +820,7 @@ export async function maybeAutoShutdownStale(): Promise<boolean> {
     const summary = await finalizeTrip(state, state.lastTs ?? undefined, 'stale');
     await clearRoute();
     const fresh = defaultState();
-    fresh.vehicleId = state.vehicleId;
+    fresh.vehicleId = isVehicleClaimConfirmed(state) ? state.vehicleId : null;
     await writeState(fresh);
     if (summary) {
       await enqueueTripFromTask(summary);
@@ -708,7 +848,7 @@ export async function maybeAutoShutdownStale(): Promise<boolean> {
     const summary = await finalizeTrip(state, state.lastTs ?? undefined, 'interrupted');
     await clearRoute();
     const fresh = defaultState();
-    fresh.vehicleId = state.vehicleId;
+    fresh.vehicleId = isVehicleClaimConfirmed(state) ? state.vehicleId : null;
     await writeState(fresh);
     if (summary) {
       await enqueueTripFromTask(summary);
@@ -839,7 +979,7 @@ async function notifyVehicleLockedOnce(vehicleId: number, holderDeviceId: string
  * ra ngay lúc mở app). Nếu thiếu quyền, trả về để tầng gọi tự quyết định cách
  * nhắc (banner/alert một lần, không xin quyền hộ).
  */
-export async function autoArmIfReady(vehicleId: number): Promise<AutoArmResult> {
+export async function autoArmIfReady(vehicleId: number, options?: { guessed?: boolean }): Promise<AutoArmResult> {
   try {
     // Rà soát 27/7 (user báo: tắt máy giữa chuyến sáng, chiều kết nối lại OBD2
     // vẫn không thấy chuyến sáng được ghi nhận): autoArmIfReady() trước đây chỉ
@@ -864,7 +1004,7 @@ export async function autoArmIfReady(vehicleId: number): Promise<AutoArmResult> 
       return { armed: false, reason: 'missing_permission' };
     }
 
-    const result = await requestPermissionsAndStart(vehicleId);
+    const result = await requestPermissionsAndStart(vehicleId, { guessed: options?.guessed });
     if (result.ok) return { armed: true };
     if (result.reason === 'vehicle_locked') {
       await notifyVehicleLockedOnce(vehicleId, result.lockedByDeviceId);
@@ -985,6 +1125,14 @@ export async function resumeTracking(): Promise<void> {
       state.lastLng = pos.coords.longitude;
       state.lastTs = pos.timestamp;
       state.lastAccuracy = pos.coords.accuracy ?? null;
+      // Chỉ dùng làm mốc TỐT cho tính quãng đường nếu đủ chính xác - nếu fix này tệ,
+      // giữ nguyên lastGoodLat/Lng cũ (đã cập nhật liên tục trong lúc tạm dừng ở
+      // nhánh state.paused của handleLocation) thay vì seed 1 mốc lệch.
+      if ((pos.coords.accuracy ?? 999) <= MAX_ACCURACY_M) {
+        state.lastGoodLat = pos.coords.latitude;
+        state.lastGoodLng = pos.coords.longitude;
+        state.lastGoodTs = pos.timestamp;
+      }
     } catch { /* giữ mốc cũ - đã cập nhật liên tục trong lúc tạm dừng */ }
     state.paused = false;
     state.idleStartTs = null;
@@ -1049,69 +1197,58 @@ export async function checkInterruptedTrip(): Promise<InterruptedTripInfo> {
   };
 }
 
-const STILL_MOVING_NOTIFIED_KEY_PREFIX = 'gps_trip_still_moving_notified_';
-const STILL_MOVING_NOTIFY_COOLDOWN_MS = 10 * 60_000; // tránh spam nếu user bấm X/kết nối lại OBD2 nhiều lần liên tiếp
-
 /**
  * Gọi khi user CHỦ ĐỘNG bấm "X ngắt kết nối" OBD2 (useObd.ts disconnect(), chỉ
  * đường vào duy nhất set intentionalDisconnect=true trong BleService - KHÔNG
  * bao giờ chạy khi Bluetooth tự rớt giữa đường, vì nhánh đó đi qua
- * attemptReconnect() riêng, không gọi tới disconnect() này). An toàn để coi
- * đây là tín hiệu Ý ĐỊNH của user, không phải sự cố kết nối.
+ * attemptReconnect() riêng (BleService.handleTransportDisconnected), không gọi
+ * tới disconnect()/hàm này). An toàn để coi đây là tín hiệu Ý ĐỊNH của user,
+ * không phải sự cố kết nối - kể cả khi reconnect-grace thử hết các lần vẫn
+ * thất bại, đường đó chỉ bắn `disconnectListeners` (reset UI trong useObd.ts),
+ * KHÔNG gọi hàm này.
  *
- * User góp ý (sau khi hỏi vì sao chuyến hôm qua mãi sáng nay mới thấy): OBD2
- * disconnect và hành trình GPS là 2 hệ thống tách biệt CÓ CHỦ ĐÍCH (GPS luôn là
- * nguồn CHUYẾN ĐI duy nhất, không phụ thuộc OBD2 - tránh mất nửa chuyến nếu
- * Bluetooth rớt giữa đường) - nhưng khi user bấm X ĐÚNG LÚC xe đã dừng hẳn
- * (dấu hiệu mạnh nhất "đã xong chuyến"), chờ thêm tới 5 phút nữa (WAITING_STOP_MS)
- * mới tự chốt là không cần thiết, và làm mốc ODO tự động (cập nhật ngay lúc
- * BE nhận trip - xem GpsTripController::store()) bị trễ oan theo.
- *
- * Chỉ tự chốt khi tốc độ GPS gần nhất < SPEED_STOP_KMPH (xe đã dừng thật) -
- * nếu vẫn đang di chuyển (OBD2 rớt vì lý do khác, không phải hết chuyến), CỐ
- * TÌNH không đụng tới hành trình đang ghi, chỉ báo cho user biết để họ tự
- * kiểm soát (Tạm dừng/Dừng theo dõi ở màn Hành trình GPS) - tránh lặp lại lỗi
- * "kẹt xe cắt chuyến" mà rà soát 7/8 đã sửa (WAITING_STOP_MS tăng lên 5 phút),
- * lần này qua đường disconnect thay vì qua đường tốc độ.
+ * Rà soát 2026-08-14 (user báo: bấm X xong hành trình GPS vẫn tiếp tục, hoặc
+ * dừng xong lại tự bật 1 chuyến mới):
+ * - LUÔN chốt NGAY bất kể tốc độ (bỏ điều kiện "chỉ chốt nếu đã dừng hẳn, còn
+ *   không thì chờ 5 phút") - user bấm X là tín hiệu ý định rõ ràng, không có lý
+ *   do bắt mốc ODO tự động (cập nhật ngay lúc BE nhận trip) trễ oan theo.
+ * - Cân nhắc lại 2 lần (user hỏi tiếp): có nên GIỮ service sống + giữ nguyên
+ *   vehicleId sau khi chốt, để nếu xe vẫn đang chạy thật thì đoạn còn lại tự
+ *   tách thành 1 chuyến MỚI (không mất dữ liệu)? -> KHÔNG, vì lỗ hổng nặng hơn
+ *   nhiều: nếu user ngắt OBD2 xe A rồi lên NGAY xe B (đổi xe, không phải đi
+ *   tiếp xe A) mà tốc độ xe B >5km/h đủ 12s, hệ thống sẽ ghi nhầm quãng đường
+ *   xe B vào lịch sử/ODO của xe A - âm thầm SAI DỮ LIỆU cho 1 xe hoàn toàn
+ *   không liên quan, còn tệ hơn việc thiếu 1 đoạn của đúng xe A. Khác biệt mấu
+ *   chốt so với case user tự bật "Hành trình GPS" độc lập (không qua OBD2): ở
+ *   đó user TỰ BIẾT đang ghi (thấy banner "đang ghi" ở màn Hành trình GPS) nên
+ *   tự chịu trách nhiệm tắt/kiểm soát nếu đổi xe - còn nhánh OBD2 này chạy NGẦM,
+ *   user không có cách nào biết để tự sửa. Nên: chốt xong PHẢI tắt hẳn
+ *   (stopTracking = dừng location service + xoá vehicleId + nhả lock) - đánh đổi
+ *   là nếu xe A thật sự vẫn đang chạy tiếp, đoạn đó không được ghi cho tới khi
+ *   có sự kiện re-arm khác (mở app/OBD2 connect lại/tự bấm nút ở màn Hành trình
+ *   GPS) - THIẾU dữ liệu (rõ ràng, tự sửa được) an toàn hơn nhiều so với SAI
+ *   dữ liệu (âm thầm, khó phát hiện, làm bẩn ODO/chi phí/health score của xe B).
  */
 export async function handleObdDisconnected(vehicleId: number): Promise<void> {
   try {
     const state = await readState();
-    const inTrip = state.status === 'active' || state.status === 'waiting_stop';
-    if (!inTrip || state.vehicleId !== vehicleId) return;
+    if (state.vehicleId !== vehicleId) return;
+    const running = await isTrackingActive();
+    if (state.status === 'idle' && !running) return; // không có gì đang chạy cho xe này
 
-    if (state.lastSpeedKmh < SPEED_STOP_KMPH) {
-      const summary = await stopTracking(true);
-      if (summary) {
-        try {
-          await Notifications.scheduleNotificationAsync({
-            content: {
-              title: 'NoteDri',
-              body: useI18nStore.getState().t('gps_trips.notif_autosaved_obd_disconnect', { km: summary.distanceKm }),
-              data: { type: 'gps_trip_saved', vehicleId },
-            },
-            trigger: null,
-          });
-        } catch { /* notifications non-critical */ }
-      }
-      return;
+    const summary = await stopTracking(true);
+    if (summary) {
+      try {
+        await Notifications.scheduleNotificationAsync({
+          content: {
+            title: 'NoteDri',
+            body: useI18nStore.getState().t('gps_trips.notif_autosaved_obd_disconnect', { km: summary.distanceKm }),
+            data: { type: 'gps_trip_saved', vehicleId },
+          },
+          trigger: null,
+        });
+      } catch { /* notifications non-critical */ }
     }
-
-    // Vẫn đang di chuyển - không đụng tới trip, chỉ báo 1 lần/cooldown để user tự kiểm soát.
-    const key = STILL_MOVING_NOTIFIED_KEY_PREFIX + vehicleId;
-    const lastNotifiedAt = Number(await AsyncStorage.getItem(key).catch(() => null)) || 0;
-    if (Date.now() - lastNotifiedAt < STILL_MOVING_NOTIFY_COOLDOWN_MS) return;
-    try {
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: 'NoteDri',
-          body: useI18nStore.getState().t('gps_trips.notif_still_recording_after_obd_disconnect'),
-          data: { type: 'gps_trip_still_recording', vehicleId },
-        },
-        trigger: null,
-      });
-    } catch { /* notifications non-critical */ }
-    await AsyncStorage.setItem(key, String(Date.now())).catch(() => {});
   } catch { /* non-critical - không được làm hỏng luồng disconnect OBD2 */ }
 }
 
