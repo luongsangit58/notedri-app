@@ -44,15 +44,34 @@ export default function TrafficFinesScreen() {
     return true;
   }), [rows, loaiXe, nhom, normalizedKeyword]);
 
+  // Rà soát 15/8 (góp ý user: 2 hàng lọc "Loại xe" và "Nhóm vi phạm" dùng CHUNG
+  // 1 kiểu viên thuốc cam đặc, nhìn giống hệt nhau - khó phân biệt đang lọc gì).
+  // Tách bạch 2 kiểu khác nhau, cùng tinh thần đã áp dụng cho ReportsScreen: hàng
+  // "Loại xe" (chỉ 2 lựa chọn, phân loại chính) giữ viên đặc cam nổi bật + icon
+  // xe; hàng "Nhóm vi phạm" (7 lựa chọn, bộ lọc phụ chi tiết hơn) đổi sang viền
+  // mỏng nhạt - nhẹ hơn hẳn, đúng vai trò lọc con.
   const styles = StyleSheet.create({
+    groupLabel: {
+      color: colors.textSecondary, fontSize: 11, fontWeight: '700',
+      textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8,
+    },
     chip: {
       borderRadius: 20, paddingHorizontal: 14, paddingVertical: 7,
       borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, marginRight: 8,
+      flexDirection: 'row', alignItems: 'center', gap: 6,
     },
     chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
     chipText: { color: colors.textSecondary, fontSize: 12.5, fontWeight: '600' },
     chipTextActive: { color: colors.primaryText, fontWeight: '700' },
+    ghostChip: {
+      borderRadius: 16, paddingHorizontal: 12, paddingVertical: 6,
+      borderWidth: 1, borderColor: colors.border, backgroundColor: 'transparent', marginRight: 6,
+    },
+    ghostChipActive: { backgroundColor: colors.primary + '18', borderColor: colors.primary },
+    ghostChipText: { color: colors.textSecondary, fontSize: 12, fontWeight: '500' },
+    ghostChipTextActive: { color: colors.primary, fontWeight: '700' },
   });
+  const LOAI_XE_ICON: Record<string, string> = { oto: 'car-side', xe_may: 'motorcycle' };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'left', 'right']}>
@@ -91,7 +110,8 @@ export default function TrafficFinesScreen() {
             {/* ScrollView (không phải FlatList) - cùng quy ước hàng chip lọc nhỏ đã dùng ở
                 ServicesScreen.tsx (vehicle filter), tránh lồng VirtualizedList bên trong
                 ListHeaderComponent của FlatList ngoài. */}
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
+            <Text style={styles.groupLabel}>{t('traffic_fines.filter_vehicle_type')}</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 14 }}>
               {[null, ...LOAI_XE_OPTIONS].map((item) => {
                 const active = loaiXe === item;
                 return (
@@ -99,6 +119,14 @@ export default function TrafficFinesScreen() {
                     key={item ?? 'all'}
                     style={[styles.chip, active && styles.chipActive]}
                     onPress={() => setLoaiXe(item)}>
+                    {item !== null && (
+                      <FontAwesome5
+                        name={LOAI_XE_ICON[item]}
+                        size={12}
+                        color={active ? colors.primaryText : colors.textSecondary}
+                        solid
+                      />
+                    )}
                     <Text style={[styles.chipText, active && styles.chipTextActive]}>
                       {item === null ? t('common.all') : t(`traffic_fines.loai_${item}`)}
                     </Text>
@@ -107,15 +135,16 @@ export default function TrafficFinesScreen() {
               })}
             </ScrollView>
 
+            <Text style={styles.groupLabel}>{t('traffic_fines.filter_violation_group')}</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 14 }}>
               {[null, ...NHOM_OPTIONS].map((item) => {
                 const active = nhom === item;
                 return (
                   <TouchableOpacity
                     key={item ?? 'all'}
-                    style={[styles.chip, active && styles.chipActive]}
+                    style={[styles.ghostChip, active && styles.ghostChipActive]}
                     onPress={() => setNhom(item)}>
-                    <Text style={[styles.chipText, active && styles.chipTextActive]}>
+                    <Text style={[styles.ghostChipText, active && styles.ghostChipTextActive]}>
                       {item === null ? t('common.all') : t(`traffic_fines.nhom_${item}`)}
                     </Text>
                   </TouchableOpacity>

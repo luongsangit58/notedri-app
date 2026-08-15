@@ -855,6 +855,8 @@ const vi = {
   "traffic_fines.entry_subtitle": "Mức phạt theo Nghị định 168/2024",
   "traffic_fines.hint": "Mức phạt tham khảo theo Nghị định 168/2024/NĐ-CP. Lọc theo loại xe/nhóm vi phạm hoặc gõ từ khoá.",
   "traffic_fines.search_placeholder": "Tìm theo hành vi vi phạm...",
+  "traffic_fines.filter_vehicle_type": "Loại xe",
+  "traffic_fines.filter_violation_group": "Nhóm vi phạm",
   "traffic_fines.loai_oto": "Ô tô",
   "traffic_fines.loai_xe_may": "Xe máy",
   "traffic_fines.nhom_toc_do": "Tốc độ",

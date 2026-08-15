@@ -12,7 +12,7 @@ import { servicesApi } from '../../api/services';
 import AppBgPattern from '../../components/AppBgPattern';
 import { useColors } from '../../utils/theme';
 import { contentWide } from '../../utils/layout';
-import { formatVND, formatKm } from '../../utils/format';
+import { formatVND, formatVNDShort, formatKm } from '../../utils/format';
 import dayjs from 'dayjs';
 import { useT } from '../../i18n';
 
@@ -91,13 +91,25 @@ function serviceOdo(s: ServiceLog): number | null {
 }
 
 /* ─── stat card ─── */
+// Rà soát 15/8 (góp ý user: 4 ô số liệu to nhỏ không đều, khó nhìn) - nguyên nhân
+// kép: (1) không có viền nên các ô mờ lẫn vào nhau trên nền tối, (2) giá trị dài
+// (tiền tổng chi, vd "8.340.000đ") bị adjustsFontSizeToFit tự co nhỏ hẳn lại để
+// vừa 1 dòng trong khi ô cạnh bên chỉ có "11" (2 ký tự) giữ nguyên cỡ 16 - 4 số
+// to nhỏ lệch hẳn nhau. Thêm viền cho rõ ràng + đặt minimumFontScale sàn (không
+// co quá 70% cỡ gốc) - phối hợp với việc đổi sang formatVNDShort ở nơi gọi (rút
+// "8.340.000đ" còn "8,3tr") để độ dài các giá trị gần nhau hơn, đỡ lệch cỡ chữ.
 function StatCard({ label, value, accent }: { label: string; value: string; accent?: string }) {
   const colors = useColors();
   return (
     <View style={{
       flex: 1, backgroundColor: colors.card, borderRadius: 12, padding: 12, alignItems: 'center',
+      borderWidth: 1, borderColor: colors.border,
     }}>
-      <Text style={{ color: accent ?? colors.primary, fontWeight: '800', fontSize: 16 }} numberOfLines={1} adjustsFontSizeToFit>
+      <Text
+        style={{ color: accent ?? colors.primary, fontWeight: '800', fontSize: 16 }}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.7}>
         {value}
       </Text>
       <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 3, textAlign: 'center' }}>{label}</Text>
@@ -385,7 +397,7 @@ export default function DossierScreen() {
           <View style={{ flexDirection: 'row', gap: 8, flex: 1 }}>
             <StatCard
               label={t('dossier.total_service_cost')}
-              value={formatVND(totalCost)}
+              value={formatVNDShort(totalCost)}
               accent={colors.warning}
             />
             <StatCard
@@ -429,6 +441,12 @@ export default function DossierScreen() {
               {t('dossier.service_history_empty')}
             </Text>
           ) : (
+            // Rà soát 15/8 (góp ý user: danh sách bảo dưỡng khó nhìn, không tường minh -
+            // trước đây chỉ có 1 đường kẻ mỏng phân cách, không có icon/điểm neo thị giác
+            // nào để quét nhanh). Thêm icon cờ-lê bên trái (khớp cách ServiceCard bên màn
+            // "Bảo dưỡng" chính đã làm) + sắp lại thứ bậc: tên hạng mục lên hàng đầu (quan
+            // trọng nhất), badge+ngày xuống hàng phụ, giá tiền neo cố định bên phải cho dễ
+            // so sánh theo cột dọc xuống các dòng dưới.
             (showAllServices ? services : services.slice(0, SERVICE_PREVIEW_COUNT)).map((svc, idx) => {
               const cost = serviceCost(svc);
               const odoVal = serviceOdo(svc);
@@ -441,30 +459,41 @@ export default function DossierScreen() {
                   disabled={svc.id == null}
                   onPress={() => svc.id != null && navigation.navigate('EditService', { serviceId: svc.id })}
                   style={{
-                    paddingVertical: 10,
+                    flexDirection: 'row', gap: 10, paddingVertical: 12,
                     borderTopWidth: idx > 0 ? 1 : 0,
                     borderTopColor: colors.border,
                   }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                    <Text style={{ color: colors.textSecondary, fontSize: 12, width: 80 }}>
-                      {fmtDate(serviceDate(svc))}
-                    </Text>
-                    {type ? <TypeBadge label={type} /> : null}
-                    <Text style={{ color: cost > 0 ? colors.text : colors.textSecondary, fontWeight: '700', fontSize: 13 }}>
-                      {cost > 0 ? formatVND(cost) : '—'}
-                    </Text>
+                  <View style={{
+                    width: 32, height: 32, borderRadius: 16, marginTop: 1,
+                    backgroundColor: colors.primary + '1f', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <FontAwesome5 name="wrench" size={13} color={colors.primary} solid />
                   </View>
-                  <Text style={{ color: colors.text, fontSize: 14, fontWeight: '600' }}>
-                    {serviceName(svc)}
-                  </Text>
-                  {odoVal != null && odoVal > 0 && (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 }}>
-                      <FontAwesome5 name="road" size={11} color={colors.textSecondary} solid />
-                      <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
-                        {formatKm(odoVal)}
+                  <View style={{ flex: 1 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+                      <Text style={{ color: colors.text, fontSize: 14, fontWeight: '700', flex: 1 }} numberOfLines={1}>
+                        {serviceName(svc)}
+                      </Text>
+                      <Text style={{ color: cost > 0 ? colors.text : colors.textSecondary, fontWeight: '800', fontSize: 13.5 }}>
+                        {cost > 0 ? formatVND(cost) : '—'}
                       </Text>
                     </View>
-                  )}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
+                      {type ? <TypeBadge label={type} /> : null}
+                      <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
+                        {fmtDate(serviceDate(svc))}
+                      </Text>
+                      {odoVal != null && odoVal > 0 && (
+                        <>
+                          <Text style={{ color: colors.textSecondary, fontSize: 12 }}>·</Text>
+                          <FontAwesome5 name="road" size={10} color={colors.textSecondary} solid />
+                          <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
+                            {formatKm(odoVal)}
+                          </Text>
+                        </>
+                      )}
+                    </View>
+                  </View>
                 </TouchableOpacity>
               );
             })

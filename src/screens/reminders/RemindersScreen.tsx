@@ -630,23 +630,42 @@ export default function RemindersScreen() {
         }
         ListFooterComponent={
           <>
+          {/* Rà soát 15/8 (góp ý user: tiêu đề "GỢI Ý THÊM" trần trụi trên nền app,
+              không đóng khung/box nên khó nhìn, dễ lẫn với các thành phần khác) -
+              bọc cả khối (tiêu đề + danh sách) trong 1 box rõ ràng (nền + viền),
+              khớp kiểu box "Gợi ý hôm nay"/"Nhắc nhở sắp tới" đã dùng ở Home -
+              thanh màu + tiêu đề đậm màu primary, nút thu gọn/mở rộng bọc tròn
+              tách khỏi text thay vì icon trần. Mục con đổi từ card riêng (viền+nền
+              trùng màu box ngoài, lồng thẻ trong thẻ) sang hàng đơn ngăn cách bằng
+              đường kẻ - tránh 2 lớp "thẻ trong thẻ" cùng màu chồng lên nhau. */}
           {suggestions.length > 0 ? (
-            <View style={{ paddingTop: 8, paddingBottom: 8 }}>
+            <View style={{
+              backgroundColor: colors.surface, borderRadius: 14, padding: 14,
+              borderWidth: 1, borderColor: colors.border, marginTop: 8, marginBottom: 8,
+            }}>
               <TouchableOpacity
                 onPress={() => setShowSuggestions((v) => !v)}
                 activeOpacity={0.7}
                 style={{
                   flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-                  paddingVertical: 4,
                 }}>
-                <Text style={{ color: colors.textSecondary, fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                  {t('reminders.suggest_more')} ({suggestions.length})
-                </Text>
-                <FontAwesome5
-                  name={showSuggestions ? 'chevron-up' : 'chevron-down'}
-                  size={12}
-                  color={colors.textSecondary}
-                />
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <View style={{ width: 4, height: 16, borderRadius: 2, backgroundColor: colors.primary }} />
+                  <Text style={{ color: colors.primary, fontWeight: '800', fontSize: 14 }}>
+                    {t('reminders.suggest_more')} ({suggestions.length})
+                  </Text>
+                </View>
+                <View style={{
+                  width: 26, height: 26, borderRadius: 13,
+                  backgroundColor: colors.primary + '1a',
+                  alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <FontAwesome5
+                    name={showSuggestions ? 'chevron-up' : 'chevron-down'}
+                    size={11}
+                    color={colors.primary}
+                  />
+                </View>
               </TouchableOpacity>
               {showSuggestions && suggestions.map((s: any, i: number) => (
                 <TouchableOpacity
@@ -655,9 +674,9 @@ export default function RemindersScreen() {
                   onPress={() => navigation.navigate('AddReminder', { vehicleId: resolvedVehicleId, hang_muc: s.hang_muc, loai: s.loai, interval_km: s.interval_km ?? undefined, interval_thang: s.interval_thang ?? undefined })}
                   style={{
                     flexDirection: 'row', alignItems: 'flex-start', gap: 10,
-                    backgroundColor: colors.surface, borderRadius: 10, padding: 12,
-                    marginTop: i === 0 ? 10 : 0, marginBottom: 8,
-                    borderWidth: 1, borderColor: colors.border, opacity: canAdd ? 1 : 0.5,
+                    paddingVertical: 12, marginTop: i === 0 ? 10 : 0,
+                    borderTopWidth: 1, borderTopColor: colors.border,
+                    opacity: canAdd ? 1 : 0.5,
                   }}>
                   <FontAwesome5 name="plus-circle" size={16} color={colors.primary} solid style={{ marginTop: 2 }} />
                   <View style={{ flex: 1 }}>

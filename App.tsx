@@ -1,9 +1,9 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './src/api/queryClient';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -173,6 +173,32 @@ function AppLoader({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
+  // Rà soát 15/8 (bug thật user báo: khe/viền màu sáng lộ ra ở mép trên-dưới
+  // Home, không khớp nền tối của app) - NavigationContainer trước đây KHÔNG
+  // được truyền `theme`, nên React Navigation dùng theme mặc định (nền xám
+  // nhạt/trắng của DefaultTheme) cho card/scene container ở tầng dưới cùng -
+  // bất kỳ khoảng nào JS chưa kịp vẽ đè màu nền tối riêng của từng màn hình lên
+  // (viền/góc, lúc chuyển màn...) sẽ lộ đúng màu sáng mặc định đó. Truyền theme
+  // khớp đúng bảng màu hiện tại của app (dark/light tự đổi theo cài đặt user)
+  // để MỌI TẦNG bên dưới (kể cả những nơi JS chưa vẽ tới) đều cùng 1 màu nền.
+  const themeColors = useThemeStore((s) => s.colors);
+  const themeMode = useThemeStore((s) => s.mode);
+  const navTheme = useMemo(() => {
+    const base = themeMode === 'dark' ? DarkTheme : DefaultTheme;
+    return {
+      ...base,
+      colors: {
+        ...base.colors,
+        primary: themeColors.primary,
+        background: themeColors.background,
+        card: themeColors.surface,
+        text: themeColors.text,
+        border: themeColors.border,
+        notification: themeColors.error,
+      },
+    };
+  }, [themeMode, themeColors]);
+
   return (
     <AppErrorBoundary>
       <GestureHandlerRootView style={{ flex: 1 }}>
@@ -188,7 +214,7 @@ export default function App() {
           <SafeAreaProvider>
             <QueryClientProvider client={queryClient}>
               <AppLoader>
-                <NavigationContainer ref={navigationRef}>
+                <NavigationContainer ref={navigationRef} theme={navTheme}>
                   <RootNavigator />
                   <ObdSessionBanner />
                   <NetworkStatusToast />

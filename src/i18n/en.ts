@@ -855,6 +855,8 @@ const en = {
   "traffic_fines.entry_subtitle": "Fines under Decree 168/2024",
   "traffic_fines.hint": "Reference fines under Decree 168/2024/NĐ-CP. Filter by vehicle type/violation group or type a keyword.",
   "traffic_fines.search_placeholder": "Search by violation...",
+  "traffic_fines.filter_vehicle_type": "Vehicle type",
+  "traffic_fines.filter_violation_group": "Violation type",
   "traffic_fines.loai_oto": "Car",
   "traffic_fines.loai_xe_may": "Motorbike",
   "traffic_fines.nhom_toc_do": "Speed",
