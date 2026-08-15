@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Alert, ScrollView, Modal, TextInput, ActivityIndicator, Image, Switch, Linking } from 'react-native';
+import { View, Text, TouchableOpacity, Alert, ScrollView, Modal, TextInput, ActivityIndicator, Image, Switch, Linking, Platform } from 'react-native';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AppBgPattern from '../../components/AppBgPattern';
@@ -55,7 +56,9 @@ export default function ProfileScreen() {
   const [checkingAccountAction, setCheckingAccountAction] = useState(false);
 
   const hasGoogle: boolean = (user as any)?.has_google ?? false;
+  const hasApple: boolean = (user as any)?.has_apple ?? false;
   const hasPassword: boolean = (user as any)?.has_password ?? true;
+  const [appleLinkBusy, setAppleLinkBusy] = useState(false);
 
   // has_password/has_google có thể chưa có trong cache (user vừa mở app, background refresh
   // /auth/me ở authStore.initialize() chưa kịp xong) -> mặc định hasPassword=true có thể đưa
@@ -118,6 +121,54 @@ export default function ProfileScreen() {
       { text: t('profile.google_unlink'), style: 'destructive', onPress: async () => {
         try {
           const res = await authApi.unlinkGoogle();
+          setUser({ ...(user ?? {}), ...(res.data?.data ?? res.data) });
+        } catch (e: any) {
+          Alert.alert(t('common.error'), e?.response?.data?.message ?? t('common.error_generic'));
+        }
+      } },
+    ]);
+  };
+
+  // Liên kết Apple: khác Google (không có redirect web), gọi thẳng native
+  // AppleAuthentication.signInAsync() lấy identity_token rồi POST /auth/apple/link.
+  const handleLinkApple = async () => {
+    if (appleLinkBusy) return;
+    setAppleLinkBusy(true);
+    try {
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [AppleAuthentication.AppleAuthenticationScope.FULL_NAME, AppleAuthentication.AppleAuthenticationScope.EMAIL],
+      });
+      if (!credential.identityToken) {
+        Alert.alert(t('common.error'), t('auth.login_apple_failed'));
+        return;
+      }
+      const res = await authApi.linkApple(credential.identityToken);
+      setUser({ ...(user ?? {}), ...(res.data?.data ?? res.data) });
+      Alert.alert(t('profile.apple_linked_title'), t('profile.apple_linked_msg'));
+    } catch (e: any) {
+      // Người dùng bấm Huỷ trong hộp thoại Apple -> không phải lỗi thật, không cần Alert.
+      if (e?.code === 'ERR_REQUEST_CANCELED') return;
+      Alert.alert(t('common.error'), e?.response?.data?.message ?? e?.message ?? t('auth.login_apple_failed'));
+    } finally {
+      setAppleLinkBusy(false);
+    }
+  };
+
+  const handleUnlinkApple = async () => {
+    if (checkingAccountAction) return;
+    setCheckingAccountAction(true);
+    await refreshUserIfPasswordUnknown();
+    setCheckingAccountAction(false);
+    const freshHasPassword: boolean = (useAuthStore.getState().user as any)?.has_password ?? true;
+    if (!freshHasPassword) {
+      Alert.alert(t('profile.apple_unlink_need_pw_title'), t('profile.apple_unlink_need_pw_msg'));
+      return;
+    }
+    Alert.alert(t('profile.apple_unlink_confirm_title'), t('profile.apple_unlink_confirm_msg'), [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('profile.apple_unlink'), style: 'destructive', onPress: async () => {
+        try {
+          const res = await authApi.unlinkApple();
           setUser({ ...(user ?? {}), ...(res.data?.data ?? res.data) });
         } catch (e: any) {
           Alert.alert(t('common.error'), e?.response?.data?.message ?? t('common.error_generic'));
@@ -291,6 +342,20 @@ export default function ProfileScreen() {
             onPress={hasGoogle ? handleUnlinkGoogle : handleLinkGoogle}
             right={hasGoogle ? <Text style={{ color: colors.success, fontSize: 12, fontWeight: '600' }}>{t('profile.google_linked_badge')}</Text> : undefined}
           />
+          {/* Liên kết / Gỡ liên kết Apple - CHỈ iOS (usesAppleSignIn chỉ bật ở app.json ios,
+              expo-apple-authentication không có gì để làm trên Android). */}
+          {Platform.OS === 'ios' && (
+            <MenuItem
+              icon={<FontAwesome5 name="apple" size={16} color={colors.textSecondary} solid />}
+              label={hasApple ? t('profile.apple_unlink') : t('profile.apple_link')}
+              onPress={appleLinkBusy ? undefined : (hasApple ? handleUnlinkApple : handleLinkApple)}
+              right={
+                appleLinkBusy
+                  ? <ActivityIndicator size="small" color={colors.textSecondary} />
+                  : hasApple ? <Text style={{ color: colors.success, fontSize: 12, fontWeight: '600' }}>{t('profile.google_linked_badge')}</Text> : undefined
+              }
+            />
+          )}
           <MenuItem
             icon={<FontAwesome5 name="mobile-alt" size={16} color={colors.textSecondary} solid />}
             label={t('devices.title')}
