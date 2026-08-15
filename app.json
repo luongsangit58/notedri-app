@@ -40,7 +40,7 @@
     },
     "android": {
       "package": "com.notedri",
-      "versionCode": 55,
+      "versionCode": 56,
       "googleServicesFile": "./google-services.json",
       "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
@@ -212,6 +212,14 @@
         "expo-tracking-transparency",
         {
           "userTrackingPermission": "NoteDri dùng thông tin này để hiển thị quảng cáo phù hợp với bạn hơn."
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "deploymentTarget": "16.0"
+          }
         }
       ]
     ]
