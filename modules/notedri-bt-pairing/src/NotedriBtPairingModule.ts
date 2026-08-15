@@ -1,4 +1,5 @@
 import { NativeModule, requireNativeModule } from 'expo';
+import { Platform } from 'react-native';
 
 export type ClassicBtDevice = {
   address: string;
@@ -57,5 +58,17 @@ declare class NotedriBtPairingModule extends NativeModule<NotedriBtPairingEvents
   disconnectClassic(): Promise<void>;
 }
 
-// This call loads the native module object from the JSI.
-export default requireNativeModule<NotedriBtPairingModule>('NotedriBtPairing');
+// Module Android-only (RFCOMM Classic Bluetooth không có trên iOS - xem
+// expo-module.config.json "platforms": ["android"]). Mọi lời gọi thật đã được
+// gate bằng Platform.OS === 'android' phía BleService.ts; ở đây chỉ cần tránh
+// requireNativeModule() nổ ngay lúc import trên iOS (module load eager).
+export default Platform.OS === 'android'
+  ? requireNativeModule<NotedriBtPairingModule>('NotedriBtPairing')
+  : (new Proxy(
+      {},
+      {
+        get() {
+          throw new Error('NotedriBtPairing is only available on Android');
+        },
+      }
+    ) as NotedriBtPairingModule);

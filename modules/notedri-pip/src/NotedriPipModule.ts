@@ -1,4 +1,5 @@
 import { NativeModule, requireNativeModule } from 'expo';
+import { Platform } from 'react-native';
 
 type NotedriPipEvents = {
   // isInPip=true khi Android vừa thu nhỏ Activity vào khung PiP (user bấm
@@ -43,5 +44,19 @@ declare class NotedriPipModule extends NativeModule<NotedriPipEvents> {
   isIgnoringBatteryOptimizations(): Promise<boolean>;
 }
 
-// This call loads the native module object from the JSI.
-export default requireNativeModule<NotedriPipModule>('NotedriPip');
+// Module Android-only (Picture-in-Picture không tồn tại trên iOS - xem
+// expo-module.config.json "platforms": ["android"]). Tránh requireNativeModule()
+// nổ ngay lúc import trên iOS; call site cần tự check isPipSupported()/Platform.OS
+// trước khi gọi các hàm khác.
+export default Platform.OS === 'android'
+  ? requireNativeModule<NotedriPipModule>('NotedriPip')
+  : (new Proxy(
+      {},
+      {
+        get(_target, prop) {
+          if (prop === 'isPipSupported') return async () => false;
+          if (prop === 'isIgnoringBatteryOptimizations') return async () => true;
+          throw new Error('NotedriPip is only available on Android');
+        },
+      }
+    ) as NotedriPipModule);
