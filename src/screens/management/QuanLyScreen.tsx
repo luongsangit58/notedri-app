@@ -7,7 +7,6 @@ import { useColors } from '../../utils/theme';
 import { useT } from '../../i18n';
 import RemindersScreen from '../reminders/RemindersScreen';
 import HealthScreen from '../health/HealthScreen';
-import { resolveDefaultVehicle } from '../../services/vehicles/resolveDefaultVehicle';
 
 type Tab = 0 | 1;
 
@@ -35,20 +34,18 @@ export default function QuanLyScreen() {
   // Rà soát 27/7 (đối chiếu web: nhóm "Quản lý" trên web gồm Sức khỏe + OBD2 +
   // Lời nhắc, còn mobile thiếu OBD2) - từng thêm mục OBD2 cho khớp nhóm với web.
   // Rà soát 15/8 (góp ý user: OBD2 đã có thẻ CTA riêng rất to ngay đầu Home rồi,
-  // nhồi thêm lối tắt ở đây là thừa/trùng lặp) - đổi lối tắt sang "Sổ tay xe"
-  // (Dossier) thay vì bỏ hẳn: đúng tinh thần "Quản lý" (giấy tờ/hồ sơ xe) hơn,
-  // và trước đây CHỈ vào được từ trang Chi tiết xe (VehicleDetailScreen), chưa
-  // có lối tắt nào khác. KHÔNG làm 1 tab nội dung như 2 tab trên (Dossier là màn
-  // riêng gắn với 1 xe cụ thể, không hợp để nhồi làm nội dung con tĩnh) - bấm
-  // vào là điều hướng thẳng sang Dossier với xe mặc định (đúng quy ước
-  // is_default mọi màn khác đã dùng), không đổi activeTab.
-  async function goToDossier() {
-    const vehicle = await resolveDefaultVehicle();
-    if (!vehicle) {
-      navigation.navigate('AddVehicle');
-      return;
-    }
-    navigation.navigate('Dossier', { vehicleId: vehicle.id });
+  // nhồi thêm lối tắt ở đây là thừa/trùng lặp) - đổi sang "Sổ tay xe" (Dossier).
+  // Rà soát tiếp cùng ngày (góp ý user: muốn 1 tính năng user quan tâm hơn) -
+  // đổi tiếp sang "Bảo dưỡng" (lịch sử sửa chữa/chi phí, ServicesScreen): hoàn
+  // thiện đúng bộ ba "sắp làm gì" (Lời nhắc) + "xe đang thế nào" (Kiểm tra xe) +
+  // "đã làm gì rồi" (Bảo dưỡng) - hợp tinh thần "Quản lý" hơn Sổ tay xe (thiên
+  // về xem tóm tắt/chia sẻ khi bán xe). Bảo dưỡng trước đây CŨNG chỉ có đúng 1
+  // lối vào (thẻ trên Home) - cùng tình trạng "mồ côi lối tắt" Dossier từng có.
+  // KHÔNG làm 1 tab nội dung như 2 tab trên (ServicesScreen tự quản lý chọn xe
+  // riêng, không hợp nhồi làm nội dung con tĩnh) - bấm vào điều hướng thẳng
+  // sang màn Bảo dưỡng, không đổi activeTab.
+  function goToServices() {
+    navigation.navigate('Services');
   }
 
   return (
@@ -84,11 +81,11 @@ export default function QuanLyScreen() {
             tỉ trọng ngang bằng 2 tab thật - tín hiệu thị giác "đây là lối tắt,
             không phải tab" rõ hơn mà không cần đổi hành vi/điều hướng. */}
         <View style={{ width: 1, backgroundColor: colors.border, marginVertical: 10 }} />
-        <TouchableOpacity onPress={goToDossier} style={[styles.tabItem, { flex: 0.75 }]} activeOpacity={0.75}>
-          <FontAwesome5 name="book" size={13} color={colors.textSecondary} solid />
+        <TouchableOpacity onPress={goToServices} style={[styles.tabItem, { flex: 0.75 }]} activeOpacity={0.75}>
+          <FontAwesome5 name="wrench" size={13} color={colors.textSecondary} solid />
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
             <Text style={[styles.tabLabel, { color: colors.textSecondary }]}>
-              {t('dossier.title')}
+              {t('nav.tab_services')}
             </Text>
             <FontAwesome5 name="external-link-alt" size={9} color={colors.textSecondary} />
           </View>
