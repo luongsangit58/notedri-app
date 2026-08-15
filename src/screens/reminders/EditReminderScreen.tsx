@@ -10,6 +10,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { remindersApi } from '../../api/reminders';
 import { useQueryClient } from '@tanstack/react-query';
 import { useColors } from '../../utils/theme';
+import { INPUT_FONT_FAMILY } from '../../utils/font';
 import { useT } from '../../i18n';
 import { flattenReminders } from '../../utils/reminders';
 import { registerPushTokenAfterPermission } from '../../utils/pushNotifications';
@@ -36,6 +37,7 @@ export default function EditReminderScreen() {
     paddingHorizontal: 14,
     paddingVertical: 13,
     fontSize: 16,
+    fontFamily: INPUT_FONT_FAMILY,
   };
   const navigation = useNavigation<any>();
   const route = useRoute<any>();

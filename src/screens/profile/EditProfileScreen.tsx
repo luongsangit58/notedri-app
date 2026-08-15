@@ -15,6 +15,7 @@ import { profileApi } from '../../api/profile';
 import { geoApi, GeoItem } from '../../api/geo';
 import SelectField from '../../components/SelectField';
 import { useColors } from '../../utils/theme';
+import { INPUT_FONT_FAMILY } from '../../utils/font';
 import { useT } from '../../i18n';
 import AppBgPattern from '../../components/AppBgPattern';
 
@@ -47,6 +48,7 @@ export default function EditProfileScreen() {
     padding: 14,
     marginBottom: 4,
     fontSize: 15,
+    fontFamily: INPUT_FONT_FAMILY,
   };
 
   const cardStyle = {

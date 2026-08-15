@@ -4,6 +4,7 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import { useColors } from '../utils/theme';
 import { normalizeSearch } from '../utils/text';
 import { useT } from '../i18n';
+import { INPUT_FONT_FAMILY } from '../utils/font';
 
 type Option = { code: string; name: string };
 
@@ -53,7 +54,7 @@ export default function SelectField({
                 placeholder={t('common.search') as any}
                 placeholderTextColor={colors.textSecondary}
                 autoFocus
-                style={{ backgroundColor: colors.background, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, color: colors.text, fontSize: 15 }}
+                style={{ backgroundColor: colors.background, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, color: colors.text, fontSize: 15, fontFamily: INPUT_FONT_FAMILY }}
               />
             </View>
             <FlatList

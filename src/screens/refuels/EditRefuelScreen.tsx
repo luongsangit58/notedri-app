@@ -10,6 +10,7 @@ import { useDeleteRefuel } from '../../hooks/useRefuels';
 import { refuelsApi } from '../../api/refuels';
 import client from '../../api/client';
 import { useColors } from '../../utils/theme';
+import { INPUT_FONT_FAMILY } from '../../utils/font';
 import { contentWide } from '../../utils/layout';
 import { useT } from '../../i18n';
 import DatePickerField from '../../components/DatePickerField';
@@ -40,6 +41,7 @@ export default function EditRefuelScreen() {
     paddingHorizontal: 14,
     paddingVertical: 13,
     fontSize: 16,
+    fontFamily: INPUT_FONT_FAMILY,
   };
   const navigation = useNavigation<any>();
   const route = useRoute<any>();

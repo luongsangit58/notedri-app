@@ -13,6 +13,7 @@ import dayjs from 'dayjs';
 import { useVehicles } from '../../hooks/useVehicles';
 import { useCreateService, useRecentGarages, useServiceCatalog } from '../../hooks/useServices';
 import { useColors } from '../../utils/theme';
+import { INPUT_FONT_FAMILY } from '../../utils/font';
 import { useT } from '../../i18n';
 import MoneyInput from '../../components/MoneyInput';
 import ReceiptPicker from '../../components/ReceiptPicker';
@@ -95,6 +96,7 @@ export default function AddServiceScreen() {
       marginBottom: 4,
       borderWidth: 1,
       borderColor: colors.border,
+      fontFamily: INPUT_FONT_FAMILY,
     },
     inputMultiline: {
       minHeight: 80,

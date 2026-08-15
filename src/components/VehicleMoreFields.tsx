@@ -4,6 +4,7 @@ import DatePickerField from './DatePickerField';
 import { useColors } from '../utils/theme';
 import { useT } from '../i18n';
 import { decodeVinModelYear, decodeVinRegionHint } from '../services/vin/vinDecoder';
+import { INPUT_FONT_FAMILY } from '../utils/font';
 
 // Các trường hồ sơ xe TUỲ CHỌN (khớp web _form): màu, VIN, số máy, đại lý, ngày/giá mua, ghi chú.
 export type VehicleExtra = {
@@ -67,7 +68,7 @@ export default function VehicleMoreFields({
   const inputStyle = {
     backgroundColor: colors.surface, color: colors.text, borderRadius: 10,
     paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, marginBottom: 12,
-    borderWidth: 1, borderColor: colors.border,
+    borderWidth: 1, borderColor: colors.border, fontFamily: INPUT_FONT_FAMILY,
   };
   const labelStyle = { color: colors.textSecondary, fontSize: 12, marginBottom: 4, marginTop: 4 };
   const hintStyle = { color: colors.textSecondary, fontSize: 11.5, marginTop: -8, marginBottom: 12, fontStyle: 'italic' as const };
@@ -114,7 +115,7 @@ export default function VehicleMoreFields({
       <Text style={labelStyle}>{t('add_vehicle.purchase_price_label')}</Text>
       <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surface, borderRadius: 10, borderWidth: 1, borderColor: colors.border, marginBottom: 12, paddingRight: 14 }}>
         <TextInput
-          style={{ flex: 1, color: colors.text, fontSize: 15, paddingHorizontal: 14, paddingVertical: 12 }}
+          style={{ flex: 1, color: colors.text, fontSize: 15, paddingHorizontal: 14, paddingVertical: 12, fontFamily: INPUT_FONT_FAMILY }}
           value={value.gia_mua} onChangeText={(v) => onChange({ gia_mua: formatMoney(v) })}
           placeholder={t('add_vehicle.purchase_price_placeholder')} placeholderTextColor={colors.textSecondary}
           keyboardType="numeric" />

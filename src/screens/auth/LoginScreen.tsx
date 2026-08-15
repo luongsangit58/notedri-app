@@ -8,6 +8,7 @@ import { useT } from '../../i18n';
 import { BASE_URL } from '../../utils/api';
 import { AuthContainer, C, INPUT_STYLE } from './_authLayout';
 import { markGooglePending, clearGooglePending } from '../../services/googleAuthRecovery';
+import { INPUT_FONT_FAMILY } from '../../utils/font';
 
 const GOOGLE_MOBILE_URL = `${BASE_URL}/auth/google/mobile`;
 
@@ -103,8 +104,16 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
         : undefined;
       const { authApi } = await import('../../api/auth');
       const res = await authApi.loginWithApple(credential.identityToken, fullName);
-      const { token, user } = res.data?.data ?? res.data;
-      await useAuthStore.getState().setSession(token, user);
+      const { token } = res.data?.data ?? res.data;
+      // Rà soát 15/8 (bug thật user báo: đăng nhập bằng Apple xong vào Hồ sơ không
+      // thấy trạng thái "đã liên kết Apple", chỉ Google hiện đúng) - `user` nhúng sẵn
+      // trong response /auth/apple có thể thiếu/chưa cập nhật has_apple. finishGoogleLogin
+      // ở trên ĐÃ xử lý đúng bài toán y hệt (chỉ dùng token, gọi /auth/me lấy user MỚI
+      // NHẤT/đầy đủ nhất thay vì tin thẳng payload đăng nhập) - áp dụng lại đúng cách đó
+      // cho Apple thay vì dùng `user` nhúng sẵn trong response /auth/apple.
+      const me = await authApi.me(token);
+      const freshUser = me.data?.data ?? me.data;
+      await useAuthStore.getState().setSession(token, freshUser);
     } catch (e: any) {
       if (e?.code === 'ERR_REQUEST_CANCELED') return; // user tự huỷ -> im lặng như Google
       Alert.alert(t('common.error'), e?.response?.data?.message ?? e?.message ?? t('auth.login_apple_failed'));
@@ -164,7 +173,7 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
             autoCapitalize="none"
             returnKeyType="done"
             onSubmitEditing={handleLogin}
-            style={{ flex: 1, color: C.text, fontSize: 15, paddingVertical: 14 }}
+            style={{ flex: 1, color: C.text, fontSize: 15, paddingVertical: 14, fontFamily: INPUT_FONT_FAMILY }}
           />
           <TouchableOpacity onPress={() => setShowPw(s => !s)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
             <FontAwesome5 name={showPw ? 'eye-slash' : 'eye'} size={16} color={C.textSecondary} solid />

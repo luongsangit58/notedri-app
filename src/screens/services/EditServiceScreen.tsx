@@ -14,6 +14,7 @@ import { useUpdateService, useDeleteService, useRecentGarages } from '../../hook
 import { servicesApi, ServicePhoto } from '../../api/services';
 import ReceiptPicker from '../../components/ReceiptPicker';
 import { useColors } from '../../utils/theme';
+import { INPUT_FONT_FAMILY } from '../../utils/font';
 import { useT } from '../../i18n';
 
 const LOAI_OPTIONS = [
@@ -88,6 +89,7 @@ export default function EditServiceScreen() {
       marginBottom: 4,
       borderWidth: 1,
       borderColor: colors.border,
+      fontFamily: INPUT_FONT_FAMILY,
     },
     inputMultiline: {
       minHeight: 80,

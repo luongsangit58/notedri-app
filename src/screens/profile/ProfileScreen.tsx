@@ -16,6 +16,7 @@ import { authApi } from '../../api/auth';
 import { achievementsApi } from '../../api/achievements';
 import { BASE_URL } from '../../utils/api';
 import { useColors, useThemeStore } from '../../utils/theme';
+import { INPUT_FONT_FAMILY } from '../../utils/font';
 import { useI18nStore, useLang, useT } from '../../i18n';
 import { markGooglePending, clearGooglePending } from '../../services/googleAuthRecovery';
 import { PLAY_STORE_URL } from './FeedbackScreen';
@@ -539,6 +540,7 @@ export default function ProfileScreen() {
                 backgroundColor: colors.background, color: colors.text,
                 borderRadius: 10, padding: 12, fontSize: 15, marginBottom: 8,
                 borderWidth: 1, borderColor: deleteError ? colors.error : colors.border,
+                fontFamily: INPUT_FONT_FAMILY,
               }}
             />
             {!!deleteError && (

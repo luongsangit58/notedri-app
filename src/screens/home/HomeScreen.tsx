@@ -389,19 +389,22 @@ export default function HomeScreen() {
               style={{ position: 'relative' }}
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
+              {/* Rà soát 15/8 (góp ý user: avatar to quá, lệch hẳn so với icon chuông/thời
+                  tiết cùng hàng) - thu nhỏ về 36px, khớp cỡ icon tròn dùng chung ở các nơi
+                  khác trong app (thay vì 44px nổi bật quá mức trong hàng header). */}
               {user?.avatar ? (
                 <Image
                   source={{ uri: user.avatar }}
-                  style={{ width: 44, height: 44, borderRadius: 22, borderWidth: 1.5, borderColor: colors.border }}
+                  style={{ width: 36, height: 36, borderRadius: 18, borderWidth: 1.5, borderColor: colors.border }}
                 />
               ) : (
                 <View style={{
-                  width: 44, height: 44, borderRadius: 22,
+                  width: 36, height: 36, borderRadius: 18,
                   backgroundColor: colors.primary + '22',
                   alignItems: 'center', justifyContent: 'center',
                   borderWidth: 1.5, borderColor: colors.border,
                 }}>
-                  <Text style={{ color: colors.primary, fontWeight: '800', fontSize: 17 }}>
+                  <Text style={{ color: colors.primary, fontWeight: '800', fontSize: 14 }}>
                     {(user?.name ?? '?').charAt(0).toUpperCase()}
                   </Text>
                 </View>

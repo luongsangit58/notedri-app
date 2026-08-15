@@ -25,6 +25,7 @@ import { useVehicles } from '../../hooks/useVehicles';
 import { useSelectedVehicleStore } from '../../store/selectedVehicleStore';
 import ErrorView from '../../components/ErrorView';
 import { useColors } from '../../utils/theme';
+import { INPUT_FONT_FAMILY } from '../../utils/font';
 import { contentWide } from '../../utils/layout';
 import { flattenReminders } from '../../utils/reminders';
 import { useT } from '../../i18n';
@@ -428,6 +429,7 @@ export default function RemindersScreen() {
       paddingHorizontal: 14,
       paddingVertical: 12,
       marginBottom: 20,
+      fontFamily: INPUT_FONT_FAMILY,
     },
     modalActions: {
       flexDirection: 'row',
@@ -542,8 +544,15 @@ export default function RemindersScreen() {
 
   if (isError) return <ErrorView message={t('reminders.error_load_failed')} onRetry={refetch} />;
 
+  // Rà soát 15/8 (bug thật user báo, chỉ iOS: khoảng tối rỗng chen giữa nội dung
+  // và tab bar, không "đè" lên FAB như Home). Màn này là NỘI DUNG CON của tab
+  // "Quản lý" (QuanLyScreen), luôn có CustomTabBar (đã tự cộng insets.bottom
+  // trong chính nó) nằm dưới - giữ `edges` chứa 'bottom' ở đây cộng dư thêm
+  // 1 lần đúng bằng khoảng an toàn đáy (~34px, vạch cử chỉ iPhone - Android
+  // không có inset này nên không bị). Bỏ 'bottom', khớp đúng cách Home
+  // (HomeScreen edges=['top','left','right']) đã làm đúng từ đầu.
   return (
-    <SafeAreaView style={styles.container} edges={['bottom', 'left', 'right']}>
+    <SafeAreaView style={styles.container} edges={['left', 'right']}>
       <AppBgPattern />
       <FlatList
         data={reminders}

@@ -25,6 +25,7 @@ import LoadingView from '../../components/LoadingView';
 import ErrorView from '../../components/ErrorView';
 import AppBgPattern from '../../components/AppBgPattern';
 import { useColors } from '../../utils/theme';
+import { INPUT_FONT_FAMILY } from '../../utils/font';
 import { useT } from '../../i18n';
 import type { VehiclePhoto } from '../../api/vehicles';
 
@@ -41,6 +42,7 @@ export default function EditVehicleScreen() {
     marginBottom: 12,
     borderWidth: 1,
     borderColor: colors.border,
+    fontFamily: INPUT_FONT_FAMILY,
   };
   const labelStyle = {
     color: colors.textSecondary,

@@ -9,6 +9,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { odometerApi } from '../../api/odometer';
 import { useUpdateOdometer, useDeleteOdometer } from '../../hooks/useOdometer';
 import { useColors } from '../../utils/theme';
+import { INPUT_FONT_FAMILY } from '../../utils/font';
 import { contentWide } from '../../utils/layout';
 import { useT } from '../../i18n';
 import DatePickerField from '../../components/DatePickerField';
@@ -70,6 +71,7 @@ export default function EditOdometerScreen() {
       marginBottom: 4,
       borderWidth: 1,
       borderColor: colors.border,
+      fontFamily: INPUT_FONT_FAMILY,
     },
     inputLarge: {
       fontSize: 28,

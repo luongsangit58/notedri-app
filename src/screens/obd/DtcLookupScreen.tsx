@@ -16,6 +16,7 @@ import { obdApi, DtcLookupResult } from '../../api/obd';
 import { lookupDtcOffline, suggestDtcOffline, withDefaultDtcPrefix } from '../../services/obd/dtcOfflineDictionary';
 import AppBgPattern from '../../components/AppBgPattern';
 import { useColors, useThemeStore } from '../../utils/theme';
+import { INPUT_FONT_FAMILY } from '../../utils/font';
 import { formatVND } from '../../utils/format';
 import { BASE_URL } from '../../utils/api';
 import { useT } from '../../i18n';
@@ -387,6 +388,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     letterSpacing: 2,
+    fontFamily: INPUT_FONT_FAMILY,
   },
   searchBtn: {
     width: 50,

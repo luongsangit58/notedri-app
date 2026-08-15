@@ -477,7 +477,14 @@ function HealthCard({ vehicle, health, loading, onAddReminder, onCta, history, h
 }
 
 /* ─── Main screen ─── */
-export default function HealthScreen() {
+// Rà soát 15/8 (bug thật user báo, chỉ iOS): dùng ở 2 ngữ cảnh khác nhau - (1)
+// nhúng làm 1 sub-tab bên trong QuanLyScreen (CustomTabBar bên dưới ĐÃ tự cộng
+// insets.bottom trong chính nó - `edges` chứa 'bottom' ở đây cộng dư thêm 1
+// lần, tạo khoảng tối rỗng chen giữa nội dung và tab bar thay vì "đè" lên FAB
+// như Home), (2) route "Health" độc lập (RootStack, KHÔNG có tab bar nào bên
+// dưới - vẫn cần 'bottom' thật). Thêm prop `embedded` (đúng quy ước đã dùng ở
+// ReportsScreen.tsx/GpsTripsScreen.tsx) để phân biệt thay vì bỏ cứng.
+export default function HealthScreen({ embedded }: { embedded?: boolean } = {}) {
   const colors = useColors();
   const t = useT();
   const navigation = useNavigation<any>();
@@ -526,7 +533,7 @@ export default function HealthScreen() {
 
   if (vehiclesLoading) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }} edges={['bottom']}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }} edges={embedded ? [] : ['bottom']}>
         <AppBgPattern />
         <ActivityIndicator color={colors.primary} size="large" />
         <Text style={{ color: colors.textSecondary, marginTop: 12 }}>{t('health.loading')}</Text>
@@ -536,7 +543,7 @@ export default function HealthScreen() {
 
   if (vehiclesError) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', padding: 24 }} edges={['bottom']}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', padding: 24 }} edges={embedded ? [] : ['bottom']}>
         <AppBgPattern />
         <Text style={{ color: colors.error, fontSize: 16, fontWeight: '700', marginBottom: 8 }}>{t('common.error_load')}</Text>
         <TouchableOpacity
@@ -550,7 +557,7 @@ export default function HealthScreen() {
 
   if (vehicles.length === 0) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', padding: 24 }} edges={['bottom']}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', padding: 24 }} edges={embedded ? [] : ['bottom']}>
         <AppBgPattern />
         <FontAwesome5 name="car-side" size={48} color={colors.textSecondary} solid style={{ marginBottom: 12 }} />
         <Text style={{ color: colors.text, fontSize: 16, fontWeight: '700', marginBottom: 6 }}>{t('health.no_vehicles')}</Text>
@@ -561,8 +568,14 @@ export default function HealthScreen() {
     );
   }
 
+  // Rà soát 15/8 (bug thật user báo, chỉ iOS): màn này là nội dung con của tab
+  // "Quản lý" (QuanLyScreen), luôn có CustomTabBar (đã tự cộng insets.bottom
+  // trong chính nó) nằm dưới - `edges` chứa 'bottom' ở đây cộng dư thêm 1 lần
+  // đúng bằng khoảng an toàn đáy (~34px, vạch cử chỉ iPhone), tạo khoảng tối
+  // rỗng chen giữa nội dung và tab bar thay vì "đè" lên FAB như Home. Bỏ hẳn
+  // 'bottom' ở cả 4 SafeAreaView trong file này, khớp cách Home đã làm đúng.
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={embedded ? [] : ['bottom']}>
       <AppBgPattern />
       <ScrollView
         contentContainerStyle={[{ padding: 16, paddingBottom: 40 }, contentWide]}

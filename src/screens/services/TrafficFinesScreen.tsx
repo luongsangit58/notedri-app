@@ -9,6 +9,7 @@ import { useQuery } from '@tanstack/react-query';
 import { trafficFinesApi, TrafficFineRow } from '../../api/trafficFines';
 import AppBgPattern from '../../components/AppBgPattern';
 import { useColors } from '../../utils/theme';
+import { INPUT_FONT_FAMILY } from '../../utils/font';
 import { useT } from '../../i18n';
 import { formatVND } from '../../utils/format';
 import { normalizeSearch } from '../../utils/text';
@@ -83,6 +84,7 @@ export default function TrafficFinesScreen() {
               style={{
                 backgroundColor: colors.card, color: colors.text, borderRadius: 10, borderWidth: 1,
                 borderColor: colors.border, paddingHorizontal: 14, paddingVertical: 10, fontSize: 14, marginBottom: 12,
+                fontFamily: INPUT_FONT_FAMILY,
               }}
             />
 

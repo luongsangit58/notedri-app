@@ -19,6 +19,7 @@ import DatePickerField from '../../components/DatePickerField';
 import MoneyInput from '../../components/MoneyInput';
 import VoiceButton from '../../components/VoiceButton';
 import { useColors } from '../../utils/theme';
+import { INPUT_FONT_FAMILY } from '../../utils/font';
 import { contentWide } from '../../utils/layout';
 import { formatVND, formatKm } from '../../utils/format';
 import { useT } from '../../i18n';
@@ -45,6 +46,7 @@ export default function AddRefuelScreen() {
     paddingHorizontal: 14,
     paddingVertical: 13,
     fontSize: 16,
+    fontFamily: INPUT_FONT_FAMILY,
   };
   const navigation = useNavigation();
   const route = useRoute<any>();

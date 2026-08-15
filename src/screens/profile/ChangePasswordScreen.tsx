@@ -9,6 +9,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useMutation } from '@tanstack/react-query';
 import { profileApi } from '../../api/profile';
 import { useColors } from '../../utils/theme';
+import { INPUT_FONT_FAMILY } from '../../utils/font';
 import { useT } from '../../i18n';
 import AppBgPattern from '../../components/AppBgPattern';
 
@@ -41,7 +42,7 @@ function PasswordField({
         paddingHorizontal: 14,
       }}>
         <TextInput
-          style={{ flex: 1, color: colors.text, fontSize: 15, paddingVertical: 12 }}
+          style={{ flex: 1, color: colors.text, fontSize: 15, paddingVertical: 12, fontFamily: INPUT_FONT_FAMILY }}
           value={value}
           onChangeText={onChange}
           secureTextEntry={!show}

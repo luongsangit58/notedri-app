@@ -4,6 +4,7 @@ import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { FontAwesome5 } from '@expo/vector-icons';
 import * as Speech from 'expo-speech';
 import { useColors } from '../../utils/theme';
+import { INPUT_FONT_FAMILY } from '../../utils/font';
 import { prepareTextForSpeech } from '../../utils/text';
 import { useNoriAgentStore, PREMIUM_REQUIRED_TEXT } from '../../store/noriAgentStore';
 import { useInitNoriAgent } from '../../agent/useInitNoriAgent';
@@ -275,7 +276,7 @@ export default function NoriQuickPopover({ visible, onClose, vehicleId }: NoriQu
                 onChangeText={setInput}
                 placeholder="Hoặc gõ câu hỏi..."
                 placeholderTextColor={colors.textSecondary}
-                style={{ flex: 1, paddingHorizontal: 12, paddingVertical: 8, color: colors.text, fontSize: 15 }}
+                style={{ flex: 1, paddingHorizontal: 12, paddingVertical: 8, color: colors.text, fontSize: 15, fontFamily: INPUT_FONT_FAMILY }}
                 onSubmitEditing={() => handleSend()}
                 editable={!isThinking}
               />

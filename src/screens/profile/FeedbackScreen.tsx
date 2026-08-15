@@ -10,6 +10,7 @@ import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import client from '../../api/client';
 import { useColors } from '../../utils/theme';
+import { INPUT_FONT_FAMILY } from '../../utils/font';
 import { useT, useI18nStore } from '../../i18n';
 import AppBgPattern from '../../components/AppBgPattern';
 
@@ -149,6 +150,7 @@ export default function FeedbackScreen() {
             borderRadius: 12, padding: 14, fontSize: 14, lineHeight: 20,
             minHeight: 120, textAlignVertical: 'top',
             borderWidth: 1, borderColor: colors.border, marginBottom: 8,
+            fontFamily: INPUT_FONT_FAMILY,
           }}
         />
         <Text style={{ color: colors.textSecondary, fontSize: 11, marginBottom: 24, textAlign: 'right' }}>

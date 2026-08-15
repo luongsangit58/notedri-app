@@ -26,6 +26,7 @@ import { useSendTransferRequest } from '../../hooks/useVehicleTransfer';
 import { useAuthStore } from '../../store/authStore';
 import client from '../../api/client';
 import { useColors } from '../../utils/theme';
+import { INPUT_FONT_FAMILY } from '../../utils/font';
 import { normalizeSearch } from '../../utils/text';
 import { useT } from '../../i18n';
 import VehicleMoreFields, { VehicleExtra, EMPTY_VEHICLE_EXTRA, extraToPayload } from '../../components/VehicleMoreFields';
@@ -155,7 +156,7 @@ export default function AddVehicleScreen() {
   const inputStyle = {
     backgroundColor: colors.surface, color: colors.text, borderRadius: 10,
     paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, marginBottom: 12,
-    borderWidth: 1, borderColor: colors.border,
+    borderWidth: 1, borderColor: colors.border, fontFamily: INPUT_FONT_FAMILY,
   };
   const labelStyle = { color: colors.textSecondary, fontSize: 12, marginBottom: 4, marginTop: 4 };
 

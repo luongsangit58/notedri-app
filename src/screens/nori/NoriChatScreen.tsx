@@ -8,6 +8,7 @@ import { KeyboardStickyView, KeyboardAvoidingView, useKeyboardState } from 'reac
 import { FontAwesome5 } from '@expo/vector-icons';
 import * as Speech from 'expo-speech';
 import { useColors } from '../../utils/theme';
+import { INPUT_FONT_FAMILY } from '../../utils/font';
 import { prepareTextForSpeech } from '../../utils/text';
 import { useNoriAgentStore } from '../../store/noriAgentStore';
 import { useInitNoriAgent } from '../../agent/useInitNoriAgent';
@@ -346,6 +347,7 @@ export default function NoriChatScreen() {
               paddingHorizontal: 16,
               paddingVertical: 10,
               color: colors.text,
+              fontFamily: INPUT_FONT_FAMILY,
             }}
             onSubmitEditing={() => handleSend()}
             editable={!isThinking}
@@ -413,6 +415,7 @@ export default function NoriChatScreen() {
                 backgroundColor: colors.background, color: colors.text,
                 borderRadius: 10, padding: 12, fontSize: 14, minHeight: 60,
                 borderWidth: 1, borderColor: colors.border, marginBottom: 12,
+                fontFamily: INPUT_FONT_FAMILY,
               }}
             />
             <TouchableOpacity onPress={() => setFeedbackRequestId(null)} style={{ alignItems: 'center', padding: 8 }}>

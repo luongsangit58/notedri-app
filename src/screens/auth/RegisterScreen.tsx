@@ -7,6 +7,7 @@ import { API_URL } from '../../utils/api';
 import { useAuthStore } from '../../store/authStore';
 import { useT } from '../../i18n';
 import { AuthContainer, C, INPUT_STYLE, LABEL_STYLE } from './_authLayout';
+import { INPUT_FONT_FAMILY } from '../../utils/font';
 
 type Step = 'form' | 'otp';
 
@@ -171,7 +172,7 @@ export default function RegisterScreen({ navigation }: { navigation: any }) {
               autoCapitalize="none"
               returnKeyType="next"
               onSubmitEditing={() => confirmRef.current?.focus()}
-              style={{ flex: 1, color: C.text, fontSize: 15, paddingVertical: 14 }}
+              style={{ flex: 1, color: C.text, fontSize: 15, paddingVertical: 14, fontFamily: INPUT_FONT_FAMILY }}
             />
             <TouchableOpacity onPress={() => setShowPw(s => !s)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
               <FontAwesome5 name={showPw ? 'eye-slash' : 'eye'} size={16} color={C.textSecondary} solid />
@@ -191,7 +192,7 @@ export default function RegisterScreen({ navigation }: { navigation: any }) {
               autoCapitalize="none"
               returnKeyType="done"
               onSubmitEditing={handleSubmitForm}
-              style={{ flex: 1, color: C.text, fontSize: 15, paddingVertical: 14 }}
+              style={{ flex: 1, color: C.text, fontSize: 15, paddingVertical: 14, fontFamily: INPUT_FONT_FAMILY }}
             />
             <TouchableOpacity onPress={() => setShowPwConfirm(s => !s)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
               <FontAwesome5 name={showPwConfirm ? 'eye-slash' : 'eye'} size={16} color={C.textSecondary} solid />

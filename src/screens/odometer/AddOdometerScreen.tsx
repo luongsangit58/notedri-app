@@ -20,6 +20,7 @@ import { useColors } from '../../utils/theme';
 import { contentWide } from '../../utils/layout';
 import { formatKm } from '../../utils/format';
 import { useT } from '../../i18n';
+import { INPUT_FONT_FAMILY } from '../../utils/font';
 
 export default function AddOdometerScreen() {
   const t = useT();
@@ -31,6 +32,7 @@ export default function AddOdometerScreen() {
     paddingHorizontal: 14,
     paddingVertical: 13,
     fontSize: 16,
+    fontFamily: INPUT_FONT_FAMILY,
   };
 
   const navigation = useNavigation();

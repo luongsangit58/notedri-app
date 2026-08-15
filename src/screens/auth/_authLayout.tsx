@@ -3,6 +3,7 @@ import {
   View, KeyboardAvoidingView, ScrollView, Platform, useWindowDimensions,
 } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
+import { INPUT_FONT_FAMILY } from '../../utils/font';
 
 // Fixed dark palette cho toàn bộ auth flow
 export const C = {
@@ -32,6 +33,7 @@ export const INPUT_STYLE = {
   paddingVertical: 14,
   color: C.text,
   fontSize: 15,
+  fontFamily: INPUT_FONT_FAMILY,
 } as const;
 
 export const LABEL_STYLE = {

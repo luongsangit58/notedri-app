@@ -1,5 +1,6 @@
 import React from 'react';
 import { TextInput, TextInputProps } from 'react-native';
+import { INPUT_FONT_FAMILY } from '../utils/font';
 
 // Hiển thị tiền có dấu chấm phân cách ("100.000") trong khi GIÁ TRỊ lưu là số thô
 // ("100000"). Parent giữ chuỗi số thô; submit chỉ cần parseInt/parseFloat.
@@ -23,10 +24,11 @@ interface Props extends Omit<TextInputProps, 'value' | 'onChangeText'> {
   onChangeText: (raw: string) => void; // trả lại chuỗi số thô
 }
 
-export default function MoneyInput({ value, onChangeText, ...rest }: Props) {
+export default function MoneyInput({ value, onChangeText, style, ...rest }: Props) {
   return (
     <TextInput
       {...rest}
+      style={[{ fontFamily: INPUT_FONT_FAMILY }, style]}
       value={formatThousands(value)}
       onChangeText={(t) => onChangeText(t.replace(/\D/g, ''))}
       keyboardType="numeric"

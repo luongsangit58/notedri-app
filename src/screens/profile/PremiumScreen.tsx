@@ -13,6 +13,7 @@ import client from '../../api/client';
 import { authApi } from '../../api/auth';
 import { useAuthStore } from '../../store/authStore';
 import { useColors } from '../../utils/theme';
+import { INPUT_FONT_FAMILY } from '../../utils/font';
 import { useT } from '../../i18n';
 import AppBgPattern from '../../components/AppBgPattern';
 
@@ -291,6 +292,7 @@ export default function PremiumScreen() {
                   fontSize: 15,
                   borderWidth: 1,
                   borderColor: colors.border,
+                  fontFamily: INPUT_FONT_FAMILY,
                 }}
               />
               <TouchableOpacity

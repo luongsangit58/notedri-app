@@ -142,9 +142,19 @@ function ThemedTabNavigator() {
 export default function AppNavigator() {
   const colors = useColors();
   const t = useT();
+  // Rà soát 15/8 (bug thật user báo: mở bất kỳ màn nào đẩy lên từ Tabs (Hồ sơ...)
+  // đều thấy nút back hiện chữ "Tabs" - kể cả khi đang dùng tiếng Việt). Nguyên
+  // nhân: back button (iOS) mặc định hiện TIÊU ĐỀ của màn TRƯỚC ĐÓ trong stack -
+  // "Tabs" (RootStack.Screen bên dưới) không có `options.title` nên rơi về đúng
+  // `name` thô của route. "Tabs" gộp 4-5 tab khác tiêu đề (Tổng quan/Thống kê/Xe/
+  // Quản lý) nên không có 1 title cố định nào hợp lý để gán - cách chuẩn hơn
+  // (headerBackButtonDisplayMode: 'minimal') là ẩn hẳn chữ, chỉ còn mũi tên, khớp
+  // đúng phong cách các nút back tự vẽ (mũi tên trần, không chữ) đã dùng ở nhiều
+  // màn khác trong app (vd OBDSetupScreen).
   const headerOpts = {
     headerStyle: { backgroundColor: colors.surface },
     headerTintColor: colors.text,
+    headerBackButtonDisplayMode: 'minimal' as const,
   };
   return (
     <RootStack.Navigator screenOptions={{ headerShown: false }}>

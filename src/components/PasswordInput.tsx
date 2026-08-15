@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, TextInput, TouchableOpacity, StyleProp, ViewStyle } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useColors } from '../utils/theme';
+import { INPUT_FONT_FAMILY } from '../utils/font';
 
 interface Props {
   value: string;
@@ -37,7 +38,7 @@ export default function PasswordInput({
     }, style]}>
       <TextInput
         ref={inputRef}
-        style={{ flex: 1, color: colors.text, fontSize: 16, paddingVertical: 14 }}
+        style={{ flex: 1, color: colors.text, fontSize: 16, paddingVertical: 14, fontFamily: INPUT_FONT_FAMILY }}
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}

@@ -11,6 +11,7 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import { useServices } from '../../hooks/useServices';
 import { useVehicles } from '../../hooks/useVehicles';
 import { useColors } from '../../utils/theme';
+import { INPUT_FONT_FAMILY } from '../../utils/font';
 import { normalizeSearch } from '../../utils/text';
 import { contentWide } from '../../utils/layout';
 import { formatVND } from '../../utils/format';
@@ -211,6 +212,7 @@ export default function ServicesScreen() {
     searchInput: {
       backgroundColor: colors.surface, color: colors.text,
       borderRadius: 10, padding: 12, marginBottom: 8, fontSize: 14,
+      fontFamily: INPUT_FONT_FAMILY,
     },
     chipsContainer: { gap: 8, paddingBottom: 4 },
     groupLabel: {

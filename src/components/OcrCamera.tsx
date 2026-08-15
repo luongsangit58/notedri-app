@@ -12,6 +12,7 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import { useColors } from '../utils/theme';
 import { useT } from '../i18n';
 import { PermissionManager } from '../services/permissions/PermissionManager';
+import { INPUT_FONT_FAMILY } from '../utils/font';
 
 export type OcrMode = 'odo' | 'receipt';
 
@@ -288,6 +289,7 @@ export default function OcrCamera({ visible, onClose, onResult, onReceiptResult,
     borderRadius: 8,
     padding: 12,
     marginBottom: 12,
+    fontFamily: INPUT_FONT_FAMILY,
   };
 
   return (

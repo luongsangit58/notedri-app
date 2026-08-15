@@ -10,6 +10,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { useCreateReminder, useReminders } from '../../hooks/useReminders';
 import { useVehicles } from '../../hooks/useVehicles';
 import { useColors } from '../../utils/theme';
+import { INPUT_FONT_FAMILY } from '../../utils/font';
 import { useT } from '../../i18n';
 import { registerPushTokenAfterPermission } from '../../utils/pushNotifications';
 
@@ -35,6 +36,7 @@ export default function AddReminderScreen() {
     paddingHorizontal: 14,
     paddingVertical: 13,
     fontSize: 16,
+    fontFamily: INPUT_FONT_FAMILY,
   };
   const navigation = useNavigation<any>();
   const route = useRoute<any>();

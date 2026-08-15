@@ -22,6 +22,7 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useColors } from '../../utils/theme';
+import { INPUT_FONT_FAMILY } from '../../utils/font';
 import { useT, useI18nStore } from '../../i18n';
 import { useGpsTripState, useGpsTrips } from '../../hooks/useGpsTrip';
 import { useVehicles } from '../../hooks/useVehicles';
@@ -880,7 +881,7 @@ export default function GpsTripsScreen({ embedded }: { embedded?: boolean } = {}
               placeholder={t('gps_trips.note_placeholder')}
               placeholderTextColor={colors.textSecondary}
               maxLength={255}
-              style={{ backgroundColor: colors.background, color: colors.text, borderRadius: 10, padding: 12, minHeight: 48 }}
+              style={{ backgroundColor: colors.background, color: colors.text, borderRadius: 10, padding: 12, minHeight: 48, fontFamily: INPUT_FONT_FAMILY }}
             />
             <View style={{ flexDirection: 'row', gap: 10, marginTop: 16 }}>
               <TouchableOpacity onPress={() => setNoteTrip(null)} style={{ flex: 1, alignItems: 'center', paddingVertical: 11, borderRadius: 10, borderWidth: 1, borderColor: colors.border }}>

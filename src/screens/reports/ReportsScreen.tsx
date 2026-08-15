@@ -1029,9 +1029,16 @@ export default function ReportsScreen({ embedded }: { embedded?: boolean } = {})
   if (loadingVehicles) return <LoadingView />;
 
   return (
+    // Rà soát 15/8 (bug thật user báo, chỉ iOS): khi `embedded` (nhúng trong tab
+    // "Thống kê" - ThongKeScreen), CustomTabBar bên dưới ĐÃ tự cộng insets.bottom
+    // trong chính nó rồi - giữ 'bottom' ở đây cộng dư thêm 1 lần, tạo khoảng tối
+    // rỗng chen giữa nội dung và tab bar thay vì "đè" lên FAB như Home. Đứng
+    // ĐỘC LẬP (route "Reports" riêng, không có tab bar nào bên dưới) thì NGƯỢC
+    // LẠI vẫn cần 'bottom' thật (không có ai khác lo phần này) - dùng đúng cờ
+    // `embedded` sẵn có để phân biệt 2 ngữ cảnh thay vì bỏ cứng.
     <SafeAreaView
       style={{ flex: 1, backgroundColor: colors.background }}
-      edges={['bottom']}>
+      edges={embedded ? [] : ['bottom']}>
       <AppBgPattern />
       {/* header - chỉ hiện khi nhúng (không có header gốc "← Báo cáo" để dựa
           vào); đứng riêng thì header gốc đã đủ, không lặp lại tiêu đề. */}

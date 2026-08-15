@@ -97,8 +97,13 @@ export default function TimelineScreen() {
 
   if (isError) return <ErrorView message={t('timeline.load_error')} onRetry={refetch} />;
 
+  // Rà soát 15/8 (bug thật user báo, chỉ iOS): màn này là nội dung con của tab
+  // "Thống kê" (ThongKeScreen), luôn có CustomTabBar (đã tự cộng insets.bottom
+  // trong chính nó) nằm dưới - `edges` chứa 'bottom' cộng dư thêm 1 lần đúng
+  // bằng khoảng an toàn đáy, tạo khoảng tối rỗng chen giữa nội dung và tab bar
+  // thay vì "đè" lên FAB như Home. Bỏ 'bottom', khớp cách Home đã làm đúng.
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={[]}>
       <AppBgPattern />
       <FlatList
         data={filteredItems}
