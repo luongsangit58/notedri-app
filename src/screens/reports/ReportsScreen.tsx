@@ -419,7 +419,7 @@ function PeriodReportContent({
   return (
     <ScrollView
       refreshControl={
-        <RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={colors.primary} />
+        <RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={colors.primary} colors={[colors.primary]} />
       }
       contentContainerStyle={[{ padding: 16, paddingBottom: 40 }, contentWide]}>
 
@@ -727,6 +727,7 @@ function ReportContent({
           refreshing={isFetching}
           onRefresh={refetch}
           tintColor={colors.primary}
+          colors={[colors.primary]}
         />
       }
       contentContainerStyle={[{ padding: 16, paddingBottom: 40 }, contentWide]}>

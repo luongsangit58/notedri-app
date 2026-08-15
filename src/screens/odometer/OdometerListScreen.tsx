@@ -277,6 +277,7 @@ function SingleVehicleList({
           refreshing={refreshing}
           onRefresh={handleRefresh}
           tintColor={colors.primary}
+          colors={[colors.primary]}
         />
       }
     />
@@ -378,6 +379,7 @@ function AllVehiclesList({
           refreshing={refreshing}
           onRefresh={handleRefresh}
           tintColor={colors.primary}
+          colors={[colors.primary]}
         />
       }
     />

@@ -1,6 +1,8 @@
-import React, { useMemo } from 'react';
-import { View, StyleSheet } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { View, StyleSheet, Modal, TouchableOpacity, Text } from 'react-native';
 import { WebView } from 'react-native-webview';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { FontAwesome5 } from '@expo/vector-icons';
 import { useColors } from '../utils/theme';
 import { useT } from '../i18n';
 import { LEAFLET_JS_B64, LEAFLET_CSS_B64 } from './leafletAssets';
@@ -62,31 +64,71 @@ function buildDayHtml(routes: ColoredRoute[], mapErrorText: string): string {
 </html>`;
 }
 
+function DayMapWebView({ html, bgColor }: { html: string; bgColor: string }) {
+  return (
+    <WebView
+      originWhitelist={['*']}
+      source={{ html, baseUrl: 'https://notedri.com' }}
+      style={{ flex: 1, backgroundColor: bgColor }}
+      scrollEnabled={false}
+      javaScriptEnabled
+      domStorageEnabled
+      cacheEnabled
+      androidLayerType="hardware"
+      mixedContentMode="always"
+      setSupportMultipleWindows={false}
+      startInLoadingState
+    />
+  );
+}
+
+// Rà soát 15/8 (góp ý user: bản đồ "xem cả ngày" chỉ có 240px cố định, không có
+// cách nào xem to hơn) - thêm nút phóng to + Modal toàn màn hình, khớp đúng
+// cơ chế RouteMap.tsx đã dùng cho bản đồ 1 chuyến (không sửa RouteMap gốc vì
+// đây là component riêng cho nhiều tuyến/nhiều màu, xem comment đầu file).
 export default function DayRouteMap({ routes, height = 260 }: { routes: ColoredRoute[]; height?: number }) {
   const colors = useColors();
   const t = useT();
   const mapErrorText = t('route_map.load_error');
   const html = useMemo(() => buildDayHtml(routes, mapErrorText), [routes, mapErrorText]);
+  const [fullscreen, setFullscreen] = useState(false);
 
   return (
-    <View style={[styles.wrap, { height, borderColor: colors.border }]}>
-      <WebView
-        originWhitelist={['*']}
-        source={{ html, baseUrl: 'https://notedri.com' }}
-        style={{ flex: 1, backgroundColor: colors.background }}
-        scrollEnabled={false}
-        javaScriptEnabled
-        domStorageEnabled
-        cacheEnabled
-        androidLayerType="hardware"
-        mixedContentMode="always"
-        setSupportMultipleWindows={false}
-        startInLoadingState
-      />
-    </View>
+    <>
+      <View style={[styles.wrap, { height, borderColor: colors.border }]}>
+        <DayMapWebView html={html} bgColor={colors.background} />
+        <TouchableOpacity
+          onPress={() => setFullscreen(true)}
+          style={styles.expandBtn}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <FontAwesome5 name="expand-arrows-alt" size={13} color="#fff" />
+        </TouchableOpacity>
+      </View>
+
+      <Modal visible={fullscreen} animationType="slide" statusBarTranslucent onRequestClose={() => setFullscreen(false)}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#0d1527' }} edges={['top', 'bottom']}>
+          <DayMapWebView html={html} bgColor="#0d1527" />
+          <TouchableOpacity onPress={() => setFullscreen(false)} style={styles.closeBtn}>
+            <FontAwesome5 name="times" size={16} color="#fff" />
+            <Text style={{ color: '#fff', fontSize: 12, marginTop: 2 }}>{t('common.close')}</Text>
+          </TouchableOpacity>
+        </SafeAreaView>
+      </Modal>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
   wrap: { borderRadius: 12, borderWidth: 1, overflow: 'hidden' },
+  expandBtn: {
+    position: 'absolute', top: 8, right: 8,
+    backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 7,
+    paddingHorizontal: 8, paddingVertical: 6,
+  },
+  closeBtn: {
+    position: 'absolute', top: 56, right: 16,
+    backgroundColor: 'rgba(0,0,0,0.65)', borderRadius: 10,
+    paddingHorizontal: 14, paddingVertical: 10,
+    alignItems: 'center',
+  },
 });

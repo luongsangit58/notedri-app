@@ -72,7 +72,7 @@ export default function VehiclesScreen() {
           </View>
         )}
         contentContainerStyle={[{ padding: 16, paddingBottom: 80 }, contentWide]}
-        refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={colors.primary} />}
+        refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={colors.primary} colors={[colors.primary]} />}
         ListEmptyComponent={
           <View style={{ alignItems: 'center', marginTop: 64 }}>
             <FontAwesome5 name="car-side" size={48} color={colors.textSecondary} solid style={{ marginBottom: 12 }} />

@@ -568,7 +568,7 @@ export default function RemindersScreen() {
         )}
         contentContainerStyle={[styles.listContent, contentWide]}
         refreshControl={
-          <RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={colors.primary} />
+          <RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={colors.primary} colors={[colors.primary]} />
         }
         ListHeaderComponent={
           pendingConfirmCount > 0 ? (

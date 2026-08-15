@@ -123,7 +123,7 @@ export default function PaymentHistoryScreen() {
         keyExtractor={(o) => String(o.order_id)}
         renderItem={renderOrder}
         contentContainerStyle={{ padding: 16, paddingBottom: 40, width: '100%', maxWidth: 720, alignSelf: 'center' }}
-        refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={AMBER} />}
+        refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={AMBER} colors={[AMBER]} />}
         ListEmptyComponent={
           <View style={{ alignItems: 'center', marginTop: 64, paddingHorizontal: 32 }}>
             <FontAwesome5 name="receipt" size={36} color={colors.textSecondary} />

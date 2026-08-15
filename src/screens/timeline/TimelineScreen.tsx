@@ -126,6 +126,7 @@ export default function TimelineScreen() {
             refreshing={isFetching && !isFetchingNextPage}
             onRefresh={refetch}
             tintColor={colors.primary}
+            colors={[colors.primary]}
           />
         }
         onEndReached={handleEndReached}

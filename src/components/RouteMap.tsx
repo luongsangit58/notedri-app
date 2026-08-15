@@ -109,7 +109,7 @@ export default function RouteMap({ points, height = 240, live = false }: Props) 
         </TouchableOpacity>
       </View>
 
-      <Modal visible={fullscreen} animationType="slide" onRequestClose={() => setFullscreen(false)}>
+      <Modal visible={fullscreen} animationType="slide" statusBarTranslucent onRequestClose={() => setFullscreen(false)}>
         <SafeAreaView style={{ flex: 1, backgroundColor: '#0d1527' }} edges={['top', 'bottom']}>
           <MapWebView html={html} bgColor="#0d1527" textColor="#94a3b8" />
           <TouchableOpacity

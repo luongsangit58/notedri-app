@@ -271,13 +271,20 @@ function LevelHeroCard({
 }
 
 // ===== Badge earned glow animation =====
+// Rà soát 15/8 (báo cáo user: page Thành tích lag nặng trên iPhone) - mỗi thẻ
+// huy hiệu ĐÃ ĐẠT render 1 EarnedGlow, và user đạt nhiều huy hiệu thì có hàng
+// chục Animated.loop chạy song song CÙNG LÚC. useNativeDriver: false trước đây
+// (chỉ animate opacity, không cần JS driver) buộc MỌI frame của MỌI vòng lặp
+// phải round-trip qua JS bridge để cập nhật style - đúng loại bug gây giật/lag
+// khi có nhiều instance cùng chạy. Chuyển sang true: animation chạy hẳn trên
+// UI thread, không tốn JS thread nữa.
 function EarnedGlow({ color }: { color: string }) {
   const anim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(anim, { toValue: 1, duration: 1600, useNativeDriver: false, easing: Easing.inOut(Easing.sin) }),
-        Animated.timing(anim, { toValue: 0, duration: 1600, useNativeDriver: false, easing: Easing.inOut(Easing.sin) }),
+        Animated.timing(anim, { toValue: 1, duration: 1600, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
+        Animated.timing(anim, { toValue: 0, duration: 1600, useNativeDriver: true, easing: Easing.inOut(Easing.sin) }),
       ]),
     );
     loop.start();
@@ -435,7 +442,7 @@ export default function AchievementsScreen() {
       ) : (
         <ScrollView
           contentContainerStyle={[{ padding: 16, paddingBottom: 40 }, contentWide]}
-          refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={colors.primary} />}>
+          refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={colors.primary} colors={[colors.primary]} />}>
 
           {/* Hero card: level + ladder */}
           {level && (

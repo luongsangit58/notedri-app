@@ -853,7 +853,7 @@ export default function GpsTripsScreen({ embedded }: { embedded?: boolean } = {}
       <FlatList
         data={listData}
         keyExtractor={(item) => item.key}
-        refreshControl={<RefreshControl refreshing={isFetching} onRefresh={handleRefresh} tintColor={colors.primary} />}
+        refreshControl={<RefreshControl refreshing={isFetching} onRefresh={handleRefresh} tintColor={colors.primary} colors={[colors.primary]} />}
         ListHeaderComponent={
           <>
             <GpsPrimaryBanner vehicleId={vehicleId} />
@@ -913,8 +913,12 @@ export default function GpsTripsScreen({ embedded }: { embedded?: boolean } = {}
 
       {/* Modal "Xem cả ngày" (đồng bộ web/trips/index.blade.php): gộp tất cả tuyến đường 1
           ngày trên 1 bản đồ, mỗi chuyến 1 màu - bấm 1 dòng chú giải để đóng modal và mở
-          nhanh đúng chuyến đó trong danh sách. */}
-      <Modal visible={dayMapKey !== null} animationType="slide" onRequestClose={() => setDayMapKey(null)}>
+          nhanh đúng chuyến đó trong danh sách.
+          Rà soát 15/8 (góp ý user: header dính sát mép trên, nút back không bấm được) -
+          statusBarTranslucent: Modal Android không tự kế thừa đúng safe-area-inset của
+          root app (xem cùng pattern ở DashboardStylePicker.tsx) - thiếu prop này khiến
+          SafeAreaView bên trong tính insets.top = 0, đẩy header ra sau/dưới status bar. */}
+      <Modal visible={dayMapKey !== null} animationType="slide" statusBarTranslucent onRequestClose={() => setDayMapKey(null)}>
         <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['top', 'left', 'right']}>
           <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
             <TouchableOpacity onPress={() => setDayMapKey(null)} style={styles.backBtn}>

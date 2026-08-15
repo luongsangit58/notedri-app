@@ -259,6 +259,7 @@ export default function ServicesScreen() {
             refreshing={isFetching && !isFetchingNextPage}
             onRefresh={refetch}
             tintColor={colors.primary}
+            colors={[colors.primary]}
           />
         }
         onEndReached={handleEndReached}

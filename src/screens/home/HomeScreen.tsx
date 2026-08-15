@@ -373,7 +373,7 @@ export default function HomeScreen() {
       <AppBgPattern />
       <ScrollView
         contentContainerStyle={{ padding: 16, paddingBottom: 40, width: '100%', maxWidth: contentMaxWidth, alignSelf: 'center' }}
-        refreshControl={<RefreshControl refreshing={isFetching} onRefresh={onRefresh} tintColor={colors.primary} />}>
+        refreshControl={<RefreshControl refreshing={isFetching} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} />}>
 
         {/* Header */}
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>

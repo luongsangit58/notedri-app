@@ -134,7 +134,7 @@ export default function PremiumScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }} edges={['bottom', 'left', 'right']}>
       <AppBgPattern />
       <ScrollView
-        refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={AMBER} />}
+        refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={AMBER} colors={[AMBER]} />}
         contentContainerStyle={[{ padding: 20, paddingBottom: 40 }, contentWide]}>
 
         {/* Header */}

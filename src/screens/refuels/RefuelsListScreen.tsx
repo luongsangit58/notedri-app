@@ -331,7 +331,7 @@ export default function RefuelsListScreen() {
             : [{ paddingHorizontal: 16, paddingBottom: 88 }, contentWide]
         }
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} colors={[colors.primary]} />
         }
       />
 

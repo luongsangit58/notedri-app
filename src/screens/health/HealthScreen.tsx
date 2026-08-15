@@ -580,7 +580,7 @@ export default function HealthScreen({ embedded }: { embedded?: boolean } = {}) 
       <ScrollView
         contentContainerStyle={[{ padding: 16, paddingBottom: 40 }, contentWide]}
         refreshControl={
-          <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor={colors.primary} />
+          <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} tintColor={colors.primary} colors={[colors.primary]} />
         }>
         <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 16 }}>
           {t('health.check_subtitle', { count: vehicles.length })}

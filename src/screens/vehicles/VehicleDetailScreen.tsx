@@ -405,7 +405,7 @@ export default function VehicleDetailScreen() {
       <AppBgPattern />
       <ScrollView
         contentContainerStyle={[{ padding: 16, paddingBottom: 32 }, contentWide]}
-        refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={colors.primary} />}>
+        refreshControl={<RefreshControl refreshing={isFetching} onRefresh={refetch} tintColor={colors.primary} colors={[colors.primary]} />}>
 
         {/* Thông tin xe — ảnh làm background nếu có */}
         <ImageBackground
