@@ -787,7 +787,7 @@ export default function HomeScreen() {
           {vehicleId && dashRaw && (
             <TouchableOpacity
               activeOpacity={0.85}
-              onPress={() => nav.navigate('Stats', { tab: 1 })}
+              onPress={() => nav.navigate('Reports', { vehicleId })}
               style={[
                 { flexDirection: 'row', backgroundColor: colors.surface, borderRadius: 14, paddingVertical: 14, borderWidth: 1, borderColor: colors.border },
                 isLandscape ? { flex: 1 } : null,

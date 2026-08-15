@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
 import { useCallback } from 'react';
 import dayjs from 'dayjs';
+import updateLocale from 'dayjs/plugin/updateLocale';
 import 'dayjs/locale/vi'; // 'en' là locale mặc định sẵn có của dayjs
 import vi from './vi';
 import en from './en';
@@ -13,6 +14,13 @@ const LANG_KEY = 'app_lang';
 // KHÔNG ghi đè local bằng locale tài khoản (tránh nuốt lựa chọn), và sẽ thử đẩy lại khi online.
 const LANG_PENDING_KEY = 'app_lang_pending_push';
 const translations = { vi, en } as const;
+
+dayjs.extend(updateLocale);
+// dayjs/locale/vi để tên thứ viết thường ("thứ hai") - viết hoa lại cho đúng chính tả
+// khi hiện trong app (format('dddd') ở GpsTripsScreen/ObdReportScreen...).
+dayjs.updateLocale('vi', {
+  weekdays: ['Chủ nhật', 'Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy'],
+});
 
 // Đồng bộ locale ngày/thứ của dayjs theo ngôn ngữ app (thứ, "x phút trước"...).
 dayjs.locale('vi'); // khớp lang mặc định

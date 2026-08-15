@@ -106,7 +106,7 @@ const en = {
   "vehicles.vin_duplicate_send_request": "This vehicle is already on NoteDri. Send a request to view its maintenance history (Premium)?",
   "vehicles.vin_duplicate_send_request_btn": "Send request",
   "vehicles.vin_duplicate_request_sent": "Request sent - waiting for the previous owner to respond (up to 7 days).",
-  "vehicles.mark_sold_title": "Mark as sold",
+  "vehicles.mark_sold_title": "Vehicle sold",
   "vehicles.mark_sold_confirm": "Mark this vehicle as sold? It will be removed from your active list.",
   "vehicles.mark_sold_hint": "Sold, no longer tracked daily",
   "transfer.screen_title": "Vehicle transfer",
@@ -144,7 +144,7 @@ const en = {
   "vehicles.detail_edit": "Edit",
   "vehicles.detail_reminders": "Reminders",
   "vehicles.detail_service": "Service",
-  "vehicles.rest_toggle": "Vehicle at rest",
+  "vehicles.rest_toggle": "Not in use",
   "vehicles.rest_toggle_hint": "Pause odometer warnings and reminders while not in use",
   "vehicles.detail_add_refuel": "Add fuel",
 
@@ -251,6 +251,7 @@ const en = {
   "reports.period_month": "Month",
   "reports.period_quarter": "Quarter",
   "reports.period_partial_badge": "Period still in progress - figures may still change",
+  "reports.period_label_quarter": "Q{{q}} - {{year}}",
 
   // Year Review
   "year_review.title": "{{year}} in Review",
@@ -492,7 +493,7 @@ const en = {
   "obd.devices_found": "Found {{n}} device(s)",
   "obd.show_all_devices": "Show all devices",
   "obd.auto_connect_launch_title": "Ask before auto-connect",
-  "obd.auto_connect_launch_desc": "When the paired adapter is nearby, the app will show a countdown popup. You can close it to skip or turn auto-connect off.",
+  "obd.auto_connect_launch_desc": "A countdown popup appears to auto-connect when the paired adapter is nearby. Close it if you don't want to connect right now.",
   "obd.auto_connect_prompt_badge": "Connection suggestion",
   "obd.auto_connect_prompt_title": "OBD2 device ready",
   "obd.auto_connect_prompt_body": "{{name}} will auto-connect in {{seconds}}s. Close the popup if you're not ready.",
@@ -559,7 +560,7 @@ const en = {
   "obd.classic_guide_s3_desc": "KONNWEI pairs automatically, no PIN needed - just tap \"Pair\" to confirm.",
   "obd.classic_guide_s4_title": "Return to the app",
   "obd.classic_guide_s4_desc": "Open NoteDri again and tap \"Load paired devices\" - the device you just paired will show up, select it to connect.",
-  "obd.guide_reco_title": "Recommended adapter type",
+  "obd.guide_reco_title": "Recommended device",
   "obd.guide_reco_body": "A standard ELM327 adapter (Bluetooth 4.0+/BLE or Classic) — NoteDri has been tested reliably on many models (KONNWEI, Vgate iCar Pro, etc.).",
   "obd.guide_reco_warn": "Avoid Wi-Fi OBD2 modules or brand-proprietary readers - only standard ELM327 adapters connect to NoteDri.",
   "obd.guide_trouble_title": "No device showing? Quick fixes",

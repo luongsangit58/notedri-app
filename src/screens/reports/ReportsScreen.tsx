@@ -31,6 +31,16 @@ function fmtNum(n: number | string | null | undefined, unit = ''): string {
   return v.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') + (unit ? ' ' + unit : '');
 }
 
+/* `by_category` trả về nhãn tự do từ backend (VD "Xăng", "Bảo dưỡng") - suy ra
+   trang lịch sử tương ứng theo từ khoá thay vì mã danh mục cố định. Nhãn không
+   khớp từ khoá nào (đăng kiểm, bảo hiểm...) thì để dòng tĩnh, không đoán bừa. */
+function categoryTarget(label: string): string | null {
+  const s = label.toLowerCase();
+  if (s.includes('xăng') || s.includes('nhiên liệu')) return 'RefuelsList';
+  if (s.includes('bảo dưỡng') || s.includes('dịch vụ') || s.includes('sửa chữa')) return 'Services';
+  return null;
+}
+
 /* ─── period (tuần/tháng) date helpers ───
    Ngày từ API luôn dạng 'YYYY-MM-DD' (không giờ) - parse/format qua UTC để
    +-1 ngày không bị lệch bởi múi giờ máy user (tránh nhảy sai kỳ gần nửa đêm). */
@@ -45,6 +55,21 @@ function fmtDateShort(dateStr: string): string {
   return `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')}/${d.getUTCFullYear()}`;
 }
 
+/* Nhãn kỳ ở đầu trang: Tháng/Quý không cần ghi rõ ngày bắt đầu-kết thúc (khó
+   nhìn, ai cũng biết tháng có ngày nào) - chỉ Tháng/Quý mới rút gọn, các nơi
+   khác dùng periodStart/periodEnd vẫn cần ngày chính xác nên giữ fmtDateShort. */
+function fmtPeriodLabel(
+  period: 'month' | 'quarter',
+  periodStart: string,
+  t: (key: any, params?: Record<string, string | number>) => string,
+): string {
+  const year = periodStart.slice(0, 4);
+  const month = Number(periodStart.slice(5, 7));
+  if (period === 'month') return `${String(month).padStart(2, '0')}/${year}`;
+  const quarter = Math.ceil(month / 3);
+  return t('reports.period_label_quarter', { q: quarter, year });
+}
+
 function todayStr(): string {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -54,29 +79,36 @@ type ReportPeriodType = 'year' | 'month' | 'quarter';
 
 /* ─── stat card ─── */
 function StatCard({
-  icon, label, value, sub,
+  icon, label, value, sub, onPress,
 }: {
   icon: React.ReactNode;
   label: string;
   value: string;
   sub?: string;
+  onPress?: () => void;
 }) {
   const colors = useColors();
+  const Wrapper = onPress ? TouchableOpacity : View;
   return (
-    <View
+    <Wrapper
+      activeOpacity={onPress ? 0.7 : undefined}
+      onPress={onPress}
       style={{
         backgroundColor: colors.surface,
         borderRadius: 14,
         padding: 16,
         flex: 1,
       }}>
-      <View style={{ marginBottom: 6 }}>{icon}</View>
+      <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 6 }}>
+        {icon}
+        {onPress ? <FontAwesome5 name="chevron-right" size={11} color={colors.textSecondary} /> : null}
+      </View>
       <Text style={{ color: colors.textSecondary, fontSize: 12, marginBottom: 4 }}>{label}</Text>
       <Text style={{ color: colors.text, fontWeight: '800', fontSize: 16 }}>{value}</Text>
       {sub ? (
         <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 3 }}>{sub}</Text>
       ) : null}
-    </View>
+    </Wrapper>
   );
 }
 
@@ -290,17 +322,22 @@ function CardRow({
   value,
   index,
   valueColor,
+  onPress,
 }: {
   label: string;
   value: string;
   index: number;
   valueColor?: string;
+  onPress?: () => void;
 }) {
   const colors = useColors();
+  const Wrapper = onPress ? TouchableOpacity : View;
   return (
     <>
       <Divider index={index} />
-      <View
+      <Wrapper
+        activeOpacity={onPress ? 0.6 : undefined}
+        onPress={onPress}
         style={{
           flexDirection: 'row',
           justifyContent: 'space-between',
@@ -319,7 +356,10 @@ function CardRow({
           }}>
           {value}
         </Text>
-      </View>
+        {onPress ? (
+          <FontAwesome5 name="chevron-right" size={11} color={colors.textSecondary} style={{ marginLeft: 8 }} />
+        ) : null}
+      </Wrapper>
     </>
   );
 }
@@ -339,6 +379,7 @@ function PeriodReportContent({
 }) {
   const colors = useColors();
   const t = useT();
+  const navigation = useNavigation<any>();
   const [at, setAt] = useState<string | null>(null);
 
   const { data, isLoading, isError, refetch, isFetching } = useQuery({
@@ -398,7 +439,7 @@ function PeriodReportContent({
         </TouchableOpacity>
         <View style={{ alignItems: 'center' }}>
           <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14 }}>
-            {fmtDateShort(periodStart)} - {fmtDateShort(periodEnd)}
+            {fmtPeriodLabel(period, periodStart, t)}
           </Text>
           {isPartial && (
             <Text style={{ color: colors.primary, fontSize: 11, marginTop: 2, fontWeight: '600' }}>
@@ -470,6 +511,7 @@ function PeriodReportContent({
               ? `${t('reports.refuels_count', { count: fmtNum(summary.fill_count) })}${summary.liters != null ? ` · ${Number(summary.liters).toFixed(1)} L` : ''}`
               : undefined
           }
+          onPress={() => navigation.navigate('RefuelsList')}
         />
         <StatCard
           icon={<FontAwesome5 name="wrench" size={20} color={colors.primary} solid />}
@@ -480,6 +522,7 @@ function PeriodReportContent({
               ? t('reports.services_count', { count: fmtNum(summary.service_count) })
               : undefined
           }
+          onPress={() => navigation.navigate('Services')}
         />
       </View>
 
@@ -516,6 +559,7 @@ function ReportContent({
 }) {
   const colors = useColors();
   const t = useT();
+  const navigation = useNavigation<any>();
   const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ['report', vehicleId, selectedYear],
     queryFn: () =>
@@ -718,6 +762,7 @@ function ReportContent({
               ? `${t('reports.refuels_count', { count: fmtNum(refuelCount) })}${totalLiters != null ? ` · ${Number(totalLiters).toFixed(1)} L` : ''}`
               : undefined
           }
+          onPress={() => navigation.navigate('RefuelsList')}
         />
         <StatCard
           icon={<FontAwesome5 name="wrench" size={20} color={colors.primary} solid />}
@@ -728,6 +773,7 @@ function ReportContent({
               ? t('reports.services_count', { count: fmtNum(serviceCount) })
               : undefined
           }
+          onPress={() => navigation.navigate('Services')}
         />
       </View>
 
@@ -768,6 +814,7 @@ function ReportContent({
               index={[yrKm, yrCost].filter(Boolean).length}
               label={t('reports.refuel_label')}
               value={t('reports.times_count', { count: fmtNum(yrRefuels) })}
+              onPress={() => navigation.navigate('RefuelsList')}
             />
           )}
           {yr?.service_cost != null && yr.service_cost > 0 && (
@@ -775,6 +822,7 @@ function ReportContent({
               index={[yrKm, yrCost, yrRefuels].filter(x => x != null).length}
               label={t('year_review.service_cost')}
               value={fmtVnd(yr.service_cost)}
+              onPress={() => navigation.navigate('Services')}
             />
           )}
           <TouchableOpacity
@@ -948,6 +996,7 @@ function ReportContent({
               index={tcoTotal != null ? 1 : 0}
               label={t('reports.fuel_cost')}
               value={fmtVnd(tcoFuel)}
+              onPress={() => navigation.navigate('RefuelsList')}
             />
           )}
           {tcoService != null && (
@@ -955,6 +1004,7 @@ function ReportContent({
               index={[tcoTotal, tcoFuel].filter(Boolean).length}
               label={t('reports.service_cost')}
               value={fmtVnd(tcoService)}
+              onPress={() => navigation.navigate('Services')}
             />
           )}
           {tcoPerKm != null && (
@@ -970,14 +1020,18 @@ function ReportContent({
       {/* ── by category ── */}
       {byCategory.length > 0 && (
         <SectionCard title={t('reports.spending_by_category')}>
-          {byCategory.map((c, i) => (
-            <CardRow
-              key={i}
-              index={i}
-              label={c.label}
-              value={fmtVnd(c.amount)}
-            />
-          ))}
+          {byCategory.map((c, i) => {
+            const target = categoryTarget(c.label);
+            return (
+              <CardRow
+                key={i}
+                index={i}
+                label={c.label}
+                value={fmtVnd(c.amount)}
+                onPress={target ? () => navigation.navigate(target) : undefined}
+              />
+            );
+          })}
         </SectionCard>
       )}
 

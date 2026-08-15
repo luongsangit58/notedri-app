@@ -556,8 +556,11 @@ export default function AddRefuelScreen() {
               Rà soát 15/8 (góp ý user: tên cây xăng dài nên dù đã flexWrap, mỗi hàng
               chỉ vừa đúng 1 ô - nhìn như danh sách dọc, chiếm nhiều chiều cao). Đổi
               sang cuộn NGANG 1 hàng duy nhất (khớp cách VehicleChips/loại xăng phía
-              trên đã làm) + giới hạn bề rộng mỗi ô - gọn hẳn xuống 1 hàng cố định,
-              vuốt ngang để xem hết thay vì kéo dài màn hình xuống. */}
+              trên đã làm) - gọn hẳn xuống 1 hàng cố định, vuốt ngang để xem hết thay
+              vì kéo dài màn hình xuống.
+              Rà soát 15/8 (góp ý user: tên bị cắt "..." thiếu thông tin) - bỏ giới
+              hạn bề rộng + numberOfLines để mỗi ô tự giãn theo hết tên, cuộn ngang
+              vẫn xử lý phần tràn thay vì cắt chữ. */}
           {stationsDropdown.length === 0 && recentStations.length > 0 && (
             <ScrollView
               horizontal
@@ -569,12 +572,12 @@ export default function AddRefuelScreen() {
                   key={name}
                   onPress={() => setCayXang(name)}
                   style={{
-                    flexDirection: 'row', alignItems: 'center', gap: 5, maxWidth: 150,
+                    flexDirection: 'row', alignItems: 'center', gap: 5,
                     paddingHorizontal: 10, paddingVertical: 6, borderRadius: 16,
                     backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
                   }}>
                   <FontAwesome5 name="history" size={9} color={colors.textSecondary} solid />
-                  <Text style={{ color: colors.text, fontSize: 12, fontWeight: '600', flexShrink: 1 }} numberOfLines={1}>{name}</Text>
+                  <Text style={{ color: colors.text, fontSize: 12, fontWeight: '600' }}>{name}</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -599,13 +602,13 @@ export default function AddRefuelScreen() {
                     }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                       <FontAwesome5 name="gas-pump" size={11} color={colors.textSecondary} solid />
-                      <Text style={{ color: colors.text, fontWeight: '600', flex: 1, fontSize: 13 }} numberOfLines={1}>
+                      <Text style={{ color: colors.text, fontWeight: '600', flex: 1, fontSize: 13 }}>
                         {s.name}
                       </Text>
                       {dist && <Text style={{ color: colors.textSecondary, fontSize: 12 }}>{dist}</Text>}
                     </View>
                     {s.addr ? (
-                      <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 2, marginLeft: 17 }} numberOfLines={1}>
+                      <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 2, marginLeft: 17 }}>
                         {s.addr}
                       </Text>
                     ) : null}

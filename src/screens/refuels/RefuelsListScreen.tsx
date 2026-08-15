@@ -89,7 +89,7 @@ function RefuelCard({ item, onPress }: { item: RefuelItem; onPress: () => void }
             {Number(item.so_lit).toFixed(2)} L · {formatVND(item.gia_lit)}/L
           </Text>
           {item.cay_xang ? (
-            <Text style={{ color: colors.textSecondary, fontSize: 12, marginBottom: 2 }} numberOfLines={1}>
+            <Text style={{ color: colors.textSecondary, fontSize: 12, marginBottom: 2 }}>
               {item.cay_xang}
             </Text>
           ) : null}
@@ -190,13 +190,21 @@ export default function RefuelsListScreen() {
   const prediction = meta?.prediction ?? null;
 
   const ListHeader = (
-    <View style={{ marginBottom: 4 }}>
-      {/* Vehicle filter chips - only show when user has multiple vehicles */}
+    <View style={{ paddingTop: 14, marginBottom: 4 }}>
+      {/* Vehicle filter chips - only show when user has multiple vehicles.
+          contentContainerStyle giữ paddingHorizontal riêng vì đây là 1 hàng
+          cuộn NGANG (cần đệm ở điểm bắt đầu/kết thúc cuộn) - khác các khối
+          tĩnh bên dưới, vốn nên khớp mép với card danh sách nên bỏ đệm
+          ngang riêng, dùng chung padding của FlatList (contentContainerStyle
+          paddingHorizontal: 16). Rà soát: trước đây các khối này TỰ thêm
+          paddingHorizontal/marginHorizontal: 16 dù đã nằm trong vùng đã có
+          sẵn đệm 16 đó -> cộng dồn thành 32px mỗi bên, hẹp hơn hẳn card bên
+          dưới (nhìn như bị "bóp vào"). */}
       {vehicles.length > 1 && (
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ gap: 8, paddingHorizontal: 16, paddingVertical: 10 }}
+          contentContainerStyle={{ gap: 8, paddingBottom: 10 }}
         >
           {vehicles.map((v: any) => (
             <TouchableOpacity
@@ -221,7 +229,7 @@ export default function RefuelsListScreen() {
 
       {/* Stats tổng */}
       {consumption != null && (
-        <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingBottom: 10 }}>
+        <View style={{ flexDirection: 'row', gap: 8, paddingBottom: 10 }}>
           {consumption.l100km != null && (
             <View style={{ flex: 1, backgroundColor: colors.surface, borderRadius: 10, padding: 10, alignItems: 'center', borderWidth: 1, borderColor: colors.border }}>
               <Text style={{ color: colors.textSecondary, fontSize: 10, marginBottom: 2 }}>{t('refuels.consumption_avg')}</Text>
@@ -243,7 +251,11 @@ export default function RefuelsListScreen() {
           {consumption.tong_tien != null && (
             <View style={{ flex: 1, backgroundColor: colors.surface, borderRadius: 10, padding: 10, alignItems: 'center', borderWidth: 1, borderColor: colors.border }}>
               <Text style={{ color: colors.textSecondary, fontSize: 10, marginBottom: 2 }}>{t('refuels.total_cost')}</Text>
-              <Text style={{ color: colors.primary, fontWeight: '800', fontSize: 13 }}>
+              <Text
+                style={{ color: colors.primary, fontWeight: '800', fontSize: 13 }}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.75}>
                 {formatVND(consumption.tong_tien)}
               </Text>
             </View>
@@ -254,7 +266,7 @@ export default function RefuelsListScreen() {
       {/* Dự đoán */}
       {prediction?.days_left != null && (
         <View style={{
-          marginHorizontal: 16, marginBottom: 10,
+          marginBottom: 10,
           backgroundColor: colors.success + '18', borderRadius: 10, padding: 10,
           flexDirection: 'row', alignItems: 'center', gap: 8,
           borderWidth: 1, borderColor: colors.success + '44',

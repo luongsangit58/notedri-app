@@ -649,24 +649,24 @@ export default function OBDSetupScreen() {
             Classic. Mặc định BẬT (đổi 31/7, xem pairedDevices.ts) - user tự
             tắt nếu thấy phiền. */}
         {pairedDeviceId && (
-          <View style={[styles.showAllRow, { backgroundColor: colors.card }]}>
-            <View style={{ flex: 1, paddingRight: 12 }}>
-              <Text style={[styles.showAllLabel, { color: colors.text }]}>
+          <View style={[styles.autoConnectBox, { backgroundColor: colors.card }]}>
+            <View style={styles.autoConnectHeaderRow}>
+              <Text style={[styles.showAllLabel, { color: colors.text, flex: 1, paddingRight: 12 }]}>
                 {t('obd.auto_connect_launch_title')}
               </Text>
-              <Text style={{ color: colors.textSecondary, fontSize: 12, lineHeight: 17, marginTop: 2 }}>
-                {t('obd.auto_connect_launch_desc')}
-              </Text>
+              <Switch
+                value={autoConnectOnLaunch}
+                onValueChange={handleToggleAutoConnectOnLaunch}
+                trackColor={{ true: '#3B82F6' }}
+              />
             </View>
-            <Switch
-              value={autoConnectOnLaunch}
-              onValueChange={handleToggleAutoConnectOnLaunch}
-              trackColor={{ true: '#3B82F6' }}
-            />
+            <Text style={{ color: colors.textSecondary, fontSize: 12, lineHeight: 17, marginTop: 4 }}>
+              {t('obd.auto_connect_launch_desc')}
+            </Text>
             <TouchableOpacity
               onPress={handleForgetPairing}
               disabled={forgettingPairing}
-              style={{ opacity: forgettingPairing ? 0.6 : 1 }}
+              style={{ alignSelf: 'flex-end', marginTop: 8, opacity: forgettingPairing ? 0.6 : 1 }}
             >
               <Text style={{ color: '#EF4444', fontSize: 12, fontWeight: '700' }}>
                 {forgettingPairing ? t('common.loading') : t('obd.forget_device')}
@@ -780,6 +780,17 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   showAllLabel: { fontSize: 14, fontWeight: '500' },
+  autoConnectBox: {
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginTop: 12,
+  },
+  autoConnectHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   btActionBtn: { marginTop: 8, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 8, backgroundColor: '#3B82F6' },
   btActionBtnText: { color: '#fff', fontWeight: '600', fontSize: 13 },
   modeToggle: { flexDirection: 'row', borderRadius: 10, padding: 4, gap: 4 },
