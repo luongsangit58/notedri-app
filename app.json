@@ -22,7 +22,7 @@
       }
     },
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "usesAppleSignIn": true,
       "infoPlist": {
         "NSBluetoothAlwaysUsageDescription": "NoteDri cần Bluetooth để kết nối với thiết bị OBD2 của xe bạn",
@@ -125,13 +125,14 @@
           "bluetoothAlwaysPermission": "NoteDri cần Bluetooth để kết nối với thiết bị OBD2 của xe bạn"
         }
       ],
+      "./withIosNfcDisabled.js",
       [
         "react-native-nfc-manager",
         {
-          "nfcPermission": "NoteDri cần NFC để nhận diện xe khi bạn chạm thẻ NFC"
+          "nfcPermission": "NoteDri cần NFC để nhận diện xe khi bạn chạm thẻ NFC",
+          "includeNdefEntitlement": false
         }
       ],
-      "./withIosNfcDisabled.js",
       "expo-web-browser",
       [
         "expo-speech-recognition",

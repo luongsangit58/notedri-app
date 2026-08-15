@@ -39,27 +39,26 @@ permissions this build requests:
   shown before any ad personalization. Declining still shows (non-personalized)
   ads.
 
-Demo account: [FILL IN — email / password, pre-loaded with at least one
+Demo account: appreview@notedri.com / Admin@123, pre-loaded with at least one
 vehicle, a few fuel/odometer logs, and one reminder so the reviewer isn't
-looking at an empty state]. Sign in with Apple and Sign in with Google are
+looking at an empty state. Sign in with Apple and Sign in with Google are
 also both available on the login screen.
 ```
 
 ---
 
-## 2. Demo Account — action needed
+## 2. Demo Account — status
 
-Not created yet. Before submitting, seed one test account with:
-- 1 vehicle (car or motorbike)
-- 2-3 fuel/refuel log entries
-- 1 upcoming maintenance reminder
-- Optionally: `is_premium = true` so the reviewer can see Premium screens
-  (OBD2 live dashboard UI, data export) without needing to redeem an
-  activation code
+Account created: `appreview@notedri.com` / `Admin@123`.
 
-Let me know if you want me to seed this via the backend (sibling repo
-`notedri`) — that touches the production database, so I'd rather do it with
-your go-ahead and your choice of demo email/password.
+Still to verify before submitting (log in and check manually):
+- [ ] Has at least 1 vehicle (car or motorbike)
+- [ ] Has 2-3 fuel/refuel log entries (so Reports/Stats isn't empty)
+- [ ] Has 1 upcoming maintenance reminder
+- [ ] Consider setting `is_premium = true` on this account so the reviewer can
+  see Premium screens (OBD2 live dashboard UI, data export) without needing
+  to redeem an activation code — optional, but reduces back-and-forth if the
+  reviewer tries a Premium-gated screen
 
 ---
 
@@ -179,6 +178,10 @@ the app changes.
 - [ ] Fill in the App Privacy Nutrition Label using `notedri` repo's updated
       privacy policy as the source of truth (Location, Camera, Microphone,
       Bluetooth, Advertising Identifier)
-- [ ] Seed the demo account (see §2)
+- [x] Demo account created (see §2) — still needs data seeded/verified
 - [ ] iPhone 6.7" screenshots (required); iPad screenshots only if
       `supportsTablet: true` stays enabled in `app.json`
+- [ ] `eas build --platform ios --profile production`
+- [ ] `eas submit --platform ios --profile production`
+- [ ] Paste §1/§3/§4/§5/§6 content into App Store Connect, attach screenshots,
+      submit for review
