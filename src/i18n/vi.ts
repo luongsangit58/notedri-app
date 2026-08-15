@@ -162,7 +162,7 @@ const vi = {
   "refuels.station_label": "Cây xăng",
   "refuels.full_tank_label": "Đổ đầy bình",
   "refuels.full_tank_hint": "Tính L/100km chính xác hơn",
-  "refuels.save_button": "Lưu lần đổ xăng",
+  "refuels.save_button": "Lưu",
   "refuels.delete_confirm_title": "Xoá lần đổ xăng",
   "refuels.delete_confirm_message": "Bạn có chắc muốn xoá lần đổ xăng này?",
   "refuels.consumption_avg": "Tiêu hao TB",

@@ -32,6 +32,16 @@ const IDLE_SHUTDOWN_MS = 20 * 60_000;    // stop the service after 20min idle (s
 const STALE_ACTIVE_MS = 15 * 60_000;     // an "active" trip with no GPS for 15min = forgotten/stuck
 const MAX_ACCURACY_M = 50;               // ignore fixes worse than this for distance
 const MIN_SEGMENT_KM = 0.008;            // ignore <8m moves (GPS jitter when parked)
+// Rà soát 15/8 (bug thật user báo: màn "Đang ghi hành trình" hiện "tối đa 34468
+// km/h" - rõ ràng vô lý). 1 lần đọc GPS bị nhiễu/glitch (đặc biệt ngay sau khi
+// mất/tìm lại tín hiệu) thỉnh thoảng trả về tốc độ tức thời phi thực tế - trước
+// đây speedKmh CHỈ được giới hạn về 0-300 lúc LƯU chuyến xong (tránh backend từ
+// chối 422), không có gì chặn lúc CẬP NHẬT maxSpeedKmh/speedSum khi đang ghi
+// trực tiếp -> 1 lần đọc rác duy nhất làm hỏng maxSpeedKmh CHO CẢ CHUYẾN (chỉ
+// tăng dần, không tự sửa) và kéo méo cả avgSpeedKmh (cộng dồn vào speedSum).
+// Ngưỡng khớp đúng giới hạn backend đã chấp nhận (0-300) - loại bỏ NGAY TỪ ĐẦU
+// thay vì chỉ che giấu lúc hiển thị.
+const MAX_PLAUSIBLE_SPEED_KMH = 300;
 
 // Cửa sổ cho phép resume sau khi app bị kill (swipe-kill / OS kill).
 // Trong 10 phút: hỏi user muốn tiếp tục hay lưu/bỏ.
@@ -208,7 +218,7 @@ async function finalizeTrip(
   // lose the real distance data.
   // Lưu ý: đây là tốc độ trung bình khi ĐANG DI CHUYỂN (speedSum/speedCount chỉ cộng
   // khi speedKmh > 0), không tính thời gian dừng.
-  const avgSpeedKmh = Math.min(300,
+  const avgSpeedKmh = Math.min(MAX_PLAUSIBLE_SPEED_KMH,
     state.speedCount > 0 ? Math.round(state.speedSum / state.speedCount) : 0);
 
   // endTs cho phép "đóng" hành trình bị gián đoạn theo mốc GPS cuối cùng (thay vì
@@ -221,7 +231,7 @@ async function finalizeTrip(
     endedAt: endIso,
     distanceKm: Math.round(state.distanceKm * 10) / 10,
     avgSpeedKmh,
-    maxSpeedKmh: Math.min(300, Math.round(state.maxSpeedKmh)),
+    maxSpeedKmh: Math.min(MAX_PLAUSIBLE_SPEED_KMH, Math.round(state.maxSpeedKmh)),
     idleTimeSeconds: Math.round(state.idleMs / 1000),
     drivingTimeSeconds: Math.round(state.drivingMs / 1000),
     routePoints,
@@ -384,9 +394,11 @@ async function handleLocation(loc: Location.LocationObject): Promise<void> {
     // Còn lại (teleport/glitch: nhảy lớn + tốc độ phi lý) -> bỏ qua
   }
 
-  // Track speed stats when active
+  // Track speed stats when active. Chỉ tính vào speedSum/maxSpeedKmh khi tốc độ
+  // còn NẰM TRONG NGƯỠNG HỢP LÝ - đọc rác vượt ngưỡng (glitch GPS) bị bỏ qua
+  // hoàn toàn ở đây, không chỉ che lúc hiển thị (xem MAX_PLAUSIBLE_SPEED_KMH).
   if (state.status === 'active' || state.status === 'waiting_stop') {
-    if (speedKmh > 0) {
+    if (speedKmh > 0 && speedKmh <= MAX_PLAUSIBLE_SPEED_KMH) {
       state.speedSum += speedKmh;
       state.speedCount += 1;
       if (speedKmh > state.maxSpeedKmh) state.maxSpeedKmh = speedKmh;
@@ -400,7 +412,7 @@ async function handleLocation(loc: Location.LocationObject): Promise<void> {
 
   // Append route point
   if (state.status === 'active' || state.status === 'waiting_stop') {
-    await appendRoute({ lat, lng, ts: now, spd: Math.min(300, Math.round(speedKmh)) });
+    await appendRoute({ lat, lng, ts: now, spd: Math.min(MAX_PLAUSIBLE_SPEED_KMH, Math.round(speedKmh)) });
     state.pointCount += 1;
   }
 
@@ -409,7 +421,10 @@ async function handleLocation(loc: Location.LocationObject): Promise<void> {
   state.lastTs = now;
   // Diagnostics: always update so the status panel shows GPS is alive even before a trip starts
   state.lastAccuracy = loc.coords.accuracy ?? null;
-  state.lastSpeedKmh = Math.round(speedKmh);
+  // Chặn hiển thị "Tốc độ" tức thời cũng phi lý y hệt maxSpeedKmh nếu gặp đúng
+  // lần đọc glitch đó (dù chỉ 1 lần đọc, tự sửa ở lần tiếp theo, vẫn không nên
+  // doạ user bằng số vô lý dù chỉ thoáng qua).
+  state.lastSpeedKmh = Math.round(Math.min(speedKmh, MAX_PLAUSIBLE_SPEED_KMH));
   // Chỉ đẩy mốc TỐT khi fix đủ chính xác - xem giải thích ở khối cộng dồn quãng đường trên.
   if (goodFix) {
     state.lastGoodLat = lat;
@@ -677,6 +692,13 @@ export async function requestPermissionsAndStart(
     guessed?: boolean;
   },
 ): Promise<StartResult> {
+  // Bất kỳ lần gọi nào tới đây (bấm "Bật theo dõi" thủ công, HOẶC autoArmIfReady()
+  // tự gọi lại sau khi đã tự kiểm tra cờ này KHÔNG bị bật) đều là tín hiệu "được
+  // phép tự bật trở lại từ giờ" - xoá cờ "user chủ động tắt" nếu còn sót. An toàn
+  // dù caller là autoArmIfReady() vì nhánh đó đã return sớm từ trước nếu cờ đang
+  // bật (xem autoArmIfReady()), nên tới được đây nghĩa là cờ vốn đã sạch rồi.
+  await AsyncStorage.removeItem(GPS_AUTO_ARM_DISABLED_KEY).catch(() => {});
+
   // 0) Kiểm tra lock: chỉ 1 thiết bị/xe cùng lúc.
   //    Nếu mạng lỗi -> offline-first: cho phép bật, tránh chặn oan.
   try {
@@ -773,7 +795,9 @@ export async function requestPermissionsAndStart(
       s.lastLat = pos.coords.latitude;
       s.lastLng = pos.coords.longitude;
       s.lastAccuracy = pos.coords.accuracy ?? null;
-      s.lastSpeedKmh = pos.coords.speed && pos.coords.speed > 0 ? Math.round(pos.coords.speed * 3.6) : 0;
+      s.lastSpeedKmh = pos.coords.speed && pos.coords.speed > 0
+        ? Math.round(Math.min(pos.coords.speed * 3.6, MAX_PLAUSIBLE_SPEED_KMH))
+        : 0;
       await writeState(s);
     });
   } catch { /* non-fatal */ }
@@ -931,9 +955,24 @@ export async function getReadiness(): Promise<Readiness> {
 
 export type AutoArmResult =
   | { armed: true }
-  | { armed: false; reason: 'already_active' | 'missing_permission' | 'error' | 'vehicle_locked' };
+  | { armed: false; reason: 'already_active' | 'missing_permission' | 'error' | 'vehicle_locked' | 'user_disabled' };
 
 const LOCKED_NOTIFIED_KEY_PREFIX = 'gps_trip_locked_notified_';
+// Rà soát 15/8 (bug thật user báo, iPhone: bấm "Tắt theo dõi" xong, mở lại app
+// vẫn thấy đang ghi) - autoArmIfReady() chạy lại MỖI LẦN mở app/quay về foreground
+// (App.tsx) mà không biết user vừa CHỦ ĐỘNG chọn tắt hẳn dịch vụ (khác hẳn việc
+// chỉ kết thúc 1 chuyến bình thường - xem chỗ gọi disableAutoArm() ở UI, CHỈ gắn
+// vào đúng nhánh "Tắt theo dõi?" khi CHƯA vào chuyến nào, không gắn vào nhánh kết
+// thúc chuyến đang chạy - kết thúc 1 chuyến KHÔNG có nghĩa "đừng bao giờ tự ghi
+// nữa", chỉ nhánh tắt hẳn dịch vụ mới đúng ý đó). Lưu AsyncStorage (bền qua khởi
+// động lại app, KHÁC cờ sessionSuppressed của OBD2 - tình huống này user báo rõ
+// là còn tồn tại SAU KHI mở lại app, không phải trong cùng 1 phiên) - chỉ được
+// xoá khi user tự bấm "Bật theo dõi" lại (xem requestPermissionsAndStart()).
+const GPS_AUTO_ARM_DISABLED_KEY = 'gps_auto_arm_user_disabled';
+
+export async function disableAutoArm(): Promise<void> {
+  await AsyncStorage.setItem(GPS_AUTO_ARM_DISABLED_KEY, '1').catch(() => {});
+}
 
 /**
  * Rà soát (user báo: có popup "xe đang được ghi hành trình ở máy khác" nhưng
@@ -981,6 +1020,12 @@ async function notifyVehicleLockedOnce(vehicleId: number, holderDeviceId: string
  */
 export async function autoArmIfReady(vehicleId: number, options?: { guessed?: boolean }): Promise<AutoArmResult> {
   try {
+    // Kiểm tra cờ "user chủ động tắt" TRƯỚC MỌI THỨ KHÁC - tôn trọng tuyệt đối,
+    // không tự bật lại dù quyền vẫn còn, dù xe đang ở đúng điều kiện lý tưởng
+    // nào đi nữa. Xem giải thích đầy đủ ở GPS_AUTO_ARM_DISABLED_KEY phía trên.
+    const disabled = await AsyncStorage.getItem(GPS_AUTO_ARM_DISABLED_KEY).catch(() => null);
+    if (disabled) return { armed: false, reason: 'user_disabled' };
+
     // Rà soát 27/7 (user báo: tắt máy giữa chuyến sáng, chiều kết nối lại OBD2
     // vẫn không thấy chuyến sáng được ghi nhận): autoArmIfReady() trước đây chỉ
     // kiểm tra isTrackingActive() rồi bật lại luôn nếu false - nếu tiến trình bị

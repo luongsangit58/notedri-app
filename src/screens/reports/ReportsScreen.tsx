@@ -96,7 +96,7 @@ function VehicleChips({
       horizontal
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={{ gap: 8, paddingHorizontal: 16 }}
-      style={{ marginBottom: 10 }}>
+      style={{ marginBottom: 6 }}>
       {vehicles.map((v: any) => {
         const active = v.id === selectedId;
         return (
@@ -104,13 +104,20 @@ function VehicleChips({
             key={v.id}
             onPress={() => onSelect(v.id)}
             style={{
-              paddingHorizontal: 16,
-              paddingVertical: 8,
+              flexDirection: 'row', alignItems: 'center', gap: 6,
+              paddingHorizontal: 14,
+              paddingVertical: 6,
               borderRadius: 20,
               backgroundColor: active ? colors.primary : colors.surface,
               borderWidth: 1,
               borderColor: active ? colors.primary : colors.border,
             }}>
+            <FontAwesome5
+              name="car-side"
+              size={11}
+              color={active ? colors.primaryText : colors.textSecondary}
+              solid
+            />
             <Text
               style={{
                 color: active ? colors.primaryText : colors.textSecondary,
@@ -143,7 +150,7 @@ function YearChips({
       horizontal
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={{ gap: 8, paddingHorizontal: 16 }}
-      style={{ marginBottom: 10 }}>
+      style={{ marginBottom: 6 }}>
       {years.map((y) => {
         const active = y === selectedYear;
         return (
@@ -151,16 +158,16 @@ function YearChips({
             key={y}
             onPress={() => onSelect(y)}
             style={{
-              paddingHorizontal: 14,
-              paddingVertical: 6,
-              borderRadius: 16,
-              backgroundColor: active ? colors.primary : colors.surface,
+              paddingHorizontal: 12,
+              paddingVertical: 5,
+              borderRadius: 14,
+              backgroundColor: active ? colors.primary + '18' : 'transparent',
               borderWidth: 1,
               borderColor: active ? colors.primary : colors.border,
             }}>
             <Text
               style={{
-                color: active ? colors.primaryText : colors.textSecondary,
+                color: active ? colors.primary : colors.textSecondary,
                 fontWeight: active ? '700' : '400',
                 fontSize: 13,
               }}>
@@ -192,8 +199,17 @@ function PeriodTypeChips({
     { key: 'quarter', label: t('reports.period_quarter') },
     { key: 'year', label: t('reports.period_year') },
   ];
+  // Rà soát 15/8 (góp ý user: 3 hàng chọn xe/kỳ/năm đều dùng CHUNG 1 kiểu "viên
+  // thuốc bo tròn cam đặc", nhìn giống hệt nhau, khó phân biệt đang chọn gì).
+  // Đổi hàng này thành segmented control thật (1 khối nền chung, ô đang chọn nổi
+  // lên bằng màu nền sáng hơn + chữ cam - không còn tô cam đặc) - khác hẳn kiểu
+  // "viên thuốc rời" của VehicleChips (đặc cam) và YearChips (viền mỏng nhạt).
   return (
-    <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 16, marginBottom: 8 }}>
+    <View style={{
+      flexDirection: 'row', gap: 3, marginHorizontal: 16, marginBottom: 6,
+      backgroundColor: colors.surface, borderRadius: 12, padding: 3,
+      borderWidth: 1, borderColor: colors.border,
+    }}>
       {options.map((opt) => {
         const active = opt.key === value;
         return (
@@ -202,16 +218,14 @@ function PeriodTypeChips({
             onPress={() => onSelect(opt.key)}
             style={{
               flex: 1,
-              paddingVertical: 9,
-              borderRadius: 12,
+              paddingVertical: 7,
+              borderRadius: 9,
               alignItems: 'center',
-              backgroundColor: active ? colors.primary : colors.surface,
-              borderWidth: 1,
-              borderColor: active ? colors.primary : colors.border,
+              backgroundColor: active ? colors.background : 'transparent',
             }}>
             <Text
               style={{
-                color: active ? colors.primaryText : colors.textSecondary,
+                color: active ? colors.primary : colors.textSecondary,
                 fontWeight: active ? '700' : '500',
                 fontSize: 13.5,
               }}>
@@ -1040,29 +1054,16 @@ export default function ReportsScreen({ embedded }: { embedded?: boolean } = {})
       style={{ flex: 1, backgroundColor: colors.background }}
       edges={embedded ? [] : ['bottom']}>
       <AppBgPattern />
-      {/* header - chỉ hiện khi nhúng (không có header gốc "← Báo cáo" để dựa
-          vào); đứng riêng thì header gốc đã đủ, không lặp lại tiêu đề. */}
-      {embedded && (
-        <View
-          style={{
-            paddingHorizontal: 16,
-            paddingTop: 16,
-            paddingBottom: 8,
-          }}>
-          <Text style={{ color: colors.text, fontWeight: '800', fontSize: 20 }}>
-            {t('reports.title')}
-          </Text>
-          <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 2 }}>
-            {t('reports.subtitle')}
-          </Text>
-        </View>
-      )}
+      {/* Rà soát 15/8 (góp ý user: khối cố định phía trên chiếm quá nhiều diện
+          tích, đặc biệt khi nhúng - đã có tab "Báo cáo" (icon + nhãn) ở ngay
+          trên cùng của ThongKeScreen rồi). Bỏ hẳn khối tiêu đề + mô tả lặp lại
+          này - tiêu đề đã có sẵn: header gốc "← Báo cáo" khi đứng riêng, nhãn
+          tab "Báo cáo" khi nhúng - giữ lại chỉ tốn thêm ~50px vô ích mà không
+          thêm thông tin gì mới. */}
 
-      {/* vehicle + year chips — luôn chiếm chiều cao cố định, không gây layout shift.
-          Đứng riêng (không có khối tiêu đề ở trên) cần chút đệm trên để không dính
-          sát mép header gốc. */}
+      {/* vehicle + year chips — luôn chiếm chiều cao cố định, không gây layout shift. */}
       {vehicles.length > 0 ? (
-        <View style={!embedded ? { paddingTop: 12 } : undefined}>
+        <View style={{ paddingTop: 8 }}>
           <VehicleChips
             vehicles={vehicles}
             selectedId={effectiveId}

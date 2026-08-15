@@ -161,7 +161,7 @@ const en = {
   "refuels.date_label": "Date",
   "refuels.station_label": "Station",
   "refuels.full_tank_label": "Full tank",
-  "refuels.save_button": "Save fuel record",
+  "refuels.save_button": "Save",
   "refuels.delete_confirm_title": "Delete fuel record",
   "refuels.delete_confirm_message": "Are you sure you want to delete this record?",
   "refuels.consumption_avg": "Avg consumption",

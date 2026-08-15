@@ -28,7 +28,7 @@ import { useGpsTripState, useGpsTrips } from '../../hooks/useGpsTrip';
 import { useVehicles } from '../../hooks/useVehicles';
 import { devicesApi, DeviceSession } from '../../api/devices';
 import { GpsTripRecord, gpsTripsApi } from '../../api/gpsTrips';
-import { openLocationSettings, openBatterySettings } from '../../services/gps/GpsTripTracker';
+import { openLocationSettings, openBatterySettings, disableAutoArm } from '../../services/gps/GpsTripTracker';
 import { detectDrivingEvents, computeDrivingScoreByDistance } from '../../services/drivingScore/drivingScoreEngine';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import RouteMap from '../../components/RouteMap';
@@ -274,10 +274,16 @@ function ActiveTripCard({ vehicleId }: { vehicleId: number }) {
           } },
         ]);
       } else {
-        // Chỉ đang theo dõi, chưa vào chuyến -> tắt luôn
+        // Chỉ đang theo dõi, chưa vào chuyến -> tắt luôn. Rà soát 15/8 (bug thật
+        // user báo, iPhone: bấm "Tắt theo dõi" xong, mở lại app vẫn thấy đang
+        // ghi) - đây là nhánh DUY NHẤT thật sự có nghĩa "đừng tự bật lại nữa"
+        // (khác nhánh trên chỉ kết thúc 1 CHUYẾN, không phải tắt hẳn dịch vụ) -
+        // gọi disableAutoArm() để autoArmIfReady() (App.tsx, mọi lần mở/quay lại
+        // app) tôn trọng, không âm thầm bật lại tới khi user tự bấm "Bật theo
+        // dõi" lần nữa.
         Alert.alert(t('gps_trips.stop_tracking_title'), t('gps_trips.stop_tracking_body'), [
           { text: t('common.cancel'), style: 'cancel' },
-          { text: t('gps_trips.turn_off'), style: 'destructive', onPress: () => stop(true) },
+          { text: t('gps_trips.turn_off'), style: 'destructive', onPress: () => { disableAutoArm(); stop(true); } },
         ]);
       }
     } else {
@@ -377,26 +383,35 @@ function ActiveTripCard({ vehicleId }: { vehicleId: number }) {
           )}
         />
       )}
-      <View style={styles.activeRow}>
+      {/* Rà soát 15/8 (bug thật user báo, iOS: badge + 2 nút dồn chung 1 hàng
+          không có flexWrap - tràn hẳn ra ngoài viền thẻ khi nhãn dài, vd "Đang
+          ghi hành trình" + "Tạm dừng" + "Dừng theo dõi" cùng lúc). Tách hẳn
+          thành 2 hàng riêng: badge trạng thái ở trên (rộng bao nhiêu tuỳ nội
+          dung), hàng nút bên dưới chia đều theo flex:1 - luôn vừa khít trong
+          thẻ bất kể độ dài nhãn/ngôn ngữ nào. `alignSelf: 'flex-start'` bắt
+          buộc - activeCard là flex column mặc định alignItems:'stretch', nếu
+          không có badge sẽ bị kéo giãn hết chiều ngang thẻ thay vì giữ dạng
+          viên nhỏ gọn như thiết kế gốc. */}
+      <View style={{ alignSelf: 'flex-start' }}>
         <StatusBadge status={status} tracking={tracking} paused={paused} />
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          {inTrip && (
-            <TouchableOpacity
-              onPress={handlePauseResume}
-              style={[styles.toggleBtn, { backgroundColor: paused ? colors.success : colors.warning }]}>
-              <FontAwesome5 name={paused ? 'play' : 'pause'} size={12} color="#fff" solid />
-              <Text style={styles.toggleBtnText}>{paused ? t('gps_trips.resume') : t('gps_trips.pause')}</Text>
-            </TouchableOpacity>
-          )}
+      </View>
+      <View style={{ flexDirection: 'row', gap: 8, marginTop: 10 }}>
+        {inTrip && (
           <TouchableOpacity
-            onPress={handleToggle}
-            style={[styles.toggleBtn, { backgroundColor: isRunning ? colors.error : colors.primary }]}>
-            <FontAwesome5 name={isRunning ? 'stop' : 'play'} size={12} color="#fff" solid />
-            <Text style={styles.toggleBtnText}>
-              {isRunning ? t('gps_trips.btn_stop') : t('gps_trips.btn_enable')}
-            </Text>
+            onPress={handlePauseResume}
+            style={[styles.toggleBtn, { flex: 1, justifyContent: 'center', backgroundColor: paused ? colors.success : colors.warning }]}>
+            <FontAwesome5 name={paused ? 'play' : 'pause'} size={12} color="#fff" solid />
+            <Text style={styles.toggleBtnText} numberOfLines={1}>{paused ? t('gps_trips.resume') : t('gps_trips.pause')}</Text>
           </TouchableOpacity>
-        </View>
+        )}
+        <TouchableOpacity
+          onPress={handleToggle}
+          style={[styles.toggleBtn, { flex: 1, justifyContent: 'center', backgroundColor: isRunning ? colors.error : colors.primary }]}>
+          <FontAwesome5 name={isRunning ? 'stop' : 'play'} size={12} color="#fff" solid />
+          <Text style={styles.toggleBtnText} numberOfLines={1}>
+            {isRunning ? t('gps_trips.btn_stop') : t('gps_trips.btn_enable')}
+          </Text>
+        </TouchableOpacity>
       </View>
 
       {/* Thông báo đang tạm dừng */}
@@ -982,7 +997,6 @@ const styles = StyleSheet.create({
   emptySub: { fontSize: 13, textAlign: 'center', paddingHorizontal: 32 },
 
   activeCard: { borderRadius: 12, borderWidth: 1, padding: 11, marginBottom: 8 },
-  activeRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   badge: {
     flexDirection: 'row',
     alignItems: 'center',

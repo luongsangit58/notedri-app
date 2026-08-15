@@ -552,23 +552,32 @@ export default function AddRefuelScreen() {
           </View>
           {/* Gợi ý nhanh từ các cây xăng ĐÃ TỪNG đổ cho xe này - hiện sẵn, không cần
               chạm gì (khác "Tìm gần đây" phải xin quyền vị trí + gọi API). Ẩn khi đang
-              hiện kết quả tìm gần đây để khỏi chồng 2 danh sách cùng lúc. */}
+              hiện kết quả tìm gần đây để khỏi chồng 2 danh sách cùng lúc.
+              Rà soát 15/8 (góp ý user: tên cây xăng dài nên dù đã flexWrap, mỗi hàng
+              chỉ vừa đúng 1 ô - nhìn như danh sách dọc, chiếm nhiều chiều cao). Đổi
+              sang cuộn NGANG 1 hàng duy nhất (khớp cách VehicleChips/loại xăng phía
+              trên đã làm) + giới hạn bề rộng mỗi ô - gọn hẳn xuống 1 hàng cố định,
+              vuốt ngang để xem hết thay vì kéo dài màn hình xuống. */}
           {stationsDropdown.length === 0 && recentStations.length > 0 && (
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ gap: 6 }}
+              style={{ marginBottom: 8 }}>
               {recentStations.map((name) => (
                 <TouchableOpacity
                   key={name}
                   onPress={() => setCayXang(name)}
                   style={{
-                    flexDirection: 'row', alignItems: 'center', gap: 5,
+                    flexDirection: 'row', alignItems: 'center', gap: 5, maxWidth: 150,
                     paddingHorizontal: 10, paddingVertical: 6, borderRadius: 16,
                     backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
                   }}>
                   <FontAwesome5 name="history" size={9} color={colors.textSecondary} solid />
-                  <Text style={{ color: colors.text, fontSize: 12, fontWeight: '600' }} numberOfLines={1}>{name}</Text>
+                  <Text style={{ color: colors.text, fontSize: 12, fontWeight: '600', flexShrink: 1 }} numberOfLines={1}>{name}</Text>
                 </TouchableOpacity>
               ))}
-            </View>
+            </ScrollView>
           )}
           {stationsDropdown.length > 0 && (
             <View style={{
