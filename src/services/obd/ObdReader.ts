@@ -71,6 +71,26 @@ export type InitResult =
   | { ok: true; dataAvailable: boolean; rawRpmResponse?: string }
   | { ok: false; dataAvailable: false };
 
+// ATSP0 (auto-detect) đôi khi không dò ra được protocol dù bus vẫn sống (gặp với
+// 1 xe điện VF6 trong log thực tế: mọi PID timeout/UNABLE TO CONNECT qua auto,
+// nghi do CAN chưa được auto-detect đúng). Mọi xe 2008+ (bắt buộc với EV) đều
+// dùng CAN nên chỉ cần thử 4 biến thể CAN, khỏi thử protocol legacy 1-5.
+const CAN_PROTOCOL_FALLBACKS = ['6', '7', '8', '9'];
+
+// CHỈ được gọi khi health-check ATSP0 đã thất bại (dataAvailable=false) - xe đang
+// hoạt động bình thường không bao giờ chạy qua đây nên không tốn thêm round-trip
+// nào so với trước.
+async function tryForcedCanProtocols(): Promise<boolean> {
+  for (const protocol of CAN_PROTOCOL_FALLBACKS) {
+    await bleService.sendCommand(`ATSP${protocol}`, 1000).catch(() => {});
+    const [rpm, speed] = await Promise.all([readRpm(), readSpeed()]);
+    if (rpm !== null || speed !== null) return true;
+  }
+  // Không protocol nào ép được: trả adapter về auto để lần reconnect sau sạch sẽ.
+  await bleService.sendCommand('ATSP0', 1000).catch(() => {});
+  return false;
+}
+
 export async function initializeElm327(): Promise<InitResult> {
   try {
     await bleService.sendCommand('ATZ', 3000);
@@ -83,8 +103,12 @@ export async function initializeElm327(): Promise<InitResult> {
     // Health-check: try reading RPM and Speed to confirm the vehicle ECU is responding.
     // Both null means the adapter connected but the car is off, uses an unsupported
     // protocol, or the vehicle predates OBD2 (pre-2005 VN market).
-    const [rpm, speed] = await Promise.all([readRpm(), readSpeed()]);
-    const dataAvailable = rpm !== null || speed !== null;
+    const [rpm0, speed0] = await Promise.all([readRpm(), readSpeed()]);
+    let dataAvailable = rpm0 !== null || speed0 !== null;
+
+    if (!dataAvailable) {
+      dataAvailable = await tryForcedCanProtocols();
+    }
 
     // Dò best-effort CHỈ ĐỂ GHI LOG PHIÊN: phiên bản adapter, protocol.
     // Bitmap 0100/0120/... KHÔNG probe ở đây nữa - capabilityService dò + parse thật.
