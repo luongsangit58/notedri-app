@@ -13,7 +13,7 @@ let currentProtocol = 'auto';
 // định "chỉ nói CAN 29-bit 500k (ATSP7)" mà auto-detect bỏ sót.
 const RESPONSIVE_PROTOCOL = '7';
 
-const mockSendCommand = jest.fn((cmd: string): Promise<string> => {
+const mockSendCommand = jest.fn((cmd: string, _timeoutMs?: number): Promise<string> => {
   const setProtocol = /^ATSP(\w)$/.exec(cmd);
   if (setProtocol) {
     currentProtocol = setProtocol[1];

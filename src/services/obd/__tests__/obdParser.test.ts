@@ -4,7 +4,7 @@
  * Đây là hồi quy cho bug "màn hình toàn dấu -": ATS0 làm response dính liền
  * ("410C1034") trong khi parser cũ tách token theo dấu cách.
  */
-import { extractPayload, isNoData, parseSupportedPids, parseVin, parseDtcCodes, assembleIsoTpFrames, parseReadinessStatus, PID_REGISTRY, PID_PLAUSIBLE_RANGE, isPlausibleValue } from '../obdParser';
+import { extractPayload, isNoData, parseSupportedPids, parseVin, parseCalibrationId, parseCvn, parseDtcCodes, assembleIsoTpFrames, parseReadinessStatus, PID_REGISTRY, PID_PLAUSIBLE_RANGE, isPlausibleValue } from '../obdParser';
 
 describe('extractPayload - format thật từ fixture #2 (ATS0, không dấu cách)', () => {
   it('parse RPM 410C1034 → 1037 rpm', () => {
@@ -70,6 +70,29 @@ describe('parseVin - format multi-frame thật từ fixture #3', () => {
   it('NO DATA / rác → null', () => {
     expect(parseVin('NO DATA')).toBeNull();
     expect(parseVin('ELM327 v2.3')).toBeNull();
+  });
+});
+
+describe('parseCalibrationId - mode 09 PID 04 (18/8)', () => {
+  it('decode ASCII 16 ký tự sau marker 4904 + 1 byte số bản ghi', () => {
+    // "ABC123DEF456GHI7" (16 ký tự) mã hex, giống format VIN nhưng marker 4904
+    const raw = '49041041424331323344454634353647484937';
+    expect(parseCalibrationId(raw)).toBe('ABC123DEF456GHI7');
+  });
+
+  it('NO DATA / rác → null', () => {
+    expect(parseCalibrationId('NO DATA')).toBeNull();
+  });
+});
+
+describe('parseCvn - mode 09 PID 06 (18/8)', () => {
+  it('trả về checksum hex viết hoa, KHÔNG decode ASCII', () => {
+    const raw = '490601BA001A5E';
+    expect(parseCvn(raw)).toBe('BA001A5E');
+  });
+
+  it('NO DATA / rác → null', () => {
+    expect(parseCvn('NO DATA')).toBeNull();
   });
 });
 

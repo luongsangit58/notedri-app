@@ -143,6 +143,47 @@ export function parseVin(response: string): string | null {
 }
 
 /**
+ * Calibration ID (mode 09 PID 04) - cùng cấu trúc payload ASCII như VIN
+ * (0902), chỉ khác marker hex "4904" - xác nhận qua python-OBD (thư viện
+ * KONNWEI R&D khuyên dùng, 16/8): decoder "encoded_string(16)". Không có
+ * format cố định như VIN (17 ký tự, bảng chữ riêng) nên không validate bằng
+ * regex - chỉ trim, bỏ padding 0x00.
+ */
+export function parseCalibrationId(response: string): string | null {
+  const hex = responseHex(response);
+  if (!hex) return null;
+
+  const idx = hex.indexOf('4904');
+  if (idx === -1) return null;
+
+  const payload = hex.slice(idx + 6);
+  let cid = '';
+  for (let i = 0; i + 1 < payload.length; i += 2) {
+    const byte = parseInt(payload.slice(i, i + 2), 16);
+    if (byte === 0) continue;
+    cid += String.fromCharCode(byte);
+  }
+  cid = cid.trim();
+  return cid.length > 0 ? cid : null;
+}
+
+/**
+ * CVN - Calibration Verification Number (mode 09 PID 06) - KHÁC VIN/CID: giá
+ * trị là checksum hex 4 byte, KHÔNG phải chuỗi ASCII (python-OBD dùng decoder
+ * riêng "cvn", không phải encoded_string). Trả về chuỗi hex viết hoa.
+ */
+export function parseCvn(response: string): string | null {
+  const hex = responseHex(response);
+  if (!hex) return null;
+
+  const idx = hex.indexOf('4906');
+  if (idx === -1) return null;
+
+  const payload = hex.slice(idx + 6).toUpperCase();
+  return payload.length > 0 ? payload : null;
+}
+
+/**
  * Parse mã lỗi từ response mode 03/07/0A (CAN - ISO 15765-4, protocol xe đã xác
  * nhận qua ATDPN=A7): "<echo mode+40>" + từng cặp 2 byte/mã, KHÔNG byte đếm.
  * Xe khoẻ: "4300". Nhiều mã (>2) sẽ về dạng multi-frame như VIN - responseHex

@@ -67,6 +67,17 @@ mode 01 chuẩn (broadcast, không cần địa chỉ ECU cụ thể).
 Đọc thêm thông số ngoài chuẩn OBD-II (mode 21/22 UDS) — cùng rào cản dữ liệu
 như 2.1, và cùng nằm sau paywall "$58" của MAXOBD.
 
+**Cập nhật 2026-08-16 — tra thêm trang App Store/Google Play chính thức của app
+MAXOBD** (không chỉ dựa vào ảnh chụp màn hình): mô tả app liệt kê rõ các hãng xe
+được hỗ trợ chẩn đoán sâu (mở rộng ngoài mode 01 chuẩn) là **Subaru,
+Mercedes-Benz, GM, Suzuki, Hyundai, KIA, Mazda, Mitsubishi** — xác nhận đúng
+hướng "vehicle-specific per hãng" đã phân tích ở trên, và **không có VinFast**
+trong danh sách này (khớp với phần đã bàn về VF6 ở
+[obd-supported-devices.md](obd-supported-devices.md)). Mô tả app cũng không đề
+cập gì tới hỗ trợ xe điện/hybrid ở bất kỳ đâu trong 4 nguồn đã tra (App Store,
+2 trang mirror Google Play) — cùng kết luận với phần nghiên cứu KONNWEI trước
+đó, không phải trùng hợp.
+
 ### 2.3 Deep Security Scan
 
 Tên chưa rõ nghĩa kỹ thuật cụ thể (không có mô tả chi tiết trong nguồn tìm

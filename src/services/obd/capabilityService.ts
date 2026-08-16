@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { bleService } from './BleService';
-import { parseSupportedPids, parseVin } from './obdParser';
+import { parseSupportedPids, parseVin, parseCalibrationId, parseCvn } from './obdParser';
 import { createLogger } from './obdLogger';
 
 const log = createLogger('elm');
@@ -92,8 +92,15 @@ export async function getCachedCapability(vehicleId: number): Promise<VehicleCap
 // cho thấy 0902 bị gửi lặp không cần thiết. Reset khi ngắt kết nối - phiên mới
 // (rút cắm sang xe khác) phải đọc lại thật.
 let vinCacheThisSession: { value: string | null } | null = null;
+// Calibration ID (0904) và CVN (0906) - cùng lý do cache theo phiên như VIN
+// (18/8, gộp vào "Thông tin xe" cùng VIN theo màn Vehicle Information tham
+// khảo từ MAXOBD): giá trị không đổi giữa chừng 1 phiên, tránh gửi lặp.
+let calibrationIdCacheThisSession: { value: string | null } | null = null;
+let cvnCacheThisSession: { value: string | null } | null = null;
 bleService.addDisconnectListener(() => {
   vinCacheThisSession = null;
+  calibrationIdCacheThisSession = null;
+  cvnCacheThisSession = null;
 });
 
 /**
@@ -118,9 +125,43 @@ export async function readCurrentVin(): Promise<string | null> {
   }
 }
 
-/** User bấm "Làm mới"/dò lại capability chủ động - buộc đọc VIN thật lần sau. */
+/**
+ * Calibration ID (mode 09 PID 04) - mã hiệu chuẩn phần mềm ECU. Cùng cơ chế
+ * cache/lỗi-không-cache như readCurrentVin() ở trên.
+ */
+export async function readCalibrationId(): Promise<string | null> {
+  if (calibrationIdCacheThisSession) return calibrationIdCacheThisSession.value;
+  try {
+    const cid = parseCalibrationId(await bleService.sendCommand('0904', 4000));
+    calibrationIdCacheThisSession = { value: cid };
+    log.info('Calibration ID read (0904)', cid);
+    return cid;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * CVN - Calibration Verification Number (mode 09 PID 06) - checksum xác nhận
+ * bản hiệu chuẩn ECU khớp đúng bản đã đăng ký khí thải. Cùng cơ chế cache như trên.
+ */
+export async function readCvn(): Promise<string | null> {
+  if (cvnCacheThisSession) return cvnCacheThisSession.value;
+  try {
+    const cvn = parseCvn(await bleService.sendCommand('0906', 4000));
+    cvnCacheThisSession = { value: cvn };
+    log.info('CVN read (0906)', cvn);
+    return cvn;
+  } catch {
+    return null;
+  }
+}
+
+/** User bấm "Làm mới"/dò lại capability chủ động - buộc đọc VIN/CID/CVN thật lần sau. */
 export function invalidateVinCache(): void {
   vinCacheThisSession = null;
+  calibrationIdCacheThisSession = null;
+  cvnCacheThisSession = null;
 }
 
 /** VIN đã đọc được trong phiên hiện tại (không gửi lệnh mới) - dùng để chuẩn

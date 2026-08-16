@@ -106,7 +106,13 @@ export default function OBDDashboardScreen() {
     capability,
     vinMismatch,
     disconnect,
+    refreshCapability,
   } = useObdConnection(vehicleId, vehicleName);
+
+  async function handleRefreshCapability() {
+    await refreshCapability();
+    Alert.alert(t('obd.refresh_capability'), t('obd.refresh_capability_done'));
+  }
 
   async function handleDisconnect() {
     Alert.alert(t('obd.disconnect_title'), t('obd.disconnect_confirm'), [
@@ -593,6 +599,19 @@ export default function OBDDashboardScreen() {
           onPress={() => navigation.navigate('OBDTechnical', { vehicleId })}>
           <FontAwesome5 name="table" size={14} color={colors.primary} />
           <Text style={[styles.historyBtnText, { color: colors.primary }]}>{t('obd.tech_link')}</Text>
+          <FontAwesome5 name="chevron-right" size={12} color={colors.textSecondary} />
+        </TouchableOpacity>
+
+        {/* Làm mới capability (16/8, rà soát UX): trước đây CHỈ có ở màn Setup -
+            muốn dùng phải ngắt kết nối rồi quay lại (navigation.replace không
+            giữ Setup trong stack, xem comment doConnect() ở OBDSetupScreen.tsx).
+            Duplicate sang Dashboard giống handleExportLog để không ai cần quay
+            lại Setup giữa phiên chỉ để làm mới capability. */}
+        <TouchableOpacity
+          style={[styles.historyBtn, { backgroundColor: colors.card }]}
+          onPress={handleRefreshCapability}>
+          <FontAwesome5 name="sync" size={14} color={colors.primary} />
+          <Text style={[styles.historyBtnText, { color: colors.primary }]}>{t('obd.refresh_capability')}</Text>
           <FontAwesome5 name="chevron-right" size={12} color={colors.textSecondary} />
         </TouchableOpacity>
 

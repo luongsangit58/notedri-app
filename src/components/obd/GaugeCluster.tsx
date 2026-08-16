@@ -258,30 +258,45 @@ export default function GaugeCluster({
         <CockpitWeather color={toolbarAccent} fontSize={clockFontSize} />
       </View>
 
-      {/* Toàn bộ nút chức năng dời hẳn xuống ĐÁY màn hình (xem comment
-          CLOCK_INSET_CAP đầu file) - né dứt điểm dải status bar riêng của ROM
-          đầu Android ô tô (chỉ nằm ở top), không cần đoán chiều cao hay xếp
-          cột dọc như trước. */}
-      <Animated.View
-        pointerEvents={controlsVisible ? 'box-none' : 'none'}
+      {/* Chip trái (mũi tên quay lại Lưới) tách khỏi animation ẩn/hiện của phần
+          còn lại (rà soát 16/8, góp ý user: toolbar tự ẩn sau 4s khiến đường
+          quay lại "biến mất", phải chạm màn hình trước mới thấy lại được) -
+          LUÔN hiển thị, không phụ thuộc controlsOpacity/controlsVisible. */}
+      <View
         style={[
-          styles.toolbar,
+          styles.chip,
+          styles.chipAbsolute,
           {
             bottom: 8 + toolbarInsetBottom,
             left: 12 + toolbarInsetSide,
+            backgroundColor: toolbarAccent + '33',
+            borderColor: toolbarAccent + '77',
+          },
+        ]}
+      >
+        <TouchableOpacity onPress={onBack} style={styles.iconBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+          <FontAwesome5 name="arrow-left" size={19} color="#FFFFFF" />
+        </TouchableOpacity>
+        <FontAwesome5 name="tachometer-alt" size={17} color={toolbarAccent} solid />
+        <Text style={styles.brandText}>NoteDri</Text>
+      </View>
+
+      {/* Nút chức năng còn lại (theme/bảng màu/ngắt kết nối) dời hẳn xuống ĐÁY
+          màn hình (xem comment CLOCK_INSET_CAP đầu file) - né dứt điểm dải
+          status bar riêng của ROM đầu Android ô tô (chỉ nằm ở top), không cần
+          đoán chiều cao hay xếp cột dọc như trước. Vẫn tự ẩn sau 4s như cũ -
+          chỉ tách RIÊNG mũi tên quay lại ra khỏi nhóm này (xem chip ở trên). */}
+      <Animated.View
+        pointerEvents={controlsVisible ? 'box-none' : 'none'}
+        style={[
+          styles.toolbarBtnsWrap,
+          {
+            bottom: 8 + toolbarInsetBottom,
             right: 12 + toolbarInsetSide,
             opacity: controlsOpacity,
           },
         ]}
       >
-        <View style={[styles.chip, { backgroundColor: toolbarAccent + '33', borderColor: toolbarAccent + '77' }]}>
-          <TouchableOpacity onPress={onBack} style={styles.iconBtn} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-            <FontAwesome5 name="arrow-left" size={19} color="#FFFFFF" />
-          </TouchableOpacity>
-          <FontAwesome5 name="tachometer-alt" size={17} color={toolbarAccent} solid />
-          <Text style={styles.brandText}>NoteDri</Text>
-        </View>
-
         <View style={styles.toolbarBtns}>
           {pipSupported && isConnected && (
             <TouchableOpacity
@@ -340,10 +355,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 10,
     borderRadius: 20, borderWidth: 1, paddingHorizontal: 16, paddingVertical: 8,
   },
-  toolbar: {
-    position: 'absolute',
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-  },
+  // Chip trái (mũi tên quay lại) và nhóm nút phải giờ là 2 khối định vị TUYỆT
+  // ĐỐI riêng biệt (trước đây chung 1 `toolbar` bao cả 2, xem rà soát 16/8 -
+  // tách để chip không bị cuốn theo animation ẩn/hiện của nhóm nút phải).
+  chipAbsolute: { position: 'absolute' },
+  toolbarBtnsWrap: { position: 'absolute' },
   // Rà soát 13/8 (góp ý user: toolbar nhìn "thụt thò", không cân bằng) - chip
   // bên trái trước đây cao theo nội dung (~39px, paddingVertical:8) trong khi
   // 4 nút chức năng bên phải cao CỐ ĐỊNH 46px - 2 khối cùng 1 hàng nhưng lệch
