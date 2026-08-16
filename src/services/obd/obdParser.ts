@@ -331,6 +331,24 @@ export const PID_PLAUSIBLE_RANGE: Record<string, PidRange> = {
   '07': { min: -100, max: 100 },  // Long term fuel trim B1 %
   '14': { min: 0, max: 1.275 },   // O2 Sensor B1S1 voltage V (byte max 255/200)
   '33': { min: 0, max: 120 },     // Absolute barometric pressure kPa
+  // 14 PID mở rộng thêm (18/8, đối chiếu bảng chuẩn SAE J1979 công khai - xem
+  // obdParser.ts PID_REGISTRY cho công thức). Ngưỡng theo dải vật lý hợp lý
+  // cho xe con phổ thông, không lấy nguyên trần lý thuyết của spec (giống lý
+  // do 0C giới hạn 8000 thay vì 16383.75).
+  '0E': { min: -64, max: 63.5 },   // Timing advance ° trước TDC
+  '10': { min: 0, max: 655.35 },   // MAF air flow g/s
+  '15': { min: 0, max: 1.275 },    // O2 Sensor 2 voltage V
+  '1C': { min: 1, max: 250 },      // OBD standard - enum thô, không phải số đo
+  '1F': { min: 0, max: 65535 },    // Time since engine start s
+  '21': { min: 0, max: 65535 },    // Distance with MIL on km
+  '22': { min: 0, max: 5177.265 }, // Fuel rail pressure (rel. manifold vacuum) kPa
+  '23': { min: 0, max: 655350 },   // Fuel rail gauge pressure kPa (phun trực tiếp)
+  '2C': { min: 0, max: 100 },      // Commanded EGR %
+  '2E': { min: 0, max: 100 },      // Commanded evaporative purge %
+  '3C': { min: -40, max: 1000 },   // Catalyst temperature °C - trần thực tế xe con, spec cho phép tới 6513.5
+  '43': { min: 0, max: 25700 },    // Absolute load value % (có thể vượt 100% theo spec)
+  '44': { min: 0, max: 2 },        // Commanded air-fuel equivalence ratio
+  '45': { min: 0, max: 100 },      // Relative throttle position %
 };
 
 /**
@@ -364,10 +382,28 @@ export const PID_REGISTRY: Record<string, PidDefinition> = {
   '0B': { pid: '0B', name: 'Intake manifold pressure', unit: 'kPa', decode: (x) => b(x, 0) },
   '0C': { pid: '0C', name: 'Engine RPM', unit: 'rpm', decode: (x) => (b(x, 1) === null ? null : (x[0] * 256 + x[1]) / 4) },
   '0D': { pid: '0D', name: 'Vehicle speed', unit: 'km/h', decode: (x) => b(x, 0) },
+  '0E': { pid: '0E', name: 'Timing advance', unit: '° trước TDC', decode: (x) => (b(x, 0) === null ? null : Math.round((x[0] / 2 - 64) * 10) / 10) },
   '0F': { pid: '0F', name: 'Intake air temperature', unit: '°C', decode: (x) => (b(x, 0) === null ? null : x[0] - 40) },
+  '10': { pid: '10', name: 'MAF air flow rate', unit: 'g/s', decode: (x) => (b(x, 1) === null ? null : Math.round(((x[0] * 256 + x[1]) / 100) * 100) / 100) },
   '11': { pid: '11', name: 'Throttle position', unit: '%', decode: (x) => (b(x, 0) === null ? null : Math.round((x[0] * 100) / 255)) },
+  // O2 Sensor 2 - chỉ lấy voltage (byte A), bỏ short-term fuel trim (byte B)
+  // cùng cách PID 14 (O2 Sensor 1) đã đơn giản hoá trước đó.
+  '15': { pid: '15', name: 'O2 Sensor 2 voltage', unit: 'V', decode: (x) => (b(x, 0) === null ? null : Math.round((x[0] / 200) * 1000) / 1000) },
+  // Enum chuẩn OBD (1-250, vd 6="EOBD"), không phải số đo - hiển thị nguyên byte thô.
+  '1C': { pid: '1C', name: 'OBD standard', unit: '', decode: (x) => b(x, 0) },
+  '1F': { pid: '1F', name: 'Time since engine start', unit: 's', decode: (x) => (b(x, 1) === null ? null : x[0] * 256 + x[1]) },
+  '21': { pid: '21', name: 'Distance with MIL on', unit: 'km', decode: (x) => (b(x, 1) === null ? null : x[0] * 256 + x[1]) },
+  '22': { pid: '22', name: 'Fuel rail pressure (rel. manifold vacuum)', unit: 'kPa', decode: (x) => (b(x, 1) === null ? null : Math.round(0.079 * (x[0] * 256 + x[1]) * 10) / 10) },
+  '23': { pid: '23', name: 'Fuel rail gauge pressure', unit: 'kPa', decode: (x) => (b(x, 1) === null ? null : 10 * (x[0] * 256 + x[1])) },
+  '2C': { pid: '2C', name: 'Commanded EGR', unit: '%', decode: (x) => (b(x, 0) === null ? null : Math.round((x[0] * 100) / 255)) },
+  '2E': { pid: '2E', name: 'Commanded evaporative purge', unit: '%', decode: (x) => (b(x, 0) === null ? null : Math.round((x[0] * 100) / 255)) },
   '2F': { pid: '2F', name: 'Fuel level', unit: '%', decode: (x) => (b(x, 0) === null ? null : Math.round((x[0] * 100) / 255)) },
+  '33': { pid: '33', name: 'Barometric pressure', unit: 'kPa', decode: (x) => b(x, 0) },
+  '3C': { pid: '3C', name: 'Catalyst temperature B1S1', unit: '°C', decode: (x) => (b(x, 1) === null ? null : Math.round(((x[0] * 256 + x[1]) / 10 - 40) * 10) / 10) },
   '42': { pid: '42', name: 'Control module voltage', unit: 'V', decode: (x) => (b(x, 1) === null ? null : Math.round(((x[0] * 256 + x[1]) / 1000) * 100) / 100) },
+  '43': { pid: '43', name: 'Absolute load value', unit: '%', decode: (x) => (b(x, 1) === null ? null : Math.round(((100 / 255) * (x[0] * 256 + x[1])) * 10) / 10) },
+  '44': { pid: '44', name: 'Commanded air-fuel equivalence ratio', unit: '', decode: (x) => (b(x, 1) === null ? null : Math.round(((2 / 65536) * (x[0] * 256 + x[1])) * 1000) / 1000) },
+  '45': { pid: '45', name: 'Relative throttle position', unit: '%', decode: (x) => (b(x, 0) === null ? null : Math.round((x[0] * 100) / 255)) },
   '46': { pid: '46', name: 'Ambient air temperature', unit: '°C', decode: (x) => (b(x, 0) === null ? null : x[0] - 40) },
   '5C': { pid: '5C', name: 'Engine oil temperature', unit: '°C', decode: (x) => (b(x, 0) === null ? null : x[0] - 40) },
   '5E': { pid: '5E', name: 'Fuel rate', unit: 'L/h', decode: (x) => (b(x, 1) === null ? null : Math.round(((x[0] * 256 + x[1]) / 20) * 10) / 10) },

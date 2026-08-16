@@ -275,6 +275,33 @@ export async function readBarometricPressure(): Promise<number | null> {
   return isPlausibleValue('33', bytes[0]) ? bytes[0] : null;
 }
 
+// 14 PID mở rộng thêm (18/8, đối chiếu bảng chuẩn SAE J1979 công khai) - dùng
+// lại công thức đã khai trong PID_REGISTRY thay vì viết lại lần 2, tránh lệch
+// công thức giữa 2 chỗ. Cùng cách dùng như 8 hàm ở trên: chỉ cho màn kỹ thuật.
+function simpleReader(pid: string): () => Promise<number | null> {
+  return async () => {
+    const bytes = await readPid(pid);
+    if (!bytes) return null;
+    const value = PID_REGISTRY[pid].decode(bytes);
+    return value !== null && isPlausibleValue(pid, value) ? value : null;
+  };
+}
+
+export const readTimingAdvance = simpleReader('0E');
+export const readMafAirFlowRate = simpleReader('10');
+export const readO2SensorB2Voltage = simpleReader('15');
+export const readObdStandard = simpleReader('1C');
+export const readTimeSinceEngineStart = simpleReader('1F');
+export const readDistanceWithMilOn = simpleReader('21');
+export const readFuelRailPressure = simpleReader('22');
+export const readFuelRailGaugePressure = simpleReader('23');
+export const readCommandedEgr = simpleReader('2C');
+export const readCommandedEvapPurge = simpleReader('2E');
+export const readCatalystTempB1S1 = simpleReader('3C');
+export const readAbsoluteLoadValue = simpleReader('43');
+export const readCommandedAirFuelRatio = simpleReader('44');
+export const readRelativeThrottlePosition = simpleReader('45');
+
 export type ObdExtendedSnapshot = {
   fuelTrimShortB1Pct: number | null;
   intakeManifoldPressureKpa: number | null;
@@ -284,6 +311,20 @@ export type ObdExtendedSnapshot = {
   fuelTrimLongB1Pct: number | null;
   o2SensorB1S1Voltage: number | null;
   barometricPressureKpa: number | null;
+  timingAdvanceDeg: number | null;
+  mafAirFlowRateGPerS: number | null;
+  o2SensorB2Voltage: number | null;
+  obdStandard: number | null;
+  timeSinceEngineStartS: number | null;
+  distanceWithMilOnKm: number | null;
+  fuelRailPressureKpa: number | null;
+  fuelRailGaugePressureKpa: number | null;
+  commandedEgrPct: number | null;
+  commandedEvapPurgePct: number | null;
+  catalystTempB1S1C: number | null;
+  absoluteLoadValuePct: number | null;
+  commandedAirFuelRatio: number | null;
+  relativeThrottlePositionPct: number | null;
   timestamp: number;
 };
 
@@ -297,12 +338,40 @@ export async function readExtendedSnapshot(): Promise<ObdExtendedSnapshot> {
   const fuelTrimLongB1Pct = await readFuelTrimLongB1();
   const o2SensorB1S1Voltage = await readO2SensorB1S1Voltage();
   const barometricPressureKpa = await readBarometricPressure();
+  const timingAdvanceDeg = await readTimingAdvance();
+  const mafAirFlowRateGPerS = await readMafAirFlowRate();
+  const o2SensorB2Voltage = await readO2SensorB2Voltage();
+  const obdStandard = await readObdStandard();
+  const timeSinceEngineStartS = await readTimeSinceEngineStart();
+  const distanceWithMilOnKm = await readDistanceWithMilOn();
+  const fuelRailPressureKpa = await readFuelRailPressure();
+  const fuelRailGaugePressureKpa = await readFuelRailGaugePressure();
+  const commandedEgrPct = await readCommandedEgr();
+  const commandedEvapPurgePct = await readCommandedEvapPurge();
+  const catalystTempB1S1C = await readCatalystTempB1S1();
+  const absoluteLoadValuePct = await readAbsoluteLoadValue();
+  const commandedAirFuelRatio = await readCommandedAirFuelRatio();
+  const relativeThrottlePositionPct = await readRelativeThrottlePosition();
 
   return {
     fuelTrimShortB1Pct,
     intakeManifoldPressureKpa,
     intakeAirTempC,
     ambientAirTempC,
+    timingAdvanceDeg,
+    mafAirFlowRateGPerS,
+    o2SensorB2Voltage,
+    obdStandard,
+    timeSinceEngineStartS,
+    distanceWithMilOnKm,
+    fuelRailPressureKpa,
+    fuelRailGaugePressureKpa,
+    commandedEgrPct,
+    commandedEvapPurgePct,
+    catalystTempB1S1C,
+    absoluteLoadValuePct,
+    commandedAirFuelRatio,
+    relativeThrottlePositionPct,
     fuelRateLPerHour,
     fuelTrimLongB1Pct,
     o2SensorB1S1Voltage,

@@ -42,6 +42,21 @@ const ROWS: Row[] = [
   { pid: '07', nameKey: 'obd.stat_fuel_trim_long', unit: '%', read: (_s, e) => e?.fuelTrimLongB1Pct ?? null },
   { pid: '14', nameKey: 'obd.stat_o2_voltage', unit: ' V', read: (_s, e) => e?.o2SensorB1S1Voltage ?? null },
   { pid: '33', nameKey: 'obd.stat_barometric', unit: ' kPa', read: (_s, e) => e?.barometricPressureKpa ?? null },
+  // 14 PID mở rộng thêm (18/8, đối chiếu bảng chuẩn SAE J1979 công khai).
+  { pid: '0E', nameKey: 'obd.stat_timing_advance', unit: '°', read: (_s, e) => e?.timingAdvanceDeg ?? null },
+  { pid: '10', nameKey: 'obd.stat_maf', unit: ' g/s', read: (_s, e) => e?.mafAirFlowRateGPerS ?? null },
+  { pid: '15', nameKey: 'obd.stat_o2_voltage_2', unit: ' V', read: (_s, e) => e?.o2SensorB2Voltage ?? null },
+  { pid: '1C', nameKey: 'obd.stat_obd_standard', unit: '', read: (_s, e) => e?.obdStandard ?? null },
+  { pid: '1F', nameKey: 'obd.stat_time_since_start', unit: ' s', read: (_s, e) => e?.timeSinceEngineStartS ?? null },
+  { pid: '21', nameKey: 'obd.stat_distance_mil', unit: ' km', read: (_s, e) => e?.distanceWithMilOnKm ?? null },
+  { pid: '22', nameKey: 'obd.stat_fuel_rail_pressure', unit: ' kPa', read: (_s, e) => e?.fuelRailPressureKpa ?? null },
+  { pid: '23', nameKey: 'obd.stat_fuel_rail_gauge_pressure', unit: ' kPa', read: (_s, e) => e?.fuelRailGaugePressureKpa ?? null },
+  { pid: '2C', nameKey: 'obd.stat_egr', unit: '%', read: (_s, e) => e?.commandedEgrPct ?? null },
+  { pid: '2E', nameKey: 'obd.stat_evap_purge', unit: '%', read: (_s, e) => e?.commandedEvapPurgePct ?? null },
+  { pid: '3C', nameKey: 'obd.stat_catalyst_temp', unit: '°C', read: (_s, e) => e?.catalystTempB1S1C ?? null },
+  { pid: '43', nameKey: 'obd.stat_absolute_load', unit: '%', read: (_s, e) => e?.absoluteLoadValuePct ?? null },
+  { pid: '44', nameKey: 'obd.stat_air_fuel_ratio', unit: '', read: (_s, e) => e?.commandedAirFuelRatio ?? null },
+  { pid: '45', nameKey: 'obd.stat_relative_throttle', unit: '%', read: (_s, e) => e?.relativeThrottlePositionPct ?? null },
 ];
 
 const SAMPLE_INTERVAL_MS = 1000;
