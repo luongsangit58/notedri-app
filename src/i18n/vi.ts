@@ -1177,6 +1177,8 @@ const vi = {
   // Reports labels (previously hardcoded)
   "reports.actual_vs_spec": "Thực tế vs Nhà sản xuất",
   "reports.top_spending_month": "Tháng chi nhiều nhất",
+  "reports.monthly_cost_chart_title": "Chi phí xăng theo tháng {{year}}",
+  "reports.monthly_distance_chart_title": "Quãng đường mỗi tháng {{year}}",
   "reports.forecast_total": "Dự báo tổng",
   "reports.forecast_fuel": "Dự báo xăng",
   "reports.forecast_service": "Dự báo dịch vụ",

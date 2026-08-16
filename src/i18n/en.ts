@@ -1177,6 +1177,8 @@ const en = {
   // Reports labels
   "reports.actual_vs_spec": "Actual vs Manufacturer",
   "reports.top_spending_month": "Top spending month",
+  "reports.monthly_cost_chart_title": "Fuel cost by month {{year}}",
+  "reports.monthly_distance_chart_title": "Distance by month {{year}}",
   "reports.forecast_total": "Total forecast",
   "reports.forecast_fuel": "Fuel forecast",
   "reports.forecast_service": "Service forecast",

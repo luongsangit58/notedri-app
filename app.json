@@ -40,7 +40,7 @@
     },
     "android": {
       "package": "com.notedri",
-      "versionCode": 56,
+      "versionCode": 57,
       "googleServicesFile": "./google-services.json",
       "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
@@ -89,6 +89,15 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/android-icon-foreground.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#060507"
+        }
+      ],
       [
         "expo-notifications",
         {}

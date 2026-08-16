@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, RefreshControl,
+  View, Text, ScrollView, TouchableOpacity, RefreshControl, Modal, FlatList, Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AppBgPattern from '../../components/AppBgPattern';
@@ -165,8 +165,12 @@ function VehicleChips({
   );
 }
 
-/* ─── year chip selector ─── */
-function YearChips({
+/* ─── year dropdown selector ───
+   Rà soát 16/8 (góp ý user: bộ chọn năm trước đây là 1 hàng chip cuộn ngang riêng,
+   chiếm cả 1 dòng full-width bên dưới tên xe) - đổi thành dropdown pill gọn, đặt
+   cùng hàng với VehicleChips (góc phải) thay vì chiếm thêm 1 dòng riêng. Pattern
+   Modal + FlatList giống SelectField.tsx. */
+function YearDropdown({
   years,
   selectedYear,
   onSelect,
@@ -176,39 +180,57 @@ function YearChips({
   onSelect: (year: number) => void;
 }) {
   const colors = useColors();
+  const [open, setOpen] = useState(false);
   if (!years || years.length === 0) return null;
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={{ gap: 8, paddingHorizontal: 16 }}
-      style={{ marginBottom: 6 }}>
-      {years.map((y) => {
-        const active = y === selectedYear;
-        return (
-          <TouchableOpacity
-            key={y}
-            onPress={() => onSelect(y)}
-            style={{
-              paddingHorizontal: 12,
-              paddingVertical: 5,
-              borderRadius: 14,
-              backgroundColor: active ? colors.primary + '18' : 'transparent',
-              borderWidth: 1,
-              borderColor: active ? colors.primary : colors.border,
-            }}>
-            <Text
-              style={{
-                color: active ? colors.primary : colors.textSecondary,
-                fontWeight: active ? '700' : '400',
-                fontSize: 13,
-              }}>
-              {y}
-            </Text>
-          </TouchableOpacity>
-        );
-      })}
-    </ScrollView>
+    <>
+      <TouchableOpacity
+        onPress={() => setOpen(true)}
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 6,
+          paddingHorizontal: 12,
+          paddingVertical: 6,
+          borderRadius: 20,
+          backgroundColor: colors.surface,
+          borderWidth: 1,
+          borderColor: colors.border,
+        }}>
+        <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14 }}>
+          {selectedYear}
+        </Text>
+        <FontAwesome5 name="chevron-down" size={10} color={colors.textSecondary} />
+      </TouchableOpacity>
+
+      <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
+        <Pressable style={{ flex: 1, backgroundColor: '#0008', justifyContent: 'center', padding: 20 }} onPress={() => setOpen(false)}>
+          <Pressable style={{ backgroundColor: colors.surface, borderRadius: 14, maxHeight: '60%', overflow: 'hidden', alignSelf: 'center', width: 180 }}>
+            <FlatList
+              data={years}
+              keyExtractor={(y) => String(y)}
+              renderItem={({ item }) => {
+                const active = item === selectedYear;
+                return (
+                  <TouchableOpacity
+                    onPress={() => { onSelect(item); setOpen(false); }}
+                    style={{
+                      paddingHorizontal: 18, paddingVertical: 14,
+                      borderBottomWidth: 1, borderBottomColor: colors.border,
+                      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+                    }}>
+                    <Text style={{ color: active ? colors.primary : colors.text, fontSize: 15, fontWeight: active ? '700' : '400' }}>
+                      {item}
+                    </Text>
+                    {active && <FontAwesome5 name="check" size={13} color={colors.primary} solid />}
+                  </TouchableOpacity>
+                );
+              }}
+            />
+          </Pressable>
+        </Pressable>
+      </Modal>
+    </>
   );
 }
 
@@ -235,7 +257,7 @@ function PeriodTypeChips({
   // thuốc bo tròn cam đặc", nhìn giống hệt nhau, khó phân biệt đang chọn gì).
   // Đổi hàng này thành segmented control thật (1 khối nền chung, ô đang chọn nổi
   // lên bằng màu nền sáng hơn + chữ cam - không còn tô cam đặc) - khác hẳn kiểu
-  // "viên thuốc rời" của VehicleChips (đặc cam) và YearChips (viền mỏng nhạt).
+  // "viên thuốc rời" của VehicleChips (đặc cam) và YearDropdown (viền mỏng nhạt).
   return (
     <View style={{
       flexDirection: 'row', gap: 3, marginHorizontal: 16, marginBottom: 6,
@@ -313,6 +335,91 @@ function SectionCard({
       </Text>
       {children}
     </View>
+  );
+}
+
+/* ─── monthly bar chart ───
+   Rà soát 16/8 (góp ý user: báo cáo trên app chỉ liệt kê text, không có biểu đồ
+   trong khi web đã có bar chart cho chi phí/quãng đường theo tháng). Dựng bằng
+   View thuần (không thêm thư viện chart) - mô phỏng đúng kỹ thuật CSS flex-height
+   web đang dùng ở garage/reports/index.blade.php (flex + height % theo max). */
+function MonthlyBarChart({
+  data,
+  color,
+  formatValue,
+}: {
+  data: { label: string; value: number }[];
+  color: string;
+  formatValue: (v: number) => string;
+}) {
+  const colors = useColors();
+  const t = useT();
+  const max = Math.max(1, ...data.map((d) => d.value));
+  const [pressedIndex, setPressedIndex] = useState<number | null>(null);
+  const pressed = pressedIndex != null ? data[pressedIndex] : null;
+  return (
+    <View>
+      <View style={{ height: 16, marginBottom: 4 }}>
+        {pressed && (
+          <Text style={{ color: colors.text, fontSize: 12, fontWeight: '700' }}>
+            {t('reports.month_label', { n: pressed.label })} · {formatValue(pressed.value)}
+          </Text>
+        )}
+      </View>
+      <View style={{ flexDirection: 'row', alignItems: 'flex-end', height: 120, gap: 3 }}>
+        {data.map((d, i) => (
+          <TouchableOpacity
+            key={i}
+            activeOpacity={0.7}
+            onPressIn={() => setPressedIndex(i)}
+            onPressOut={() => setPressedIndex(null)}
+            accessibilityLabel={`${t('reports.month_label', { n: d.label })}: ${formatValue(d.value)}`}
+            style={{ flex: 1, alignItems: 'center', justifyContent: 'flex-end', height: '100%' }}>
+            <View
+              style={{
+                width: '100%',
+                height: d.value > 0 ? `${Math.max(2, Math.round((d.value / max) * 100))}%` : 0,
+                backgroundColor: color,
+                borderRadius: 3,
+              }}
+            />
+            <Text style={{ color: colors.textSecondary, fontSize: 9, marginTop: 3 }}>{d.label}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+/* ─── category spending bar row ───
+   Thay CardRow text đơn thuần bằng thanh ngang tỉ lệ, cùng kiểu trình bày web
+   (label + số tiền phía trên, bar màu bên dưới rộng theo % so với mục cao nhất). */
+function CategoryBarRow({
+  label,
+  amount,
+  maxAmount,
+  onPress,
+}: {
+  label: string;
+  amount: number;
+  maxAmount: number;
+  onPress?: () => void;
+}) {
+  const colors = useColors();
+  const Wrapper = onPress ? TouchableOpacity : View;
+  const pct = Math.max(2, Math.round((amount / maxAmount) * 100));
+  return (
+    <Wrapper activeOpacity={onPress ? 0.6 : undefined} onPress={onPress} style={{ marginBottom: 10 }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 }}>
+        <Text style={{ color: colors.text, fontSize: 13, flex: 1 }} numberOfLines={1}>{label}</Text>
+        <Text style={{ color: colors.text, fontWeight: '600', fontSize: 13, marginLeft: 8 }}>
+          {formatVND(amount)}
+        </Text>
+      </View>
+      <View style={{ height: 6, borderRadius: 3, backgroundColor: colors.background, overflow: 'hidden' }}>
+        <View style={{ width: `${pct}%`, height: '100%', borderRadius: 3, backgroundColor: colors.primary }} />
+      </View>
+    </Wrapper>
   );
 }
 
@@ -679,6 +786,21 @@ function ReportContent({
     )
     .slice(0, 3);
 
+  /* ── monthly chart data (chi phí xăng theo tháng) ── */
+  const monthlyChartData = monthly.map((m) => ({
+    label: String(m.thang ?? m.month ?? m.month_number ?? ''),
+    value: Number(m.tong_tien ?? m.chi_phi ?? m.cost ?? m.total_cost ?? 0),
+  }));
+
+  /* ── monthly distance chart data (quãng đường mỗi tháng) — field có sẵn ở API
+     (ReportService::yearReport -> monthly_distance) nhưng trước đây app chưa đọc. */
+  const monthlyDistance: any[] = Array.isArray(data.monthly_distance) ? data.monthly_distance : [];
+  const monthlyDistanceChartData = monthlyDistance.map((m) => ({
+    label: String(m.thang ?? m.month ?? m.month_number ?? ''),
+    value: Number(m.km ?? m.distance ?? m.total_km ?? 0),
+  }));
+  const totalDistanceFromMonthly = monthlyDistanceChartData.reduce((s, m) => s + m.value, 0);
+
   /* ── stations top 3 ── */
   const stations: any[] = Array.isArray(data.stations) ? data.stations : [];
   const top3Stations = stations.slice(0, 3);
@@ -914,6 +1036,21 @@ function ReportContent({
         </SectionCard>
       )}
 
+      {/* ── monthly cost bar chart ── */}
+      {monthlyChartData.some((m) => m.value > 0) && (
+        <SectionCard title={t('reports.monthly_cost_chart_title', { year: selectedYear })}>
+          <MonthlyBarChart data={monthlyChartData} color={colors.primary} formatValue={fmtVnd} />
+        </SectionCard>
+      )}
+
+      {/* ── monthly distance bar chart — dữ liệu monthly_distance có sẵn ở API
+          nhưng trước đây app chưa hiển thị, giờ thêm cho đồng bộ với web. ── */}
+      {totalDistanceFromMonthly > 0 && (
+        <SectionCard title={t('reports.monthly_distance_chart_title', { year: selectedYear })}>
+          <MonthlyBarChart data={monthlyDistanceChartData} color="#38bdf8" formatValue={(v) => fmtNum(v, 'km')} />
+        </SectionCard>
+      )}
+
       {/* ── top 3 months by spend ── */}
       {top3Months.length > 0 && (
         <SectionCard title={t('reports.top_spending_month')}>
@@ -1018,21 +1155,24 @@ function ReportContent({
         </SectionCard>
       )}
 
-      {/* ── by category ── */}
+      {/* ── by category — thanh ngang tỉ lệ, cùng kiểu trình bày web thay vì list text ── */}
       {byCategory.length > 0 && (
         <SectionCard title={t('reports.spending_by_category')}>
-          {byCategory.map((c, i) => {
-            const target = categoryTarget(c.label);
-            return (
-              <CardRow
-                key={i}
-                index={i}
-                label={c.label}
-                value={fmtVnd(c.amount)}
-                onPress={target ? () => navigation.navigate(target) : undefined}
-              />
-            );
-          })}
+          {(() => {
+            const maxCat = Math.max(...byCategory.map((c) => c.amount));
+            return byCategory.map((c, i) => {
+              const target = categoryTarget(c.label);
+              return (
+                <CategoryBarRow
+                  key={i}
+                  label={c.label}
+                  amount={c.amount}
+                  maxAmount={maxCat}
+                  onPress={target ? () => navigation.navigate(target) : undefined}
+                />
+              );
+            });
+          })()}
         </SectionCard>
       )}
 
@@ -1116,25 +1256,32 @@ export default function ReportsScreen({ embedded }: { embedded?: boolean } = {})
           tab "Báo cáo" khi nhúng - giữ lại chỉ tốn thêm ~50px vô ích mà không
           thêm thông tin gì mới. */}
 
-      {/* vehicle + year chips — luôn chiếm chiều cao cố định, không gây layout shift. */}
+      {/* vehicle chips + year dropdown (cùng hàng, năm neo bên phải) — luôn chiếm
+          chiều cao cố định, không gây layout shift. */}
       {vehicles.length > 0 ? (
         <View style={{ paddingTop: 8 }}>
-          <VehicleChips
-            vehicles={vehicles}
-            selectedId={effectiveId}
-            onSelect={(id) => {
-              setSelectedVehicleId(id);
-              setAvailableYears([new Date().getFullYear()]);
-            }}
-          />
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <View style={{ flex: 1 }}>
+              <VehicleChips
+                vehicles={vehicles}
+                selectedId={effectiveId}
+                onSelect={(id) => {
+                  setSelectedVehicleId(id);
+                  setAvailableYears([new Date().getFullYear()]);
+                }}
+              />
+            </View>
+            {periodType === 'year' && (
+              <View style={{ paddingRight: 16, marginBottom: 6 }}>
+                <YearDropdown
+                  years={availableYears}
+                  selectedYear={selectedYear}
+                  onSelect={setSelectedYear}
+                />
+              </View>
+            )}
+          </View>
           <PeriodTypeChips value={periodType} onSelect={setPeriodType} />
-          {periodType === 'year' && (
-            <YearChips
-              years={availableYears}
-              selectedYear={selectedYear}
-              onSelect={setSelectedYear}
-            />
-          )}
         </View>
       ) : (
         <View
