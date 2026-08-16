@@ -91,7 +91,13 @@ export default function GaugeCluster({
   const rawInsets = useSafeAreaInsets();
   const toolbarInsetBottom = Math.min(rawInsets.bottom, MAX_TOOLBAR_INSET);
   const toolbarInsetSide = Math.min(Math.max(rawInsets.left, rawInsets.right), MAX_TOOLBAR_INSET);
-  const clockInsetTop = Math.min(rawInsets.top, CLOCK_INSET_CAP);
+  // Rà soát 19/8 (góp ý user: tai thỏ/Dynamic Island trên iPhone che mất giờ/
+  // thời tiết) - CLOCK_INSET_CAP (12px) được tinh chỉnh riêng cho dải status
+  // bar GIẢ của ROM đầu Android ô tô (báo inset nhưng không có vật cản thật -
+  // xem comment 30/7 phía trên), KHÔNG áp dụng được cho iOS: rawInsets.top
+  // trên iOS luôn là số đo PHẦN CỨNG chính xác của tai thỏ/Dynamic Island
+  // (44-59px thật), ép xuống 12px chắc chắn bị che. Chỉ giới hạn trên Android.
+  const clockInsetTop = Platform.OS === 'ios' ? rawInsets.top : Math.min(rawInsets.top, CLOCK_INSET_CAP);
 
   // Nút PiP thủ công (rà soát 24/7: user báo PiP tự động vẫn chưa thấy hoạt
   // động trên đầu Android ô tô cụ thể của họ) - không thể chẩn đoán từ xa liệu
