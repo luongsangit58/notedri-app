@@ -51,6 +51,11 @@ export default function SafetyAlerts({ vinMismatch, vehicleName, warning, findin
                 Raw: {warning.rawResponse.replace(/[\r\n]+/g, ' ').trim().slice(0, 60)}
               </Text>
             ) : null}
+            {warning.batteryVoltage != null ? (
+              <Text style={[styles.warningText, { fontSize: 10, opacity: 0.65, marginTop: 2 }]}>
+                Nguồn OBD: {warning.batteryVoltage.toFixed(1)}V
+              </Text>
+            ) : null}
           </View>
         </View>
       )}

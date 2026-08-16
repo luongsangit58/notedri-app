@@ -68,8 +68,26 @@ export async function reinitElm327AfterReconnect(): Promise<void> {
 }
 
 export type InitResult =
-  | { ok: true; dataAvailable: boolean; rawRpmResponse?: string }
+  | { ok: true; dataAvailable: boolean; rawRpmResponse?: string; batteryVoltage?: number | null }
   | { ok: false; dataAvailable: false };
+
+/**
+ * ATRV đọc điện áp trực tiếp từ chân 16 giắc OBD qua ADC của chính chip ELM327
+ * - KHÔNG qua ECU/protocol nào cả, nên vẫn đo được ngay cả khi mọi PID mode 01
+ * đều TIMEOUT/UNABLE TO CONNECT (case VF6). Cho biết adapter có nhận điện từ
+ * xe hay không, tách bạch khỏi câu hỏi "ECU có trả lời không".
+ */
+export async function readBatteryVoltageDirect(): Promise<number | null> {
+  try {
+    const response = await bleService.sendCommand('ATRV', 2000);
+    const match = response.match(/(\d+\.?\d*)\s*V/i);
+    if (!match) return null;
+    const volts = parseFloat(match[1]);
+    return Number.isFinite(volts) && volts > 0 && volts < 30 ? volts : null;
+  } catch {
+    return null;
+  }
+}
 
 // ATSP0 (auto-detect) đôi khi không dò ra được protocol dù bus vẫn sống (gặp với
 // 1 xe điện VF6 trong log thực tế: mọi PID timeout/UNABLE TO CONNECT qua auto,
@@ -132,7 +150,10 @@ export async function initializeElm327(): Promise<InitResult> {
       } catch {
         rawRpmResponse = undefined;
       }
-      return { ok: true, dataAvailable: false, rawRpmResponse };
+      // ATRV không qua ECU nên vẫn thử được ở đây - phân biệt "xe không cấp
+      // điện/adapter cắm lỏng" khỏi "có điện nhưng ECU không trả lời PID".
+      const batteryVoltage = await readBatteryVoltageDirect();
+      return { ok: true, dataAvailable: false, rawRpmResponse, batteryVoltage };
     }
 
     return { ok: true, dataAvailable: true };

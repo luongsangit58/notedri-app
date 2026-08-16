@@ -62,8 +62,10 @@ describe('ObdReader - fallback ép protocol CAN khi ATSP0 auto-detect thất b�
 
   it('không protocol CAN nào ép được: vẫn báo dataAvailable=false như cũ, KHÔNG hang, và trả adapter về auto', async () => {
     currentProtocol = 'auto';
-    // Không xe nào phản hồi ở bất kỳ protocol nào (mô phỏng bus thực sự im lặng).
+    // Không xe nào phản hồi ở bất kỳ protocol nào (mô phỏng bus thực sự im lặng),
+    // nhưng ATRV vẫn đo được điện áp - KHÔNG qua ECU nên không phụ thuộc protocol.
     const alwaysSilent = mockSendCommand.mockImplementation((cmd: string) => {
+      if (cmd === 'ATRV') return Promise.resolve('12.6V');
       if (cmd.toUpperCase().startsWith('AT')) return Promise.resolve('OK');
       return Promise.resolve('UNABLE TO CONNECT');
     });
@@ -74,6 +76,7 @@ describe('ObdReader - fallback ép protocol CAN khi ATSP0 auto-detect thất b�
     expect(result.dataAvailable).toBe(false);
     if (!result.dataAvailable) {
       expect(result.rawRpmResponse).toBe('UNABLE TO CONNECT');
+      expect(result.batteryVoltage).toBe(12.6);
     }
 
     const calls = alwaysSilent.mock.calls.map((c) => c[0]);

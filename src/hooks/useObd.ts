@@ -22,7 +22,7 @@ import { getDeviceId } from '../utils/deviceId';
 // lần renew liên tiếp không tới (mất kết nối đột ngột, không kịp release()).
 const DEVICE_LOCK_RENEW_INTERVAL_MS = 90_000;
 
-export type ObdWarning = { type: 'no_data'; rawResponse?: string } | null;
+export type ObdWarning = { type: 'no_data'; rawResponse?: string; batteryVoltage?: number | null } | null;
 
 // ---- Data queries ----
 
@@ -298,7 +298,7 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
     setWarning(
       result.dataAvailable
         ? null
-        : { type: 'no_data', rawResponse: result.rawRpmResponse },
+        : { type: 'no_data', rawResponse: result.rawRpmResponse, batteryVoltage: result.batteryVoltage },
     );
 
     // Dò capability TRƯỚC snapshot đầu tiên để whitelist kịp áp dụng

@@ -24,6 +24,7 @@ Master navigation index for all project documentation.
 | Xem kế hoạch triển khai Nori Agent (AI Agent, chưa xong) | [nori-agent-plan.md](nori-agent-plan.md) |
 | Knowledge (từ điển DTC + rule chẩn đoán) đang phủ tới đâu, còn thiếu gì | [knowledge-coverage.md](knowledge-coverage.md) |
 | So sánh tính năng app vs web (notedri.com), còn thiếu gì | [feature-parity-vs-web.md](feature-parity-vs-web.md) |
+| So sánh tính năng OBD2 app vs KONNWEI KW905/MAXOBD Pro, còn thiếu gì | [feature-parity-vs-maxobd.md](feature-parity-vs-maxobd.md) |
 
 ---
 
@@ -122,6 +123,13 @@ Hiện trạng **Knowledge** (từ điển DTC `dtc_dictionary.json` + rule ch�
 ### [feature-parity-vs-web.md](feature-parity-vs-web.md)
 
 Đối chiếu tính năng app vs web (`notedri.com`) — tính năng nào app đã có, đã tương đương, hay còn thiếu so với web, kèm đề xuất ưu tiên xử lý và trạng thái đã làm/chưa làm.
+
+### [feature-parity-vs-maxobd.md](feature-parity-vs-maxobd.md)
+
+So sánh tính năng OBD2 (xe xăng/dầu) với KONNWEI KW905/MAXOBD và MAXOBD Pro
+2026 — 11 tính năng KW905 đối chiếu NoteDri (9/11 đã có), phân tích "full-system"
+(ABS/SRS/Transmission...) của MAXOBD Pro và rào cản dữ liệu ECU riêng hãng, kèm
+đề xuất thứ tự triển khai nếu theo đuổi hướng full-system.
 
 ### [deployment-guide.md](deployment-guide.md)
 

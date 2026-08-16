@@ -64,6 +64,31 @@ device `Android-Vlink ... (classic)`, 2026-07-27) — đây là log Vgate/Androi
 Classic từ lúc phát triển tính năng SPP, không phải KW906, không đưa vào bảng
 so sánh trên nhưng có thể xoá hoặc giữ làm tư liệu tham khảo thêm cho Vgate Classic.
 
+## Cập nhật 2026-08-16 — KW906 KHÔNG hỗ trợ xe điện (xác nhận bởi KONNWEI)
+
+Log thật trên xe **VinFast VF6** (BLE, cùng model KW906 nói trên): `ATZ`/`ATE0`/
+`ATL0`/`ATH0`/`ATS0`/`ATSP0` đều `OK` (adapter + BLE + ELM327 khởi tạo bình
+thường), nhưng **mọi PID mode 01 sau đó** (`010C`, `010D`, `0111`, `0104`,
+`012F`...) đều `<<TIMEOUT>>` hoặc `STOPPED`, và sau ~14 lần thử liên tiếp
+`ATSP0` (auto-detect) tự chuyển sang báo thẳng `SEARCHING...\rUNABLE TO
+CONNECT` — không ECU nào trên xe phản hồi qua bất kỳ protocol nào mà
+auto-detect thử.
+
+Đã thử hướng "có thể do `ATSP0` tự dò nhầm/bỏ sót protocol" bằng cách thêm
+fallback ép lần lượt các protocol CAN (`ATSP6`-`ATSP9`, xem
+`src/services/obd/ObdReader.ts` — `tryForcedCanProtocols()`) trước khi báo
+không đọc được. **Trước khi kịp test trên xe thật**, đã hỏi trực tiếp nhà sản
+xuất KONNWEI: **họ xác nhận KW906 không hỗ trợ xe điện.** Đây là giới hạn ở
+tầng firmware/phần cứng của adapter (chip ELM327 clone giá rẻ), không phải do
+`ATSP0` chọn nhầm protocol — nên fallback ép protocol trong code (dù vẫn giữ
+lại vì vô hại và có ích cho các xe khác gặp lỗi tương tự không liên quan EV)
+**không kỳ vọng sẽ khắc phục được case KW906 + VF6 (hoặc EV nói chung)**.
+
+**Kết luận cho trang supported-devices:** KW906 nên đánh dấu rõ
+`ev_support: false` (xác nhận bởi hãng, không phải suy đoán từ 1 log) — khác
+hẳn với các mục còn lại trong bảng trên vốn đều đo trên xe xăng/dầu, không ai
+xác nhận hỗ trợ EV.
+
 ## Diễn giải
 
 - **Không có thiết bị nào lỗi giao thức PID sống** (RPM `010C`, tốc độ `010D`, ga
@@ -165,3 +190,43 @@ xác minh PIN" thay vì khẳng định hỗ trợ cả 2 transport như KW902.
 Số liệu latency/tốc độ poll phụ thuộc điều kiện đo (khoảng cách, nhiễu BLE xung
 quanh) — nên nêu trên trang là "đo được trong 1 lần test", không cam kết tuyệt
 đối, và cập nhật lại nếu có log mới với điều kiện đo tốt hơn (nhiều lần lặp).
+
+## Nghiên cứu bên ngoài — thiết bị nào hỗ trợ xe điện? (2026-08-16, CHƯA kiểm chứng bằng log thật)
+
+Khác với toàn bộ phần trên (dựa 100% trên log phiên thật, cùng 1 xe) — mục này
+tổng hợp từ tài liệu marketing/cộng đồng bên ngoài (web search), **chỉ để định
+hướng chọn thiết bị test tiếp theo cho VF6, KHÔNG phải kết luận đã kiểm chứng**
+như các phần trên. Không trộn lẫn 2 loại bằng chứng khi viết trang
+supported-devices.
+
+- **Vgate iCar Pro (BT3.0/BLE4.0 — bản gốc, KHÔNG phải 2S, cùng model đang có
+  sẵn để test)**: theo tài liệu hãng, tính năng auto-sleep/auto-wake qua
+  Bluetooth "chỉ dành cho xe xăng — xe hybrid/điện KHÔNG hỗ trợ wake tự động,
+  phải rút cắm lại thủ công". Đây là giới hạn ở **tính năng tiện ích** (đánh
+  thức từ xa), KHÔNG phải giới hạn đọc dữ liệu OBD-II chuẩn qua CAN — về
+  nguyên tắc chip ELM327 v2.3 trong máy này vẫn giao tiếp CAN được với EV nếu
+  xe đã ở trạng thái sẵn sàng (không dựa vào auto-wake). Khác hẳn xác nhận
+  "không hỗ trợ xe điện" của KONNWEI ở mục trên — Vgate không có tuyên bố
+  tương tự cho bản BT4.0 này.
+- **Vgate iCar Pro 2S** (bản mới hơn, KHÁC với máy đang có): quảng cáo hỗ trợ
+  đầy đủ xe điện/hybrid kể cả auto-wake. Nhưng "EV mode" đọc sâu dữ liệu pin
+  (cell voltage, SOH) của hãng chỉ liệt kê hỗ trợ **BYD và Tesla** — không có
+  VinFast.
+- **OBDLink MX+** — được cộng đồng EV nhắc tới nhiều nhất như lựa chọn ổn định
+  nhất để ghép với app đọc pin chuyên biệt (LeafSpy Pro cho Nissan Leaf, Scan
+  My Tesla cho Tesla, OBD Fusion + plugin GM cho Chevy Bolt).
+- **Điểm chung quan trọng**: toàn bộ hệ sinh thái "đọc pin xe điện" tìm được
+  (LeafSpy, Scan My Tesla, OBD Fusion GM plugin...) đều là app **chuyên biệt
+  theo hãng xe**, dựa trên PID/protocol độc quyền của hãng đó — không phải PID
+  mode 01 chuẩn OBD-II. Không tìm thấy app/plugin tương đương nào cho VinFast.
+  Nghĩa là ngay cả khi có adapter "hỗ trợ EV" tốt, vẫn khó có dữ liệu pin/động
+  cơ điện sâu cho VF6 nếu không ai giải mã PID riêng của VinFast (như cộng
+  đồng đã làm với Leaf/Tesla/Bolt) — vấn đề không chỉ nằm ở adapter.
+
+**Gợi ý test tiếp theo:** Vgate iCar Pro BT4.0 hiện có sẵn, không có tuyên bố
+"không hỗ trợ EV" như KONNWEI, nên là bước rẻ nhất để thử tiếp trên VF6 — nhớ
+để xe ở chế độ Ready thủ công trước khi kết nối (auto-wake không hoạt động
+trên EV theo tài liệu hãng). Nếu vẫn không đọc được data mode 01 cơ bản
+(RPM/speed không áp dụng cho EV, nhưng control module voltage `0142` hoặc VIN
+`0902` có thể vẫn phản hồi) thì nghiêng nhiều hơn về khả năng bus của VF6
+không expose OBD-II chuẩn qua cổng này, bất kể adapter nào.
