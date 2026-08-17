@@ -287,18 +287,41 @@ export default function GaugeCluster({
         <Text style={styles.brandText}>NoteDri</Text>
       </View>
 
-      {/* Nút chức năng còn lại (theme/bảng màu/ngắt kết nối) dời hẳn xuống ĐÁY
-          màn hình (xem comment CLOCK_INSET_CAP đầu file) - né dứt điểm dải
-          status bar riêng của ROM đầu Android ô tô (chỉ nằm ở top), không cần
-          đoán chiều cao hay xếp cột dọc như trước. Vẫn tự ẩn sau 4s như cũ -
-          chỉ tách RIÊNG mũi tên quay lại ra khỏi nhóm này (xem chip ở trên). */}
+      {/* Nút ngắt kết nối (X) - LUÔN hiển thị, KHÔNG theo animation ẩn/hiện của
+          nhóm nút phụ bên dưới (rà soát 17/8, góp ý user: nút quay lại đã luôn
+          hiện sẵn - rà soát 16/8 - nhưng nút ngắt kết nối vẫn tự ẩn sau
+          AUTO_HIDE_MS, khiến user khó ngắt kết nối ngay khi cần). Tách riêng
+          khỏi toolbarBtnsWrap, cùng lý do "luôn hiện" đã áp dụng cho chip quay
+          lại ở trên - đây là 2 hành động thoát màn hình quan trọng ngang nhau. */}
+      <TouchableOpacity
+        onPress={onDisconnect}
+        style={[
+          styles.styleBtn,
+          styles.chipAbsolute,
+          {
+            bottom: 8 + toolbarInsetBottom,
+            right: 12 + toolbarInsetSide,
+            backgroundColor: '#EF444433', borderColor: '#EF444477',
+          },
+        ]}
+      >
+        <FontAwesome5 name="times" size={18} color="#EF4444" solid />
+      </TouchableOpacity>
+
+      {/* Nút chức năng còn lại (theme/bảng màu) dời hẳn xuống ĐÁY màn hình (xem
+          comment CLOCK_INSET_CAP đầu file) - né dứt điểm dải status bar riêng
+          của ROM đầu Android ô tô (chỉ nằm ở top), không cần đoán chiều cao hay
+          xếp cột dọc như trước. Vẫn tự ẩn sau 4s như cũ - chỉ 2 nút phụ này,
+          không phải hành động thoát/an toàn nên chấp nhận ẩn tạm được. Dịch
+          sang trái đúng bề rộng nút ngắt kết nối (luôn hiện, tách riêng ở trên)
+          để không đè lên nhau. */}
       <Animated.View
         pointerEvents={controlsVisible ? 'box-none' : 'none'}
         style={[
           styles.toolbarBtnsWrap,
           {
             bottom: 8 + toolbarInsetBottom,
-            right: 12 + toolbarInsetSide,
+            right: 12 + toolbarInsetSide + 46 + 10,
             opacity: controlsOpacity,
           },
         ]}
@@ -323,12 +346,6 @@ export default function GaugeCluster({
             style={[styles.styleBtn, { backgroundColor: toolbarAccent + '33', borderColor: toolbarAccent + '77' }]}
           >
             <FontAwesome5 name="palette" size={18} color={toolbarAccent} solid />
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={onDisconnect}
-            style={[styles.styleBtn, { backgroundColor: '#EF444433', borderColor: '#EF444477' }]}
-          >
-            <FontAwesome5 name="times" size={18} color="#EF4444" solid />
           </TouchableOpacity>
         </View>
       </Animated.View>

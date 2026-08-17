@@ -294,10 +294,11 @@ export default function NoriFloatingButton() {
                 </Defs>
                 <Circle cx={boxSize / 2} cy={boxSize / 2} r={boxSize / 2} fill="url(#noriGlow)" />
               </Svg>
-              <View style={{
-                margin: BACKDROP_PAD, borderRadius: SIZE / 2,
-                borderWidth: 2, borderColor: showCoachmark ? '#F59E0B' : 'transparent',
-              }}>
+              {/* Rà soát 17/8 (góp ý user: viền cam đang gắn nhầm vào icon Nori - user
+                  chỉ muốn viền cho Ô CHAT coachmark bên dưới, icon Nori không cần viền
+                  trong bất kỳ trường hợp nào) - bỏ hẳn borderWidth/borderColor theo
+                  showCoachmark ở đây, chuyển viền sang đúng box tooltip coachmark. */}
+              <View style={{ margin: BACKDROP_PAD }}>
                 <NoriAvatar mood={mood} size={SIZE} />
               </View>
               {/* Huy hiệu nhấp nháy khi có điều đáng chú ý CHƯA XEM (cải thiện UX 2026-07-28) -
@@ -338,6 +339,11 @@ export default function NoriFloatingButton() {
               backgroundColor: colors.surface,
               borderRadius: 12,
               padding: 12,
+              // Rà soát 17/8 (góp ý user: ô chat coachmark này màu trùng nền, không có
+              // viền nên gần như vô hình - viền cam trước đây lại gắn nhầm vào icon
+              // Nori bên cạnh) - viền thuộc về ĐÚNG ô chat này, không phải icon.
+              borderWidth: 1.5,
+              borderColor: '#F59E0B',
               shadowColor: '#000',
               shadowOpacity: 0.25,
               shadowRadius: 8,

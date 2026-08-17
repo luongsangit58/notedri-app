@@ -3,7 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import Svg, { Polyline, Line, Circle } from 'react-native-svg';
+import Svg, { Polyline, Polygon, Line, Circle } from 'react-native-svg';
 import { bleService } from '../../services/obd/BleService';
 import { readExtendedSnapshot, readBatteryVoltageDirect, ObdSnapshot, ObdExtendedSnapshot } from '../../services/obd/ObdReader';
 import { obdLiveMonitor } from '../../services/obd/obdLiveMonitor';
@@ -240,7 +240,12 @@ export default function OBDTechnicalScreen() {
               <StatCard label={t('obd.battery_min')} value={batteryMin} colors={colors} />
             </View>
 
-            <VoltageChart samples={batterySamples} colors={colors} sampling={t('obd.battery_sampling')} />
+            <VoltageChart
+              samples={batterySamples}
+              colors={colors}
+              sampling={t('obd.battery_sampling')}
+              accentColor={batteryStatusColor}
+            />
           </View>
         )}
 
@@ -286,20 +291,33 @@ function StatCard({ label, value, colors, highlight }: { label: string; value: n
   );
 }
 
-const CHART_HEIGHT = 120;
+const CHART_HEIGHT = 130;
 const Y_AXIS_WIDTH = 42;
 
 // Line chart tự vẽ bằng react-native-svg (đã có sẵn trong app qua ArcGauge, không
 // thêm thư viện chart mới - cùng quyết định 15/7 đã áp dụng cho ObdTrendChart).
 // Trục Y neo theo min/max THẬT của mẫu (không ép về 0) - điện áp dao động hẹp
 // (12-15V), ép về 0 sẽ khiến mọi dao động trông phẳng lì, vô nghĩa.
-function VoltageChart({ samples, colors, sampling }: { samples: Sample[]; colors: ColorPalette; sampling: string }) {
+//
+// Rà soát 17/8 (góp ý user: bảng cũ "chưa đẹp") - áp mark spec chuẩn (skill
+// dataviz): line 2px giữ nguyên, thêm area fill mờ ~10% dưới đường (chỉ 1
+// chuỗi dữ liệu nên không cần legend), điểm neo/điểm chạm >=8px kèm viền màu
+// nền (surface ring) để không "dính" vào lưới/đường khi chồng lên nhau thay
+// vì vẽ thêm viền quanh mark. Màu đường/điểm giờ đi theo ĐÚNG màu tình trạng
+// ắc quy (accentColor - cùng nguồn với badge "Tốt/Trung bình/Yếu" phía trên)
+// thay vì màu primary trung tính - nhìn là biết ngay tốt/xấu, không cần đọc số.
+function VoltageChart({
+  samples, colors, sampling, accentColor,
+}: {
+  samples: Sample[]; colors: ColorPalette; sampling: string; accentColor: string;
+}) {
+  const t = useT();
   const [width, setWidth] = useState(0);
   const [touchIndex, setTouchIndex] = useState<number | null>(null);
 
   if (samples.length < 2) {
     return (
-      <View style={[styles.chartCard, { backgroundColor: colors.card, height: CHART_HEIGHT + 32, justifyContent: 'center', alignItems: 'center' }]}>
+      <View style={[styles.chartCard, { backgroundColor: colors.card, height: CHART_HEIGHT + 40, justifyContent: 'center', alignItems: 'center' }]}>
         <Text style={{ color: colors.textSecondary, fontSize: 12 }}>{sampling}</Text>
       </View>
     );
@@ -314,11 +332,18 @@ function VoltageChart({ samples, colors, sampling }: { samples: Sample[]; colors
   const tMax = samples[samples.length - 1].t || 1;
   const plotWidth = Math.max(0, width - Y_AXIS_WIDTH);
 
-  const toX = (t: number) => Y_AXIS_WIDTH + (t / tMax) * plotWidth;
+  // Tham số đổi tên "ms" (không phải "t") - tránh trùng tên với hàm dịch t() ở trên,
+  // dễ đọc nhầm dù JS không lỗi (shadowing hợp lệ trong scope của chính arrow function).
+  const toX = (ms: number) => Y_AXIS_WIDTH + (ms / tMax) * plotWidth;
   const toY = (v: number) => CHART_HEIGHT - ((v - scaleMin) / (scaleMax - scaleMin)) * CHART_HEIGHT;
   const points = samples.map((s) => `${toX(s.t)},${toY(s.v)}`).join(' ');
+  // Vùng tô mờ dưới đường - khép kín xuống đúng đáy plot (không phải xuống 0V
+  // thật) để wash chỉ tô phần diện tích giữa đường và trục dưới, đúng spec
+  // "area fill ~10% opacity, never a saturated block".
+  const areaPoints = `${Y_AXIS_WIDTH},${CHART_HEIGHT} ${points} ${width},${CHART_HEIGHT}`;
 
   const touched = touchIndex !== null ? samples[touchIndex] : null;
+  const latest = samples[samples.length - 1];
   const nearestIndex = (x: number) => {
     if (plotWidth <= 0) return 0;
     const frac = Math.max(0, Math.min(1, (x - Y_AXIS_WIDTH) / plotWidth));
@@ -331,8 +356,11 @@ function VoltageChart({ samples, colors, sampling }: { samples: Sample[]; colors
       onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
     >
       <View style={styles.chartHeaderRow}>
-        <Text style={[styles.chartHeaderValue, { color: colors.text }]}>
-          {touched ? `${touched.v.toFixed(2)}V · ${Math.round(touched.t / 1000)}s` : ''}
+        <Text style={[styles.chartHeaderLabel, { color: colors.textSecondary }]}>
+          {touched ? `${Math.round(touched.t / 1000)}s` : t('obd.battery_current')}
+        </Text>
+        <Text style={[styles.chartHeaderValue, { color: touched ? colors.text : accentColor }]}>
+          {(touched ?? latest).v.toFixed(2)}V
         </Text>
       </View>
 
@@ -345,16 +373,21 @@ function VoltageChart({ samples, colors, sampling }: { samples: Sample[]; colors
           onResponderRelease={() => setTouchIndex(null)}
         >
           <Svg width={width} height={CHART_HEIGHT}>
-            {/* Gridline trên/dưới - mờ, không cạnh tranh với đường dữ liệu */}
+            {/* Gridline trên/dưới - hairline đặc, không dashed (dashed đọc nhầm
+                thành "ngưỡng"/"dự báo" - xem anti-patterns của skill dataviz) */}
             <Line x1={Y_AXIS_WIDTH} y1={1} x2={width} y2={1} stroke={colors.border} strokeWidth={1} />
             <Line x1={Y_AXIS_WIDTH} y1={CHART_HEIGHT - 1} x2={width} y2={CHART_HEIGHT - 1} stroke={colors.border} strokeWidth={1} />
-            <Polyline points={points} fill="none" stroke={colors.primary} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
-            {/* Điểm neo tại mẫu mới nhất */}
-            <Circle cx={toX(samples[samples.length - 1].t)} cy={toY(samples[samples.length - 1].v)} r={3.5} fill={colors.primary} />
+            <Polygon points={areaPoints} fill={accentColor} fillOpacity={0.12} stroke="none" />
+            <Polyline points={points} fill="none" stroke={accentColor} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+            {/* Điểm neo tại mẫu mới nhất - viền màu nền (surface ring) tách khỏi
+                đường thay vì vẽ thêm border quanh mark. */}
+            <Circle cx={toX(latest.t)} cy={toY(latest.v)} r={7} fill={colors.card} />
+            <Circle cx={toX(latest.t)} cy={toY(latest.v)} r={5} fill={accentColor} />
             {touched && (
               <>
                 <Line x1={toX(touched.t)} y1={0} x2={toX(touched.t)} y2={CHART_HEIGHT} stroke={colors.textSecondary} strokeWidth={1} opacity={0.5} />
-                <Circle cx={toX(touched.t)} cy={toY(touched.v)} r={4} fill={colors.text} />
+                <Circle cx={toX(touched.t)} cy={toY(touched.v)} r={7} fill={colors.card} />
+                <Circle cx={toX(touched.t)} cy={toY(touched.v)} r={5} fill={colors.text} />
               </>
             )}
           </Svg>
@@ -409,9 +442,10 @@ const styles = StyleSheet.create({
   statCard: { flex: 1, borderRadius: 12, paddingVertical: 12, alignItems: 'center', gap: 4 },
   statValue: { fontSize: 16, fontWeight: '800' },
   statLabel: { fontSize: 11 },
-  chartCard: { borderRadius: 12, padding: 14, gap: 8 },
-  chartHeaderRow: { flexDirection: 'row', justifyContent: 'flex-end' },
-  chartHeaderValue: { fontSize: 13, fontWeight: '700' },
+  chartCard: { borderRadius: 12, padding: 14, gap: 10 },
+  chartHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
+  chartHeaderLabel: { fontSize: 12 },
+  chartHeaderValue: { fontSize: 18, fontWeight: '800' },
   chartAxisRow: { flexDirection: 'row', justifyContent: 'space-between', paddingLeft: Y_AXIS_WIDTH },
   chartAxisText: { fontSize: 10 },
   table: { borderRadius: 12, overflow: 'hidden' },

@@ -765,7 +765,15 @@ export default function HomeScreen() {
             activeOpacity={0.85}
             onPress={() => nav.navigate('Services')}
             style={{
+              // Rà soát 17/8 (góp ý user: 2 box này lệch nhau, không chia đôi bằng
+              // nhau trên màn ngang/đầu xe) - flex:1 một mình không đủ: Yoga (như
+              // CSS flexbox) mặc định min-width của item flex = kích thước nội
+              // dung bên trong ("min-width: auto"), không phải 0 - box này có Text
+              // dài (vd "Ghi lịch sử sửa chữa") ép rộng ra, cướp chỗ của box bên
+              // cạnh dù cả 2 cùng flex:1. minWidth: 0 buộc Yoga cho phép co đúng
+              // 50/50 thật sự, phần nội dung dư ra thì truncate qua numberOfLines.
               flex: isLandscape && vehicleId && dashRaw ? 1 : undefined,
+              minWidth: isLandscape && vehicleId && dashRaw ? 0 : undefined,
               flexDirection: 'row', alignItems: 'center', gap: 12,
               backgroundColor: colors.surface, borderRadius: 14, padding: 12,
               borderWidth: 1, borderColor: colors.border,
@@ -776,24 +784,24 @@ export default function HomeScreen() {
             }}>
               <FontAwesome5 name="wrench" size={15} color="#10b981" solid />
             </View>
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: colors.text, fontWeight: '700', fontSize: 13 }}>{t('home.service_title')}</Text>
-              <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 1 }}>{t('home.service_subtitle')}</Text>
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={{ color: colors.text, fontWeight: '700', fontSize: 13 }} numberOfLines={1}>{t('home.service_title')}</Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 11, marginTop: 1 }} numberOfLines={1}>{t('home.service_subtitle')}</Text>
             </View>
             <FontAwesome5 name="chevron-right" size={12} color={colors.textSecondary} />
           </TouchableOpacity>
 
-          {/* So lieu nhanh (stats strip) */}
+          {/* So lieu nhanh (stats strip) - cùng lý do minWidth:0 như box Bảo dưỡng ở trên */}
           {vehicleId && dashRaw && (
             <TouchableOpacity
               activeOpacity={0.85}
               onPress={() => nav.navigate('Reports', { vehicleId })}
               style={[
                 { flexDirection: 'row', backgroundColor: colors.surface, borderRadius: 14, paddingVertical: 14, borderWidth: 1, borderColor: colors.border },
-                isLandscape ? { flex: 1 } : null,
+                isLandscape ? { flex: 1, minWidth: 0 } : null,
               ]}>
-              <View style={{ flex: 1, alignItems: 'center', paddingHorizontal: 4 }}>
-                <Text style={{ color: colors.textSecondary, fontSize: 10, marginBottom: 3 }}>
+              <View style={{ flex: 1, minWidth: 0, alignItems: 'center', paddingHorizontal: 4 }}>
+                <Text style={{ color: colors.textSecondary, fontSize: 10, marginBottom: 3 }} numberOfLines={1}>
                   {t('home.stat_this_month')}
                 </Text>
                 <Text style={{ color: colors.text, fontWeight: '800', fontSize: 13 }} numberOfLines={1}>
@@ -801,15 +809,15 @@ export default function HomeScreen() {
                 </Text>
               </View>
               <View style={{ width: 1, backgroundColor: colors.border, marginVertical: 4 }} />
-              <View style={{ flex: 1, alignItems: 'center', paddingHorizontal: 4 }}>
-                <Text style={{ color: colors.textSecondary, fontSize: 10, marginBottom: 3 }}>L/100KM</Text>
-                <Text style={{ color: colors.text, fontWeight: '800', fontSize: 13 }}>
+              <View style={{ flex: 1, minWidth: 0, alignItems: 'center', paddingHorizontal: 4 }}>
+                <Text style={{ color: colors.textSecondary, fontSize: 10, marginBottom: 3 }} numberOfLines={1}>L/100KM</Text>
+                <Text style={{ color: colors.text, fontWeight: '800', fontSize: 13 }} numberOfLines={1}>
                   {consumption != null ? `${Number(consumption).toFixed(1)}` : '-'}
                 </Text>
               </View>
               <View style={{ width: 1, backgroundColor: colors.border, marginVertical: 4 }} />
-              <View style={{ flex: 1, alignItems: 'center', paddingHorizontal: 4 }}>
-                <Text style={{ color: colors.textSecondary, fontSize: 10, marginBottom: 3 }}>
+              <View style={{ flex: 1, minWidth: 0, alignItems: 'center', paddingHorizontal: 4 }}>
+                <Text style={{ color: colors.textSecondary, fontSize: 10, marginBottom: 3 }} numberOfLines={1}>
                   {t('home.stat_total')}
                 </Text>
                 <Text style={{ color: colors.text, fontWeight: '800', fontSize: 13 }} numberOfLines={1}>
