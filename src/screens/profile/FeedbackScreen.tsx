@@ -6,7 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { useMutation } from '@tanstack/react-query';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import client from '../../api/client';
 import { useColors } from '../../utils/theme';
@@ -45,8 +45,10 @@ export default function FeedbackScreen() {
   const colors = useColors();
   const t = useT();
   const navigation = useNavigation<any>();
-  const [loai, setLoai] = useState<LoaiKey>('loi');
-  const [noi_dung, setNoiDung] = useState('');
+  const route = useRoute<any>();
+  // Cho phép màn khác (vd Premium - liên hệ gia hạn) mở form này với nội dung/loại có sẵn.
+  const [loai, setLoai] = useState<LoaiKey>(route.params?.initialLoai ?? 'loi');
+  const [noi_dung, setNoiDung] = useState(route.params?.initialContent ?? '');
   const [rating, setRating] = useState<number | null>(null);
 
   const LOAI_OPTIONS: { key: LoaiKey; label: string; icon: string }[] = [

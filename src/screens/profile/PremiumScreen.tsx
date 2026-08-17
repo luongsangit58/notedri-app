@@ -315,16 +315,24 @@ export default function PremiumScreen() {
           </View>
         )}
 
-        {/* Lịch sử thanh toán */}
+        {/* Liên hệ gia hạn/hỗ trợ - thay cho Lịch sử thanh toán (đã bỏ cùng SePay).
+            Hiện tại chưa có kênh tự thanh toán trong app: user hết hạn muốn gia hạn
+            phải gửi yêu cầu qua đây, admin liên hệ lại rồi cấp mã kích hoạt. */}
         <TouchableOpacity
-          onPress={() => navigation.navigate('PaymentHistory')}
+          onPress={() => navigation.navigate('Feedback', {
+            initialLoai: 'khac',
+            initialContent: t('premium.contact_prefill'),
+          })}
           style={{
-            flexDirection: 'row', alignItems: 'center', gap: 10,
+            flexDirection: 'row', alignItems: 'center', gap: 12,
             backgroundColor: colors.surface, borderRadius: 12, padding: 14, marginBottom: 16,
             borderWidth: 1, borderColor: colors.border,
           }}>
-          <FontAwesome5 name="receipt" size={15} color={colors.textSecondary} solid />
-          <Text style={{ color: colors.text, fontSize: 14, fontWeight: '600', flex: 1 }}>{t('payment.history_title')}</Text>
+          <FontAwesome5 name="headset" size={16} color={AMBER} solid />
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: colors.text, fontSize: 14, fontWeight: '700' }}>{t('premium.contact_title')}</Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>{t('premium.contact_desc')}</Text>
+          </View>
           <FontAwesome5 name="chevron-right" size={13} color={colors.textSecondary} />
         </TouchableOpacity>
 

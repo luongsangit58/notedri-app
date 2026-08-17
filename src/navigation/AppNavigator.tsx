@@ -42,7 +42,6 @@ import YearReviewScreen from '../screens/reports/YearReviewScreen';
 import FuelPricesScreen from '../screens/refuels/FuelPricesScreen';
 import FeedbackScreen from '../screens/profile/FeedbackScreen';
 import PremiumScreen from '../screens/profile/PremiumScreen';
-import PaymentHistoryScreen from '../screens/profile/PaymentHistoryScreen';
 import AboutScreen from '../screens/profile/AboutScreen';
 import NotificationSettingsScreen from '../screens/profile/NotificationSettingsScreen';
 import ExportDataScreen from '../screens/profile/ExportDataScreen';
@@ -290,16 +289,6 @@ export default function AppNavigator() {
           headerTintColor: '#F59E0B',
           headerTitleStyle: { fontWeight: '800', color: '#F59E0B' },
           title: t('premium.title'),
-        }} />
-
-      {/* Payment history */}
-      <RootStack.Screen name="PaymentHistory" component={PaymentHistoryScreen}
-        options={{
-          headerShown: true,
-          headerStyle: { backgroundColor: '#1C1207' },
-          headerTintColor: '#F59E0B',
-          headerTitleStyle: { fontWeight: '800', color: '#F59E0B' },
-          title: t('payment.history_title'),
         }} />
 
       {/* Services list + Garage guide (moved out of tab bar) */}
