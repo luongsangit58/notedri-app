@@ -382,7 +382,18 @@ async function handleLocation(loc: Location.LocationObject): Promise<void> {
     const realGapSec = state.lastGoodTs ? (now - state.lastGoodTs) / 1000 : 0;
     const impliedKmh = realGapSec > 0 ? (seg / realGapSec) * 3600 : 0;
 
-    if (seg >= MIN_SEGMENT_KM && seg < 0.5) {
+    // Rà soát 2026-08-17 (user vẫn báo cộng dư sau các lần sửa trước): đỗ/dừng
+    // đèn đỏ trong đô thị, toạ độ GPS có thể trôi 8-20m dù xe đứng yên hẳn (nhà
+    // cao tầng/tán cây che vệ tinh) - MIN_SEGMENT_KM=8m không chặn hết, cộng dồn
+    // nhiều lần mỗi 5s suốt lúc dừng thành 1 khoản "cộng thêm" đều đặn dù không
+    // hề di chuyển. Tốc độ Doppler (rawSpeed) từ vệ tinh đáng tin hơn NHIỀU cho
+    // việc "có đang di chuyển không" vì không suy ra từ 2 điểm toạ độ nên không
+    // bị nhiễu vị trí như seg - chỉ cộng đoạn <500m khi máy THẬT SỰ báo đang di
+    // chuyển; máy không hỗ trợ rawSpeed (null, xem comment ở trên) thì giữ hành
+    // vi cũ (không có tín hiệu độc lập nào để chặn thêm).
+    const likelyStationary = rawSpeed != null && rawSpeed >= 0 && speedKmh < SPEED_STOP_KMPH;
+
+    if (seg >= MIN_SEGMENT_KM && seg < 0.5 && !likelyStationary) {
       // Đoạn bình thường (<500m/lần)
       state.distanceKm += seg;
     } else if (seg >= 0.5 && realGapSec > 0 && realGapSec <= 600 && impliedKmh <= 200) {
