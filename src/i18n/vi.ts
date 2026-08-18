@@ -1744,6 +1744,12 @@ const vi = {
   "nori.cta_health": "Xem chi tiết sức khỏe",
   "nori.cta_obd_report": "Xem báo cáo OBD2",
 
+  // ==== Biểu đồ xu hướng (đồng bộ Web) ====
+  "refuels.consumption_trend": "Xu hướng tiêu hao",
+  "refuels.consumption_trend_empty": "Cần thêm lần đổ xăng để vẽ xu hướng",
+  "gps_trips.distance_trend": "Quãng đường 14 ngày qua",
+  "gps_trips.distance_trend_empty": "Chưa đủ dữ liệu",
+
 } as const;
 
 export default vi;

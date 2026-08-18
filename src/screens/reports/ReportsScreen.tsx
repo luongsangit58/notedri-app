@@ -16,6 +16,7 @@ import { useColors } from '../../utils/theme';
 import { useT } from '../../i18n';
 import { formatVND, formatKm } from '../../utils/format';
 import { contentWide } from '../../utils/layout';
+import LineTrendChart from '../../components/charts/LineTrendChart';
 
 /* ─── helpers ─── */
 function fmtVnd(n: number | string | null | undefined): string {
@@ -334,59 +335,6 @@ function SectionCard({
         {title}
       </Text>
       {children}
-    </View>
-  );
-}
-
-/* ─── monthly bar chart ───
-   Rà soát 16/8 (góp ý user: báo cáo trên app chỉ liệt kê text, không có biểu đồ
-   trong khi web đã có bar chart cho chi phí/quãng đường theo tháng). Dựng bằng
-   View thuần (không thêm thư viện chart) - mô phỏng đúng kỹ thuật CSS flex-height
-   web đang dùng ở garage/reports/index.blade.php (flex + height % theo max). */
-function MonthlyBarChart({
-  data,
-  color,
-  formatValue,
-}: {
-  data: { label: string; value: number }[];
-  color: string;
-  formatValue: (v: number) => string;
-}) {
-  const colors = useColors();
-  const t = useT();
-  const max = Math.max(1, ...data.map((d) => d.value));
-  const [pressedIndex, setPressedIndex] = useState<number | null>(null);
-  const pressed = pressedIndex != null ? data[pressedIndex] : null;
-  return (
-    <View>
-      <View style={{ height: 16, marginBottom: 4 }}>
-        {pressed && (
-          <Text style={{ color: colors.text, fontSize: 12, fontWeight: '700' }}>
-            {t('reports.month_label', { n: pressed.label })} · {formatValue(pressed.value)}
-          </Text>
-        )}
-      </View>
-      <View style={{ flexDirection: 'row', alignItems: 'flex-end', height: 120, gap: 3 }}>
-        {data.map((d, i) => (
-          <TouchableOpacity
-            key={i}
-            activeOpacity={0.7}
-            onPressIn={() => setPressedIndex(i)}
-            onPressOut={() => setPressedIndex(null)}
-            accessibilityLabel={`${t('reports.month_label', { n: d.label })}: ${formatValue(d.value)}`}
-            style={{ flex: 1, alignItems: 'center', justifyContent: 'flex-end', height: '100%' }}>
-            <View
-              style={{
-                width: '100%',
-                height: d.value > 0 ? `${Math.max(2, Math.round((d.value / max) * 100))}%` : 0,
-                backgroundColor: color,
-                borderRadius: 3,
-              }}
-            />
-            <Text style={{ color: colors.textSecondary, fontSize: 9, marginTop: 3 }}>{d.label}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
     </View>
   );
 }
@@ -788,7 +736,7 @@ function ReportContent({
 
   /* ── monthly chart data (chi phí xăng theo tháng) ── */
   const monthlyChartData = monthly.map((m) => ({
-    label: String(m.thang ?? m.month ?? m.month_number ?? ''),
+    label: t('reports.month_label', { n: m.thang ?? m.month ?? m.month_number ?? '' }),
     value: Number(m.tong_tien ?? m.chi_phi ?? m.cost ?? m.total_cost ?? 0),
   }));
 
@@ -796,7 +744,7 @@ function ReportContent({
      (ReportService::yearReport -> monthly_distance) nhưng trước đây app chưa đọc. */
   const monthlyDistance: any[] = Array.isArray(data.monthly_distance) ? data.monthly_distance : [];
   const monthlyDistanceChartData = monthlyDistance.map((m) => ({
-    label: String(m.thang ?? m.month ?? m.month_number ?? ''),
+    label: t('reports.month_label', { n: m.thang ?? m.month ?? m.month_number ?? '' }),
     value: Number(m.km ?? m.distance ?? m.total_km ?? 0),
   }));
   const totalDistanceFromMonthly = monthlyDistanceChartData.reduce((s, m) => s + m.value, 0);
@@ -1036,18 +984,18 @@ function ReportContent({
         </SectionCard>
       )}
 
-      {/* ── monthly cost bar chart ── */}
+      {/* ── monthly cost line chart — đồng bộ web (garage/reports - line, không phải bar) ── */}
       {monthlyChartData.some((m) => m.value > 0) && (
         <SectionCard title={t('reports.monthly_cost_chart_title', { year: selectedYear })}>
-          <MonthlyBarChart data={monthlyChartData} color={colors.primary} formatValue={fmtVnd} />
+          <LineTrendChart points={monthlyChartData} color={colors.primary} valueFormatter={fmtVnd} />
         </SectionCard>
       )}
 
-      {/* ── monthly distance bar chart — dữ liệu monthly_distance có sẵn ở API
+      {/* ── monthly distance line chart — dữ liệu monthly_distance có sẵn ở API
           nhưng trước đây app chưa hiển thị, giờ thêm cho đồng bộ với web. ── */}
       {totalDistanceFromMonthly > 0 && (
         <SectionCard title={t('reports.monthly_distance_chart_title', { year: selectedYear })}>
-          <MonthlyBarChart data={monthlyDistanceChartData} color="#38bdf8" formatValue={(v) => fmtNum(v, 'km')} />
+          <LineTrendChart points={monthlyDistanceChartData} color="#38bdf8" valueFormatter={(v) => fmtNum(v, 'km')} />
         </SectionCard>
       )}
 

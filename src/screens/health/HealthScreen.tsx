@@ -17,6 +17,7 @@ import { useT, useI18nStore } from '../../i18n';
 import NoriAvatar from '../../components/nori/NoriAvatar';
 import { noriMoodFromScore } from '../../services/nori/nori';
 import { scoreColor, scoreBand } from '../../utils/healthScore';
+import LineTrendChart from '../../components/charts/LineTrendChart';
 
 /* ─── types ─── */
 type OrganStatus = 'urgent' | 'warn' | 'info' | 'ok' | 'na';
@@ -196,50 +197,25 @@ function OrganRow({ organ, onCta }: { organ: Organ & { cta?: any }; onCta?: (scr
 /* ─── ScoreTrendChart ─── */
 interface TrendPoint { total: number; band: string; date: string }
 
+// Rà soát (đồng bộ web garage/health/index.blade.php - SVG polyline sparkline
+// thay vì bar). Dùng chung LineTrendChart (đã có ở Refuels/GpsTrips) thay vì
+// tự vẽ bar riêng - cùng mark spec trong cả app. Màu đường đi theo màu tình
+// trạng điểm MỚI NHẤT (scoreColor) - giữ đúng quy ước "nhìn màu biết ngay
+// tốt/xấu" đã dùng ở VoltageChart.
 function ScoreTrendChart({ points }: { points: TrendPoint[] }) {
-  const colors = useColors();
-  const t = useT();
   if (points.length < 2) return null;
-  const BAR_W = 6;
-  const GAP = 3;
-  const CHART_H = 48;
   const latest = points[0]; // most recent first
-
   const reversed = [...points].reverse().slice(-20);
+  const t = useT();
 
   return (
     <View style={{ marginTop: 12 }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-        <FontAwesome5 name="chart-line" size={11} color={colors.textSecondary} />
-        <Text style={{ color: colors.textSecondary, fontSize: 11 }}>{t('health.trend_title')}</Text>
-        <Text style={{ color: scoreColor(latest.total), fontWeight: '700', fontSize: 11, marginLeft: 'auto' }}>
-          {latest.total} {t('health.current_label')}
-        </Text>
-      </View>
-      <View style={{ flexDirection: 'row', alignItems: 'flex-end', height: CHART_H + 12 }}>
-        {reversed.map((p, i) => {
-          const barH = Math.max(3, Math.round((p.total / 100) * CHART_H));
-          const clr = scoreColor(p.total);
-          return (
-            <View key={i} style={{ marginRight: GAP, alignItems: 'center' }}>
-              <View style={{
-                width: BAR_W, height: barH,
-                backgroundColor: clr + (i === reversed.length - 1 ? 'ff' : '99'),
-                borderRadius: 2,
-              }} />
-            </View>
-          );
-        })}
-        <View style={{ flex: 1 }} />
-      </View>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 2 }}>
-        <Text style={{ color: colors.textSecondary, fontSize: 9 }}>
-          {reversed[0]?.date?.slice(5)}
-        </Text>
-        <Text style={{ color: colors.textSecondary, fontSize: 9 }}>
-          {reversed[reversed.length - 1]?.date?.slice(5)}
-        </Text>
-      </View>
+      <LineTrendChart
+        points={reversed.map((p) => ({ label: p.date.slice(5), value: p.total }))}
+        color={scoreColor(latest.total)}
+        valueFormatter={(v) => `${Math.round(v)}`}
+        headerLabel={t('health.trend_title')}
+      />
     </View>
   );
 }

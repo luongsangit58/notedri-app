@@ -1738,6 +1738,12 @@ const en = {
   "nori.cta_health": "View health details",
   "nori.cta_obd_report": "View OBD2 report",
 
+  // ==== Trend charts (synced with Web) ====
+  "refuels.consumption_trend": "Consumption trend",
+  "refuels.consumption_trend_empty": "Add more refuels to see the trend",
+  "gps_trips.distance_trend": "Distance, last 14 days",
+  "gps_trips.distance_trend_empty": "Not enough data yet",
+
 } as const;
 
 export default en;

@@ -33,6 +33,7 @@ import { detectDrivingEvents, computeDrivingScoreByDistance } from '../../servic
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import RouteMap from '../../components/RouteMap';
 import DayRouteMap from '../../components/DayRouteMap';
+import LineTrendChart from '../../components/charts/LineTrendChart';
 import dayjs from 'dayjs';
 
 // Đồng bộ với web (trips/index.blade.php $dayRouteColors) - mỗi chuyến trong "xem cả ngày"
@@ -773,6 +774,24 @@ export default function GpsTripsScreen({ embedded }: { embedded?: boolean } = {}
     return groups;
   }, [trips, t]);
 
+  // Quãng đường 14 ngày gần nhất - đồng bộ web (Trips – Distance, last 14
+  // days). Gộp theo NGÀY THẬT (kể cả ngày không chạy = 0km, không phải thiếu
+  // dữ liệu) để trục X liên tục, không nhảy cóc khi vài ngày liền không có
+  // chuyến nào.
+  const distanceTrendPoints = useMemo(() => {
+    const days: { key: string; label: string; km: number }[] = [];
+    for (let i = 13; i >= 0; i--) {
+      const d = dayjs().subtract(i, 'day');
+      days.push({ key: d.format('YYYY-MM-DD'), label: d.format('DD/MM'), km: 0 });
+    }
+    const byKey = new Map(days.map((d) => [d.key, d]));
+    for (const trip of trips) {
+      const bucket = byKey.get(dayjs(trip.started_at).format('YYYY-MM-DD'));
+      if (bucket) bucket.km += Number(trip.distance_km ?? 0);
+    }
+    return days.map((d) => ({ label: d.label, value: Math.round(d.km * 10) / 10 }));
+  }, [trips]);
+
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [noteTrip, setNoteTrip] = useState<GpsTripRecord | null>(null);
   const [noteText, setNoteText] = useState('');
@@ -858,6 +877,17 @@ export default function GpsTripsScreen({ embedded }: { embedded?: boolean } = {}
           <>
             <GpsPrimaryBanner vehicleId={vehicleId} />
             <ActiveTripCard vehicleId={vehicleId} />
+            {trips.length > 0 && (
+              <View style={{ backgroundColor: colors.surface, borderRadius: 12, borderWidth: 1, borderColor: colors.border, padding: 12, marginBottom: 8 }}>
+                <LineTrendChart
+                  points={distanceTrendPoints}
+                  color={colors.primary}
+                  valueFormatter={(v) => `${v.toFixed(1)} km`}
+                  headerLabel={t('gps_trips.distance_trend')}
+                  emptyText={t('gps_trips.distance_trend_empty')}
+                />
+              </View>
+            )}
           </>
         }
         ListEmptyComponent={

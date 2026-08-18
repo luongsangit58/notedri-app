@@ -18,6 +18,7 @@ import { useColors } from '../../utils/theme';
 import { contentWide } from '../../utils/layout';
 import { formatVND, formatKm } from '../../utils/format';
 import { useT } from '../../i18n';
+import LineTrendChart from '../../components/charts/LineTrendChart';
 
 const PER_PAGE = 15;
 
@@ -189,6 +190,21 @@ export default function RefuelsListScreen() {
   const consumption = meta?.consumption ?? null;
   const prediction = meta?.prediction ?? null;
 
+  // Xu hướng L/100km theo từng lần đổ xăng - đồng bộ web (Refuels – Fuel
+  // consumption trend). allItems đến từ nhiều trang "xem thêm" chồng lại,
+  // không đảm bảo thứ tự thời gian tuyệt đối -> tự sort theo ngày rồi lấy
+  // 12 điểm gần nhất (đủ đọc xu hướng trên màn hình hẹp, không rối mắt).
+  const trendPoints = React.useMemo(() => {
+    const withConsumption = allItems
+      .filter((it) => it.l100km != null)
+      .slice()
+      .sort((a, b) => new Date(a.ngay).getTime() - new Date(b.ngay).getTime());
+    return withConsumption.slice(-12).map((it) => ({
+      label: formatDate(it.ngay).slice(0, 5),
+      value: Number(it.l100km),
+    }));
+  }, [allItems]);
+
   const ListHeader = (
     <View style={{ paddingTop: 14, marginBottom: 4 }}>
       {/* Vehicle filter chips - only show when user has multiple vehicles.
@@ -260,6 +276,19 @@ export default function RefuelsListScreen() {
               </Text>
             </View>
           )}
+        </View>
+      )}
+
+      {/* Xu hướng tiêu hao L/100km */}
+      {allItems.length > 0 && (
+        <View style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 12, marginBottom: 10, borderWidth: 1, borderColor: colors.border }}>
+          <LineTrendChart
+            points={trendPoints}
+            color={colors.primary}
+            valueFormatter={(v) => `${v.toFixed(1)} L/100km`}
+            headerLabel={t('refuels.consumption_trend')}
+            emptyText={t('refuels.consumption_trend_empty')}
+          />
         </View>
       )}
 
