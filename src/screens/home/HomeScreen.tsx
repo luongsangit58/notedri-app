@@ -667,6 +667,36 @@ export default function HomeScreen() {
           </LinearGradient>
         </View>
 
+        {/* Chẩn đoán xe (miễn phí mọi tài khoản) - lựa chọn THỨ HAI, tách biệt hẳn
+            khối OBD Premium ở trên (không gradient, không icon crown): chỉ kết nối
+            để quét thông số/mã lỗi kiểu Car Scanner, không gắn với ghi hành trình,
+            không bị khoá Premium (khác nhánh OBDSetup phía trên - xem purpose ở
+            OBDSetupScreen.tsx). */}
+        <TouchableOpacity
+          activeOpacity={0.85}
+          onPress={() => vehicleId
+            ? nav.navigate('OBDSetup', { vehicleId, vehicleName: vehicleName ?? '', consumptionOfficial: null, purpose: 'diagnostics' })
+            : nav.navigate('AddVehicle')}
+          style={{
+            flexDirection: 'row', alignItems: 'center', gap: 14,
+            backgroundColor: colors.surface, borderRadius: 14, padding: 14, marginBottom: 12,
+            borderWidth: 1, borderColor: colors.border,
+          }}>
+          <View style={{
+            width: 44, height: 44, borderRadius: 22,
+            backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center',
+          }}>
+            <FontAwesome5 name="stethoscope" size={18} color={colors.primary} solid />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14 }}>{t('home.obd_diagnostics_title')}</Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>
+              {t('home.obd_diagnostics_desc')}
+            </Text>
+          </View>
+          <FontAwesome5 name="chevron-right" size={13} color={colors.textSecondary} />
+        </TouchableOpacity>
+
         {/* Rich CTA cards - 2 col */}
         <View style={{ flexDirection: 'row', gap: 12, marginBottom: 12 }}>
 

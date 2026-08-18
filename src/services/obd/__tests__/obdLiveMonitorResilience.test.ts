@@ -63,6 +63,13 @@ jest.mock('../../../api/obd', () => ({
   obdApi: { reportDtc: async () => {}, reportSession: async () => {} },
 }));
 
+// Test này kiểm tra hành vi CHECKPOINT (không liên quan Premium) - mock is_premium
+// true để tránh bị gate ở isPremiumUser() (obdLiveMonitor.ts, thêm 18/8: POST
+// /obd2/sessions nằm sau middleware('premium') phía backend).
+jest.mock('../../../store/authStore', () => ({
+  useAuthStore: { getState: () => ({ user: { is_premium: true } }) },
+}));
+
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { obdLiveMonitor, buildSessionSummary } = require('../obdLiveMonitor');
 

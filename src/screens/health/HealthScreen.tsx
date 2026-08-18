@@ -16,6 +16,7 @@ import { contentWide } from '../../utils/layout';
 import { useT, useI18nStore } from '../../i18n';
 import NoriAvatar from '../../components/nori/NoriAvatar';
 import { noriMoodFromScore } from '../../services/nori/nori';
+import { scoreColor, scoreBand } from '../../utils/healthScore';
 
 /* ─── types ─── */
 type OrganStatus = 'urgent' | 'warn' | 'info' | 'ok' | 'na';
@@ -62,21 +63,6 @@ interface HealthData {
 
 /* ─── helpers ─── */
 const PILLAR_KEYS = ['a', 'b', 'c', 'd'] as const;
-
-function scoreColor(score: number): string {
-  if (score >= 80) return '#4CAF50'; // success / emerald
-  if (score >= 50) return '#FF9800'; // warning / amber
-  return '#F44336'; // error / rose
-}
-
-function scoreBand(score: number): string {
-  const t = useI18nStore.getState().t;
-  if (score >= 85) return t('dashboard.health_band_excellent');
-  if (score >= 70) return t('dashboard.health_band_good');
-  if (score >= 55) return t('dashboard.health_band_warn');
-  if (score >= 40) return t('dashboard.health_band_poor');
-  return t('health.band_check_needed');
-}
 
 function pillarQualLabel(pct: number): string {
   const t = useI18nStore.getState().t;

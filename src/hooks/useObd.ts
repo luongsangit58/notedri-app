@@ -48,6 +48,11 @@ export const useObdDtcEvents = (vehicleId: number) => {
 
 export function useObdConnection(vehicleId: number, vehicleName?: string) {
   const qc = useQueryClient();
+  // POST/PUT/DELETE /obd2/device-lock nằm sau middleware('premium') phía
+  // backend (routes/api.php) - free chắc chắn 403. Dùng để gate claimDeviceLock()
+  // và release() bên dưới, tránh gọi vô ích khi tính năng "Chẩn đoán xe" (free)
+  // dùng chung hook này.
+  const isPremium = useAuthStore((s) => s.user?.is_premium ?? false);
 
   const [connectionState, setConnectionState] = useState<ConnectionState>('disconnected');
   const [foundDevices, setFoundDevices] = useState<ObdDevice[]>([]);
@@ -256,6 +261,7 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
   // renew(), vừa gia hạn TTL vừa lấy được đúng thông tin chia sẻ mới nhất mỗi
   // lần gọi (renew() không còn được dùng ở đâu nữa sau thay đổi này).
   const claimDeviceLock = useCallback(() => {
+    if (!isPremium) return; // xem comment isPremium ở đầu hook
     const lockDeviceName = useObdSessionStore.getState().deviceName ?? vehicleName ?? 'OBD2';
     getDeviceId().then((appDeviceId) =>
       obdApi.deviceLock.claim(vehicleId, appDeviceId, lockDeviceName)
@@ -268,7 +274,7 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
         })
         .catch(() => {}), // BE chưa triển khai / mất mạng: im lặng, không chặn gì cả
     );
-  }, [vehicleId, vehicleName]);
+  }, [vehicleId, vehicleName, isPremium]);
 
   // Phần chung SAU KHI transport (BLE hoặc Classic) đã kết nối xong ở tầng
   // BleService - init ELM327, dò capability, khởi động live monitor, lưu
@@ -451,14 +457,17 @@ export function useObdConnection(vehicleId: number, vehicleName?: string) {
     setConnectionState('disconnected');
     setLiveSnapshot(null);
     useObdSessionStore.getState().patch({ sharedByOtherDevice: null });
-    getDeviceId().then((appDeviceId) => obdApi.deviceLock.release(vehicleId, appDeviceId).catch(() => {}));
+    // isPremium: xem comment ở đầu hook - free chưa từng claim() nên không có gì để release().
+    if (isPremium) {
+      getDeviceId().then((appDeviceId) => obdApi.deviceLock.release(vehicleId, appDeviceId).catch(() => {}));
+    }
     // Rà soát (user hỏi: ngắt OBD2 xong sao hành trình GPS không chốt luôn) -
     // nếu xe đã dừng hẳn lúc bấm X, chốt ngay thay vì chờ tới 5 phút nữa (xem
     // comment đầy đủ ở handleObdDisconnected()). Chỉ chạy khi NGẮT CHỦ ĐỘNG -
     // không đụng gì khi Bluetooth tự rớt giữa đường (đi qua attemptReconnect(),
     // không qua disconnect() này).
     handleObdDisconnected(vehicleId).catch(() => {});
-  }, [vehicleId]);
+  }, [vehicleId, isPremium]);
 
   // Heartbeat khoá mềm (29/7, đổi endpoint 30/7 - xem comment claimDeviceLock()
   // ở trên): gọi lại claim() định kỳ trong lúc còn kết nối, để BE biết máy này

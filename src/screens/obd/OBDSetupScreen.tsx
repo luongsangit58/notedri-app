@@ -45,6 +45,12 @@ export default function OBDSetupScreen() {
   const autoConnectDeviceId: string | null = route.params?.autoConnectDeviceId ?? null;
   // Đến từ nút "Ngắt kết nối" - không auto-connect lại thiết bị đã ghép ngay
   const suppressAutoConnect: boolean = route.params?.suppressAutoConnect ?? false;
+  // 'diagnostics' (tính năng "Chẩn đoán xe", miễn phí mọi tài khoản): chỉ kết
+  // nối để quét thông số/mã lỗi, KHÔNG vào Dashboard ghi hành trình - bỏ qua
+  // khoá Premium bên dưới và điều hướng sang ObdSystemHealth sau khi kết nối
+  // thay vì OBDDashboard. Mặc định 'trip' giữ nguyên hành vi cũ.
+  const purpose: 'trip' | 'diagnostics' = route.params?.purpose ?? 'trip';
+  const connectDestination = purpose === 'diagnostics' ? 'ObdSystemHealth' : 'OBDDashboard';
 
   const t = useT();
   const colors = useColors();
@@ -75,11 +81,12 @@ export default function OBDSetupScreen() {
 
   // Guard: redirect to PremiumScreen if user is not premium. Đợi userSynced để không đá nhầm
   // user Premium thật ra màn nâng cấp chỉ vì cache lúc cold-start chưa kịp làm mới is_premium.
+  // Bỏ qua khi purpose='diagnostics' - "Chẩn đoán xe" áp dụng cho MỌI tài khoản.
   useEffect(() => {
-    if (userSynced && !isPremium) {
+    if (userSynced && !isPremium && purpose !== 'diagnostics') {
       navigation.replace('Premium');
     }
-  }, [userSynced, isPremium]);
+  }, [userSynced, isPremium, purpose]);
 
   // Toggle "hiện tất cả thiết bị": một số adapter quảng bá tên lạ (không chứa
   // OBD/ELM/VLINK...) sẽ bị bộ lọc mặc định bỏ qua - bật lên để hiện mọi thiết bị BLE có tên.
@@ -192,12 +199,13 @@ export default function OBDSetupScreen() {
   }
 
   useEffect(() => {
-    if (!isPremium) return;
+    if (!isPremium && purpose !== 'diagnostics') return;
     // Đang kết nối sẵn (user quay lại màn này khi phiên trước còn sống) → vào thẳng
-    // Dashboard. Nếu quét lại lúc này sẽ KHÔNG bao giờ thấy adapter: thiết bị BLE
-    // đang bị giữ kết nối thì ngừng quảng bá tên - nguồn cơn lỗi "connect được 1 lần".
+    // Dashboard (hoặc ObdSystemHealth nếu đang ở luồng chẩn đoán). Nếu quét lại lúc
+    // này sẽ KHÔNG bao giờ thấy adapter: thiết bị BLE đang bị giữ kết nối thì ngừng
+    // quảng bá tên - nguồn cơn lỗi "connect được 1 lần".
     if (bleService.isConnected()) {
-      navigation.replace('OBDDashboard', {
+      navigation.replace(connectDestination, {
         vehicleId,
         vehicleName,
         deviceName: bleService.getDeviceName() ?? 'OBD2',
@@ -207,14 +215,14 @@ export default function OBDSetupScreen() {
     }
     startScan(showAllDevices);
     return () => stopScan();
-  }, [isPremium, showAllDevices]);
+  }, [isPremium, showAllDevices, purpose]);
 
   async function doConnect(deviceId: string, deviceName: string) {
     const ok = await connect(deviceId);
-    // Chỉ vào Dashboard khi kết nối THÀNH CÔNG - lỗi thì ở lại màn này cho user
-    // thấy thông báo và quét lại (trước đây nhảy vào Dashboard kể cả khi lỗi).
+    // Chỉ vào Dashboard/ObdSystemHealth khi kết nối THÀNH CÔNG - lỗi thì ở lại màn
+    // này cho user thấy thông báo và quét lại (trước đây nhảy vào Dashboard kể cả khi lỗi).
     if (ok) {
-      navigation.replace('OBDDashboard', { vehicleId, vehicleName, deviceName, consumptionOfficial });
+      navigation.replace(connectDestination, { vehicleId, vehicleName, deviceName, consumptionOfficial });
     }
   }
 
@@ -271,7 +279,7 @@ export default function OBDSetupScreen() {
   async function doConnectClassic(address: string, name: string) {
     const ok = await connectClassic(address, name);
     if (ok) {
-      navigation.replace('OBDDashboard', { vehicleId, vehicleName, deviceName: name, consumptionOfficial });
+      navigation.replace(connectDestination, { vehicleId, vehicleName, deviceName: name, consumptionOfficial });
     }
   }
 

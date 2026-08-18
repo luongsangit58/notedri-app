@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { obdApi, DtcLookupResult } from '../../api/obd';
 import { lookupDtcOffline, suggestDtcOffline, withDefaultDtcPrefix } from '../../services/obd/dtcOfflineDictionary';
 import AppBgPattern from '../../components/AppBgPattern';
@@ -94,6 +94,7 @@ const COMMON_DTC_CODES = [
 
 export default function DtcLookupScreen() {
   const navigation = useNavigation<any>();
+  const route = useRoute<any>();
   const t = useT();
   const colors = useColors();
 
@@ -105,6 +106,18 @@ export default function DtcLookupScreen() {
 
   const normalized = withDefaultDtcPrefix(input);
   const isValidFormat = DTC_FORMAT.test(normalized);
+
+  // Đến từ 1 mã vừa quét được (ObdSystemHealthScreen: DtcCard, chạm vào 1 dòng
+  // mã lỗi) - điền sẵn + tra luôn, khỏi bắt user gõ lại đúng mã vừa thấy.
+  useEffect(() => {
+    const prefill: string | undefined = route.params?.code;
+    if (!prefill) return;
+    const code = withDefaultDtcPrefix(prefill);
+    if (!DTC_FORMAT.test(code)) return;
+    setInput(code);
+    searchCode(code);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [route.params?.code]);
 
   const commonResults = useMemo(
     () => COMMON_DTC_CODES.map((code) => lookupDtcOffline(code)),

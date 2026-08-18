@@ -29,6 +29,7 @@ import { evaluate, Finding } from './diagnosticEngine';
 import { getActiveRules, refreshRulesFromServer } from './diagnosticRulesStore';
 import { detectDrivingEvents, computeSessionScore, isNightHour, SpeedSample } from '../drivingScore/drivingScoreEngine';
 import { useObdSessionStore } from '../../store/obdSessionStore';
+import { useAuthStore } from '../../store/authStore';
 import { startObdKeepAlive, stopObdKeepAlive } from './obdKeepAliveService';
 import { syncDtcNotifications } from './dtcNotificationStore';
 import { ewmaStep } from '../../utils/ewma';
@@ -39,6 +40,20 @@ import { createLogger } from './obdLogger';
 
 const dtcLog = createLogger('dtc');
 const perfLog = createLogger('performance');
+
+// POST /obd2/dtc, /obd2/sessions (và device-lock ở useObd.ts) đều nằm sau
+// middleware('premium') phía backend (routes/api.php) - tài khoản free gọi
+// LUÔN 403. Trước bản vá 18/8 (tính năng "Chẩn đoán xe" mở luồng kết nối free)
+// những lệnh này chỉ từng chạy dưới tài khoản Premium nên chưa ai để ý; giờ
+// free cũng kết nối được thật, gọi rồi 403 sẽ bị hàng đợi retry (createSyncQueue,
+// xem syncRetryPolicy.ts) thử lại tới MAX_AUTH_RETRIES lần trước khi bỏ - lãng
+// phí request mà CHẮC CHẮN không bao giờ thành công. Chặn TỪ ĐẦU bằng cờ
+// is_premium (đã có sẵn trong authStore) thay vì để đường ống retry tự phát
+// hiện dần. Quyết định giữ nguyên ranh giới Premium (không mở 2 route này cho
+// free) do user xác nhận 18/8 - xem lịch sử trò chuyện.
+function isPremiumUser(): boolean {
+  return useAuthStore.getState().user?.is_premium ?? false;
+}
 
 /**
  * Live monitor OBD (quyết định 14/7: GPS là nguồn CHUYẾN ĐI duy nhất - fixture #5
@@ -417,18 +432,24 @@ async function recoverOrphanedCheckpoint(): Promise<void> {
     const raw = await AsyncStorage.getItem(CHECKPOINT_KEY);
     if (!raw) return;
     const checkpoint = JSON.parse(raw) as SessionCheckpoint;
-    // Dùng lastWriteAt (checkpoint cũ trước bản vá này có thể thiếu field ->
-    // fallback startedAt, chấp nhận sai số như hành vi cũ) thay vì Date.now():
-    // phục hồi có thể xảy ra rất lâu sau khi phiên thực sự dừng (xem lastWriteAt ở trên).
-    const endedAtMs = checkpoint.lastWriteAt ?? checkpoint.startedAt;
-    const durationSeconds = Math.max(0, Math.round((endedAtMs - checkpoint.startedAt) / 1000));
-    await enqueueObdSession({
-      vehicle_id: checkpoint.vehicleId,
-      device_name: checkpoint.deviceName,
-      connected_at: new Date(checkpoint.startedAt).toISOString(),
-      duration_seconds: durationSeconds,
-      summary: checkpoint.summary,
-    });
+    // Free (xem isPremiumUser() ở đầu file): KHÔNG gửi lên server (chắc chắn
+    // 403) nhưng vẫn phải rơi xuống finally để dọn checkpoint - không thì file
+    // cũ này bị đọc lại y hệt ở lần khởi động app KẾ TIẾP (vô hại vì chỉ 1 key,
+    // không phình to, nhưng vô nghĩa vì không premium thì không đổi kết quả).
+    if (isPremiumUser()) {
+      // Dùng lastWriteAt (checkpoint cũ trước bản vá này có thể thiếu field ->
+      // fallback startedAt, chấp nhận sai số như hành vi cũ) thay vì Date.now():
+      // phục hồi có thể xảy ra rất lâu sau khi phiên thực sự dừng (xem lastWriteAt ở trên).
+      const endedAtMs = checkpoint.lastWriteAt ?? checkpoint.startedAt;
+      const durationSeconds = Math.max(0, Math.round((endedAtMs - checkpoint.startedAt) / 1000));
+      await enqueueObdSession({
+        vehicle_id: checkpoint.vehicleId,
+        device_name: checkpoint.deviceName,
+        connected_at: new Date(checkpoint.startedAt).toISOString(),
+        duration_seconds: durationSeconds,
+        summary: checkpoint.summary,
+      });
+    }
   } catch {
     // Checkpoint hỏng/parse lỗi - bỏ qua, không được để crash luồng start() bình thường.
   } finally {
@@ -441,6 +462,7 @@ const smoothedSnapshotListeners = new Set<(s: ObdSnapshot) => void>();
 const dtcListeners = new Set<(codes: DtcCode[]) => void>();
 const pendingDtcListeners = new Set<(codes: DtcCode[]) => void>();
 const permanentDtcListeners = new Set<(codes: DtcCode[]) => void>();
+const freezeFrameListeners = new Set<(code: string, ff: FreezeFrameSnapshot) => void>();
 const findingListeners = new Set<(findings: Finding[]) => void>();
 const vehicleUnresponsiveListeners = new Set<() => void>();
 
@@ -523,13 +545,20 @@ async function refreshDtcState(): Promise<void> {
       if (freezeFrames[c.code]) continue;
       freezeFrames[c.code] = await readFreezeFrame();
       dtcLog.info('freeze frame captured', c.code);
+      // Chụp xong SAU dtcListeners.forEach() ở trên (race đã biết) - UI cần
+      // biết riêng thời điểm freeze frame sẵn sàng, không chỉ lúc mã lỗi xuất
+      // hiện, để hiện "đang thu thập..." rồi tự cập nhật khi có dữ liệu.
+      freezeFrameListeners.forEach((fn) => fn(c.code, freezeFrames[c.code]));
     }
     if (fresh.length > 0 && activeVehicleId) {
       fresh.forEach((c) => reportedCodes.add(c.code));
-      enqueueDtcReport({ vehicle_id: activeVehicleId, codes: fresh })
-        .then(() => flushPendingDtcReports())
-        .then(() => refreshPendingSyncCount())
-        .catch(() => {});
+      // isPremiumUser(): xem comment ở đầu file - free chắc chắn 403, đừng gọi.
+      if (isPremiumUser()) {
+        enqueueDtcReport({ vehicle_id: activeVehicleId, codes: fresh })
+          .then(() => flushPendingDtcReports())
+          .then(() => refreshPendingSyncCount())
+          .catch(() => {});
+      }
     }
   }
   // Thông báo đẩy mã lỗi mới - dùng bộ nhớ BỀN VỮNG riêng (không phải
@@ -930,6 +959,17 @@ export const obdLiveMonitor = {
     return lastPermanentDtc;
   },
 
+  /** Thông số ECU (mode 02) tại đúng lúc mã lỗi `code` được ghi nhận - null nếu
+   * chưa chụp xong (round-trip BLE riêng, chạy SAU khi mã đã báo cho UI qua
+   * onDtcFound - xem comment refreshDtcState()) hoặc mã đã quá MAX_FREEZE_FRAMES. */
+  getFreezeFrame(code: string): FreezeFrameSnapshot | null {
+    return freezeFrames[code] ?? null;
+  },
+  onFreezeFrameCaptured(fn: (code: string, ff: FreezeFrameSnapshot) => void): () => void {
+    freezeFrameListeners.add(fn);
+    return () => freezeFrameListeners.delete(fn);
+  },
+
   /**
    * Mode 04: xoá DTC + tắt đèn check engine, rồi đọc lại NGAY 03/07/0A để UI
    * cập nhật tức thời (không đợi tới nhịp poll DTC kế tiếp, ~5 phút). Đây là
@@ -956,7 +996,8 @@ export const obdLiveMonitor = {
       // GET /obd2/dtc vẫn coi các mã này là "chưa xử lý" mãi mãi). Fire-and-
       // forget, KHÔNG chặn kết quả trả về UI: Mode 04 trên xe đã thành công
       // thật, lỗi mạng lúc đồng bộ server không nên khiến user tưởng xoá thất bại.
-      if (activeVehicleId && clearedCodes.length > 0) {
+      // isPremiumUser(): xem comment ở đầu file - free chắc chắn 403, đừng gọi.
+      if (activeVehicleId && clearedCodes.length > 0 && isPremiumUser()) {
         enqueueDtcResolve({ vehicle_id: activeVehicleId, codes: clearedCodes.map((c) => c.code) })
           .then(() => flushPendingDtcResolves())
           .then(() => refreshPendingSyncCount())
@@ -1012,16 +1053,19 @@ bleService.addDisconnectListener(() => {
 
     // E2: enqueue local TRƯỚC rồi mới thử gửi - rút cáp lúc mất mạng không còn mất
     // phiên (trước đây fire-and-forget thẳng). Flush lần sau: connect() trong useObd.
-    enqueueObdSession({
-      vehicle_id: vehicleId,
-      device_name: info.deviceName,
-      connected_at: new Date(info.startedAt).toISOString(),
-      duration_seconds: durationSeconds,
-      summary,
-    })
-      .then(() => flushPendingObdSessions())
-      .then(() => refreshPendingSyncCount())
-      .catch(() => {});
+    // isPremiumUser(): xem comment ở đầu file - free chắc chắn 403, đừng gọi.
+    if (isPremiumUser()) {
+      enqueueObdSession({
+        vehicle_id: vehicleId,
+        device_name: info.deviceName,
+        connected_at: new Date(info.startedAt).toISOString(),
+        duration_seconds: durationSeconds,
+        summary,
+      })
+        .then(() => flushPendingObdSessions())
+        .then(() => refreshPendingSyncCount())
+        .catch(() => {});
+    }
   }
 
   obdLiveMonitor.stop();
