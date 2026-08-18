@@ -987,7 +987,12 @@ function ReportContent({
       {/* ── monthly cost line chart — đồng bộ web (garage/reports - line, không phải bar) ── */}
       {monthlyChartData.some((m) => m.value > 0) && (
         <SectionCard title={t('reports.monthly_cost_chart_title', { year: selectedYear })}>
-          <LineTrendChart points={monthlyChartData} color={colors.primary} valueFormatter={fmtVnd} />
+          <LineTrendChart
+            points={monthlyChartData}
+            color={colors.primary}
+            valueFormatter={fmtVnd}
+            summaryValue={monthlyChartData.reduce((s, m) => s + m.value, 0)}
+          />
         </SectionCard>
       )}
 
@@ -995,7 +1000,12 @@ function ReportContent({
           nhưng trước đây app chưa hiển thị, giờ thêm cho đồng bộ với web. ── */}
       {totalDistanceFromMonthly > 0 && (
         <SectionCard title={t('reports.monthly_distance_chart_title', { year: selectedYear })}>
-          <LineTrendChart points={monthlyDistanceChartData} color="#38bdf8" valueFormatter={(v) => fmtNum(v, 'km')} />
+          <LineTrendChart
+            points={monthlyDistanceChartData}
+            color="#38bdf8"
+            valueFormatter={(v) => fmtNum(v, 'km')}
+            summaryValue={totalDistanceFromMonthly}
+          />
         </SectionCard>
       )}
 

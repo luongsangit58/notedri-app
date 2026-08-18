@@ -885,6 +885,7 @@ export default function GpsTripsScreen({ embedded }: { embedded?: boolean } = {}
                   valueFormatter={(v) => `${v.toFixed(1)} km`}
                   headerLabel={t('gps_trips.distance_trend')}
                   emptyText={t('gps_trips.distance_trend_empty')}
+                  summaryValue={distanceTrendPoints.reduce((s, p) => s + p.value, 0)}
                 />
               </View>
             )}
