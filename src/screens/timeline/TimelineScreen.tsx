@@ -36,6 +36,8 @@ export default function TimelineScreen() {
       gap: 8,
       paddingBottom: 2,
     },
+    // Xe: "viên thuốc" rời, tô đặc màu primary khi chọn - khớp VehicleChips ở
+    // ReportsScreen.tsx.
     chip: {
       paddingHorizontal: 14,
       paddingVertical: 7,
@@ -55,6 +57,39 @@ export default function TimelineScreen() {
     },
     chipTextActive: {
       color: colors.primaryText,
+      fontWeight: '700',
+    },
+    // Loại (Tất cả/Xăng/Bảo dưỡng): segmented control thật (1 khối nền chung,
+    // ô đang chọn nổi lên bằng màu nền sáng hơn + chữ cam) - CỐ Ý khác kiểu
+    // "viên thuốc đặc" của hàng chọn xe ở trên, để 2 hàng filter tách bạch rõ
+    // ràng thay vì trông giống hệt nhau. Khớp PeriodTypeChips ở ReportsScreen.tsx
+    // (rà soát 15/8 gốc: "3 hàng chọn xe/kỳ/năm đều dùng chung 1 kiểu... khó
+    // phân biệt đang chọn gì").
+    segmented: {
+      flexDirection: 'row',
+      gap: 3,
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      padding: 3,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    segmentedItem: {
+      flex: 1,
+      paddingVertical: 7,
+      borderRadius: 9,
+      alignItems: 'center',
+    },
+    segmentedItemActive: {
+      backgroundColor: colors.background,
+    },
+    segmentedText: {
+      color: colors.textSecondary,
+      fontWeight: '500',
+      fontSize: 13.5,
+    },
+    segmentedTextActive: {
+      color: colors.primary,
       fontWeight: '700',
     },
   });
@@ -158,28 +193,24 @@ export default function TimelineScreen() {
               </ScrollView>
             )}
 
-            {/* Type chips */}
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.chipsContainer}
-              style={styles.chipRow}
-            >
+            {/* Loại - segmented control (xem styles.segmented), tách bạch với
+                hàng chọn xe ở trên thay vì dùng chung 1 kiểu chip. */}
+            <View style={styles.segmented}>
               {TYPE_CHIPS.map(({ key, label }) => {
                 const active = key === typeFilter;
                 return (
                   <TouchableOpacity
                     key={key}
                     onPress={() => setTypeFilter(key)}
-                    style={[styles.chip, active && styles.chipActive]}
+                    style={[styles.segmentedItem, active && styles.segmentedItemActive]}
                   >
-                    <Text style={[styles.chipText, active && styles.chipTextActive]}>
+                    <Text style={[styles.segmentedText, active && styles.segmentedTextActive]}>
                       {label}
                     </Text>
                   </TouchableOpacity>
                 );
               })}
-            </ScrollView>
+            </View>
           </View>
         }
         ListEmptyComponent={

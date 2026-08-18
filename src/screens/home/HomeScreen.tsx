@@ -660,7 +660,7 @@ export default function HomeScreen() {
                 style={{ flex: 1, paddingHorizontal: 4, paddingVertical: 10, alignItems: 'center', justifyContent: 'center', gap: 4 }}>
                 <FontAwesome5 name="search" size={14} color="#ffffffcc" solid />
                 <Text style={{ color: '#ffffffe6', fontSize: 10.5, fontWeight: '600', textAlign: 'center' }} numberOfLines={2}>
-                  {t('dtc.lookup_title')}
+                  {t('home.dtc_lookup_tile')}
                 </Text>
               </TouchableOpacity>
             </View>

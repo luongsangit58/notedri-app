@@ -55,6 +55,13 @@ interface ServiceItem {
 // Rà soát 14/8 (góp ý user: hàng dài icon-nhỏ + 2 dòng chữ chiếm nhiều chiều
 // cao, muốn dạng "ô vuông" gọn hơn cho nhóm "tìm địa điểm") - ô icon lớn nổi
 // bật + 1 nhãn ngắn, không kèm mô tả phụ (mô tả dài không hợp bố cục lưới hẹp).
+// Rà soát 18/8 (góp ý user: nhãn tự động wrap không đều - "Đăng kiểm gần đây"
+// xuống dòng khác điểm với 2 ô còn lại, khiến 3 ô cao lệch nhau dù đã "chừa sẵn
+// chỗ cho 2 dòng"). Bỏ auto-wrap, CHỦ ĐỘNG xuống dòng đúng điểm mong muốn bằng
+// \n trong chính nội dung dịch (services.tile_* - key RIÊNG cho 3 ô này, không
+// dùng chung key title header của 3 màn đích vì header không hợp xuống dòng
+// cứng). Nhãn giờ LUÔN đúng 2 dòng thật, không cần chừa chỗ dự phòng nữa nên
+// thu gọn hẳn kích thước ô theo góp ý.
 function GridTile({ icon, label, onPress }: { icon: string; label: string; onPress: () => void }) {
   const colors = useColors();
   return (
@@ -62,26 +69,19 @@ function GridTile({ icon, label, onPress }: { icon: string; label: string; onPre
       onPress={onPress}
       activeOpacity={0.8}
       style={{
-        flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8,
-        backgroundColor: colors.primary + '15', borderRadius: 12, paddingVertical: 14, paddingHorizontal: 6,
-        borderWidth: 1, borderColor: colors.primary + '33', minHeight: 88,
+        flex: 1, alignItems: 'center', justifyContent: 'center', gap: 6,
+        backgroundColor: colors.primary + '15', borderRadius: 12, paddingVertical: 10, paddingHorizontal: 6,
+        borderWidth: 1, borderColor: colors.primary + '33', minHeight: 72,
       }}>
       <View style={{
-        width: 40, height: 40, borderRadius: 20,
+        width: 34, height: 34, borderRadius: 17,
         backgroundColor: colors.primary + '22', alignItems: 'center', justifyContent: 'center',
       }}>
-        <FontAwesome5 name={icon} size={16} color={colors.primary} solid />
+        <FontAwesome5 name={icon} size={14} color={colors.primary} solid />
       </View>
-      {/* Rà soát 14/8 (góp ý user: 3 ô cùng hàng cao lệch nhau khi CHỈ 1 nhãn dài
-          xuống 2 dòng, mấy ô còn lại 1 dòng - trông lệch). Luôn CHỪA SẴN đúng chỗ
-          cho 2 dòng (kể cả khi label thật chỉ 1 dòng, canh giữa trong khoảng chừa
-          đó) - chiều cao khối chữ luôn giống nhau ở cả 3 ô, không phụ thuộc nhãn
-          ngắn/dài, thay vì trông chờ layout tự co giãn theo đúng số dòng thật. */}
-      <View style={{ height: 30, justifyContent: 'center' }}>
-        <Text numberOfLines={2} style={{ color: colors.primary, fontWeight: '700', fontSize: 12, textAlign: 'center', lineHeight: 15 }}>
-          {label}
-        </Text>
-      </View>
+      <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 12, textAlign: 'center', lineHeight: 14 }}>
+        {label}
+      </Text>
     </TouchableOpacity>
   );
 }
@@ -226,6 +226,18 @@ export default function ServicesScreen() {
     chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
     chipText: { color: colors.textSecondary, fontSize: 13, fontWeight: '400' },
     chipTextActive: { color: colors.primaryText, fontWeight: '700' },
+    // Loại: viền mỏng nhạt (khác hẳn viên cam đặc của hàng chọn xe ở trên) - cùng
+    // pattern đã áp dụng cho TrafficFinesScreen.tsx (rà soát 15/8: 2 hàng lọc
+    // dùng chung 1 kiểu chip khó phân biệt đang lọc gì). Hàng xe (ít lựa chọn,
+    // lọc chính) giữ chip đặc; hàng Loại (nhiều lựa chọn, lọc phụ chi tiết hơn)
+    // đổi sang ghost - nhẹ hơn hẳn, đúng vai trò lọc con.
+    ghostChip: {
+      borderRadius: 16, paddingHorizontal: 12, paddingVertical: 6,
+      borderWidth: 1, borderColor: colors.border, backgroundColor: 'transparent',
+    },
+    ghostChipActive: { backgroundColor: colors.primary + '18', borderColor: colors.primary },
+    ghostChipText: { color: colors.textSecondary, fontSize: 12, fontWeight: '500' },
+    ghostChipTextActive: { color: colors.primary, fontWeight: '700' },
     listContent: { padding: 16, paddingBottom: 80 },
     emptyContainer: { flexGrow: 1, padding: 16, paddingBottom: 80 },
     emptyState: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 80 },
@@ -274,15 +286,15 @@ export default function ServicesScreen() {
             <Text style={styles.groupLabel}>{t('services.nearby_group_title')}</Text>
             <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
               <GridTile
-                icon="suitcase" label={t('garage_guide.title')}
+                icon="suitcase" label={t('services.tile_garage_guide')}
                 onPress={() => navigation.navigate('GarageGuide')}
               />
               <GridTile
-                icon="wrench" label={t('nearby_garages.title_garage')}
+                icon="wrench" label={t('services.tile_nearby_garage')}
                 onPress={() => navigation.navigate('NearbyGarages', { mode: 'garage' })}
               />
               <GridTile
-                icon="clipboard-check" label={t('nearby_garages.title_dangkiem')}
+                icon="clipboard-check" label={t('services.tile_nearby_dangkiem')}
                 onPress={() => navigation.navigate('NearbyGarages', { mode: 'dangkiem' })}
               />
             </View>
@@ -323,22 +335,25 @@ export default function ServicesScreen() {
 
             {/* Vehicle filter — only for multi-vehicle users */}
             {vehicles.length > 1 && (
-              <ScrollView
-                horizontal showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.chipsContainer}
-                style={{ marginBottom: 8 }}>
-                {vehicles.map((v: any) => {
-                  const active = v.id === selectedVehicleId;
-                  return (
-                    <TouchableOpacity
-                      key={v.id}
-                      onPress={() => setSelectedVehicleId(v.id)}
-                      style={[styles.chip, active && styles.chipActive]}>
-                      <Text style={[styles.chipText, active && styles.chipTextActive]}>{v.ten}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
+              <>
+                <Text style={styles.groupLabel}>{t('services.filter_vehicle_title')}</Text>
+                <ScrollView
+                  horizontal showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.chipsContainer}
+                  style={{ marginBottom: 12 }}>
+                  {vehicles.map((v: any) => {
+                    const active = v.id === selectedVehicleId;
+                    return (
+                      <TouchableOpacity
+                        key={v.id}
+                        onPress={() => setSelectedVehicleId(v.id)}
+                        style={[styles.chip, active && styles.chipActive]}>
+                        <Text style={[styles.chipText, active && styles.chipTextActive]}>{v.ten}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              </>
             )}
 
             {/* Search */}
@@ -352,6 +367,7 @@ export default function ServicesScreen() {
             />
 
             {/* Loại filter */}
+            <Text style={styles.groupLabel}>{t('services.filter_type_title')}</Text>
             <ScrollView
               horizontal showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.chipsContainer}>
@@ -361,8 +377,8 @@ export default function ServicesScreen() {
                   <TouchableOpacity
                     key={key}
                     onPress={() => setSelectedLoai(key)}
-                    style={[styles.chip, active && styles.chipActive]}>
-                    <Text style={[styles.chipText, active && styles.chipTextActive]}>
+                    style={[styles.ghostChip, active && styles.ghostChipActive]}>
+                    <Text style={[styles.ghostChipText, active && styles.ghostChipTextActive]}>
                       {key === ALL_CHIP ? t('common.all') : t(LOAI_KEYS[key] as any)}
                     </Text>
                   </TouchableOpacity>
