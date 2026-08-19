@@ -56,6 +56,15 @@ declare class NotedriBtPairingModule extends NativeModule<NotedriBtPairingEvents
 
   /** Đóng kết nối Classic đang mở (nếu có) - an toàn khi gọi dù không có kết nối. */
   disconnectClassic(): Promise<void>;
+
+  /**
+   * Đồng bộ danh sách MAC (Classic)/deviceId (BLE) đủ điều kiện "tự thức app
+   * khi Bluetooth kết nối lại" - xem autoWakeSync.ts (gọi lại mỗi khi pairing/
+   * switch auto-connect thay đổi) và AclConnectedReceiver.kt/BleScanResultReceiver.kt
+   * phía native. Không throw khi context native chưa sẵn sàng (no-op im lặng
+   * phía Kotlin) - an toàn gọi sớm lúc app khởi động.
+   */
+  syncAutoWakeDevices(classicMacs: string[], bleMacs: string[]): Promise<void>;
 }
 
 // Module Android-only (RFCOMM Classic Bluetooth không có trên iOS - xem

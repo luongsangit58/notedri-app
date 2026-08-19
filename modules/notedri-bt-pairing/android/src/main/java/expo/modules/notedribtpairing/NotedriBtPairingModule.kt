@@ -126,6 +126,23 @@ class NotedriBtPairingModule : Module() {
     AsyncFunction("disconnectClassic") {
       closeActiveSocket(suppressEvent = false)
     }
+
+    // Đồng bộ danh sách MAC (Classic)/deviceId (BLE) đủ điều kiện "tự thức app
+    // khi Bluetooth kết nối lại" (xem AclConnectedReceiver/BleScanResultReceiver/
+    // BleAutoWakeScanner) - gọi từ JS (autoWakeSync.ts) mỗi khi pairing hoặc
+    // switch auto-connect thay đổi, để 2 receiver trên đọc được ngay cả khi JS
+    // chưa từng chạy (khởi động máy, hoặc app bị kill hẳn).
+    AsyncFunction("syncAutoWakeDevices") { classicMacs: List<String>, bleMacs: List<String> ->
+      val context = appContext.reactContext
+      if (context != null) {
+        AutoWakeStore.save(context, classicMacs, bleMacs)
+        if (bleMacs.isNotEmpty()) {
+          BleAutoWakeScanner.arm(context, bleMacs.toSet())
+        } else {
+          BleAutoWakeScanner.disarm(context)
+        }
+      }
+    }
   }
 
   // Rà soát 22/7 (log thật notedri-obd-session.json 22/7 11:00): live discovery

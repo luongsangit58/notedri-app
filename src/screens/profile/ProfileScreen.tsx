@@ -18,6 +18,7 @@ import { BASE_URL } from '../../utils/api';
 import { useColors, useThemeStore } from '../../utils/theme';
 import { INPUT_FONT_FAMILY } from '../../utils/font';
 import { useI18nStore, useLang, useT } from '../../i18n';
+import { maybeNudgeAutoWakeNotificationPermission } from '../../services/obd/autoWakeNotificationNudge';
 import { markGooglePending, clearGooglePending } from '../../services/googleAuthRecovery';
 import { PLAY_STORE_URL } from './FeedbackScreen';
 import { safeFaIcon } from '../../utils/faIcon';
@@ -377,7 +378,10 @@ export default function ProfileScreen() {
             right={(
               <Switch
                 value={autoConnectEnabled}
-                onValueChange={setAutoConnectEnabled}
+                onValueChange={(next) => {
+                  setAutoConnectEnabled(next);
+                  if (next) void maybeNudgeAutoWakeNotificationPermission(t);
+                }}
                 trackColor={{ true: '#3B82F6' }}
               />
             )}

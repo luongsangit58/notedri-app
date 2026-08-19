@@ -29,6 +29,7 @@ import AppBgPattern from '../../components/AppBgPattern';
 import { useColors } from '../../utils/theme';
 import { useAuthStore } from '../../store/authStore';
 import { useT } from '../../i18n';
+import { maybeNudgeAutoWakeNotificationPermission } from '../../services/obd/autoWakeNotificationNudge';
 import ObdConnectionGuide from '../../components/ObdConnectionGuide';
 import { contentWide } from '../../utils/layout';
 import { cleanNativeErrorMessage } from '../../utils/nativeError';
@@ -333,6 +334,7 @@ export default function OBDSetupScreen() {
   async function handleToggleAutoConnectOnLaunch(next: boolean) {
     setAutoConnectOnLaunchState(next); // phản hồi tức thì, không đợi AsyncStorage
     await setAutoConnect(vehicleId, next);
+    if (next) void maybeNudgeAutoWakeNotificationPermission(t);
   }
 
   async function handleForgetPairing() {

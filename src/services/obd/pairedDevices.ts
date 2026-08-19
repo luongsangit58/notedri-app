@@ -37,6 +37,16 @@ async function writeAll(devices: PairedDevice[]): Promise<void> {
   await AsyncStorage.setItem(KEY, JSON.stringify(devices));
 }
 
+// Import động (không static) để tránh vòng phụ thuộc: autoWakeSync.ts cần đọc
+// dữ liệu từ chính module này (getAllPairedDevices), nên module này không thể
+// import tĩnh ngược lại autoWakeSync.ts. Lỗi đồng bộ cache native không được
+// làm hỏng việc lưu pairing (chức năng chính) - luôn .catch() im lặng.
+function scheduleNativeAutoWakeSync(): void {
+  import('./autoWakeSync')
+    .then((m) => m.syncAutoWakeDevices())
+    .catch(() => {});
+}
+
 // Gọi sau mỗi lần connect() thành công để BleService.handleRestoredState() (iOS
 // background restore) và NFC tag biết thiết bị BLE này thuộc xe nào.
 export async function savePairing(pairing: PairedDevice): Promise<void> {
@@ -62,15 +72,18 @@ export async function savePairing(pairing: PairedDevice): Promise<void> {
     lastConnectedAt: pairing.lastConnectedAt ?? Date.now(),
   });
   await writeAll(next);
+  scheduleNativeAutoWakeSync();
 }
 
 export async function removePairingForVehicle(vehicleId: number): Promise<void> {
   const devices = await readAll();
   await writeAll(devices.filter((d) => d.vehicleId !== vehicleId));
+  scheduleNativeAutoWakeSync();
 }
 
 export async function clearPairings(): Promise<void> {
   await AsyncStorage.removeItem(KEY);
+  scheduleNativeAutoWakeSync();
 }
 
 // User bật/tắt "Hỏi trước khi tự kết nối" cho 1 xe cụ thể (OBDSetupScreen).
@@ -80,6 +93,14 @@ export async function setAutoConnect(vehicleId: number, enabled: boolean): Promi
   if (idx === -1) return;
   devices[idx] = { ...devices[idx], autoConnect: enabled };
   await writeAll(devices);
+  scheduleNativeAutoWakeSync();
+}
+
+// Toàn bộ pairing đã lưu - dùng để đồng bộ cache native (autoWakeSync.ts), nơi
+// duy nhất cần liệt kê TẤT CẢ thiết bị (khác các hàm export khác ở trên, luôn
+// lọc theo 1 xe/1 device cụ thể).
+export async function getAllPairedDevices(): Promise<PairedDevice[]> {
+  return readAll();
 }
 
 // Pairing ĐỦ ĐIỀU KIỆN tự kết nối khi mở app (đã bật autoConnect) - dùng gần

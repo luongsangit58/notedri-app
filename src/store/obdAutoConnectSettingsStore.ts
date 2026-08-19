@@ -35,6 +35,10 @@ export const useObdAutoConnectSettingsStore = create<ObdAutoConnectSettingsState
   setEnabled: (enabled) => {
     set({ enabled });
     AsyncStorage.setItem(AUTO_CONNECT_MASTER_KEY, enabled ? '1' : '0').catch(() => {});
+    // Import động - tránh vòng phụ thuộc tĩnh (autoWakeSync.ts đọc lại state
+    // của chính store này). Tắt công tắc tổng phải xoá cache native ngay (tắt
+    // tính năng "tự thức app" tương ứng), không chỉ chặn ở tầng JS.
+    import('../services/obd/autoWakeSync').then((m) => m.syncAutoWakeDevices()).catch(() => {});
   },
   suppressForSession: () => set({ sessionSuppressed: true }),
   clearSessionSuppression: () => set({ sessionSuppressed: false }),

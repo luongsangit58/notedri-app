@@ -213,6 +213,7 @@
       ],
       "./withOptionalHardwareFeatures.js",
       "./withNfcIntentFilter.js",
+      "./withBtAutoWakeReceivers.js",
       "./withPictureInPicture.js",
       "./withAndroidReleaseSigning.js",
       "expo-background-task",

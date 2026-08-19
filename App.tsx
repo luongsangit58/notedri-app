@@ -21,6 +21,7 @@ import { useI18nStore } from './src/i18n';
 import { flushPendingTrips } from './src/services/obd/TripSyncQueue';
 import { bleService } from './src/services/obd/BleService';
 import { hasAnyPairing } from './src/services/obd/pairedDevices';
+import { syncAutoWakeDevices } from './src/services/obd/autoWakeSync';
 import { flushPendingGpsTrips } from './src/services/gps/GpsTripSyncQueue';
 import { maybeAutoShutdownStale, autoArmIfReady, registerGpsRecoveryTask } from './src/services/gps/GpsTripTracker';
 import { vehiclesApi } from './src/api/vehicles';
@@ -72,7 +73,12 @@ function AppLoader({ children }: { children: React.ReactNode }) {
     loadTheme();
     loadLang();
     void useCockpitThemeStore.getState().loadSaved();
-    void useObdAutoConnectSettingsStore.getState().loadSaved();
+    // Đợi loadSaved() đọc xong công tắc tổng auto-connect từ AsyncStorage rồi
+    // mới đồng bộ cache native (autoWakeSync.ts) - đồng bộ trước khi load xong
+    // sẽ đọc nhầm giá trị mặc định `enabled: true` dù user đã tắt trước đó.
+    void useObdAutoConnectSettingsStore.getState().loadSaved().then(() => {
+      void syncAutoWakeDevices();
+    });
     void initializeAdMob();
     // Khôi phục đăng nhập/liên kết Google nếu OS kill app giữa lúc đang chờ callback (xem
     // src/services/googleAuthRecovery.ts). Đặt ở đây (không phải LoginScreen/ProfileScreen) vì
