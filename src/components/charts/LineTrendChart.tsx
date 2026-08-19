@@ -1,14 +1,24 @@
 import React, { useState } from 'react';
-import { View, Text } from 'react-native';
-import Svg, { Circle, Line, Polygon, Polyline } from 'react-native-svg';
+import { View, Text, TouchableOpacity } from 'react-native';
+import Svg, { Circle, Line, Polygon, Polyline, Rect } from 'react-native-svg';
+import { FontAwesome5 } from '@expo/vector-icons';
 import { useColors } from '../../utils/theme';
 
-// Biểu đồ đường dùng chung, tự vẽ bằng react-native-svg (không thêm thư viện
+// Biểu đồ đường/cột dùng chung, tự vẽ bằng react-native-svg (không thêm thư viện
 // chart mới - giữ đúng quyết định 15/7 đã áp dụng cho VoltageChart/
 // ObdTrendChart: charts tự vẽ để còn lên bản qua OTA, không phải build lại
 // native). Cùng mark spec với VoltageChart (OBDTechnicalScreen): line 2px,
 // area fill mờ ~12%, hairline gridline trên/dưới, điểm neo tại giá trị mới
 // nhất kèm viền màu nền (surface ring), touch-to-scrub.
+//
+// Rà soát 19/8 (user báo: chạm vào không hiện số liệu tháng, thiếu nút đổi
+// cột/đường như web): 2 lỗi trong bản trước:
+// 1) onResponderRelease xoá touchIndex NGAY khi nhả tay -> chạm nhanh (tap)
+//    coi như không thấy gì (giá trị chỉ hiện đúng lúc còn giữ tay). Giờ giữ
+//    nguyên điểm đã chạm tới khi chạm điểm khác, khớp cách ObdTrendChart.tsx
+//    (Pressable, chọn dính tới khi chọn lại) đang làm.
+// 2) Không có cách xem dạng cột - web (garage/_trend_chart.blade.php) có nút
+//    chuyển line/bar. Thêm toggle nhỏ cạnh giá trị đầu bảng.
 export interface LineTrendPoint {
   label: string;
   value: number;
@@ -24,6 +34,8 @@ const CHART_HEIGHT = 120;
 // rộng thật, chỉ chừa đệm nhỏ 2 đầu để điểm neo (circle marker) không bị cắt
 // nửa ở sát mép canvas.
 const H_PAD = 8; // >= r=7 của circle marker ngoài cùng, không cho viền bị cắt sát mép
+
+type ChartMode = 'line' | 'bar';
 
 export default function LineTrendChart({
   points, color, valueFormatter, emptyText, headerLabel, summaryValue,
@@ -45,6 +57,7 @@ export default function LineTrendChart({
   const colors = useColors();
   const [width, setWidth] = useState(0);
   const [touchIndex, setTouchIndex] = useState<number | null>(null);
+  const [mode, setMode] = useState<ChartMode>('line');
 
   if (points.length < 2) {
     return (
@@ -59,7 +72,9 @@ export default function LineTrendChart({
   const vMin = Math.min(...values);
   const pad = Math.max(0.1, (vMax - vMin) * 0.15);
   const scaleMax = vMax + pad;
-  const scaleMin = Math.max(0, vMin - pad);
+  // Cột luôn neo đáy = 0 (đúng trực giác so sánh độ cao cột); đường thì thu
+  // hẹp quanh khoảng dữ liệu thật để thấy rõ biến động (giữ hành vi cũ).
+  const scaleMin = mode === 'bar' ? 0 : Math.max(0, vMin - pad);
   const n = points.length;
   const plotWidth = Math.max(0, width - H_PAD * 2);
 
@@ -68,6 +83,7 @@ export default function LineTrendChart({
     CHART_HEIGHT - ((v - scaleMin) / (scaleMax - scaleMin || 1)) * CHART_HEIGHT;
   const linePoints = points.map((p, i) => `${toX(i)},${toY(p.value)}`).join(' ');
   const areaPoints = `${toX(0)},${CHART_HEIGHT} ${linePoints} ${toX(n - 1)},${CHART_HEIGHT}`;
+  const barWidth = n > 0 ? Math.max(4, Math.min(28, (plotWidth / n) * 0.5)) : 0;
 
   const latest = points[n - 1];
   const defaultValue = summaryValue ?? latest.value;
@@ -81,13 +97,36 @@ export default function LineTrendChart({
 
   return (
     <View onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
         <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
           {touched ? touched.label : (headerLabel ?? '')}
         </Text>
-        <Text style={{ color: touched ? colors.text : color, fontSize: 15, fontWeight: '700' }}>
-          {valueFormatter(displayValue)}
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <Text style={{ color: touched ? colors.text : color, fontSize: 15, fontWeight: '700' }}>
+            {valueFormatter(displayValue)}
+          </Text>
+          <View style={{ flexDirection: 'row', backgroundColor: colors.border, borderRadius: 7, padding: 2 }}>
+            {(['line', 'bar'] as ChartMode[]).map((m) => (
+              <TouchableOpacity
+                key={m}
+                onPress={() => setMode(m)}
+                style={{
+                  paddingHorizontal: 7,
+                  paddingVertical: 4,
+                  borderRadius: 5,
+                  backgroundColor: mode === m ? color : 'transparent',
+                }}
+              >
+                <FontAwesome5
+                  name={m === 'line' ? 'chart-line' : 'chart-bar'}
+                  size={10}
+                  color={mode === m ? colors.card : colors.textSecondary}
+                  solid
+                />
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
       </View>
 
       {width > 0 && (
@@ -96,21 +135,42 @@ export default function LineTrendChart({
           onMoveShouldSetResponder={() => true}
           onResponderGrant={(e) => setTouchIndex(nearestIndex(e.nativeEvent.locationX))}
           onResponderMove={(e) => setTouchIndex(nearestIndex(e.nativeEvent.locationX))}
-          onResponderRelease={() => setTouchIndex(null)}
         >
           <Svg width={width} height={CHART_HEIGHT}>
             <Line x1={0} y1={1} x2={width} y2={1} stroke={colors.border} strokeWidth={1} />
             <Line x1={0} y1={CHART_HEIGHT - 1} x2={width} y2={CHART_HEIGHT - 1} stroke={colors.border} strokeWidth={1} />
-            <Polygon points={areaPoints} fill={color} fillOpacity={0.12} stroke="none" />
-            <Polyline points={linePoints} fill="none" stroke={color} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
-            <Circle cx={toX(n - 1)} cy={toY(latest.value)} r={7} fill={colors.card} />
-            <Circle cx={toX(n - 1)} cy={toY(latest.value)} r={5} fill={color} />
-            {touched && touchIndex !== null && (
+
+            {mode === 'line' ? (
               <>
-                <Line x1={toX(touchIndex)} y1={0} x2={toX(touchIndex)} y2={CHART_HEIGHT} stroke={colors.textSecondary} strokeWidth={1} opacity={0.5} />
-                <Circle cx={toX(touchIndex)} cy={toY(touched.value)} r={7} fill={colors.card} />
-                <Circle cx={toX(touchIndex)} cy={toY(touched.value)} r={5} fill={colors.text} />
+                <Polygon points={areaPoints} fill={color} fillOpacity={0.12} stroke="none" />
+                <Polyline points={linePoints} fill="none" stroke={color} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+                <Circle cx={toX(n - 1)} cy={toY(latest.value)} r={7} fill={colors.card} />
+                <Circle cx={toX(n - 1)} cy={toY(latest.value)} r={5} fill={color} />
+                {touched && touchIndex !== null && (
+                  <>
+                    <Line x1={toX(touchIndex)} y1={0} x2={toX(touchIndex)} y2={CHART_HEIGHT} stroke={colors.textSecondary} strokeWidth={1} opacity={0.5} />
+                    <Circle cx={toX(touchIndex)} cy={toY(touched.value)} r={7} fill={colors.card} />
+                    <Circle cx={toX(touchIndex)} cy={toY(touched.value)} r={5} fill={colors.text} />
+                  </>
+                )}
               </>
+            ) : (
+              points.map((p, i) => {
+                const y = toY(p.value);
+                const isActive = touchIndex === i || (touchIndex === null && i === n - 1);
+                return (
+                  <Rect
+                    key={i}
+                    x={toX(i) - barWidth / 2}
+                    y={y}
+                    width={barWidth}
+                    height={Math.max(1, CHART_HEIGHT - y)}
+                    rx={3}
+                    fill={color}
+                    fillOpacity={isActive ? 1 : 0.45}
+                  />
+                );
+              })
             )}
           </Svg>
         </View>

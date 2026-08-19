@@ -752,7 +752,7 @@ const vi = {
   "obd.battery_sampling": "Đang lấy mẫu...",
   "obd.sys_health_link": "Sức khoẻ theo hệ thống",
   "obd.sys_health_title": "Sức khoẻ theo hệ thống",
-  "obd.sys_health_subtitle": "Gom cảnh báo và số liệu sống theo từng hệ của xe. Đây là bảng xem nhanh — không phải điểm số, mức đánh giá dựa trên dữ liệu đọc được ngay lúc này.",
+  "obd.sys_health_subtitle": "Số liệu kỹ thuật theo từng hệ của xe, cập nhật theo thời gian thực.",
   "obd.sys_overall": "Tổng quan",
   "obd.sys_engine": "Động cơ",
   "obd.sys_cooling": "Làm mát",

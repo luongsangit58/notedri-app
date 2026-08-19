@@ -43,6 +43,8 @@ export default function NetworkStatusToast() {
         borderRadius: 10,
         paddingHorizontal: 16,
         paddingVertical: 10,
+        borderWidth: 1,
+        borderColor: (isOnline ? '#22C55E' : '#94A3B8') + '88',
         elevation: 8,
         shadowColor: '#000',
         shadowOpacity: 0.3,

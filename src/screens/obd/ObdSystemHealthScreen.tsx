@@ -55,6 +55,19 @@ const LEVEL_COLOR: Record<ReadingClassification['level'], string> = {
   info: '#3B82F6',
 };
 
+// Rà soát 19/8 (user: dân chơi xe đọc mã kỹ thuật quen hơn tên tiếng Việt) -
+// mã PID chuẩn OBD-II (SAE J1979) của đúng số liệu đang hiển thị ở đây, khớp
+// PID_REGISTRY trong obdParser.ts (nguồn duy nhất, không định nghĩa lại giá
+// trị). Hiện thêm dưới nhãn Việt, không thay thế - vẫn dễ đọc cho user thường.
+const READING_PID: Record<SystemReading['key'], string> = {
+  rpm: '0C',
+  coolant: '05',
+  voltage: '42',
+  load: '04',
+  throttle: '11',
+  fuel: '2F',
+};
+
 // Định dạng giá trị số liệu: rpm làm tròn, còn lại giữ như đọc (điện áp có phần
 // thập phân, % là số nguyên sẵn) - không tự bịa độ chính xác thừa.
 function formatReading(r: SystemReading): string {
@@ -120,6 +133,7 @@ function SystemCard({ sys, snapshot }: { sys: SystemHealth; snapshot: ObdSnapsho
                 <Text style={[styles.readingValue, { color: colors.text }]}>{formatReading(r)}</Text>
                 <Text style={[styles.readingLabel, { color: colors.textSecondary }]}>
                   {t(`obd.sys_reading_${r.key}` as any)}
+                  <Text style={styles.readingPid}> · PID {READING_PID[r.key]}</Text>
                 </Text>
                 {cls && (
                   <Text style={[styles.readingRange, { color: LEVEL_COLOR[cls.level] }]}>
@@ -596,11 +610,11 @@ export default function ObdSystemHealthScreen() {
         {isConnected ? (
           <TouchableOpacity
             onPress={handleDisconnect}
-            style={styles.backBtn}
+            style={styles.disconnectBtn}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             accessibilityLabel={t('obd.disconnect_title')}
           >
-            <FontAwesome5 name="times-circle" size={18} color="#EF4444" />
+            <FontAwesome5 name="power-off" size={14} color="#EF4444" />
           </TouchableOpacity>
         ) : (
           <View style={{ width: 32 }} />
@@ -712,6 +726,14 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   backBtn: { padding: 4 },
+  disconnectBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#EF444422',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   title: { fontSize: 18, fontWeight: '600' },
   body: { padding: 16, gap: 12 },
   subtitle: { fontSize: 13, lineHeight: 19 },
@@ -774,6 +796,7 @@ const styles = StyleSheet.create({
   reading: { minWidth: 64 },
   readingValue: { fontSize: 18, fontWeight: '700' },
   readingLabel: { fontSize: 11, marginTop: 1 },
+  readingPid: { fontSize: 9.5, fontWeight: '600', opacity: 0.7 },
   readingRange: { fontSize: 10, fontWeight: '700', marginTop: 2 },
   findingRow: { flexDirection: 'row', gap: 8, borderTopWidth: 1, paddingTop: 10 },
   findingTitle: { fontSize: 13, fontWeight: '600', lineHeight: 18 },

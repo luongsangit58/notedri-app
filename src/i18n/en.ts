@@ -751,7 +751,7 @@ const en = {
   "obd.battery_sampling": "Sampling...",
   "obd.sys_health_link": "Health by system",
   "obd.sys_health_title": "Health by system",
-  "obd.sys_health_subtitle": "Groups alerts and live readings by vehicle system. A quick overview — not a score; each status reflects data read right now.",
+  "obd.sys_health_subtitle": "Technical readings by vehicle system, updated in real time.",
   "obd.sys_overall": "Overall",
   "obd.sys_engine": "Engine",
   "obd.sys_cooling": "Cooling",

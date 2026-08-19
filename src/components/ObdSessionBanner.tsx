@@ -19,22 +19,39 @@ import { useT } from '../i18n';
 const TOAST_DURATION_MS = 4500;
 const TOAST_DURATION_SAVED_MS = 6000; // tin "phiên đã lưu N phút" dài hơn, cần đọc lâu hơn
 
-function useTransitionToast(): [string | null, () => void] {
+// Loại toast - dùng để chọn màu viền (rà soát 19/8: user báo toast kết nối/mất
+// kết nối không có viền, khó thấy trên nền tối). Màu khớp bán chất: xanh lá =
+// tin tốt (đã nối/nối lại/đã lưu), xám = trung tính (mất kết nối).
+type ToastKind = 'connected' | 'reconnected' | 'saved' | 'disconnected';
+const TOAST_BORDER_COLOR: Record<ToastKind, string> = {
+  connected: '#22C55E',
+  reconnected: '#22C55E',
+  saved: '#22C55E',
+  disconnected: '#94A3B8',
+};
+
+function useTransitionToast(): [string | null, ToastKind | null, () => void] {
   const t = useT();
   const { connected, reconnecting, vehicleName, lastSessionSaved } = useObdSessionStore();
   const [toast, setToast] = useState<string | null>(null);
+  const [toastKind, setToastKind] = useState<ToastKind | null>(null);
   const prev = useRef({ connected: false, reconnecting: false });
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const was = prev.current;
     let message: string | null = null;
+    let kind: ToastKind | null = null;
     let justSaved = false;
 
     if (!was.connected && connected) {
-      message = was.reconnecting
-        ? t('obd.toast_reconnected')
-        : t('obd.toast_connected', { name: vehicleName ?? 'OBD2' });
+      if (was.reconnecting) {
+        message = t('obd.toast_reconnected');
+        kind = 'reconnected';
+      } else {
+        message = t('obd.toast_connected', { name: vehicleName ?? 'OBD2' });
+        kind = 'connected';
+      }
     } else if (was.connected && !connected && !reconnecting) {
       // Rà soát 16/7 (góp ý user: kết thúc phiên không có phản hồi gì): nếu
       // obdLiveMonitor vừa patch lastSessionSaved đồng bộ NGAY trước lúc connected
@@ -45,11 +62,13 @@ function useTransitionToast(): [string | null, () => void] {
       message = justSaved
         ? t('obd.toast_session_saved', { minutes: Math.max(1, Math.round(lastSessionSaved!.durationSeconds / 60)) })
         : t('obd.toast_disconnected');
+      kind = justSaved ? 'saved' : 'disconnected';
     }
 
     prev.current = { connected, reconnecting };
     if (message) {
       setToast(message);
+      setToastKind(kind);
       if (timer.current) clearTimeout(timer.current);
       timer.current = setTimeout(
         () => setToast(null),
@@ -64,7 +83,7 @@ function useTransitionToast(): [string | null, () => void] {
     setToast(null);
   };
 
-  return [toast, dismiss];
+  return [toast, toastKind, dismiss];
 }
 
 // Các màn đã tự hiển thị trạng thái OBD - banner ở đó là thừa
@@ -80,7 +99,7 @@ export default function ObdSessionBanner() {
   const t = useT();
   const { connected, reconnecting, vehicleId, vehicleName, sharedByOtherDevice } = useObdSessionStore();
   const [routeName, setRouteName] = useState<string | undefined>(undefined);
-  const [toast, dismissToast] = useTransitionToast();
+  const [toast, toastKind, dismissToast] = useTransitionToast();
   const [lockNoticeDismissed, setLockNoticeDismissed] = useState(false);
 
   // Reset "đã đóng" mỗi khi thông tin khoá đổi (xe khác, hoặc hết bị giữ rồi
@@ -113,6 +132,8 @@ export default function ObdSessionBanner() {
         borderRadius: 10,
         paddingHorizontal: 16,
         paddingVertical: 10,
+        borderWidth: 1,
+        borderColor: (toastKind ? TOAST_BORDER_COLOR[toastKind] : '#94A3B8') + '88',
         elevation: 8,
         shadowColor: '#000',
         shadowOpacity: 0.3,
