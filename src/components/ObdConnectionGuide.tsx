@@ -264,7 +264,7 @@ export default function ObdConnectionGuide({ mode = 'ble' }: { mode?: 'ble' | 'c
       </TouchableOpacity>
       {showTrouble && (
         <View style={[styles.troubleBody, { backgroundColor: colors.card }]}>
-          {[1, 2, 3].map((n) => (
+          {[1, 2, 3, 4].map((n) => (
             <View key={n} style={styles.troubleRow}>
               <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '700' }}>•</Text>
               <Text style={[styles.troubleText, { color: colors.textSecondary }]}>
