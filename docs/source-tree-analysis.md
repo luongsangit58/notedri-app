@@ -181,7 +181,6 @@ src/api/
 ├── notifications.ts   GET/PATCH /notifications/*
 ├── obd.ts             POST /obd2/sessions, GET /obd2/dtc, DTC lookup, session sync
 ├── odometer.ts        GET/POST/PUT/DELETE /odometer/*
-├── payment.ts         Premium payment orders (create, poll status, redeem code)
 ├── profile.ts         GET/PUT /profile, POST /profile/password, POST /profile/avatar,
 │                      POST /profile/push-token, POST /profile/export, DELETE /profile
 ├── refuels.ts         GET/POST/PUT/DELETE /refuels/*

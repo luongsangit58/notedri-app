@@ -26,6 +26,7 @@ Master navigation index for all project documentation.
 | So sánh tính năng app vs web (notedri.com), còn thiếu gì | [feature-parity-vs-web.md](feature-parity-vs-web.md) |
 | So sánh tính năng OBD2 app vs KONNWEI KW905/MAXOBD Pro, còn thiếu gì | [feature-parity-vs-maxobd.md](feature-parity-vs-maxobd.md) |
 | Apple từ chối app vì bán kèm KW906+gói dịch vụ, cách xử lý guideline 3.1.4/NFC/IAP | [apple-hardware-bundle-compliance.md](apple-hardware-bundle-compliance.md) |
+| Spec webhook RevenueCat cho backend Laravel (chưa triển khai) | [revenuecat-iap-backend-spec.md](revenuecat-iap-backend-spec.md) |
 
 ---
 
@@ -140,6 +141,14 @@ KW906 + gói dịch vụ 3/6/12 tháng. Có: nguyên văn guideline 3.1.4 + phâ
 2 nhánh áp dụng, audit toàn bộ tính năng Premium (hardware-dependent hay
 không), lý do bỏ hướng định danh qua MAC Bluetooth, checklist triển khai
 nếu Apple duyệt, và phương án dự phòng Offer Code/Promo Code nếu bị từ chối.
+
+### [revenuecat-iap-backend-spec.md](revenuecat-iap-backend-spec.md)
+
+Spec (không phải code) cho backend Laravel xử lý webhook RevenueCat sau khi
+app bỏ hẳn `/premium/redeem`, chuyển sang IAP thật (Apple/Google Play
+Billing). Endpoint webhook cần tạo, cách map `event.app_user_id` -> `users.id`,
+tái sử dụng field `plan_expires_at` có sẵn (không cần bảng mới), idempotency,
+và ghi chú `/premium/trial` (flow admin duyệt trial cũ) đã dư thừa.
 
 ### [deployment-guide.md](deployment-guide.md)
 

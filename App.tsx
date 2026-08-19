@@ -29,6 +29,7 @@ import { initDeepLinkService } from './src/services/nfc/DeepLinkService';
 import { sendDeviceHeartbeat } from './src/api/devices';
 import { useAuthStore } from './src/store/authStore';
 import { initializeAdMob } from './src/services/ads/admob';
+import { ensureConfigured as ensureRevenueCatConfigured } from './src/services/iap/RevenueCatService';
 import { recoverPendingGoogleAuthIfAny } from './src/services/googleAuthRecovery';
 import AppErrorBoundary from './src/components/AppErrorBoundary';
 import { installGlobalErrorHandler, readLastFatalError } from './src/services/crashLog';
@@ -80,6 +81,7 @@ function AppLoader({ children }: { children: React.ReactNode }) {
       void syncAutoWakeDevices();
     });
     void initializeAdMob();
+    ensureRevenueCatConfigured();
     // Khôi phục đăng nhập/liên kết Google nếu OS kill app giữa lúc đang chờ callback (xem
     // src/services/googleAuthRecovery.ts). Đặt ở đây (không phải LoginScreen/ProfileScreen) vì
     // AppLoader luôn mount lúc cold-start bất kể đã đăng nhập hay chưa - còn Login/Profile thì

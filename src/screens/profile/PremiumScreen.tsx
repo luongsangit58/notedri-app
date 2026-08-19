@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, RefreshControl, Alert, ActivityIndicator,
-  TextInput,
 } from 'react-native';
+import { PurchasesPackage } from 'react-native-purchases';
 import { contentWide } from '../../utils/layout';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -13,13 +13,13 @@ import client from '../../api/client';
 import { authApi } from '../../api/auth';
 import { useAuthStore } from '../../store/authStore';
 import { useColors } from '../../utils/theme';
-import { INPUT_FONT_FAMILY } from '../../utils/font';
 import { useT } from '../../i18n';
 import AppBgPattern from '../../components/AppBgPattern';
+import { getOfferings, purchase as purchasePackage, restorePurchases, isEntitled } from '../../services/iap/RevenueCatService';
 
 const AMBER = '#F59E0B';
 
-// Đồng bộ lại authStore.user sau khi kích hoạt Premium (redeem/dùng thử) để các
+// Đồng bộ lại authStore.user sau khi kích hoạt Premium (mua IAP/dùng thử) để các
 // gate đọc thẳng user?.is_premium (OBD, thành tích, chi tiết xe) mở khoá NGAY, không
 // phải mở lại app.
 async function refreshAuthUser() {
@@ -35,8 +35,6 @@ export default function PremiumScreen() {
   const t = useT();
   const qc = useQueryClient();
   const navigation = useNavigation<any>();
-
-  const [redeemCode, setRedeemCode] = useState('');
 
   // Rà soát 14/8 (góp ý user: rà lại cho khớp thực tế gói Premium + web) - đối
   // chiếu config/plans.php (backend, nguồn xác thực duy nhất): "Tìm gần đây"
@@ -90,16 +88,47 @@ export default function PremiumScreen() {
     },
   });
 
-  const { mutate: redeemMutate, isPending: isRedeeming } = useMutation({
-    mutationFn: () => client.post('/premium/redeem', { code: redeemCode.trim().toUpperCase() }),
-    onSuccess: (res: any) => {
-      Alert.alert(t('premium.notification_title'), res?.data?.message ?? t('premium.notification_title'));
-      setRedeemCode('');
+  // Danh sách gói 3/6/12 tháng lấy trực tiếp từ RevenueCat offering hiện tại (cấu
+  // hình trong RevenueCat dashboard, không hardcode giá/thời hạn ở đây) - packages
+  // rỗng nếu chưa cấu hình offering hoặc API key trống (dev chưa điền .env).
+  const { data: offering } = useQuery({
+    queryKey: ['revenuecat-offering'],
+    queryFn: getOfferings,
+    staleTime: 1000 * 60 * 5,
+  });
+  const packages: PurchasesPackage[] = offering?.availablePackages ?? [];
+
+  // Sau khi mua/restore thành công qua StoreKit/Play Billing, backend cần thời
+  // gian ngắn để nhận webhook RevenueCat rồi mới cập nhật is_premium - refetch
+  // /premium NGAY (thường đã kịp vì RevenueCat gửi webhook gần như tức thì), UI
+  // vẫn đúng dù có trễ vài giây vì user quay lại màn này sẽ tự refetch lần nữa.
+  const { mutate: purchaseMutate, isPending: isPurchasing } = useMutation({
+    mutationFn: (pkg: PurchasesPackage) => purchasePackage(pkg),
+    onSuccess: (info) => {
+      if (isEntitled(info)) {
+        Alert.alert(t('premium.notification_title'), t('premium.purchase_success'));
+      }
       qc.invalidateQueries({ queryKey: ['premium-status'] });
       refreshAuthUser();
     },
     onError: (err: any) => {
-      Alert.alert(t('common.error'), err?.response?.data?.message ?? t('common.error_generic'));
+      if (err?.userCancelled) return;
+      Alert.alert(t('common.error'), err?.message ?? t('common.error_generic'));
+    },
+  });
+
+  const { mutate: restoreMutate, isPending: isRestoring } = useMutation({
+    mutationFn: () => restorePurchases(),
+    onSuccess: (info) => {
+      Alert.alert(
+        t('premium.notification_title'),
+        isEntitled(info) ? t('premium.purchase_success') : t('premium.restore_empty')
+      );
+      qc.invalidateQueries({ queryKey: ['premium-status'] });
+      refreshAuthUser();
+    },
+    onError: (err: any) => {
+      Alert.alert(t('common.error'), err?.message ?? t('common.error_generic'));
     },
   });
 
@@ -269,55 +298,60 @@ export default function PremiumScreen() {
           </View>
         )}
 
-        {/* Redeem code */}
-        {!isPremium && (
+        {/* Gói mua thật qua App Store/Play Billing (RevenueCat) - thay cho redeem code
+            (bị Apple 3.1.1 reject 18/8/2026, xem docs/apple-hardware-bundle-compliance.md).
+            packages rỗng nếu offering chưa cấu hình trong RevenueCat dashboard hoặc
+            API key .env trống - không hiện gì thay vì hiện danh sách trống khó hiểu. */}
+        {!isPremium && packages.length > 0 && (
           <View style={{ marginBottom: 20 }}>
             <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14, marginBottom: 10 }}>
-              {t('premium.redeem_section_title')}
+              {t('premium.plans_section_title')}
             </Text>
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              <TextInput
-                value={redeemCode}
-                onChangeText={setRedeemCode}
-                placeholder={t('premium.redeem_placeholder')}
-                placeholderTextColor={colors.textSecondary}
-                autoCapitalize="characters"
-                style={{
-                  flex: 1,
-                  backgroundColor: colors.surface,
-                  borderRadius: 10,
-                  paddingHorizontal: 14,
-                  paddingVertical: 12,
-                  color: colors.text,
-                  fontSize: 15,
-                  borderWidth: 1,
-                  borderColor: colors.border,
-                  fontFamily: INPUT_FONT_FAMILY,
-                }}
-              />
+            {packages.map((pkg) => (
               <TouchableOpacity
-                onPress={() => redeemMutate()}
-                disabled={isRedeeming || !redeemCode.trim()}
+                key={pkg.identifier}
+                onPress={() => purchaseMutate(pkg)}
+                disabled={isPurchasing}
                 style={{
-                  backgroundColor: AMBER,
-                  borderRadius: 10,
-                  paddingHorizontal: 16,
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  opacity: (isRedeeming || !redeemCode.trim()) ? 0.5 : 1,
+                  flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+                  backgroundColor: colors.surface, borderRadius: 12, padding: 14, marginBottom: 10,
+                  borderWidth: 1, borderColor: colors.border, opacity: isPurchasing ? 0.6 : 1,
                 }}>
-                {isRedeeming
-                  ? <ActivityIndicator size="small" color="#fff" />
-                  : <Text style={{ color: '#fff', fontWeight: '700' }}>{t('premium.redeem_btn')}</Text>
-                }
+                <Text style={{ color: colors.text, fontSize: 14, fontWeight: '700', flex: 1 }}>
+                  {pkg.product.title}
+                </Text>
+                <Text style={{ color: AMBER, fontSize: 15, fontWeight: '800' }}>
+                  {pkg.product.priceString}
+                </Text>
               </TouchableOpacity>
-            </View>
+            ))}
+            {isPurchasing && <ActivityIndicator color={AMBER} style={{ marginTop: 4 }} />}
           </View>
         )}
 
-        {/* Liên hệ gia hạn/hỗ trợ - thay cho Lịch sử thanh toán (đã bỏ cùng SePay).
-            Hiện tại chưa có kênh tự thanh toán trong app: user hết hạn muốn gia hạn
-            phải gửi yêu cầu qua đây, admin liên hệ lại rồi cấp mã kích hoạt. */}
+        {/* Restore Purchases - bắt buộc phải có theo App Store Review Guidelines
+            khi app bán subscription (khách đổi máy/cài lại app vẫn lấy lại được gói
+            đã mua qua đúng Apple ID/Google account, không cần mua lại). */}
+        <TouchableOpacity
+          onPress={() => restoreMutate()}
+          disabled={isRestoring}
+          style={{
+            flexDirection: 'row', alignItems: 'center', gap: 12,
+            backgroundColor: colors.surface, borderRadius: 12, padding: 14, marginBottom: 16,
+            borderWidth: 1, borderColor: colors.border, opacity: isRestoring ? 0.6 : 1,
+          }}>
+          {isRestoring
+            ? <ActivityIndicator size="small" color={AMBER} />
+            : <FontAwesome5 name="rotate-right" size={16} color={AMBER} solid />
+          }
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: colors.text, fontSize: 14, fontWeight: '700' }}>{t('premium.restore_title')}</Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>{t('premium.restore_desc')}</Text>
+          </View>
+        </TouchableOpacity>
+
+        {/* Liên hệ hỗ trợ chung (không còn "cấp mã kích hoạt" - mọi kích hoạt/gia hạn
+            đi qua IAP thật ở trên). */}
         <TouchableOpacity
           onPress={() => navigation.navigate('Feedback', {
             initialLoai: 'khac',

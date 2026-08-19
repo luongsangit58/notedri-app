@@ -129,7 +129,7 @@ Note: `src/screens/dashboard/DashboardScreen.tsx` (an older, more detailed per-v
 - Email/password registration with OTP email verification, and login
 - Google OAuth (expo-auth-session), including linking/unlinking Google from an existing account
 - First-run onboarding carousel with in-flow language switch
-- Premium subscription screen with plan-length picker, redeem codes, and QR bank-transfer payment; payment history screen
+- Premium subscription screen: real Apple/Google In-App Purchase (3/6/12-month auto-renewable subscriptions via RevenueCat), Restore Purchases (see `docs/revenuecat-iap-backend-spec.md`)
 - Tier gating (OBD2 core flow, data export, vehicle limits, history window)
 - Profile editing (name, phone, address, avatar upload)
 - Active device/session management (view, log out one/all, set primary device)

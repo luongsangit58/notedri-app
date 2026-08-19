@@ -43,6 +43,12 @@ Demo account: appreview@notedri.com / Admin@123, pre-loaded with at least one
 vehicle, a few fuel/odometer logs, and one reminder so the reviewer isn't
 looking at an empty state. Sign in with Apple and Sign in with Google are
 also both available on the login screen.
+
+Update (this version): the previous "redeem code" mechanism that unlocked
+Premium outside of In-App Purchase (flagged under Guideline 3.1.1) has been
+completely removed. Premium is now purchased exclusively through StoreKit
+auto-renewable subscriptions (3/6/12-month plans). No external code, link, or
+backend mechanism grants Premium access.
 ```
 
 ---
@@ -56,9 +62,9 @@ Still to verify before submitting (log in and check manually):
 - [ ] Has 2-3 fuel/refuel log entries (so Reports/Stats isn't empty)
 - [ ] Has 1 upcoming maintenance reminder
 - [ ] Consider setting `is_premium = true` on this account so the reviewer can
-  see Premium screens (OBD2 live dashboard UI, data export) without needing
-  to redeem an activation code — optional, but reduces back-and-forth if the
-  reviewer tries a Premium-gated screen
+  see Premium screens (OBD2 live dashboard UI, data export) without needing to
+  complete a real Sandbox purchase — optional, but reduces back-and-forth if
+  the reviewer tries a Premium-gated screen
 
 ---
 

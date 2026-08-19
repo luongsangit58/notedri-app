@@ -379,15 +379,6 @@ export const useCreateRefuel = () => {
 | `POST` | `/ai/nori/chat` | `noriApi.chat()` | Body: `{ messages, tools }`. Backend does **not** execute tools itself — it forwards the conversation to Anthropic and returns `content`/`stop_reason`/`usage`/`request_id` close to verbatim, so the client-side `ConversationManager` runs the tool-calling loop. |
 | `POST` | `/ai/nori/feedback` | `noriApi.feedback()` | Body: `{ request_id, rating: 'good'\|'bad'\|'partial', note? }`. Rates a specific prior response (long-press on a chat bubble); logged server-side alongside the original request/response. |
 
-### Payment
-
-**File:** `src/api/payment.ts` (`paymentApi`)
-
-| Method | Endpoint | Caller | Description |
-|---|---|---|---|
-| `GET` | `/payment/orders` | `paymentApi.orders()` → `PaymentHistoryScreen` | List the user's payment/order history (Premium purchases). |
-| `DELETE` | `/payment/orders/{id}` | `paymentApi.cancel()` | Cancel a pending order. |
-
 ### Other
 
 **Files:** `src/api/fuelTypes.ts`

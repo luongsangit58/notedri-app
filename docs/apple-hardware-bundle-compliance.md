@@ -5,6 +5,53 @@ Ghi lại toàn bộ ngữ cảnh, quyết định và phương án cho đợt t
 trước khi động vào bất kỳ code nào liên quan đến kích hoạt Premium/IAP trên
 iOS.
 
+## 0. QUYẾT ĐỊNH CUỐI CÙNG (2026-08-19) — đã triển khai
+
+Sau khi cân nhắc kỹ toàn bộ phương án né IAP (3.1.4, 3.1.3(b) multiplatform
+recognition, web-claim...), **chốt bỏ hẳn hướng né IAP** — chấp nhận hoa hồng
+Apple/Google, đổi lấy việc loại bỏ hoàn toàn rủi ro pháp lý/review lặp lại.
+Lý do: mọi phương án né IAP đều có điểm chung là "proof mua hàng ngoài App
+Store -> backend tự cấp N tháng Premium", cùng bản chất với Data Transfer
+Code vừa bị 3.1.1 reject dù đổi tên/thêm điều kiện gì đi nữa — rủi ro strike
+lần 2 lên tài khoản dev không đáng để đổi lấy vài % hoa hồng.
+
+**Mô hình mới:**
+- Marketplace (Shopee/TikTok): bán KW906 THUẦN PHẦN CỨNG, không kèm tháng
+  dịch vụ nào.
+- Dashboard/đồng hồ trực tiếp, đọc PID sống: **free vĩnh viễn** cho mọi
+  account có OBD kết nối (đúng nhóm hardware-dependent ở §6 dưới) — không
+  cần hạ tầng gì, không liên quan billing.
+- Premium (báo cáo, Nori AI, thành tựu...): mua qua **Apple IAP thật**
+  (Auto-Renewable Subscription 3/6/12 tháng qua RevenueCat) và **Google Play
+  Billing** tương ứng — không còn redeem code, không còn web-claim, không
+  còn định danh phần cứng cho mục đích cấp quyền.
+- **1 tháng free trial** cấu hình trực tiếp bằng Introductory Offer trên
+  chính sản phẩm subscription (StoreKit/Play Billing) — không phải flow
+  admin duyệt thủ công cũ (`/premium/trial`, xem ghi chú dư thừa trong
+  [revenuecat-iap-backend-spec.md](revenuecat-iap-backend-spec.md)).
+
+**Đã triển khai ở app (2026-08-19):**
+- Gỡ hẳn `/premium/redeem` khỏi `PremiumScreen.tsx` (UI nhập mã kích hoạt).
+- Cài `react-native-purchases` (RevenueCat SDK), wrapper ở
+  `src/services/iap/RevenueCatService.ts`.
+- `authStore.ts` gọi `Purchases.logIn(user.id)`/`logOut()` đúng thời điểm.
+- `PremiumScreen.tsx` liệt kê gói từ RevenueCat Offering + nút mua + nút
+  Restore Purchases.
+- Spec webhook cho backend (chưa code, backend là repo Laravel riêng):
+  [revenuecat-iap-backend-spec.md](revenuecat-iap-backend-spec.md).
+
+**Còn cần làm (ngoài phạm vi sửa code, thuộc App Store Connect/Play
+Console/RevenueCat dashboard — xem hướng dẫn chi tiết trong chat, không lưu ở
+đây vì là thao tác UI console, không phải quyết định kỹ thuật):**
+tạo sản phẩm subscription thật + Review Screenshot (giải quyết 2.1(b)), tạo
+project RevenueCat + Entitlement + Offering, dọn IAP draft cũ trong ASC,
+implement webhook thật ở backend Laravel theo spec trên, test Sandbox trước
+khi submit.
+
+**Câu hỏi 3.1.4 đã gửi Apple (§3 dưới) không còn là trọng tâm** — không cần
+đợi Apple trả lời mới nộp bản mới, vì mô hình mới không còn dựa vào 3.1.4
+nữa. Giữ lại §1-§9 dưới đây làm lịch sử/tài liệu tham khảo.
+
 ---
 
 ## 1. Bối cảnh — thư từ chối 2026-08-18

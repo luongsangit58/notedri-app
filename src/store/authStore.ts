@@ -12,6 +12,7 @@ import { clearObdSessionQueue } from '../services/obd/ObdSessionSyncQueue';
 import { clearDtcReportQueue, clearDtcResolveQueue } from '../services/obd/ObdDtcSyncQueue';
 import { clearPairings } from '../services/obd/pairedDevices';
 import { useObdSessionStore } from './obdSessionStore';
+import { identify as identifyRevenueCat, reset as resetRevenueCat } from '../services/iap/RevenueCatService';
 
 interface User {
   id: number;
@@ -80,6 +81,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       if (token && userStr) {
         const user = JSON.parse(userStr);
         set({ token, user, isLoading: false });
+        identifyRevenueCat(user.id);
         // Tạo/cập nhật device session cho user đã đăng nhập sẵn (heartbeat upsert).
         sendDeviceHeartbeat();
         // Background refresh so plan/limit changes on the server are picked up
@@ -115,6 +117,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       queryClient.clear(); // xoá cache user cũ để không lẫn dữ liệu khi đổi tài khoản
       // Vừa đăng nhập -> user LUÔN là dữ liệu tươi từ server, không phải cache.
       set({ token, user, isLoading: false, userSynced: true });
+      identifyRevenueCat(user.id);
       adoptAccountLocale(user); // đồng bộ ngôn ngữ theo tài khoản
       // Đợi UI/màn hình chuyển hết animation rồi mới xin quyền thông báo: xin quyền
       // ngay giữa lúc set() vừa render lại + điều hướng đang chạy dễ đụng native
@@ -186,6 +189,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Xoá luôn pairing OBD local để user khác trên cùng máy không bị auto-connect
       // hoặc state "đang ghép" của người dùng trước bám lại.
       await clearPairings();
+      await resetRevenueCat();
       set({ user: null, token: null, isLoggingOut: false, userSynced: false });
     }
   },
@@ -197,6 +201,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     queryClient.clear(); // xoá cache user cũ để không lẫn dữ liệu khi đổi tài khoản
     // Vừa đăng nhập (Google) -> user LUÔN là dữ liệu tươi từ server, không phải cache.
     set({ token, user, isLoading: false, userSynced: true });
+    identifyRevenueCat(user.id);
     InteractionManager.runAfterInteractions(() => {
       syncPushTokenIfGranted().catch(() => {});
     });
