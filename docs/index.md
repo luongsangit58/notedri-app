@@ -25,6 +25,7 @@ Master navigation index for all project documentation.
 | Knowledge (từ điển DTC + rule chẩn đoán) đang phủ tới đâu, còn thiếu gì | [knowledge-coverage.md](knowledge-coverage.md) |
 | So sánh tính năng app vs web (notedri.com), còn thiếu gì | [feature-parity-vs-web.md](feature-parity-vs-web.md) |
 | So sánh tính năng OBD2 app vs KONNWEI KW905/MAXOBD Pro, còn thiếu gì | [feature-parity-vs-maxobd.md](feature-parity-vs-maxobd.md) |
+| Apple từ chối app vì bán kèm KW906+gói dịch vụ, cách xử lý guideline 3.1.4/NFC/IAP | [apple-hardware-bundle-compliance.md](apple-hardware-bundle-compliance.md) |
 
 ---
 
@@ -130,6 +131,15 @@ So sánh tính năng OBD2 (xe xăng/dầu) với KONNWEI KW905/MAXOBD và MAXOBD
 2026 — 11 tính năng KW905 đối chiếu NoteDri (9/11 đã có), phân tích "full-system"
 (ABS/SRS/Transmission...) của MAXOBD Pro và rào cản dữ liệu ECU riêng hãng, kèm
 đề xuất thứ tự triển khai nếu theo đuổi hướng full-system.
+
+### [apple-hardware-bundle-compliance.md](apple-hardware-bundle-compliance.md)
+
+Ghi lại đợt Apple từ chối app 2026-08-18 (guideline 2.1(b) IAP chưa nộp, 2.1
+NFC demo video, 3.1.1 "data transfer codes") và mô hình bán kèm KONNWEI
+KW906 + gói dịch vụ 3/6/12 tháng. Có: nguyên văn guideline 3.1.4 + phân tích
+2 nhánh áp dụng, audit toàn bộ tính năng Premium (hardware-dependent hay
+không), lý do bỏ hướng định danh qua MAC Bluetooth, checklist triển khai
+nếu Apple duyệt, và phương án dự phòng Offer Code/Promo Code nếu bị từ chối.
 
 ### [deployment-guide.md](deployment-guide.md)
 
