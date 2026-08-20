@@ -226,10 +226,12 @@ export default function PremiumScreen() {
             docs/apple-hardware-bundle-compliance.md) và cho gói subscription 3/6/12
             tháng cũ (bỏ 19/8/2026, xem docs/revenuecat-iap-backend-spec.md). Dùng thử
             1 tháng đầu tự động cấp khi đăng ký tài khoản (backend), không cần thao tác
-            gì ở đây - hết hạn thì mua Lifetime nếu muốn tiếp tục. packages rỗng nếu
-            offering chưa cấu hình trong RevenueCat dashboard hoặc API key .env trống -
-            không hiện gì thay vì hiện danh sách trống khó hiểu. */}
-        {!isPremium && packages.length > 0 && (
+            gì ở đây. Rà soát 20/8: vẫn hiện nút mua khi đang trong 30 ngày dùng thử
+            (onTrial) - cho phép mua sớm để giữ Premium vĩnh viễn ngay, chỉ ẩn hẳn khi
+            đã mua Lifetime thật (isPremium && !onTrial). packages rỗng nếu offering
+            chưa cấu hình trong RevenueCat dashboard hoặc API key .env trống - không
+            hiện gì thay vì hiện danh sách trống khó hiểu. */}
+        {(!isPremium || onTrial) && packages.length > 0 && (
           <View style={{ marginBottom: 20 }}>
             <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14, marginBottom: 10 }}>
               {t('premium.plans_section_title')}
