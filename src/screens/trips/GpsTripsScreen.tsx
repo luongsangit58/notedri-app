@@ -15,6 +15,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   useWindowDimensions,
+  Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AppBgPattern from '../../components/AppBgPattern';
@@ -24,7 +25,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useColors } from '../../utils/theme';
 import { INPUT_FONT_FAMILY } from '../../utils/font';
 import { useT, useI18nStore } from '../../i18n';
-import { useGpsTripState, useGpsTrips } from '../../hooks/useGpsTrip';
+import { useGpsTripState, useGpsTrips, useGpsAutoRecordToggle } from '../../hooks/useGpsTrip';
 import { useVehicles } from '../../hooks/useVehicles';
 import { devicesApi, DeviceSession } from '../../api/devices';
 import { GpsTripRecord, gpsTripsApi } from '../../api/gpsTrips';
@@ -236,6 +237,7 @@ function ActiveTripCard({ vehicleId }: { vehicleId: number }) {
   const { tripState, tracking, permission, routePoints, interruptedInfo,
     startTracking, stop, pause, resume, resumeInterrupted, saveInterrupted, discardInterrupted,
     checkRecordable } = useGpsTripState();
+  const { enabled: gpsAutoRecordEnabled, toggle: toggleGpsAutoRecord } = useGpsAutoRecordToggle();
 
   const status = tripState?.status ?? 'idle';
   const paused = tripState?.paused ?? false;
@@ -413,6 +415,15 @@ function ActiveTripCard({ vehicleId }: { vehicleId: number }) {
             {isRunning ? t('gps_trips.btn_stop') : t('gps_trips.btn_enable')}
           </Text>
         </TouchableOpacity>
+      </View>
+
+      {/* Cờ riêng "tự ghi khi OBD2 connect" - tách biệt hẳn với nút Bật/Tắt theo dõi
+          ở trên (nút đó chỉ điều khiển PHIÊN hiện tại). Dùng chung state với
+          ProfileScreen qua useGpsAutoRecordToggle() (xem hooks/useGpsTrip.ts) - đổi
+          ở màn nào cũng đồng bộ 2 nơi. */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border }}>
+        <Text style={{ flex: 1, color: colors.text, fontSize: 13 }}>{t('gps_trips.auto_record_on_obd_connect')}</Text>
+        <Switch value={gpsAutoRecordEnabled} onValueChange={toggleGpsAutoRecord} trackColor={{ true: colors.primary }} />
       </View>
 
       {/* Thông báo đang tạm dừng */}

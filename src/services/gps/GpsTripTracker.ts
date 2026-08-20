@@ -985,6 +985,19 @@ export async function disableAutoArm(): Promise<void> {
   await AsyncStorage.setItem(GPS_AUTO_ARM_DISABLED_KEY, '1').catch(() => {});
 }
 
+// Đối xứng với disableAutoArm() - dùng cho switch bật lại "Tự ghi hành trình
+// GPS" ở ProfileScreen (20/8). Chỉ xoá cờ, KHÔNG tự bật tracking ngay - lần
+// autoArmIfReady() tự nhiên tiếp theo (mở app/OBD2 connect) sẽ tự lo phần đó,
+// giống hệt logic requestPermissionsAndStart() đã làm khi user bấm "Bật theo
+// dõi" thủ công.
+export async function enableAutoArm(): Promise<void> {
+  await AsyncStorage.removeItem(GPS_AUTO_ARM_DISABLED_KEY).catch(() => {});
+}
+
+export async function isAutoArmDisabled(): Promise<boolean> {
+  return !!(await AsyncStorage.getItem(GPS_AUTO_ARM_DISABLED_KEY).catch(() => null));
+}
+
 /**
  * Rà soát (user báo: có popup "xe đang được ghi hành trình ở máy khác" nhưng
  * không rõ việc này có chặn ghi hành trình không) - CÓ, requestPermissionsAndStart()

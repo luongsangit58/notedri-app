@@ -19,6 +19,7 @@ import { useColors, useThemeStore } from '../../utils/theme';
 import { INPUT_FONT_FAMILY } from '../../utils/font';
 import { useI18nStore, useLang, useT } from '../../i18n';
 import { maybeNudgeAutoWakeNotificationPermission } from '../../services/obd/autoWakeNotificationNudge';
+import { useGpsAutoRecordToggle } from '../../hooks/useGpsTrip';
 import { markGooglePending, clearGooglePending } from '../../services/googleAuthRecovery';
 import { PLAY_STORE_URL } from './FeedbackScreen';
 import { safeFaIcon } from '../../utils/faIcon';
@@ -50,6 +51,8 @@ export default function ProfileScreen() {
   const t = useT();
   const autoConnectEnabled = useObdAutoConnectSettingsStore((s) => s.enabled);
   const setAutoConnectEnabled = useObdAutoConnectSettingsStore((s) => s.setEnabled);
+  // Cờ dùng chung với ActiveTripCard (GpsTripsScreen) - xem useGpsAutoRecordToggle().
+  const { enabled: gpsAutoRecordEnabled, toggle: handleToggleGpsAutoRecord } = useGpsAutoRecordToggle();
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState('');
   const [deleteError, setDeleteError] = useState('');
@@ -382,6 +385,17 @@ export default function ProfileScreen() {
                   setAutoConnectEnabled(next);
                   if (next) void maybeNudgeAutoWakeNotificationPermission(t);
                 }}
+                trackColor={{ true: '#3B82F6' }}
+              />
+            )}
+          />
+          <MenuItem
+            icon={<FontAwesome5 name="route" size={16} color={colors.textSecondary} solid />}
+            label={t('profile.gps_auto_record')}
+            right={(
+              <Switch
+                value={gpsAutoRecordEnabled}
+                onValueChange={handleToggleGpsAutoRecord}
                 trackColor={{ true: '#3B82F6' }}
               />
             )}

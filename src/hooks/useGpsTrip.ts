@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { AppState, AppStateStatus } from 'react-native';
+import { AppState, AppStateStatus, Alert } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   getTripState,
@@ -16,6 +17,9 @@ import {
   checkInterruptedTrip,
   resumeInterruptedTrip,
   renewTrackingLock,
+  isAutoArmDisabled,
+  enableAutoArm,
+  disableAutoArm,
   GpsTripState,
   GpsTripSummary,
   RoutePoint,
@@ -25,6 +29,7 @@ import {
 import { flushPendingGpsTrips } from '../services/gps/GpsTripSyncQueue';
 import { gpsTripsApi } from '../api/gpsTrips';
 import { getDeviceId } from '../utils/deviceId';
+import { useT } from '../i18n';
 
 const POLL_INTERVAL_MS = 4_000;
 
@@ -168,6 +173,53 @@ export function useGpsTripState() {
     resumeInterrupted, saveInterrupted, discardInterrupted,
     checkRecordable, updateVehicle, refresh, refreshReadiness,
   };
+}
+
+// Dùng chung cho ProfileScreen (Cài đặt > Tự ghi hành trình GPS khi kết nối
+// OBD2) VÀ ActiveTripCard (GpsTripsScreen) - 1 chỗ duy nhất để tránh 2 màn có
+// logic xác nhận save/discard lệch nhau theo thời gian. Tự đọc lại cờ
+// GPS_AUTO_ARM_DISABLED_KEY (GpsTripTracker.ts) mỗi lần màn hình chứa nó được
+// focus (useFocusEffect) - phản ánh đúng nếu user đổi từ MÀN KIA.
+export function useGpsAutoRecordToggle() {
+  const t = useT();
+  const [enabled, setEnabled] = useState(true);
+
+  useFocusEffect(useCallback(() => {
+    isAutoArmDisabled().then((disabled) => setEnabled(!disabled));
+  }, []));
+
+  const toggle = useCallback(async (next: boolean) => {
+    if (next) {
+      await enableAutoArm();
+      setEnabled(true);
+      return;
+    }
+    // Tắt: có chuyến đang ghi được thì hỏi lưu/bỏ trước (đúng luồng "Tắt theo
+    // dõi" cũ ở GpsTripsScreen) - không tự ý xoá dữ liệu hành trình đang dở.
+    const recordable = await hasRecordableTrip().catch(() => false);
+    if (!recordable) {
+      await disableAutoArm();
+      await stopTracking(true).catch(() => {});
+      setEnabled(false);
+      return;
+    }
+    Alert.alert(t('gps_trips.end_trip_title'), t('gps_trips.end_trip_body'), [
+      { text: t('gps_trips.keep_recording'), style: 'cancel' },
+      { text: t('gps_trips.discard_no_save'), style: 'destructive', onPress: async () => {
+        await disableAutoArm();
+        await stopTracking(false).catch(() => {});
+        setEnabled(false);
+      } },
+      { text: t('common.save'), onPress: async () => {
+        await disableAutoArm();
+        const saved = await stopTracking(true).catch(() => null);
+        setEnabled(false);
+        if (saved) Alert.alert(t('gps_trips.saved_title'), t('gps_trips.saved_body', { km: Number(saved.distanceKm).toFixed(1) }));
+      } },
+    ]);
+  }, [t]);
+
+  return { enabled, toggle };
 }
 
 export function useGpsTrips(vehicleId: number, page = 1) {

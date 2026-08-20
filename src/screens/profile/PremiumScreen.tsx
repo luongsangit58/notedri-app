@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, RefreshControl, Alert, ActivityIndicator,
+  View, Text, ScrollView, TouchableOpacity, RefreshControl, Alert, ActivityIndicator, Platform,
 } from 'react-native';
-import { PurchasesPackage } from 'react-native-purchases';
+import { PurchasesPackage, CustomerInfo } from 'react-native-purchases';
 import { contentWide } from '../../utils/layout';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -14,7 +14,10 @@ import { useAuthStore } from '../../store/authStore';
 import { useColors } from '../../utils/theme';
 import { useT } from '../../i18n';
 import AppBgPattern from '../../components/AppBgPattern';
-import { getOfferings, purchase as purchasePackage, restorePurchases, isEntitled } from '../../services/iap/RevenueCatService';
+import {
+  getOfferings, purchase as purchasePackage, restorePurchases, isEntitled,
+  presentCodeRedemptionSheet, addCustomerInfoUpdateListener, removeCustomerInfoUpdateListener,
+} from '../../services/iap/RevenueCatService';
 
 const AMBER = '#F59E0B';
 
@@ -115,6 +118,29 @@ export default function PremiumScreen() {
       qc.invalidateQueries({ queryKey: ['premium-status'] });
       refreshAuthUser();
     },
+    onError: (err: any) => {
+      Alert.alert(t('common.error'), err?.message ?? t('common.error_generic'));
+    },
+  });
+
+  // Redemption qua sheet hệ thống (mở bằng redeemMutate bên dưới) chạy ngoài luồng
+  // JS - lắng nghe CustomerInfo đổi để tự làm mới is_premium ngay khi StoreKit xác
+  // nhận xong, không cần user tự kéo refresh (xem RevenueCatService.ts).
+  useEffect(() => {
+    const listener = (info: CustomerInfo) => {
+      if (isEntitled(info)) {
+        qc.invalidateQueries({ queryKey: ['premium-status'] });
+        refreshAuthUser();
+      }
+    };
+    addCustomerInfoUpdateListener(listener);
+    return () => removeCustomerInfoUpdateListener(listener);
+  }, [qc]);
+
+  // Bán kèm KW906 trên Shopee - user nhập mã Offer Code (Apple StoreKit) thay vì
+  // mua lần 2. iOS-only, xem presentCodeRedemptionSheet() trong RevenueCatService.ts.
+  const { mutate: redeemMutate, isPending: isRedeeming } = useMutation({
+    mutationFn: () => presentCodeRedemptionSheet(),
     onError: (err: any) => {
       Alert.alert(t('common.error'), err?.message ?? t('common.error_generic'));
     },
@@ -256,6 +282,30 @@ export default function PremiumScreen() {
             ))}
             {isPurchasing && <ActivityIndicator color={AMBER} style={{ marginTop: 4 }} />}
           </View>
+        )}
+
+        {/* Nhập mã ưu đãi (Offer Code) - iOS only. Dành cho khách mua KW906 kèm gói
+            Premium trên Shopee: nhập mã thay vì trả tiền qua nút mua ở trên. Chỉ
+            hiện khi chưa phải Premium thật (giữ nguyên tắc ẩn/hiện như khối packages
+            phía trên) - đổi mã cho tài khoản đã Premium không có ý nghĩa gì. */}
+        {Platform.OS === 'ios' && (!isPremium || onTrial) && (
+          <TouchableOpacity
+            onPress={() => redeemMutate()}
+            disabled={isRedeeming}
+            style={{
+              flexDirection: 'row', alignItems: 'center', gap: 12,
+              backgroundColor: colors.surface, borderRadius: 12, padding: 14, marginBottom: 16,
+              borderWidth: 1, borderColor: colors.border, opacity: isRedeeming ? 0.6 : 1,
+            }}>
+            {isRedeeming
+              ? <ActivityIndicator size="small" color={AMBER} />
+              : <FontAwesome5 name="ticket-alt" size={16} color={AMBER} solid />
+            }
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: colors.text, fontSize: 14, fontWeight: '700' }}>{t('premium.redeem_code_title')}</Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>{t('premium.redeem_code_desc')}</Text>
+            </View>
+          </TouchableOpacity>
         )}
 
         {/* Restore Purchases - bắt buộc phải có theo App Store Review Guidelines

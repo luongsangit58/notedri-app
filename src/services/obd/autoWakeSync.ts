@@ -1,32 +1,24 @@
 import { Platform } from 'react-native';
 import NotedriBtPairing from '../../../modules/notedri-bt-pairing/src/NotedriBtPairingModule';
-import { getAllPairedDevices } from './pairedDevices';
-import { useObdAutoConnectSettingsStore } from '../../store/obdAutoConnectSettingsStore';
 
-// Đồng bộ danh sách MAC (Classic)/deviceId (BLE) đủ điều kiện "tự thức app khi
-// Bluetooth kết nối lại KW906" (AclConnectedReceiver/BleScanResultReceiver
-// phía native, xem modules/notedri-bt-pairing) - gọi lại mỗi khi pairing hoặc
-// switch auto-connect đổi (savePairing/removePairingForVehicle/clearPairings/
-// setAutoConnect ở pairedDevices.ts, setEnabled ở obdAutoConnectSettingsStore.ts)
-// + 1 lần lúc khởi động app (App.tsx) để đối soát lại cache native (phòng lần
-// đồng bộ trước lỗi, hoặc app vừa cài lại).
+// Rà soát 20/8 (user báo lo ngại: tính năng "tự mở app khi Bluetooth kết nối
+// lại OBD2 đã ghép nối" - dùng ACL_CONNECTED tĩnh + BLE PendingIntent scan nền,
+// xem modules/notedri-bt-pairing - khiến user cảm giác app "luôn luôn chạy nền"
+// dù chưa từng tự tay mở app/quét NFC). TẮT TẠM THỜI ở đây - luôn đồng bộ 2
+// danh sách MAC RỖNG xuống native, bất kể trạng thái pairing/switch auto-connect
+// thật sự là gì. Cache rỗng khiến AclConnectedReceiver/BleScanResultReceiver
+// phía native không còn khớp thiết bị nào để báo, và BleAutoWakeScanner.arm()
+// (gọi với bleMacs rỗng) tự disarm() - vô hiệu hoá hoàn toàn 2 đường vào nền mà
+// KHÔNG cần đổi AndroidManifest/receiver native (an toàn đẩy qua OTA JS update,
+// không cần chờ duyệt lại Play Store). Máy đã cài bản có cache MAC cũ (từ commit
+// 6150107) cũng được dọn sạch ngay lần gọi tiếp theo (App.tsx lúc khởi động).
 //
-// KHÔNG kiểm tra isPremium/token/sessionSuppressed ở đây - cache này chỉ quyết
-// định "có đáng mở app lên không", còn mọi điều kiện kết nối thật (premium,
-// đăng nhập, tạm dừng trong phiên...) vẫn do ObdAutoConnect.tsx tự kiểm tra lại
-// sau khi app đã mở, giống hệt lúc user mở app tay - không nhân bản logic đó
-// ra native để tránh 2 nơi có thể lệch nhau.
+// Auto-connect khi MỞ APP (ObdAutoConnect.tsx) hoặc quét NFC không bị ảnh hưởng
+// - đây vẫn là 2 đường vào hợp lệ duy nhất, đúng yêu cầu "phải mở app mới auto
+// connect". Muốn bật lại tính năng nền này: khôi phục thân hàm về logic đọc
+// getAllPairedDevices()/useObdAutoConnectSettingsStore ở commit 6150107.
 export async function syncAutoWakeDevices(): Promise<void> {
   if (Platform.OS !== 'android') return;
 
-  const masterEnabled = useObdAutoConnectSettingsStore.getState().enabled;
-  const devices = masterEnabled ? await getAllPairedDevices() : [];
-  // !== false: cùng quy ước với getAutoConnectPairing() ở pairedDevices.ts -
-  // pairing cũ (lưu trước 31/7) không có field autoConnect coi như đã bật.
-  const eligible = devices.filter((d) => d.autoConnect !== false);
-
-  const classicMacs = eligible.filter((d) => d.transport === 'classic').map((d) => d.bleDeviceId);
-  const bleMacs = eligible.filter((d) => (d.transport ?? 'ble') === 'ble').map((d) => d.bleDeviceId);
-
-  await NotedriBtPairing.syncAutoWakeDevices(classicMacs, bleMacs).catch(() => {});
+  await NotedriBtPairing.syncAutoWakeDevices([], []).catch(() => {});
 }

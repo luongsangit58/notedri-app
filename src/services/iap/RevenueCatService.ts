@@ -1,5 +1,5 @@
 import { Platform } from 'react-native';
-import Purchases, { CustomerInfo, PurchasesOffering, PurchasesPackage } from 'react-native-purchases';
+import Purchases, { CustomerInfo, CustomerInfoUpdateListener, PurchasesOffering, PurchasesPackage } from 'react-native-purchases';
 
 // Entitlement identifier phải KHỚP CHÍNH XÁC (phân biệt hoa/thường) với entitlement
 // tạo trong RevenueCat dashboard (Entitlements -> "PREMIUM", xác nhận 19/8/2026 -
@@ -68,6 +68,44 @@ export async function purchase(pkg: PurchasesPackage): Promise<CustomerInfo> {
 
 export async function restorePurchases(): Promise<CustomerInfo> {
   return Purchases.restorePurchases();
+}
+
+/**
+ * Bán kèm KW906 trên Shopee (20/8): user mua thiết bị + gói Premium nhập mã Offer
+ * Code (Apple StoreKit) thay vì trả tiền lần 2 qua purchase() ở trên - đúng tài
+ * liệu RevenueCat "ios-subscription-offers#offer-codes". iOS-only (native
+ * SKPaymentQueue.presentCodeRedemptionSheet(), Android không có khái niệm này -
+ * Play Console có cơ chế promo code riêng, chưa làm ở đây). Hàm CHỈ mở sheet hệ
+ * thống - resolve ngay khi sheet HIỆN RA, không đợi user nhập/xác nhận xong (đó
+ * là lý do cần addCustomerInfoUpdateListener bên dưới để biết lúc nào entitlement
+ * thực sự đổi).
+ */
+export async function presentCodeRedemptionSheet(): Promise<void> {
+  if (Platform.OS !== 'ios') return;
+  ensureConfigured();
+  // Khác purchase()/restorePurchases() (không tự kiểm tra configured, để lệnh
+  // gọi SDK tự throw) - ở đây phải tự throw rõ ràng vì thiếu key .env sẽ khiến
+  // Purchases.presentCodeRedemptionSheet() bên dưới ÂM THẦM không làm gì (native
+  // API không throw cho trường hợp SDK chưa configure() như purchasePackage()) -
+  // nút "Nhập mã ưu đãi" sẽ trông như app đứng nếu không có throw này để
+  // onError ở PremiumScreen hiện Alert.
+  if (!configured) throw new Error('RevenueCat chưa được cấu hình (thiếu API key)');
+  await Purchases.presentCodeRedemptionSheet();
+}
+
+/**
+ * Redemption qua sheet hệ thống (trên) chạy hoàn toàn ngoài luồng JS - không có
+ * callback "user vừa đổi mã xong". RevenueCat tự đẩy CustomerInfo mới qua listener
+ * này ngay khi StoreKit xác nhận giao dịch, kể cả khi app đang nền lúc user gõ mã
+ * xong trong sheet - PremiumScreen dùng để tự làm mới is_premium mà không cần
+ * user tự kéo refresh tay.
+ */
+export function addCustomerInfoUpdateListener(listener: CustomerInfoUpdateListener): void {
+  Purchases.addCustomerInfoUpdateListener(listener);
+}
+
+export function removeCustomerInfoUpdateListener(listener: CustomerInfoUpdateListener): void {
+  Purchases.removeCustomerInfoUpdateListener(listener);
 }
 
 export function isEntitled(info: CustomerInfo): boolean {
