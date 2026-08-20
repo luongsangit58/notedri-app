@@ -143,6 +143,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         syncPushTokenIfGranted().catch(() => {});
       });
       sendDeviceHeartbeat();
+      // Rà soát 20/8: RegisterScreen có nhánh dự phòng gọi login() thay vì setSession()
+      // khi response verify-otp thiếu token/data - không có nhánh này thì tài khoản MỚI
+      // đăng ký qua đường đó sẽ không được báo "tặng 30 ngày Premium" dù backend vẫn cấp
+      // đúng. Gọi lại đây cho nhất quán - hàm tự chặn hiện lặp lại (AsyncStorage theo
+      // user.id), không ảnh hưởng user cũ đăng nhập lại bình thường.
+      maybeAnnounceSignupTrial(user);
     } catch (error: any) {
       const message = error.response?.data?.message ?? useI18nStore.getState().t('auth.login_failed');
       set({ isLoading: false, error: message });
