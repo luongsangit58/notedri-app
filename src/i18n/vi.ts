@@ -349,7 +349,6 @@ const vi = {
   // Premium
   "premium.title": "Premium",
   "premium.tagline": "Kết nối OBD2, hỏi đáp cùng Nori AI, không giới hạn xe & lịch sử.",
-  "premium.trial_cta": "Dùng thử {{days}} ngày miễn phí",
   "premium.pricing_note": "Giá chính thức sẽ được thông báo khi ra mắt.\nNgười dùng sớm được ưu đãi đặc biệt.",
 
   // Feedback
@@ -1206,13 +1205,6 @@ const vi = {
   "premium.active_label": "Premium kích hoạt",
   "premium.trial_active_label": "Đang dùng thử Premium",
   "premium.expires_label": "Hết hạn: {{date}}",
-  "premium.pending_title": "Yêu cầu đang chờ duyệt",
-  "premium.pending_desc": "Admin sẽ xét duyệt trong vòng 1-2 ngày làm việc.",
-  "premium.request_flow_desc": "Gửi yêu cầu -> admin xét duyệt -> nhận email xác nhận",
-  "premium.trial_used_msg": "Bạn đã từng dùng thử Premium. Mỗi tài khoản chỉ 1 lần.",
-  "premium.request_pending_label": "Đang chờ xét duyệt",
-  "premium.request_approved_label": "Đã được duyệt",
-  "premium.request_rejected_label": "Không được duyệt lần trước",
   "premium.notification_title": "Thông báo",
   "premium.plans_section_title": "Chọn gói Premium",
   "premium.purchase_success": "Kích hoạt Premium thành công!",
@@ -1728,6 +1720,8 @@ const vi = {
   // ==== i18n audit: hardcoded strings wrapped ====
   "auth.login_google_failed": "Đăng nhập Google thất bại",
   "auth.login_apple_failed": "Đăng nhập Apple thất bại",
+  "auth.trial_welcome_title": "🎉 Chào mừng đến với NoteDri!",
+  "auth.trial_welcome_body": "Bạn được tặng 30 ngày dùng thử Premium miễn phí - trải nghiệm ngay Nori AI, kết nối OBD2 và mọi tính năng cao cấp.",
   "auth.slogan": "Chủ động vận hành, tối ưu chi phí",
   "management.tab_health": "Kiểm tra xe",
   "management.tab_reminders": "Lời nhắc",

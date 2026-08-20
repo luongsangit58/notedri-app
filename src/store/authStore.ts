@@ -1,11 +1,12 @@
 import { create } from 'zustand';
-import { InteractionManager } from 'react-native';
+import { InteractionManager, Alert } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authApi } from '../api/auth';
 import { queryClient } from '../api/queryClient';
 import { storage } from '../utils/storage';
 import { syncPushTokenIfGranted } from '../utils/pushNotifications';
 import { sendDeviceHeartbeat } from '../api/devices';
-import { useI18nStore } from '../i18n';
+import { useI18nStore, translate } from '../i18n';
 import { clearGpsQueue } from '../services/gps/GpsTripSyncQueue';
 import { clearObdQueue } from '../services/obd/TripSyncQueue';
 import { clearObdSessionQueue } from '../services/obd/ObdSessionSyncQueue';
@@ -21,9 +22,25 @@ interface User {
   avatar?: string;
   plan?: string;
   is_premium?: boolean;
+  on_trial?: boolean;
   vehicle_limit?: number;
   can_add_vehicle?: boolean;
   locale?: 'vi' | 'en' | null;
+}
+
+// Báo 1 LẦN DUY NHẤT/tài khoản việc đăng ký được tặng Premium 30 ngày (backend tự cấp ở
+// UserObserver::created(), xem docs/apple-hardware-bundle-compliance.md) - guard bằng
+// AsyncStorage theo user.id để không hiện lại mỗi lần mở app trong suốt 30 ngày dùng thử.
+async function maybeAnnounceSignupTrial(user: User): Promise<void> {
+  if (!user.on_trial) return;
+  const key = `trial_welcome_shown_${user.id}`;
+  try {
+    if (await AsyncStorage.getItem(key)) return;
+    await AsyncStorage.setItem(key, '1');
+  } catch {
+    return; // Lỗi đọc/ghi cờ - thà bỏ qua còn hơn hiện lặp lại nhiều lần.
+  }
+  Alert.alert(translate('auth.trial_welcome_title'), translate('auth.trial_welcome_body'));
 }
 
 // Áp ngôn ngữ đã lưu ở TÀI KHOẢN vào UI app (chỉ khi user đã chọn rõ vi/en) -> đồng bộ
@@ -205,6 +222,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     InteractionManager.runAfterInteractions(() => {
       syncPushTokenIfGranted().catch(() => {});
     });
+    maybeAnnounceSignupTrial(user);
   },
   clearError: () => set({ error: null }),
 }));

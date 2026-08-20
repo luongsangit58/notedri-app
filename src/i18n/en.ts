@@ -348,7 +348,6 @@ const en = {
   // Premium
   "premium.title": "Premium",
   "premium.tagline": "Connect OBD2, chat with Nori AI, unlimited vehicles & history.",
-  "premium.trial_cta": "Try free for {{days}} days",
   "premium.pricing_note": "Official pricing will be announced at launch.\nEarly users get special rates.",
 
   // Feedback
@@ -1206,13 +1205,6 @@ const en = {
   "premium.active_label": "Premium active",
   "premium.trial_active_label": "Premium trial active",
   "premium.expires_label": "Expires: {{date}}",
-  "premium.pending_title": "Request pending approval",
-  "premium.pending_desc": "Admin will review within 1-2 business days.",
-  "premium.request_flow_desc": "Submit request -> admin reviews -> receive confirmation email",
-  "premium.trial_used_msg": "You have already used a Premium trial. One per account.",
-  "premium.request_pending_label": "Pending approval",
-  "premium.request_approved_label": "Approved",
-  "premium.request_rejected_label": "Not approved previously",
   "premium.notification_title": "Notice",
   "premium.plans_section_title": "Choose a Premium plan",
   "premium.purchase_success": "Premium activated successfully!",
@@ -1722,6 +1714,8 @@ const en = {
   // ==== i18n audit: hardcoded strings wrapped ====
   "auth.login_google_failed": "Google sign-in failed",
   "auth.login_apple_failed": "Apple sign-in failed",
+  "auth.trial_welcome_title": "🎉 Welcome to NoteDri!",
+  "auth.trial_welcome_body": "You've been given 30 days of free Premium - try Nori AI, OBD2 connection and every premium feature right away.",
   "auth.slogan": "Drive Smarter, Optimize Costs",
   "management.tab_health": "Vehicle check",
   "management.tab_reminders": "Reminders",

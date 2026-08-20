@@ -79,6 +79,20 @@ export const useI18nStore = create<I18nState>((set, get) => ({
 
 export const useLang = () => useI18nStore(s => s.lang);
 
+/** Bản không-hook của useT() - dùng ở nơi không phải component React (Zustand store actions,
+ * background services...) nơi không gọi được hook. Đọc lang hiện tại trực tiếp từ store. */
+export function translate(key: Key, params?: Record<string, string | number>): string {
+  const lang = useI18nStore.getState().lang;
+  const dict = translations[lang] as Record<string, string>;
+  let str = dict[key] ?? (translations.vi as Record<string, string>)[key] ?? key;
+  if (params) {
+    Object.entries(params).forEach(([k, v]) => {
+      str = str.replace(new RegExp(`\\{\\{${k}\\}\\}`, 'g'), String(v));
+    });
+  }
+  return str;
+}
+
 /**
  * Hook — returns a translation function that re-creates when `lang` changes.
  * Using useLang() as a dependency ensures Zustand re-renders consumers on lang change.

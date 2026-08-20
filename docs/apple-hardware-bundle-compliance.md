@@ -5,7 +5,7 @@ Ghi lại toàn bộ ngữ cảnh, quyết định và phương án cho đợt t
 trước khi động vào bất kỳ code nào liên quan đến kích hoạt Premium/IAP trên
 iOS.
 
-## 0. QUYẾT ĐỊNH CUỐI CÙNG (2026-08-19) — đã triển khai
+## 0. QUYẾT ĐỊNH CUỐI CÙNG (2026-08-19, cập nhật 2026-08-20) — đã triển khai
 
 Sau khi cân nhắc kỹ toàn bộ phương án né IAP (3.1.4, 3.1.3(b) multiplatform
 recognition, web-claim...), **chốt bỏ hẳn hướng né IAP** — chấp nhận hoa hồng
@@ -15,38 +15,54 @@ Store -> backend tự cấp N tháng Premium", cùng bản chất với Data Tra
 Code vừa bị 3.1.1 reject dù đổi tên/thêm điều kiện gì đi nữa — rủi ro strike
 lần 2 lên tài khoản dev không đáng để đổi lấy vài % hoa hồng.
 
+**Cập nhật 2026-08-20 — đổi mô hình giá:** bỏ hẳn subscription 3/6/12 tháng
+(triển khai 2026-08-19), thay bằng **1 gói Lifetime duy nhất, mua 1 lần,
+129.000đ, không hết hạn**. Mọi tài khoản mới (email/OTP, Google, Apple — cả
+web lẫn app) được **tự động cấp 30 ngày Premium miễn phí ngay khi đăng ký**
+(không còn nút "yêu cầu dùng thử" chờ admin duyệt) — hết 30 ngày, muốn tiếp
+tục thì mua Lifetime. Chi tiết đầy đủ:
+[revenuecat-iap-backend-spec.md](revenuecat-iap-backend-spec.md).
+
 **Mô hình mới:**
 - Marketplace (Shopee/TikTok): bán KW906 THUẦN PHẦN CỨNG, không kèm tháng
   dịch vụ nào.
 - Dashboard/đồng hồ trực tiếp, đọc PID sống: **free vĩnh viễn** cho mọi
   account có OBD kết nối (đúng nhóm hardware-dependent ở §6 dưới) — không
   cần hạ tầng gì, không liên quan billing.
-- Premium (báo cáo, Nori AI, thành tựu...): mua qua **Apple IAP thật**
-  (Auto-Renewable Subscription 3/6/12 tháng qua RevenueCat) và **Google Play
-  Billing** tương ứng — không còn redeem code, không còn web-claim, không
-  còn định danh phần cứng cho mục đích cấp quyền.
-- **1 tháng free trial** cấu hình trực tiếp bằng Introductory Offer trên
-  chính sản phẩm subscription (StoreKit/Play Billing) — không phải flow
-  admin duyệt thủ công cũ (`/premium/trial`, xem ghi chú dư thừa trong
-  [revenuecat-iap-backend-spec.md](revenuecat-iap-backend-spec.md)).
+- Premium (báo cáo, Nori AI, thành tựu...): tự động free 30 ngày khi đăng ký
+  tài khoản; sau đó mua qua **Apple IAP thật** (non-subscription Lifetime,
+  129k, qua RevenueCat) và **Google Play Billing** tương ứng — không còn
+  redeem code, không còn web-claim, không còn định danh phần cứng cho mục
+  đích cấp quyền.
 
-**Đã triển khai ở app (2026-08-19):**
+**Đã triển khai ở app (2026-08-19, cập nhật 2026-08-20):**
 - Gỡ hẳn `/premium/redeem` khỏi `PremiumScreen.tsx` (UI nhập mã kích hoạt).
 - Cài `react-native-purchases` (RevenueCat SDK), wrapper ở
   `src/services/iap/RevenueCatService.ts`.
-- `authStore.ts` gọi `Purchases.logIn(user.id)`/`logOut()` đúng thời điểm.
-- `PremiumScreen.tsx` liệt kê gói từ RevenueCat Offering + nút mua + nút
-  Restore Purchases.
-- Spec webhook cho backend (chưa code, backend là repo Laravel riêng):
-  [revenuecat-iap-backend-spec.md](revenuecat-iap-backend-spec.md).
+- `authStore.ts` gọi `Purchases.logIn(user.id)`/`logOut()` đúng thời điểm,
+  và tự hiện thông báo chào mừng "tặng 30 ngày Premium" 1 lần/tài khoản khi
+  `on_trial: true` (mọi luồng đăng ký: OTP, Google, Apple).
+- `PremiumScreen.tsx` bỏ hẳn nút "yêu cầu dùng thử" thủ công (tự động cấp ở
+  backend), chỉ còn liệt kê gói (giờ chỉ có Lifetime) từ RevenueCat Offering
+  + nút mua + nút Restore Purchases.
+- Email chào mừng (`emails/welcome.blade.php` + bản EN) báo rõ ngày hết hạn
+  30 ngày miễn phí.
+
+**Đã triển khai ở backend `notedri` (2026-08-20):**
+- `UserObserver::grantSignupTrial()` tự cấp 30 ngày cho mọi user mới.
+- `POST /api/v1/webhooks/revenuecat` (`RevenueCatWebhookController`) — nhận
+  sự kiện mua Lifetime thật, set `plan_expires_at = null` (vĩnh viễn).
+- Xoá hẳn `/premium/trial` (API) và `premium/request` (web) — không chỉ ẩn UI.
+- `config/plans.php` đổi giá 1/3/6/12 tháng thành 1 giá Lifetime (129k).
 
 **Còn cần làm (ngoài phạm vi sửa code, thuộc App Store Connect/Play
-Console/RevenueCat dashboard — xem hướng dẫn chi tiết trong chat, không lưu ở
-đây vì là thao tác UI console, không phải quyết định kỹ thuật):**
-tạo sản phẩm subscription thật + Review Screenshot (giải quyết 2.1(b)), tạo
-project RevenueCat + Entitlement + Offering, dọn IAP draft cũ trong ASC,
-implement webhook thật ở backend Laravel theo spec trên, test Sandbox trước
-khi submit.
+Console/RevenueCat dashboard — xem chi tiết trong
+[revenuecat-iap-backend-spec.md](revenuecat-iap-backend-spec.md)):**
+tạo sản phẩm Lifetime thật (non-subscription) + Review Screenshot (giải
+quyết 2.1(b)), xoá/không dùng lại 3 sản phẩm subscription cũ, cấu hình
+`REVENUECAT_WEBHOOK_SECRET`, test Sandbox trước khi submit. **Mở, chưa
+quyết:** web (notedri.com) chưa có cổng thanh toán tự động cho Lifetime —
+đang dùng lại kênh liên hệ thủ công có sẵn, xem §5 trong file spec.
 
 **Câu hỏi 3.1.4 đã gửi Apple (§3 dưới) không còn là trọng tâm** — không cần
 đợi Apple trả lời mới nộp bản mới, vì mô hình mới không còn dựa vào 3.1.4

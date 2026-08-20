@@ -7,7 +7,6 @@ import { contentWide } from '../../utils/layout';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import client from '../../api/client';
 import { authApi } from '../../api/auth';
@@ -75,22 +74,11 @@ export default function PremiumScreen() {
     staleTime: 1000 * 60 * 5,
   });
 
-  const { mutate: requestTrial, isPending } = useMutation({
-    mutationFn: () => client.post('/premium/trial', { context: 'mobile' }),
-    onSuccess: (res: any) => {
-      const msg = res?.data?.message ?? t('common.send');
-      Alert.alert(t('premium.notification_title'), msg);
-      qc.invalidateQueries({ queryKey: ['premium-status'] });
-    },
-    onError: (err: any) => {
-      const msg = err?.response?.data?.message ?? t('common.error_generic');
-      Alert.alert(t('premium.notification_title'), msg);
-    },
-  });
-
-  // Danh sách gói 3/6/12 tháng lấy trực tiếp từ RevenueCat offering hiện tại (cấu
-  // hình trong RevenueCat dashboard, không hardcode giá/thời hạn ở đây) - packages
-  // rỗng nếu chưa cấu hình offering hoặc API key trống (dev chưa điền .env).
+  // Danh sách gói (chỉ còn Lifetime, mua 1 lần) lấy trực tiếp từ RevenueCat offering
+  // hiện tại (cấu hình trong RevenueCat dashboard, không hardcode giá ở đây) - packages
+  // rỗng nếu chưa cấu hình offering hoặc API key trống (dev chưa điền .env). Dùng thử
+  // 1 tháng giờ tự động cấp khi đăng ký tài khoản (backend) - không còn nút yêu cầu
+  // dùng thử thủ công như trước.
   const { data: offering } = useQuery({
     queryKey: ['revenuecat-offering'],
     queryFn: getOfferings,
@@ -134,21 +122,7 @@ export default function PremiumScreen() {
 
   const isPremium: boolean = data?.is_premium ?? false;
   const onTrial: boolean = data?.on_trial ?? false;
-  const canRequest: boolean = data?.can_request ?? false;
-  const requestStatus: string | null = data?.request_status ?? null;
-  const trialUsed: boolean = data?.trial_used ?? false;
-  // Rà soát 14/8: fallback khớp config/plans.php ("trial_days" => 30) thay vì
-  // 14 - chỉ dùng khi API không trả field này (fallback phòng hờ, không phải
-  // giá trị thật đang áp dụng).
-  const trialDays: number = data?.trial_days ?? 30;
   const planExpiresAt: string | null = data?.plan_expires_at ?? null;
-
-  function statusLabel(s?: string | null): string {
-    if (s === 'pending')  return t('premium.request_pending_label');
-    if (s === 'approved') return t('premium.request_approved_label');
-    if (s === 'rejected') return t('premium.request_rejected_label');
-    return '';
-  }
 
   if (isLoading) {
     return (
@@ -202,22 +176,6 @@ export default function PremiumScreen() {
               )}
             </View>
           </View>
-        ) : requestStatus === 'pending' ? (
-          <View style={{
-            backgroundColor: '#0EA5E922', borderRadius: 14, padding: 16,
-            borderWidth: 1, borderColor: '#0EA5E9', marginBottom: 24,
-            flexDirection: 'row', alignItems: 'center', gap: 12,
-          }}>
-            <FontAwesome5 name="clock" size={20} color="#0EA5E9" solid />
-            <View style={{ flex: 1 }}>
-              <Text style={{ color: '#0EA5E9', fontWeight: '700', fontSize: 15 }}>
-                {t('premium.pending_title')}
-              </Text>
-              <Text style={{ color: colors.textSecondary, fontSize: 13, marginTop: 2 }}>
-                {t('premium.pending_desc')}
-              </Text>
-            </View>
-          </View>
         ) : null}
 
         {/* Premium features - rà soát 14/8 (góp ý user: chữ mô tả dài tràn ra ngoài viền
@@ -263,45 +221,14 @@ export default function PremiumScreen() {
           ))}
         </View>
 
-        {/* CTA - trial */}
-        {!isPremium && canRequest && (
-          <>
-            <TouchableOpacity
-              onPress={() => requestTrial()}
-              disabled={isPending}
-              style={{ borderRadius: 14, marginBottom: 12, overflow: 'hidden', opacity: isPending ? 0.7 : 1 }}>
-              <LinearGradient colors={['#fbbf24', '#d97706']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-                style={{ paddingVertical: 16, alignItems: 'center' }}>
-                {isPending
-                  ? <ActivityIndicator color="#fff" />
-                  : (
-                    <Text style={{ color: '#fff', fontWeight: '800', fontSize: 17 }}>
-                      {t('premium.trial_cta', { days: trialDays })}
-                    </Text>
-                  )}
-              </LinearGradient>
-            </TouchableOpacity>
-            <Text style={{ color: colors.textSecondary, fontSize: 12, textAlign: 'center', marginBottom: 20 }}>
-              {t('premium.request_flow_desc')}
-            </Text>
-          </>
-        )}
-
-        {!isPremium && !canRequest && (
-          <View style={{ backgroundColor: colors.surface, borderRadius: 12, padding: 14, marginBottom: 20 }}>
-            <Text style={{ color: colors.textSecondary, fontSize: 13, textAlign: 'center' }}>
-              {trialUsed
-                ? t('premium.trial_used_msg')
-                : statusLabel(requestStatus)
-              }
-            </Text>
-          </View>
-        )}
-
-        {/* Gói mua thật qua App Store/Play Billing (RevenueCat) - thay cho redeem code
-            (bị Apple 3.1.1 reject 18/8/2026, xem docs/apple-hardware-bundle-compliance.md).
-            packages rỗng nếu offering chưa cấu hình trong RevenueCat dashboard hoặc
-            API key .env trống - không hiện gì thay vì hiện danh sách trống khó hiểu. */}
+        {/* Gói Lifetime mua 1 lần qua App Store/Play Billing (RevenueCat) - thay cho
+            redeem code (bị Apple 3.1.1 reject 18/8/2026, xem
+            docs/apple-hardware-bundle-compliance.md) và cho gói subscription 3/6/12
+            tháng cũ (bỏ 19/8/2026, xem docs/revenuecat-iap-backend-spec.md). Dùng thử
+            1 tháng đầu tự động cấp khi đăng ký tài khoản (backend), không cần thao tác
+            gì ở đây - hết hạn thì mua Lifetime nếu muốn tiếp tục. packages rỗng nếu
+            offering chưa cấu hình trong RevenueCat dashboard hoặc API key .env trống -
+            không hiện gì thay vì hiện danh sách trống khó hiểu. */}
         {!isPremium && packages.length > 0 && (
           <View style={{ marginBottom: 20 }}>
             <Text style={{ color: colors.text, fontWeight: '700', fontSize: 14, marginBottom: 10 }}>
