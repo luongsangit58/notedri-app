@@ -7,7 +7,7 @@ import { contentWide } from '../../utils/layout';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { FontAwesome5 } from '@expo/vector-icons';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, QueryClient } from '@tanstack/react-query';
 import client from '../../api/client';
 import { authApi } from '../../api/auth';
 import { useAuthStore } from '../../store/authStore';
@@ -30,6 +30,25 @@ async function refreshAuthUser() {
     const fresh = res.data?.data ?? res.data;
     if (fresh) useAuthStore.getState().setUser(fresh);
   } catch { /* bỏ qua - initialize() lần mở app sau sẽ tự đồng bộ */ }
+}
+
+// Rà soát 20/8 (user test thật: redeem/restore xong, Alert báo thành công ngay,
+// nhưng is_premium vẫn hiện "dùng thử" - phải TỰ TAY thoát màn/reload mới thấy
+// lên Premium) - gọi invalidateQueries() đúng 1 LẦN ngay sau khi StoreKit/
+// RevenueCat xác nhận xong sẽ refetch /premium QUÁ SỚM: backend cần thời gian
+// nhận webhook RevenueCat rồi mới cập nhật users.plan (độ trễ vài giây tới vài
+// chục giây, phía client không có tín hiệu nào biết chính xác lúc nào xong).
+// Poll lại nhiều lần thay vì 1 lần - dừng ngay khi thấy is_premium=true, tối đa
+// ~18s rồi bỏ cuộc (không mất gì nếu bỏ cuộc - lần mở lại màn/kéo refresh tay
+// sau đó vẫn tự lấy đúng dữ liệu, y hệt hành vi cũ, chỉ là không còn BẮT BUỘC
+// phải tự tay làm việc đó nữa trong đa số trường hợp).
+async function pollPremiumStatus(qc: QueryClient): Promise<void> {
+  for (let attempt = 0; attempt < 7; attempt++) {
+    await qc.invalidateQueries({ queryKey: ['premium-status'] });
+    const status = qc.getQueryData<{ is_premium?: boolean }>(['premium-status']);
+    if (status?.is_premium) return;
+    if (attempt < 6) await new Promise((resolve) => setTimeout(resolve, 3000));
+  }
 }
 
 export default function PremiumScreen() {
@@ -99,7 +118,7 @@ export default function PremiumScreen() {
       if (isEntitled(info)) {
         Alert.alert(t('premium.notification_title'), t('premium.purchase_success'));
       }
-      qc.invalidateQueries({ queryKey: ['premium-status'] });
+      void pollPremiumStatus(qc);
       refreshAuthUser();
     },
     onError: (err: any) => {
@@ -115,7 +134,7 @@ export default function PremiumScreen() {
         t('premium.notification_title'),
         isEntitled(info) ? t('premium.purchase_success') : t('premium.restore_empty')
       );
-      qc.invalidateQueries({ queryKey: ['premium-status'] });
+      void pollPremiumStatus(qc);
       refreshAuthUser();
     },
     onError: (err: any) => {
@@ -129,7 +148,7 @@ export default function PremiumScreen() {
   useEffect(() => {
     const listener = (info: CustomerInfo) => {
       if (isEntitled(info)) {
-        qc.invalidateQueries({ queryKey: ['premium-status'] });
+        void pollPremiumStatus(qc);
         refreshAuthUser();
       }
     };

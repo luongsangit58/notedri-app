@@ -1203,7 +1203,7 @@ const vi = {
   "premium.free_feature_reminders": "Nhắc nhở bảo dưỡng (tối đa 4)",
   "premium.free_feature_dossier": "Hồ sơ xe kỹ thuật số",
   "premium.free_feature_nearby": "Tìm xăng/trạm sạc/gara/đăng kiểm gần đây",
-  "premium.active_label": "Premium kích hoạt",
+  "premium.active_label": "Premium trọn đời",
   "premium.trial_active_label": "Đang dùng thử Premium",
   "premium.expires_label": "Hết hạn: {{date}}",
   "premium.notification_title": "Thông báo",

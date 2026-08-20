@@ -1203,7 +1203,7 @@ const en = {
   "premium.free_feature_reminders": "Maintenance reminders (up to 4)",
   "premium.free_feature_dossier": "Digital vehicle notebook",
   "premium.free_feature_nearby": "Find nearby gas stations, EV chargers, garages & inspection centers",
-  "premium.active_label": "Premium active",
+  "premium.active_label": "Premium for life",
   "premium.trial_active_label": "Premium trial active",
   "premium.expires_label": "Expires: {{date}}",
   "premium.notification_title": "Notice",
