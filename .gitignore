@@ -8,6 +8,7 @@ dist/
 *.key
 *.mobileprovision
 *.orig.*
+*_promotion_codes.csv
 web-build/
 *firebase-adminsdk*.json
 credentials.json
@@ -23,3 +24,4 @@ modules/**/android/build/
 # Local build outputs (EAS local build / bundletool) - not source, don't commit
 *.aab
 *.apk
+keystore.properties

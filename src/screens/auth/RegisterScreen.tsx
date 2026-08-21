@@ -125,6 +125,17 @@ export default function RegisterScreen({ navigation }: { navigation: any }) {
         </View>
       ) : null}
 
+      {step === 'form' && (
+        <View style={{
+          backgroundColor: C.primary + '22', borderRadius: 14, padding: 14,
+          borderWidth: 1, borderColor: C.primary, marginBottom: 18,
+        }}>
+          <Text style={{ color: C.primary, fontWeight: '700', fontSize: 14, textAlign: 'center' }}>
+            {t('auth.trial_banner_register')}
+          </Text>
+        </View>
+      )}
+
       {step === 'form' ? (
         <View style={{ backgroundColor: C.card, borderRadius: 20, padding: 24 }}>
           <Text style={{ color: C.text, fontSize: 17, fontWeight: '700', marginBottom: 18 }}>

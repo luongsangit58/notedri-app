@@ -1,6 +1,7 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, RefreshControl, Alert, ActivityIndicator, Platform,
+  View, Text, TextInput, ScrollView, TouchableOpacity, RefreshControl, Alert, ActivityIndicator,
+  Platform, Linking,
 } from 'react-native';
 import { PurchasesPackage, CustomerInfo } from 'react-native-purchases';
 import { contentWide } from '../../utils/layout';
@@ -50,7 +51,17 @@ async function pollPremiumStatus(qc: QueryClient): Promise<void> {
   for (let attempt = 0; attempt < 24; attempt++) {
     await qc.invalidateQueries({ queryKey: ['premium-status'] });
     const status = qc.getQueryData<{ is_premium?: boolean }>(['premium-status']);
-    if (status?.is_premium) return;
+    if (status?.is_premium) {
+      // Rà soát 21/8 (user test thật: Premium screen lên đúng nhưng gate OBD2 ở Home
+      // vẫn đẩy ngược vào màn Premium, phải tắt/mở lại app mới hết) - refreshAuthUser()
+      // trước đây bị gọi NGAY khi bắt đầu poll (song song, không đợi) nên gần như luôn
+      // lấy về user CŨ (webhook backend thường chưa kịp xử lý) rồi không gọi lại lần
+      // nào nữa dù vòng lặp này sau đó tìm ra is_premium=true - authStore.user kẹt giá
+      // trị cũ tới lúc mở lại app. Gọi ở ĐÂY, đúng lúc /premium đã xác nhận đổi, để
+      // authStore đồng bộ cùng lúc với Premium screen thay vì lệch pha.
+      await refreshAuthUser();
+      return;
+    }
     if (attempt < 23) await new Promise((resolve) => setTimeout(resolve, 5000));
   }
 }
@@ -113,9 +124,9 @@ export default function PremiumScreen() {
   const packages: PurchasesPackage[] = offering?.availablePackages ?? [];
 
   // Sau khi mua/restore thành công qua StoreKit/Play Billing, backend cần thời
-  // gian ngắn để nhận webhook RevenueCat rồi mới cập nhật is_premium - refetch
-  // /premium NGAY (thường đã kịp vì RevenueCat gửi webhook gần như tức thì), UI
-  // vẫn đúng dù có trễ vài giây vì user quay lại màn này sẽ tự refetch lần nữa.
+  // gian để nhận webhook RevenueCat rồi mới cập nhật is_premium - pollPremiumStatus()
+  // tự retry tới 2 phút, và chỉ đồng bộ authStore.user (gate OBD2/thành tích...) SAU
+  // KHI xác nhận đổi xong, không đồng bộ sớm (xem ghi chú trong pollPremiumStatus).
   const { mutate: purchaseMutate, isPending: isPurchasing } = useMutation({
     mutationFn: (pkg: PurchasesPackage) => purchasePackage(pkg),
     onSuccess: (info) => {
@@ -123,7 +134,6 @@ export default function PremiumScreen() {
         Alert.alert(t('premium.notification_title'), t('premium.purchase_success'));
       }
       void pollPremiumStatus(qc);
-      refreshAuthUser();
     },
     onError: (err: any) => {
       if (err?.userCancelled) return;
@@ -139,7 +149,6 @@ export default function PremiumScreen() {
         isEntitled(info) ? t('premium.purchase_success') : t('premium.restore_empty')
       );
       void pollPremiumStatus(qc);
-      refreshAuthUser();
     },
     onError: (err: any) => {
       Alert.alert(t('common.error'), err?.message ?? t('common.error_generic'));
@@ -153,7 +162,6 @@ export default function PremiumScreen() {
     const listener = (info: CustomerInfo) => {
       if (isEntitled(info)) {
         void pollPremiumStatus(qc);
-        refreshAuthUser();
       }
     };
     addCustomerInfoUpdateListener(listener);
@@ -172,6 +180,18 @@ export default function PremiumScreen() {
   const isPremium: boolean = data?.is_premium ?? false;
   const onTrial: boolean = data?.on_trial ?? false;
   const planExpiresAt: string | null = data?.plan_expires_at ?? null;
+
+  // Android không có sheet nhập mã hệ thống như iOS (presentCodeRedemptionSheet) - Google Play
+  // redeem qua chính app Play Store, nhưng có thể mở thẳng bằng deep link kèm mã có sẵn
+  // (https://play.google.com/redeem?code=...) để trải nghiệm gần giống iOS thay vì bắt user
+  // tự mở Play Store rồi gõ lại mã.
+  const [showRedeemInput, setShowRedeemInput] = useState(false);
+  const [redeemCode, setRedeemCode] = useState('');
+  const openAndroidRedeem = () => {
+    const code = redeemCode.trim();
+    if (!code) return;
+    Linking.openURL(`https://play.google.com/redeem?code=${encodeURIComponent(code)}`);
+  };
 
   if (isLoading) {
     return (
@@ -296,7 +316,9 @@ export default function PremiumScreen() {
                   borderWidth: 1, borderColor: colors.border, opacity: isPurchasing ? 0.6 : 1,
                 }}>
                 <Text style={{ color: colors.text, fontSize: 14, fontWeight: '700', flex: 1 }}>
-                  {pkg.product.title}
+                  {/* Play Billing tự thêm "(tên app)" vào cuối title sản phẩm trên Android
+                      (StoreKit/iOS không có hậu tố này) - cắt bỏ để khớp giao diện iOS. */}
+                  {Platform.OS === 'android' ? pkg.product.title.replace(/\s*\([^)]*\)\s*$/, '') : pkg.product.title}
                 </Text>
                 <Text style={{ color: AMBER, fontSize: 15, fontWeight: '800' }}>
                   {pkg.product.priceString}
@@ -329,6 +351,52 @@ export default function PremiumScreen() {
               <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>{t('premium.redeem_code_desc')}</Text>
             </View>
           </TouchableOpacity>
+        )}
+
+        {/* Nhập mã ưu đãi - Android. Không có sheet hệ thống như iOS nên dùng ô nhập mã +
+            mở deep link redeem của Play Store (xem openAndroidRedeem ở trên). */}
+        {Platform.OS === 'android' && (!isPremium || onTrial) && (
+          <View style={{ marginBottom: 16 }}>
+            <TouchableOpacity
+              onPress={() => setShowRedeemInput((s) => !s)}
+              style={{
+                flexDirection: 'row', alignItems: 'center', gap: 12,
+                backgroundColor: colors.surface, borderRadius: 12, padding: 14,
+                borderWidth: 1, borderColor: colors.border,
+              }}>
+              <FontAwesome5 name="ticket-alt" size={16} color={AMBER} solid />
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: colors.text, fontSize: 14, fontWeight: '700' }}>{t('premium.redeem_code_title')}</Text>
+                <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }}>{t('premium.redeem_code_desc')}</Text>
+              </View>
+              <FontAwesome5 name={showRedeemInput ? 'chevron-up' : 'chevron-down'} size={12} color={colors.textSecondary} solid />
+            </TouchableOpacity>
+            {showRedeemInput && (
+              <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+                <TextInput
+                  value={redeemCode}
+                  onChangeText={setRedeemCode}
+                  placeholder={t('premium.redeem_code_placeholder')}
+                  placeholderTextColor={colors.textSecondary}
+                  autoCapitalize="characters"
+                  autoCorrect={false}
+                  style={{
+                    flex: 1, backgroundColor: colors.surface, borderRadius: 10, borderWidth: 1,
+                    borderColor: colors.border, color: colors.text, paddingHorizontal: 12, paddingVertical: 10,
+                  }}
+                />
+                <TouchableOpacity
+                  onPress={openAndroidRedeem}
+                  disabled={!redeemCode.trim()}
+                  style={{
+                    backgroundColor: AMBER, borderRadius: 10, paddingHorizontal: 16,
+                    alignItems: 'center', justifyContent: 'center', opacity: redeemCode.trim() ? 1 : 0.5,
+                  }}>
+                  <Text style={{ color: '#1c1917', fontWeight: '700', fontSize: 13 }}>{t('premium.redeem_code_submit')}</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
         )}
 
         {/* Restore Purchases - bắt buộc phải có theo App Store Review Guidelines
