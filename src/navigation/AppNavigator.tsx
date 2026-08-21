@@ -18,7 +18,6 @@ import EditVehicleScreen from '../screens/vehicles/EditVehicleScreen';
 import VehicleTransferRequestsScreen from '../screens/vehicles/VehicleTransferRequestsScreen';
 import ProfileScreen from '../screens/profile/ProfileScreen';
 import EditProfileScreen from '../screens/profile/EditProfileScreen';
-import ChangePasswordScreen from '../screens/profile/ChangePasswordScreen';
 import AddRefuelScreen from '../screens/refuels/AddRefuelScreen';
 import AddOdometerScreen from '../screens/odometer/AddOdometerScreen';
 import EditOdometerScreen from '../screens/odometer/EditOdometerScreen';
@@ -199,8 +198,6 @@ export default function AppNavigator() {
         options={{ headerShown: true, ...headerOpts, title: t('nav.tab_profile') }} />
       <RootStack.Screen name="EditProfile" component={EditProfileScreen}
         options={{ headerShown: true, ...headerOpts, title: t('profile.edit') }} />
-      <RootStack.Screen name="ChangePassword" component={ChangePasswordScreen}
-        options={{ headerShown: true, ...headerOpts, title: t('change_password.title') }} />
       <RootStack.Screen name="Devices" component={DevicesScreen}
         options={{ headerShown: false }} />
 

@@ -114,13 +114,10 @@ interface AuthState {
   // trên field có thể đổi giữa server (vd is_premium) nên đợi cờ này = true trước khi hành động,
   // tránh đá nhầm user Premium ra màn nâng cấp chỉ vì cache cũ chưa kịp làm mới.
   userSynced: boolean;
-  error: string | null;
-  login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   initialize: () => Promise<void>;
   setUser: (user: User) => void;
   setSession: (token: string, user: User) => Promise<void>;
-  clearError: () => void;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -129,7 +126,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isLoading: true,
   isLoggingOut: false,
   userSynced: false,
-  error: null,
 
   initialize: async () => {
     try {
@@ -161,41 +157,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       }
     } catch {
       set({ isLoading: false, userSynced: true });
-    }
-  },
-
-  login: async (email: string, password: string) => {
-    try {
-      set({ isLoading: true, error: null });
-      const response = await authApi.login(email, password);
-      // Bóc envelope giống me()/setSession -> nếu backend đổi shape sang { data: {...} }
-      // vẫn không lưu nhầm token=undefined.
-      const { token, user } = response.data?.data ?? response.data;
-      await storage.setToken(token);
-      await storage.setUser(JSON.stringify(user));
-      queryClient.clear(); // xoá cache user cũ để không lẫn dữ liệu khi đổi tài khoản
-      // Vừa đăng nhập -> user LUÔN là dữ liệu tươi từ server, không phải cache.
-      set({ token, user, isLoading: false, userSynced: true });
-      identifyRevenueCat(user.id);
-      void syncPremiumIfEntitledButStale(user);
-      adoptAccountLocale(user); // đồng bộ ngôn ngữ theo tài khoản
-      // Đợi UI/màn hình chuyển hết animation rồi mới xin quyền thông báo: xin quyền
-      // ngay giữa lúc set() vừa render lại + điều hướng đang chạy dễ đụng native
-      // bridge lúc app đang bận -> app bị kill trên một số máy (đầu Android ô tô).
-      InteractionManager.runAfterInteractions(() => {
-        syncPushTokenIfGranted().catch(() => {});
-      });
-      sendDeviceHeartbeat();
-      // Rà soát 20/8: RegisterScreen có nhánh dự phòng gọi login() thay vì setSession()
-      // khi response verify-otp thiếu token/data - không có nhánh này thì tài khoản MỚI
-      // đăng ký qua đường đó sẽ không được báo "tặng 30 ngày Premium" dù backend vẫn cấp
-      // đúng. Gọi lại đây cho nhất quán - hàm tự chặn hiện lặp lại (AsyncStorage theo
-      // user.id), không ảnh hưởng user cũ đăng nhập lại bình thường.
-      maybeAnnounceSignupTrial(user);
-    } catch (error: any) {
-      const message = error.response?.data?.message ?? useI18nStore.getState().t('auth.login_failed');
-      set({ isLoading: false, error: message });
-      throw error;
     }
   },
 
@@ -274,5 +235,4 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     });
     maybeAnnounceSignupTrial(user);
   },
-  clearError: () => set({ error: null }),
 }));

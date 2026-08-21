@@ -1,23 +1,21 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Alert, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, Alert, ActivityIndicator, Platform } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { useAuthStore } from '../../store/authStore';
 import { useT } from '../../i18n';
 import { BASE_URL } from '../../utils/api';
-import { AuthContainer, C, INPUT_STYLE } from './_authLayout';
+import { AuthContainer, C } from './_authLayout';
 import { markGooglePending, clearGooglePending } from '../../services/googleAuthRecovery';
-import { INPUT_FONT_FAMILY } from '../../utils/font';
 
 const GOOGLE_MOBILE_URL = `${BASE_URL}/auth/google/mobile`;
 
-export default function LoginScreen({ navigation }: { navigation: any }) {
+// Rà soát 21/8 (5): bỏ hẳn đăng nhập/đăng ký bằng email+password - CHỈ còn Apple/Google
+// (xem comment AuthController.php phía backend). 1 nút vừa là đăng nhập vừa là đăng ký
+// (backend tự tạo tài khoản mới nếu apple_id/google_id chưa từng thấy).
+export default function LoginScreen(): React.ReactElement {
   const t = useT();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPw, setShowPw] = useState(false);
-  const { login, isLoading, error, clearError } = useAuthStore();
   const [googleBusy, setGoogleBusy] = useState(false);
   const [appleBusy, setAppleBusy] = useState(false);
 
@@ -49,14 +47,6 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
     return true;
   };
 
-  const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert(t('common.error'), t('auth.enter_email_password'));
-      return;
-    }
-    try { await login(email, password); } catch {}
-  };
-
   const handleGoogle = async () => {
     if (googleBusy) return;
     setGoogleBusy(true);
@@ -84,7 +74,7 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
   };
 
   const handleApple = async () => {
-    if (appleBusy || isLoading) return;
+    if (appleBusy) return;
     setAppleBusy(true);
     try {
       const credential = await AppleAuthentication.signInAsync({
@@ -138,11 +128,10 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
         </Text>
       </View>
 
-      {/* Chèn KW906/marketing: khuyến khích tài khoản mới đăng ký để nhận 30 ngày dùng thử
-          Premium (grantSignupTrial() cấp tự động ở backend, xem authStore.maybeAnnounceSignupTrial) -
-          hiện ngay trên màn Login vì đây là nơi user chưa có tài khoản dừng lại đầu tiên. */}
-      <TouchableOpacity
-        onPress={() => navigation.navigate('Register')}
+      {/* Khuyến khích: tài khoản mới (lần đầu đăng nhập Apple/Google) tự nhận 30 ngày dùng thử
+          Premium (grantSignupTrial() cấp tự động ở backend). Không còn nút riêng - Apple/Google
+          bên dưới vừa là đăng nhập vừa là đăng ký. */}
+      <View
         style={{
           backgroundColor: C.primary + '22', borderRadius: 14, padding: 14,
           borderWidth: 1, borderColor: C.primary, marginBottom: 18,
@@ -150,7 +139,7 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
         <Text style={{ color: C.primary, fontWeight: '700', fontSize: 14, textAlign: 'center' }}>
           {t('auth.trial_banner_login')}
         </Text>
-      </TouchableOpacity>
+      </View>
 
       {/* Card */}
       <View style={{ backgroundColor: C.card, borderRadius: 20, padding: 24 }}>
@@ -158,75 +147,20 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
           {t('auth.login')}
         </Text>
 
-        {error ? (
-          <View style={{ backgroundColor: C.errorBg, borderRadius: 10, padding: 12, marginBottom: 14, borderWidth: 1, borderColor: C.errorBorder }}>
-            <Text style={{ color: C.errorText, fontSize: 13 }}>{error}</Text>
-          </View>
-        ) : null}
-
-        <Text style={{ color: C.textSecondary, fontSize: 13, fontWeight: '500', marginBottom: 6 }}>{t('auth.email')}</Text>
-        <TextInput
-          value={email}
-          onChangeText={(v) => { clearError(); setEmail(v); }}
-          placeholder={t('auth.email')}
-          placeholderTextColor={C.inputBorder}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          returnKeyType="next"
-          style={[INPUT_STYLE, { marginBottom: 14 }]}
-        />
-
-        <Text style={{ color: C.textSecondary, fontSize: 13, fontWeight: '500', marginBottom: 6 }}>{t('auth.password')}</Text>
-        <View style={[INPUT_STYLE, { flexDirection: 'row', alignItems: 'center', paddingVertical: 0, marginBottom: 6 }]}>
-          <TextInput
-            value={password}
-            onChangeText={(v) => { clearError(); setPassword(v); }}
-            placeholder="••••••••"
-            placeholderTextColor={C.inputBorder}
-            secureTextEntry={!showPw}
-            autoCapitalize="none"
-            returnKeyType="done"
-            onSubmitEditing={handleLogin}
-            style={{ flex: 1, color: C.text, fontSize: 15, paddingVertical: 14, fontFamily: INPUT_FONT_FAMILY }}
-          />
-          <TouchableOpacity onPress={() => setShowPw(s => !s)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-            <FontAwesome5 name={showPw ? 'eye-slash' : 'eye'} size={16} color={C.textSecondary} solid />
-          </TouchableOpacity>
-        </View>
-
-        <TouchableOpacity onPress={() => navigation.navigate('ForgotPassword')} style={{ alignSelf: 'flex-end', marginBottom: 20, paddingVertical: 4 }}>
-          <Text style={{ color: C.primary, fontSize: 13, fontWeight: '500' }}>{t('auth.forgot_password')}</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={handleLogin}
-          disabled={isLoading}
-          style={{ backgroundColor: C.primary, paddingVertical: 15, borderRadius: 12, alignItems: 'center', opacity: isLoading ? 0.7 : 1, marginBottom: 18 }}>
-          <Text style={{ color: '#1c1917', fontWeight: '700', fontSize: 16 }}>
-            {isLoading ? t('auth.logging_in') : t('auth.login')}
-          </Text>
-        </TouchableOpacity>
-
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-          <View style={{ flex: 1, height: 1, backgroundColor: C.divider }} />
-          <Text style={{ color: C.textSecondary, marginHorizontal: 12, fontSize: 13 }}>{t('auth.or')}</Text>
-          <View style={{ flex: 1, height: 1, backgroundColor: C.divider }} />
-        </View>
-
         {Platform.OS === 'ios' && (
           <AppleAuthentication.AppleAuthenticationButton
             buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
             buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
             cornerRadius={12}
-            style={{ width: '100%', height: 44, marginBottom: 12, opacity: (isLoading || appleBusy) ? 0.5 : 1 }}
+            style={{ width: '100%', height: 44, marginBottom: 12, opacity: appleBusy ? 0.5 : 1 }}
             onPress={handleApple}
           />
         )}
 
         <TouchableOpacity
           onPress={handleGoogle}
-          disabled={isLoading || googleBusy}
-          style={{ backgroundColor: '#ffffff', paddingVertical: 13, borderRadius: 12, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 10, opacity: (isLoading || googleBusy) ? 0.5 : 1 }}>
+          disabled={googleBusy}
+          style={{ backgroundColor: '#ffffff', paddingVertical: 13, borderRadius: 12, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 10, opacity: googleBusy ? 0.5 : 1 }}>
           {googleBusy ? (
             <ActivityIndicator size="small" color="#4285F4" />
           ) : (
@@ -235,13 +169,6 @@ export default function LoginScreen({ navigation }: { navigation: any }) {
           <Text style={{ color: '#1c1917', fontWeight: '600', fontSize: 14 }}>{t('auth.login_with_google')}</Text>
         </TouchableOpacity>
       </View>
-
-      <TouchableOpacity onPress={() => navigation.navigate('Register')} style={{ marginTop: 22, alignItems: 'center', paddingVertical: 8 }}>
-        <Text style={{ color: C.textSecondary, fontSize: 14 }}>
-          {t('auth.no_account')}{' '}
-          <Text style={{ color: C.primary, fontWeight: '700' }}>{t('auth.register')}</Text>
-        </Text>
-      </TouchableOpacity>
     </AuthContainer>
   );
 }

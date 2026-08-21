@@ -3,7 +3,6 @@ import {
   View, KeyboardAvoidingView, ScrollView, Platform, useWindowDimensions,
 } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
-import { INPUT_FONT_FAMILY } from '../../utils/font';
 
 // Fixed dark palette cho toàn bộ auth flow
 export const C = {
@@ -22,25 +21,6 @@ export const C = {
   successBg: '#064e3b55',
   successBorder: '#059669aa',
   successText: '#6ee7b7',
-} as const;
-
-export const INPUT_STYLE = {
-  backgroundColor: C.inputBg,
-  borderWidth: 1,
-  borderColor: C.inputBorder,
-  borderRadius: 12,
-  paddingHorizontal: 16,
-  paddingVertical: 14,
-  color: C.text,
-  fontSize: 15,
-  fontFamily: INPUT_FONT_FAMILY,
-} as const;
-
-export const LABEL_STYLE = {
-  color: C.textSecondary,
-  fontSize: 13,
-  fontWeight: '600' as const,
-  marginBottom: 6,
 } as const;
 
 const BG_ICONS = [

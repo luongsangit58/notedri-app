@@ -10,11 +10,9 @@ export async function deviceMeta(): Promise<{ device_id: string; device_name: st
   return { device_id, device_name, platform: Platform.OS };
 }
 
+// Rà soát 21/8 (5): bỏ hẳn login/register/verifyOtp/forgotPassword (email+password) - CHỈ còn
+// Apple/Google (xem comment AuthController.php phía backend + LoginScreen.tsx).
 export const authApi = {
-  login: async (email: string, password: string) => {
-    const meta = await deviceMeta();
-    return client.post('/auth/login', { email, password, ...meta });
-  },
   logout: () => client.post('/auth/logout'),
   unlinkGoogle: () => client.post('/auth/google/unlink'),
   loginWithApple: async (identityToken: string, fullName?: string) => {
@@ -31,12 +29,4 @@ export const authApi = {
     const { device_id } = await deviceMeta();
     return client.post('/auth/push-token', { expo_push_token: token, device_id });
   },
-  register: (name: string, email: string, password: string, password_confirmation: string) =>
-    client.post('/auth/register', { name, email, password, password_confirmation }),
-  verifyOtp: async (email: string, code: string) => {
-    const meta = await deviceMeta();
-    return client.post('/auth/register/verify-otp', { email, code, ...meta });
-  },
-  forgotPassword: (email: string) =>
-    client.post('/auth/forgot-password', { email }),
 };

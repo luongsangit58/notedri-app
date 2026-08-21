@@ -56,31 +56,10 @@ export default function ProfileScreen() {
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState('');
   const [deleteError, setDeleteError] = useState('');
-  // Chặn double-tap khi đang làm mới has_password (xem refreshUserIfPasswordUnknown) - tránh mở
-  // Alert xoá tài khoản 2 lần hoặc gọi /auth/me 2 lần chồng nhau.
-  const [checkingAccountAction, setCheckingAccountAction] = useState(false);
 
   const hasGoogle: boolean = (user as any)?.has_google ?? false;
   const hasApple: boolean = (user as any)?.has_apple ?? false;
-  const hasPassword: boolean = (user as any)?.has_password ?? true;
   const [appleLinkBusy, setAppleLinkBusy] = useState(false);
-
-  // has_password/has_google có thể chưa có trong cache (user vừa mở app, background refresh
-  // /auth/me ở authStore.initialize() chưa kịp xong) -> mặc định hasPassword=true có thể đưa
-  // nhầm tài khoản Google-only vào luồng cần mật khẩu (xoá tài khoản / gỡ liên kết Google).
-  // Dùng chung cho cả 2 nơi thay vì lặp lại. Giới hạn 4s (thay vì timeout mặc định 30s của
-  // client) - đây chỉ là làm mới tốt-nhất-có-thể trước khi mở 1 Alert, mạng chậm/mất mạng
-  // không nên khiến user chờ tới 30s mới thấy hộp thoại xác nhận.
-  const refreshUserIfPasswordUnknown = async (): Promise<void> => {
-    if ((user as any)?.has_password !== undefined) return;
-    try {
-      const me = await Promise.race([
-        authApi.me(),
-        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), 4000)),
-      ]);
-      setUser({ ...(user ?? {}), ...(me.data?.data ?? me.data) });
-    } catch { /* offline/chậm - dùng cache hiện có */ }
-  };
 
   // Liên kết Google: mở OAuth kèm link_token -> callback gắn Google vào tài khoản này.
   const handleLinkGoogle = async () => {
@@ -109,15 +88,10 @@ export default function ProfileScreen() {
   };
 
   const handleUnlinkGoogle = async () => {
-    if (checkingAccountAction) return;
-    setCheckingAccountAction(true);
-    await refreshUserIfPasswordUnknown();
-    setCheckingAccountAction(false);
-    // Đọc thẳng từ store (không dùng closure `hasPassword` ở trên) - setUser trong
-    // refreshUserIfPasswordUnknown() chỉ áp dụng ở lần render SAU, closure của lần gọi
-    // hàm này vẫn giữ giá trị cũ nếu đọc qua biến đã destructure lúc component render.
-    const freshHasPassword: boolean = (useAuthStore.getState().user as any)?.has_password ?? true;
-    if (!freshHasPassword) {
+    // Rà soát 21/8 (5): bỏ hẳn mật khẩu - Apple/Google giờ là 2 lối đăng nhập DUY NHẤT, không
+    // cho gỡ nếu Apple chưa liên kết (tự khoá tài khoản chính mình). Khớp guard mới ở
+    // AuthController::googleUnlink() phía backend.
+    if (!hasApple) {
       Alert.alert(t('profile.google_unlink_need_pw_title'), t('profile.google_unlink_need_pw_msg'));
       return;
     }
@@ -160,12 +134,7 @@ export default function ProfileScreen() {
   };
 
   const handleUnlinkApple = async () => {
-    if (checkingAccountAction) return;
-    setCheckingAccountAction(true);
-    await refreshUserIfPasswordUnknown();
-    setCheckingAccountAction(false);
-    const freshHasPassword: boolean = (useAuthStore.getState().user as any)?.has_password ?? true;
-    if (!freshHasPassword) {
+    if (!hasGoogle) {
       Alert.alert(t('profile.apple_unlink_need_pw_title'), t('profile.apple_unlink_need_pw_msg'));
       return;
     }
@@ -188,7 +157,7 @@ export default function ProfileScreen() {
   const lvColor = level?.color && String(level.color).startsWith('#') ? String(level.color) : '#f59e0b';
 
   const { mutate: deleteAccount, isPending: isDeleting } = useMutation({
-    mutationFn: () => profileApi.deleteAccount(deleteConfirm, hasPassword),
+    mutationFn: () => profileApi.deleteAccount(deleteConfirm),
     onSuccess: () => {
       setDeleteModalVisible(false);
       logout();
@@ -209,13 +178,7 @@ export default function ProfileScreen() {
     ]);
   };
 
-  const handleDeletePress = async () => {
-    // Chặn double-tap: bấm nhanh 2 lần trong lúc đang chờ refreshUserIfPasswordUnknown() sẽ mở
-    // Alert xoá tài khoản 2 lần chồng nhau (native Alert xếp hàng đợi cái sau) + gọi /auth/me 2 lần.
-    if (checkingAccountAction) return;
-    setCheckingAccountAction(true);
-    await refreshUserIfPasswordUnknown();
-    setCheckingAccountAction(false);
+  const handleDeletePress = () => {
     Alert.alert(
       t('auth.delete_account'),
       t('profile.delete_account_warning'),
@@ -334,11 +297,6 @@ export default function ProfileScreen() {
             icon={<FontAwesome5 name="pen" size={16} color={colors.textSecondary} solid />}
             label={t('profile.edit')}
             onPress={() => navigation.navigate('EditProfile')}
-          />
-          <MenuItem
-            icon={<FontAwesome5 name="lock" size={16} color={colors.textSecondary} solid />}
-            label={t('profile.change_password')}
-            onPress={() => navigation.navigate('ChangePassword')}
           />
           {/* Liên kết / Gỡ liên kết Google */}
           <MenuItem
@@ -544,15 +502,14 @@ export default function ProfileScreen() {
               {t('auth.delete_account')}
             </Text>
             <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 20, lineHeight: 18 }}>
-              {hasPassword ? t('profile.delete_account_password_prompt') : t('profile.delete_account_email_prompt')}
+              {t('profile.delete_account_email_prompt')}
             </Text>
             <TextInput
               value={deleteConfirm}
               onChangeText={v => { setDeleteConfirm(v); setDeleteError(''); }}
-              secureTextEntry={hasPassword}
               autoCapitalize="none"
-              keyboardType={hasPassword ? 'default' : 'email-address'}
-              placeholder={hasPassword ? t('profile.your_password') : t('profile.confirm_email_placeholder')}
+              keyboardType="email-address"
+              placeholder={t('profile.confirm_email_placeholder')}
               placeholderTextColor={colors.textSecondary}
               style={{
                 backgroundColor: colors.background, color: colors.text,

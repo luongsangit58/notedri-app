@@ -36,13 +36,15 @@ export default function OnboardingScreen({ navigation }: { navigation: any }) {
   ];
   const isLast = index === slides.length - 1;
 
-  const finish = async (dest: 'Register' | 'Login') => {
+  // Rà soát 21/8 (5): bỏ hẳn Register (chỉ còn Apple/Google trên Login, vừa đăng nhập vừa
+  // đăng ký) - "Bỏ qua" và "Tiếp tục" ở slide cuối giờ cùng về Login.
+  const finish = async () => {
     try { await AsyncStorage.setItem(ONBOARDING_SEEN_KEY, '1'); } catch {}
-    navigation.replace(dest);
+    navigation.replace('Login');
   };
 
   const next = () => {
-    if (isLast) { finish('Register'); return; }
+    if (isLast) { finish(); return; }
     listRef.current?.scrollToIndex({ index: index + 1, animated: true });
   };
 
@@ -65,7 +67,7 @@ export default function OnboardingScreen({ navigation }: { navigation: any }) {
             <FontAwesome5 name="language" size={13} color={C.primary} solid />
             <Text style={{ color: C.text, fontSize: 13, fontWeight: '700' }}>{t('onboarding.lang_switch')}</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => finish('Login')} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+          <TouchableOpacity onPress={() => finish()} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
             <Text style={{ color: C.textSecondary, fontSize: 14, fontWeight: '600' }}>
               {t('onboarding.skip')}
             </Text>
@@ -127,7 +129,7 @@ export default function OnboardingScreen({ navigation }: { navigation: any }) {
             </Text>
           </TouchableOpacity>
 
-          <TouchableOpacity onPress={() => finish('Login')} style={{ alignItems: 'center', paddingVertical: 14 }}>
+          <TouchableOpacity onPress={() => finish()} style={{ alignItems: 'center', paddingVertical: 14 }}>
             <Text style={{ color: C.textSecondary, fontSize: 14 }}>
               {t('onboarding.have_account')}{' '}
               <Text style={{ color: C.primary, fontWeight: '700' }}>{t('onboarding.login')}</Text>
