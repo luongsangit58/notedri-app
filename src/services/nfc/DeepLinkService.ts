@@ -2,6 +2,7 @@ import { Linking } from 'react-native';
 import { parseAutoDriveUrl } from './NfcService';
 import { handleAutoDriveLink } from './handleAutoDriveLink';
 import { handleConnectLink } from './handleConnectLink';
+import { parseOfferCodeClaimUrl, handleOfferCodeClaimLink } from './handleOfferCodeClaimLink';
 
 const CONNECT_HOSTS = ['notedri.com', 'www.notedri.com'];
 const CONNECT_PATH = '/connect';
@@ -40,8 +41,12 @@ async function dispatch(url: string | null): Promise<void> {
     await handleConnectLink();
     return;
   }
-  // URL không khớp 2 dạng trên (vd. callback Google OAuth, link khác của hệ thống) -
-  // không phải việc của deep link NFC/OBD, bỏ qua.
+  if (parseOfferCodeClaimUrl(url)) {
+    await handleOfferCodeClaimLink(url);
+    return;
+  }
+  // URL không khớp các dạng trên (vd. callback Google OAuth, link khác của hệ thống) -
+  // không phải việc của deep link NFC/OBD/Offer Code, bỏ qua.
 }
 
 let started = false;
