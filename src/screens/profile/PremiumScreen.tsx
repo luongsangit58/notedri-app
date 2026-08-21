@@ -36,18 +36,22 @@ async function refreshAuthUser() {
 // nhưng is_premium vẫn hiện "dùng thử" - phải TỰ TAY thoát màn/reload mới thấy
 // lên Premium) - gọi invalidateQueries() đúng 1 LẦN ngay sau khi StoreKit/
 // RevenueCat xác nhận xong sẽ refetch /premium QUÁ SỚM: backend cần thời gian
-// nhận webhook RevenueCat rồi mới cập nhật users.plan (độ trễ vài giây tới vài
-// chục giây, phía client không có tín hiệu nào biết chính xác lúc nào xong).
-// Poll lại nhiều lần thay vì 1 lần - dừng ngay khi thấy is_premium=true, tối đa
-// ~18s rồi bỏ cuộc (không mất gì nếu bỏ cuộc - lần mở lại màn/kéo refresh tay
-// sau đó vẫn tự lấy đúng dữ liệu, y hệt hành vi cũ, chỉ là không còn BẮT BUỘC
-// phải tự tay làm việc đó nữa trong đa số trường hợp).
+// nhận webhook RevenueCat rồi mới cập nhật users.plan. Poll lại nhiều lần thay
+// vì 1 lần - dừng ngay khi thấy is_premium=true.
+//
+// Rà soát 20/8 (2): 7 lần x 3s (~18-21s) KHÔNG ĐỦ - test thật với Offer Code
+// redeem qua Sandbox mất tới 1-2 PHÚT mới thấy webhook về (môi trường Sandbox
+// của Apple đẩy thông báo giao dịch chậm hơn hẳn production). Tăng lên 24 lần
+// x 5s (~2 phút) để trùm qua độ trễ Sandbox thực tế - vẫn không mất gì nếu hết
+// giờ mà chưa xong (lần mở lại màn/kéo refresh tay sau đó vẫn tự lấy đúng dữ
+// liệu). JS timer tự dừng khi app bị background (RN treo JS thread), không tốn
+// pin/mạng trong lúc user rời app qua Safari để redeem.
 async function pollPremiumStatus(qc: QueryClient): Promise<void> {
-  for (let attempt = 0; attempt < 7; attempt++) {
+  for (let attempt = 0; attempt < 24; attempt++) {
     await qc.invalidateQueries({ queryKey: ['premium-status'] });
     const status = qc.getQueryData<{ is_premium?: boolean }>(['premium-status']);
     if (status?.is_premium) return;
-    if (attempt < 6) await new Promise((resolve) => setTimeout(resolve, 3000));
+    if (attempt < 23) await new Promise((resolve) => setTimeout(resolve, 5000));
   }
 }
 
