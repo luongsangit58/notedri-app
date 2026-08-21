@@ -13,7 +13,10 @@ import { clearObdSessionQueue } from '../services/obd/ObdSessionSyncQueue';
 import { clearDtcReportQueue, clearDtcResolveQueue } from '../services/obd/ObdDtcSyncQueue';
 import { clearPairings } from '../services/obd/pairedDevices';
 import { useObdSessionStore } from './obdSessionStore';
-import { identify as identifyRevenueCat, reset as resetRevenueCat } from '../services/iap/RevenueCatService';
+import {
+  identify as identifyRevenueCat, reset as resetRevenueCat,
+  getCustomerInfo as getRevenueCatCustomerInfo, isEntitled as isRevenueCatEntitled,
+} from '../services/iap/RevenueCatService';
 
 interface User {
   id: number;
@@ -63,6 +66,44 @@ function adoptAccountLocale(user: User | null): void {
   }
 }
 
+// Rà soát 21/8 (3): identify() (gọi ngay dưới mỗi lần vào hàm này) chỉ đồng bộ app_user_id
+// phía SDK RevenueCat - is_premium ở backend (users.plan) chỉ đổi khi webhook RevenueCat xử
+// lý xong, có độ trễ. Khách redeem Offer Code (KW906) NGOÀI app (web -> App Store/Play
+// Store) rồi mới mở/đăng nhập lại NoteDri sẽ không có gì tự thử lại /me ngoài đúng 1 lần lúc
+// vào hàm - đúng lúc webhook chưa xong thì is_premium kẹt false tới khi khách tự vào Premium
+// bấm "Khôi phục giao dịch mua". Dò bằng getCustomerInfo() (chỉ đọc trạng thái SDK đã biết
+// sẵn, KHÔNG kích hoạt lại luồng restore/re-auth của StoreKit như restorePurchases()) - dừng
+// ngay nếu SDK cũng chưa thấy gì (đa số trường hợp mở app bình thường, không đoán mò/không
+// bật popup Apple ID ngoài ý muốn cho user không có gì cần khôi phục - quan trọng vì app
+// đang chờ Apple duyệt lại). Chỉ khi SDK ĐÃ thấy entitlement mà backend chưa cập nhật kịp
+// mới tự thử lại /me vài lần.
+async function syncPremiumIfEntitledButStale(currentUser: User): Promise<void> {
+  if (currentUser.is_premium) return;
+  // Chốt lại token của PHIÊN ĐĂNG NHẬP hiện tại - vòng lặp bên dưới chờ tới 30s, nếu user
+  // đăng xuất (hoặc đăng nhập tài khoản khác) ngay giữa lúc đang chờ, không được ghi đè
+  // user hiện tại bằng dữ liệu của phiên đã kết thúc/đổi chủ (kiểm tra lại token trước MỌI
+  // lần đọc/ghi bên dưới, không chỉ 1 lần lúc vào hàm).
+  const sessionToken = useAuthStore.getState().token;
+  if (!sessionToken) return;
+  try {
+    const info = await getRevenueCatCustomerInfo();
+    if (!info || !isRevenueCatEntitled(info)) return;
+
+    for (let attempt = 0; attempt < 6; attempt++) {
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+      if (useAuthStore.getState().token !== sessionToken) return;
+      const res = await authApi.me().catch(() => null);
+      const fresh = res?.data?.data ?? res?.data;
+      if (fresh?.is_premium) {
+        if (useAuthStore.getState().token !== sessionToken) return;
+        await storage.setUser(JSON.stringify(fresh));
+        useAuthStore.setState({ user: fresh });
+        return;
+      }
+    }
+  } catch { /* non-critical - lần mở app sau hoặc bấm tay "Khôi phục giao dịch mua" vẫn tự lấy đúng dữ liệu */ }
+}
+
 interface AuthState {
   user: User | null;
   token: string | null;
@@ -108,6 +149,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             storage.setUser(JSON.stringify(fresh));
             set({ user: fresh });
             adoptAccountLocale(fresh); // đồng bộ ngôn ngữ theo tài khoản khi mở lại app
+            void syncPremiumIfEntitledButStale(fresh);
           }
         }).catch(() => {})
           // Dù thành công hay lỗi (vd offline) cũng coi là "đã đồng bộ" - không có cách nào
@@ -135,6 +177,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Vừa đăng nhập -> user LUÔN là dữ liệu tươi từ server, không phải cache.
       set({ token, user, isLoading: false, userSynced: true });
       identifyRevenueCat(user.id);
+      void syncPremiumIfEntitledButStale(user);
       adoptAccountLocale(user); // đồng bộ ngôn ngữ theo tài khoản
       // Đợi UI/màn hình chuyển hết animation rồi mới xin quyền thông báo: xin quyền
       // ngay giữa lúc set() vừa render lại + điều hướng đang chạy dễ đụng native
@@ -225,6 +268,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     // Vừa đăng nhập (Google) -> user LUÔN là dữ liệu tươi từ server, không phải cache.
     set({ token, user, isLoading: false, userSynced: true });
     identifyRevenueCat(user.id);
+    void syncPremiumIfEntitledButStale(user);
     InteractionManager.runAfterInteractions(() => {
       syncPushTokenIfGranted().catch(() => {});
     });

@@ -50,6 +50,19 @@ export async function reset(): Promise<void> {
   } catch { /* non-critical */ }
 }
 
+/** Đọc trạng thái entitlement SDK đã BIẾT SẴN (không kích hoạt lại luồng restore/re-auth
+ * của StoreKit như restorePurchases()) - dùng để tự dò "SDK đã thấy Premium chưa" mà không
+ * có rủi ro bật popup đăng nhập Apple ID ngoài ý muốn (xem authStore.ts). */
+export async function getCustomerInfo(): Promise<CustomerInfo | null> {
+  ensureConfigured();
+  if (!configured) return null;
+  try {
+    return await Purchases.getCustomerInfo();
+  } catch {
+    return null;
+  }
+}
+
 export async function getOfferings(): Promise<PurchasesOffering | null> {
   ensureConfigured();
   if (!configured) return null;
@@ -62,11 +75,15 @@ export async function getOfferings(): Promise<PurchasesOffering | null> {
 }
 
 export async function purchase(pkg: PurchasesPackage): Promise<CustomerInfo> {
+  ensureConfigured();
+  if (!configured) throw new Error('RevenueCat chưa được cấu hình (thiếu API key)');
   const { customerInfo } = await Purchases.purchasePackage(pkg);
   return customerInfo;
 }
 
 export async function restorePurchases(): Promise<CustomerInfo> {
+  ensureConfigured();
+  if (!configured) throw new Error('RevenueCat chưa được cấu hình (thiếu API key)');
   return Purchases.restorePurchases();
 }
 
@@ -101,10 +118,13 @@ export async function presentCodeRedemptionSheet(): Promise<void> {
  * user tự kéo refresh tay.
  */
 export function addCustomerInfoUpdateListener(listener: CustomerInfoUpdateListener): void {
+  ensureConfigured();
+  if (!configured) return;
   Purchases.addCustomerInfoUpdateListener(listener);
 }
 
 export function removeCustomerInfoUpdateListener(listener: CustomerInfoUpdateListener): void {
+  if (!configured) return;
   Purchases.removeCustomerInfoUpdateListener(listener);
 }
 
