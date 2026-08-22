@@ -5,6 +5,14 @@ build miễn phí của tài khoản Expo, không cần chờ EAS). Tương đư
 Windows (skill `notedri-build-apk-local`) nhưng lệnh khác vì Linux dùng `./gradlew`
 (không có đuôi `.bat`).
 
+## TL;DR - copy chạy ngay (đã có keystore thật từ Bước 1, chỉ cần build)
+
+```bash
+npx expo prebuild --platform android --no-install && cd android && ANDROID_HOME=~/Android/Sdk ./gradlew :app:assembleRelease --console=plain
+```
+
+APK ra ở `android/app/build/outputs/apk/release/app-release.apk`.
+
 ## Điều kiện cần có trên máy
 
 - Java 17 (`java -version`)
