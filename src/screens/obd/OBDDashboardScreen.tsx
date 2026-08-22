@@ -301,7 +301,12 @@ export default function OBDDashboardScreen() {
       // đó, nối 2 chuyến cách nhau nhiều giờ thành 1 (cùng lớp bug autoArmIfReady()
       // đã vá ở rà soát 27/7 - đường vào này lại không đi qua autoArmIfReady()).
       await maybeAutoShutdownStale().catch(() => {});
-      await requestPermissionsAndStart(vehicleId, { skipDisclosure: true }).catch(() => {});
+      // Rà soát 22/8 (chuẩn bị nộp App Store): banner gọi hàm này KHÔNG platform-gate (khác
+      // Alert nudge Android-only ở dưới) - skipDisclosure:true cứng khiến iOS mất luôn màn
+      // công bố nền trước khi bật popup hệ thống "Luôn cho phép" (chỉ còn đúng chuỗi Info.plist
+      // làm giải thích). Android đã có Alert nudge riêng làm "công bố nổi bật" trước khi gọi
+      // tới đây nên vẫn giữ skipDisclosure:true cho Android - chỉ bỏ cho iOS.
+      await requestPermissionsAndStart(vehicleId, { skipDisclosure: Platform.OS === 'android' }).catch(() => {});
     }
     await refreshGpsReadiness();
   }

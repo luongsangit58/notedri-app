@@ -26,6 +26,7 @@
       "usesAppleSignIn": true,
       "infoPlist": {
         "NSBluetoothAlwaysUsageDescription": "NoteDri cần Bluetooth để kết nối với thiết bị OBD2 của xe bạn",
+        "NSLocationWhenInUseUsageDescription": "NoteDri cần vị trí để tự động ghi hành trình khi bạn lái xe",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "NoteDri cần vị trí để tự động ghi hành trình khi bạn lái xe",
         "NSLocationAlwaysUsageDescription": "NoteDri cần vị trí nền để ghi hành trình ngay cả khi app đang đóng",
         "UIBackgroundModes": [
