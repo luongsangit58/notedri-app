@@ -19,7 +19,7 @@ import { INPUT_FONT_FAMILY } from '../../utils/font';
 import { useI18nStore, useLang, useT } from '../../i18n';
 import { maybeNudgeAutoWakeNotificationPermission } from '../../services/obd/autoWakeNotificationNudge';
 import { useGpsAutoRecordToggle } from '../../hooks/useGpsTrip';
-import { PLAY_STORE_URL } from './FeedbackScreen';
+import { STORE_URL, IOS_APP_LIVE_ON_STORE } from './FeedbackScreen';
 import { safeFaIcon } from '../../utils/faIcon';
 
 function MenuItem({ icon, label, onPress, danger, right }: { icon: React.ReactNode; label: string; onPress?: () => void; danger?: boolean; right?: React.ReactNode }) {
@@ -402,12 +402,16 @@ export default function ProfileScreen() {
           {/* Rà soát: FeedbackScreen.tsx chỉ TỰ mời đánh giá Play Store 1 LẦN DUY NHẤT (4-5 sao
               lần đầu) rồi khoá vĩnh viễn (store_review_prompted) - user lỡ bấm "Để sau" hoặc
               chỉ hài lòng thật sự ở lần dùng sau thì không còn đường nào để đánh giá nữa. Thêm
-              lối vào THỦ CÔNG, luôn hiện, không phụ thuộc cờ đó. */}
-          <MenuItem
-            icon={<FontAwesome5 name="star" size={16} color="#F59E0B" solid />}
-            label={t('profile.rate_app')}
-            onPress={() => Linking.openURL(PLAY_STORE_URL)}
-          />
+              lối vào THỦ CÔNG, luôn hiện, không phụ thuộc cờ đó.
+              Ẩn trên iOS tới khi app lên App Store thật (IOS_APP_LIVE_ON_STORE) - trước đó
+              APP_STORE_URL chỉ ra trang "Content Unavailable". */}
+          {(Platform.OS !== 'ios' || IOS_APP_LIVE_ON_STORE) && (
+            <MenuItem
+              icon={<FontAwesome5 name="star" size={16} color="#F59E0B" solid />}
+              label={t('profile.rate_app')}
+              onPress={() => Linking.openURL(STORE_URL)}
+            />
+          )}
           <MenuItem
             icon={<FontAwesome5 name="info-circle" size={16} color={colors.textSecondary} solid />}
             label={t('profile.about')}

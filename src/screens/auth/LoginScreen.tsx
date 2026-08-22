@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Alert, ActivityIndicator, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, Alert, ActivityIndicator, Platform, Image, Linking } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { GoogleSignin, isErrorWithCode, statusCodes } from '@react-native-google-signin/google-signin';
 import * as AppleAuthentication from 'expo-apple-authentication';
@@ -83,62 +83,72 @@ export default function LoginScreen(): React.ReactElement {
     }
   };
 
+  // Rà soát 22/8: bố cục đồng bộ với web (garage/auth/login.blade.php) - 1 thẻ DUY NHẤT gồm
+  // logo nhỏ + tên/tagline + pill ưu đãi + nút + link điều khoản, thay cho logo chữ to tách
+  // riêng + banner ưu đãi dạng khối lớn trước đây.
   return (
     <AuthContainer>
-      {/* Logo */}
-      <View style={{ alignItems: 'center', marginBottom: 32 }}>
-        <Text style={{ fontWeight: '800', fontSize: 52, lineHeight: 60, letterSpacing: -1 }}>
-          <Text style={{ color: '#ffffff' }}>Note</Text>
-          <Text style={{ color: C.primary }}>Dri</Text>
-        </Text>
-        <Text style={{ color: C.textMuted, fontSize: 15, fontWeight: '600', marginTop: 6 }}>
-          {t('auth.app_tagline')}
-        </Text>
-        <Text style={{ color: C.primary, fontSize: 13, fontStyle: 'italic', marginTop: 4 }}>
-          {t('auth.slogan')}
-        </Text>
-      </View>
-
-      {/* Khuyến khích: tài khoản mới (lần đầu đăng nhập Apple/Google) tự nhận 30 ngày dùng thử
-          Premium (grantSignupTrial() cấp tự động ở backend). Không còn nút riêng - Apple/Google
-          bên dưới vừa là đăng nhập vừa là đăng ký. */}
-      <View
-        style={{
-          backgroundColor: C.primary + '22', borderRadius: 14, padding: 14,
-          borderWidth: 1, borderColor: C.primary, marginBottom: 18,
-        }}>
-        <Text style={{ color: C.primary, fontWeight: '700', fontSize: 14, textAlign: 'center' }}>
-          {t('auth.trial_banner_login')}
-        </Text>
-      </View>
-
-      {/* Card */}
-      <View style={{ backgroundColor: C.card, borderRadius: 20, padding: 24 }}>
-        <Text style={{ color: C.text, fontSize: 17, fontWeight: '700', marginBottom: 18 }}>
-          {t('auth.login')}
+      <View style={{ backgroundColor: C.card, borderRadius: 20, padding: 24, alignItems: 'center' }}>
+        <Image
+          source={require('../../../assets/icon.png')}
+          style={{ width: 56, height: 56, borderRadius: 16, marginBottom: 14 }}
+        />
+        <Text style={{ color: C.text, fontSize: 17, fontWeight: '700' }}>{t('auth.login')}</Text>
+        <Text style={{ color: C.textSecondary, fontSize: 13, marginTop: 4 }}>
+          <Text style={{ fontWeight: '700' }}>
+            <Text style={{ color: '#ffffff' }}>Note</Text>
+            <Text style={{ color: C.primary }}>Dri</Text>
+          </Text>
+          {' · '}{t('auth.app_tagline')}
         </Text>
 
-        {Platform.OS === 'ios' && (
-          <AppleAuthentication.AppleAuthenticationButton
-            buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
-            buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
-            cornerRadius={12}
-            style={{ width: '100%', height: 44, marginBottom: 12, opacity: appleBusy ? 0.5 : 1 }}
-            onPress={handleApple}
-          />
-        )}
-
+        {/* Khuyến khích: tài khoản mới (lần đầu đăng nhập Apple/Google) tự nhận 30 ngày dùng
+            thử Premium (grantSignupTrial() cấp tự động ở backend) - chữ "Premium" bấm được,
+            mở trang giới thiệu Premium trên web cho khách chưa rõ Premium là gì. */}
         <TouchableOpacity
-          onPress={handleGoogle}
-          disabled={googleBusy}
-          style={{ backgroundColor: '#ffffff', paddingVertical: 13, borderRadius: 12, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 10, opacity: googleBusy ? 0.5 : 1 }}>
-          {googleBusy ? (
-            <ActivityIndicator size="small" color="#4285F4" />
-          ) : (
-            <FontAwesome5 name="google" size={16} color="#4285F4" />
-          )}
-          <Text style={{ color: '#1c1917', fontWeight: '600', fontSize: 14 }}>{t('auth.login_with_google')}</Text>
+          onPress={() => Linking.openURL('https://notedri.com/premium')}
+          style={{
+            backgroundColor: C.primary + '22', borderRadius: 999,
+            paddingHorizontal: 12, paddingVertical: 6, marginTop: 16, marginBottom: 20,
+          }}>
+          <Text style={{ color: C.primary, fontWeight: '700', fontSize: 13 }}>
+            {t('auth.trial_banner_login')} <Text style={{ textDecorationLine: 'underline' }}>Premium</Text>
+          </Text>
         </TouchableOpacity>
+
+        <View style={{ width: '100%', gap: 10 }}>
+          {Platform.OS === 'ios' && (
+            <AppleAuthentication.AppleAuthenticationButton
+              buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+              buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+              cornerRadius={12}
+              style={{ width: '100%', height: 44, opacity: appleBusy ? 0.5 : 1 }}
+              onPress={handleApple}
+            />
+          )}
+
+          <TouchableOpacity
+            onPress={handleGoogle}
+            disabled={googleBusy}
+            style={{ backgroundColor: '#ffffff', paddingVertical: 13, borderRadius: 12, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 10, opacity: googleBusy ? 0.5 : 1 }}>
+            {googleBusy ? (
+              <ActivityIndicator size="small" color="#4285F4" />
+            ) : (
+              <FontAwesome5 name="google" size={16} color="#4285F4" />
+            )}
+            <Text style={{ color: '#1c1917', fontWeight: '600', fontSize: 14 }}>{t('auth.login_with_google')}</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={{ flexDirection: 'row', marginTop: 20 }}>
+          <TouchableOpacity onPress={() => Linking.openURL('https://notedri.com/terms')}>
+            <Text style={{ color: C.textSecondary, fontSize: 12 }}>{t('about.terms')}</Text>
+          </TouchableOpacity>
+          <Text style={{ color: C.textSecondary, fontSize: 12, marginHorizontal: 6 }}>·</Text>
+          <TouchableOpacity onPress={() => Linking.openURL('https://notedri.com/privacy')}>
+            <Text style={{ color: C.textSecondary, fontSize: 12 }}>{t('about.privacy_policy')}</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </AuthContainer>
   );

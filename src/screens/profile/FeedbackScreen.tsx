@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  ScrollView, Alert, ActivityIndicator, Linking,
+  ScrollView, Alert, ActivityIndicator, Linking, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome5 } from '@expo/vector-icons';
@@ -18,6 +18,16 @@ type LoaiKey = 'loi' | 'y_tuong' | 'khac';
 
 const STARS = [1, 2, 3, 4, 5];
 export const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.notedri';
+// ascAppId 6801801310 (eas.json) - App Store Connect, KHÔNG phải bundle ID. Link này chỉ
+// LÀM VIỆC sau khi Apple duyệt xong bản đầu tiên - trước đó ra trang "Content Unavailable".
+export const APP_STORE_URL = 'https://apps.apple.com/app/id6801801310';
+// Đổi thành true ngay khi app lên App Store thật (Apple duyệt xong) - trước đó KHÔNG hiện
+// nút "Đánh giá ứng dụng"/lời mời đánh giá trên iOS, tránh dẫn user vào link chết.
+export const IOS_APP_LIVE_ON_STORE = false;
+// Rà soát 22/8 (bug thật user báo: trên iPhone bấm "Đánh giá ứng dụng"/mời đánh giá sau
+// feedback tích cực vẫn mở Google Play) - PLAY_STORE_URL trước đây dùng cứng ở cả 2 nơi,
+// không check platform. Dùng STORE_URL (đã tự chọn đúng store) thay cho PLAY_STORE_URL.
+export const STORE_URL = Platform.OS === 'ios' ? APP_STORE_URL : PLAY_STORE_URL;
 const STORE_REVIEW_PROMPTED_KEY = 'store_review_prompted';
 
 /**
@@ -26,6 +36,7 @@ const STORE_REVIEW_PROMPTED_KEY = 'store_review_prompted';
  * NHẤT (đánh dấu AsyncStorage) dù sau này còn gửi góp ý tích cực nữa - tránh làm phiền.
  */
 async function maybePromptStoreReview() {
+  if (Platform.OS === 'ios' && !IOS_APP_LIVE_ON_STORE) return; // chưa lên App Store, link chết
   try {
     if (await AsyncStorage.getItem(STORE_REVIEW_PROMPTED_KEY)) return;
     await AsyncStorage.setItem(STORE_REVIEW_PROMPTED_KEY, '1');
@@ -35,7 +46,7 @@ async function maybePromptStoreReview() {
       t('feedback.store_review_body'),
       [
         { text: t('feedback.store_review_later'), style: 'cancel' },
-        { text: t('feedback.store_review_cta'), onPress: () => Linking.openURL(PLAY_STORE_URL) },
+        { text: t('feedback.store_review_cta'), onPress: () => Linking.openURL(STORE_URL) },
       ],
     );
   } catch { /* ignore - không quan trọng bằng luồng góp ý chính */ }
