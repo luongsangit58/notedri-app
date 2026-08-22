@@ -34,7 +34,7 @@ const en = {
   "auth.app_tagline": "Smart vehicle management",
   "auth.highlight_fuel": "Log fuel",
   "auth.highlight_reminder": "Maintenance alerts",
-  "auth.highlight_obd": "Connect OBD2",
+  "auth.highlight_obd": "Connect diagnostic device",
   "auth.login": "Sign in",
   "auth.login_with_google": "Sign in with Google",
   "auth.email": "Email",

@@ -107,13 +107,13 @@ export default function LoginScreen(): React.ReactElement {
             {t('auth.slogan')}
           </Text>
 
-          <View style={{ flexDirection: 'row', marginTop: 36, gap: 28 }}>
+          <View style={{ flexDirection: 'row', marginTop: 36, gap: 20 }}>
             {[
               { icon: 'gas-pump', label: t('auth.highlight_fuel') },
               { icon: 'wrench', label: t('auth.highlight_reminder') },
               { icon: 'plug', label: t('auth.highlight_obd') },
             ].map((item) => (
-              <View key={item.icon} style={{ alignItems: 'center', width: 78 }}>
+              <View key={item.icon} style={{ alignItems: 'center', width: 90 }}>
                 <FontAwesome5 name={item.icon} size={18} color={C.primary} solid />
                 <Text style={{ color: C.textSecondary, fontSize: 11, marginTop: 8, textAlign: 'center' }}>
                   {item.label}
