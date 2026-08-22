@@ -313,8 +313,6 @@ const en = {
   "profile.dark_mode": "Dark mode",
   "profile.light_mode": "Light mode",
 
-  // Change Password
-
   // Notification Settings
   "notification_settings.title": "Notification settings",
   "notification_settings.reminders_toggle_label": "Maintenance reminders",
@@ -1096,13 +1094,6 @@ const en = {
   "onboarding.s7_desc": "Ask questions and log data instantly by voice or chat.",
   "onboarding.lang_switch": "VI",
 
-  // Auth - agree to terms (new)
-  "auth.agree_prefix": "I agree to the",
-  "auth.terms_required": "Please agree to the Terms and Privacy Policy",
-  "auth.terms_link": "Terms of Use",
-  "auth.and_word": "and",
-  "auth.privacy_link": "Privacy Policy",
-
   // EditProfile (new)
   "edit_profile.personal_info_title": "Personal info",
   "edit_profile.save_info_button": "Save info",
@@ -1111,14 +1102,9 @@ const en = {
   "edit_profile.ward_placeholder": "Ward",
   "edit_profile.address_placeholder": "House no., street...",
   "edit_profile.address_label": "Address",
-  "edit_profile.change_password_title": "Change password",
-  "edit_profile.change_password_button": "Change password",
   "edit_profile.success": "Success",
   "edit_profile.info_updated": "Personal info updated.",
-  "edit_profile.password_changed": "Password changed.",
   "edit_profile.error_generic": "An error occurred.",
-
-  // ChangePassword (new)
 
   // ExportData (new)
   "export.full_subtitle": "Download all your vehicle data, fuel history, service records, and reminders as JSON.",
@@ -1622,7 +1608,7 @@ const en = {
   "profile.google_linked_title": "Linked",
   "profile.google_linked_msg": "Google account linked.",
   "profile.google_unlink_confirm_title": "Unlink Google?",
-  "profile.google_unlink_confirm_msg": "You won't be able to sign in with Google anymore (email + password still works).",
+  "profile.google_unlink_confirm_msg": "You won't be able to sign in with Google anymore (you can still sign in with Apple).",
   "profile.google_unlink_need_pw_title": "Link Apple first",
   "profile.google_unlink_need_pw_msg": "This is the only way you sign in to this account. Link Apple before unlinking Google.",
   "profile.apple_link": "Link Apple",
@@ -1630,12 +1616,12 @@ const en = {
   "profile.apple_linked_title": "Linked",
   "profile.apple_linked_msg": "Apple account linked.",
   "profile.apple_unlink_confirm_title": "Unlink Apple?",
-  "profile.apple_unlink_confirm_msg": "You won't be able to sign in with Apple anymore (you can still sign in with email + password).",
+  "profile.apple_unlink_confirm_msg": "You won't be able to sign in with Apple anymore (you can still sign in with Google).",
   "profile.apple_unlink_need_pw_title": "Link Google first",
   "profile.apple_unlink_need_pw_msg": "This is the only way you sign in to this account. Link Google before unlinking Apple.",
   "profile.completeness_title": "Profile completeness",
   "profile.completeness_hint": "Add your phone and address to complete your profile.",
-  "profile.delete_account_email_prompt": "Your account signs in with Google and has no password. Type your email again to confirm. This action cannot be undone.",
+  "profile.delete_account_email_prompt": "Your account signs in with {{provider}} and has no password. Type your email again to confirm. This action cannot be undone.",
   "profile.confirm_email_placeholder": "Type your email again",
   "error.generic": "Something went wrong",
   "voice.listening": "Listening...",

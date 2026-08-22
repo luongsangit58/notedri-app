@@ -314,8 +314,6 @@ const vi = {
   "profile.dark_mode": "Chế độ tối",
   "profile.light_mode": "Chế độ sáng",
 
-  // Change Password
-
   // Notification Settings
   "notification_settings.title": "Cài đặt thông báo",
   "notification_settings.reminders_toggle_label": "Nhắc nhở bảo dưỡng",
@@ -1096,13 +1094,6 @@ const vi = {
   "onboarding.s7_desc": "Hỏi đáp và ghi dữ liệu nhanh bằng giọng nói hoặc chat.",
   "onboarding.lang_switch": "EN",
 
-  // Auth - đồng ý điều khoản (new)
-  "auth.agree_prefix": "Tôi đồng ý với",
-  "auth.terms_required": "Vui lòng đồng ý với Điều khoản và Chính sách bảo mật",
-  "auth.terms_link": "Điều khoản sử dụng",
-  "auth.and_word": "và",
-  "auth.privacy_link": "Chính sách bảo mật",
-
   // EditProfile (new)
   "edit_profile.personal_info_title": "Thông tin cá nhân",
   "edit_profile.save_info_button": "Lưu thông tin",
@@ -1111,14 +1102,9 @@ const vi = {
   "edit_profile.ward_placeholder": "Phường/Xã",
   "edit_profile.address_placeholder": "Số nhà, tên đường...",
   "edit_profile.address_label": "Địa chỉ",
-  "edit_profile.change_password_title": "Đổi mật khẩu",
-  "edit_profile.change_password_button": "Đổi mật khẩu",
   "edit_profile.success": "Thành công",
   "edit_profile.info_updated": "Thông tin cá nhân đã được cập nhật.",
-  "edit_profile.password_changed": "Mật khẩu đã được thay đổi.",
   "edit_profile.error_generic": "Đã có lỗi xảy ra.",
-
-  // ChangePassword (new)
 
   // ExportData (new)
   "export.full_subtitle": "Tải toàn bộ dữ liệu xe, lịch sử đổ xăng, bảo dưỡng và lời nhắc về dưới dạng JSON.",
@@ -1628,7 +1614,7 @@ const vi = {
   "profile.google_linked_title": "Đã liên kết",
   "profile.google_linked_msg": "Đã liên kết tài khoản Google.",
   "profile.google_unlink_confirm_title": "Gỡ liên kết Google?",
-  "profile.google_unlink_confirm_msg": "Bạn sẽ không đăng nhập bằng Google được nữa (vẫn đăng nhập bằng email + mật khẩu).",
+  "profile.google_unlink_confirm_msg": "Bạn sẽ không đăng nhập bằng Google được nữa (vẫn có thể đăng nhập bằng Apple).",
   "profile.google_unlink_need_pw_title": "Cần liên kết Apple trước",
   "profile.google_unlink_need_pw_msg": "Đây là cách duy nhất bạn đăng nhập vào tài khoản này. Hãy liên kết Apple trước khi gỡ Google.",
   "profile.apple_link": "Liên kết Apple",
@@ -1636,12 +1622,12 @@ const vi = {
   "profile.apple_linked_title": "Đã liên kết",
   "profile.apple_linked_msg": "Đã liên kết tài khoản Apple.",
   "profile.apple_unlink_confirm_title": "Gỡ liên kết Apple?",
-  "profile.apple_unlink_confirm_msg": "Bạn sẽ không đăng nhập bằng Apple được nữa (vẫn đăng nhập bằng email + mật khẩu).",
+  "profile.apple_unlink_confirm_msg": "Bạn sẽ không đăng nhập bằng Apple được nữa (vẫn có thể đăng nhập bằng Google).",
   "profile.apple_unlink_need_pw_title": "Cần liên kết Google trước",
   "profile.apple_unlink_need_pw_msg": "Đây là cách duy nhất bạn đăng nhập vào tài khoản này. Hãy liên kết Google trước khi gỡ Apple.",
   "profile.completeness_title": "Hồ sơ hoàn chỉnh",
   "profile.completeness_hint": "Bổ sung SĐT và địa chỉ để hoàn thiện hồ sơ.",
-  "profile.delete_account_email_prompt": "Tài khoản của bạn đăng nhập bằng Google, không có mật khẩu. Gõ lại email của bạn để xác nhận. Hành động này không thể hoàn tác.",
+  "profile.delete_account_email_prompt": "Tài khoản của bạn đăng nhập bằng {{provider}}, không có mật khẩu. Gõ lại email của bạn để xác nhận. Hành động này không thể hoàn tác.",
   "profile.confirm_email_placeholder": "Gõ lại email của bạn",
   "error.generic": "Đã có lỗi xảy ra",
   "voice.listening": "Đang nghe...",
