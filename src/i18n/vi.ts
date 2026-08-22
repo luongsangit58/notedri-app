@@ -1602,6 +1602,7 @@ const vi = {
   "common.error_occurred": "Có lỗi xảy ra.",
   "common.continue": "Tiếp tục",
   "profile.delete_account_warning": "Toàn bộ dữ liệu xe, lịch sử và lời nhắc sẽ bị xoá vĩnh viễn. Không thể khôi phục.",
+  "profile.delete_account_premium_warning": "Bạn sẽ mất luôn quyền Premium - không được hoàn tiền tự động.",
   "profile.achievements": "Thành tích",
   "profile.vehicle_limit": "Giới hạn xe: {{n}} xe",
   "profile.language": "Ngôn ngữ / Language",

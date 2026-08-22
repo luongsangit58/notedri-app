@@ -171,9 +171,15 @@ export default function ProfileScreen() {
   };
 
   const handleDeletePress = () => {
+    // Rà soát 22/8: Premium qua IAP thật gắn với Apple ID/Google account (RevenueCat), không
+    // phải row DB - xoá tài khoản KHÔNG tự hoàn tiền/mất luôn Premium đã trả tiền, cần cảnh báo
+    // rõ trước khi xoá để tránh ticket hỗ trợ "đã trả tiền sao giờ mất Premium".
+    const warning = user?.is_premium
+      ? `${t('profile.delete_account_warning')} ${t('profile.delete_account_premium_warning')}`
+      : t('profile.delete_account_warning');
     Alert.alert(
       t('auth.delete_account'),
-      t('profile.delete_account_warning'),
+      warning,
       [
         { text: t('common.cancel'), style: 'cancel' },
         { text: t('common.continue'), style: 'destructive', onPress: () => { setDeleteConfirm(''); setDeleteError(''); setDeleteModalVisible(true); } },

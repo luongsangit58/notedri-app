@@ -1596,6 +1596,7 @@ const en = {
   "common.error_occurred": "Something went wrong.",
   "common.continue": "Continue",
   "profile.delete_account_warning": "All vehicle data, history and reminders will be permanently deleted. This cannot be undone.",
+  "profile.delete_account_premium_warning": "You'll also lose your Premium access - this is not refunded automatically.",
   "profile.achievements": "Achievements",
   "profile.vehicle_limit": "Vehicle limit: {{n}}",
   "profile.language": "Language / Ngôn ngữ",
