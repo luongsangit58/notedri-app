@@ -296,15 +296,11 @@ export default function ProfileScreen() {
             label={t('profile.edit')}
             onPress={() => navigation.navigate('EditProfile')}
           />
-          {/* Liên kết / Gỡ liên kết Google */}
-          <MenuItem
-            icon={<FontAwesome5 name="google" size={16} color={hasGoogle ? '#EA4335' : colors.textSecondary} solid />}
-            label={hasGoogle ? t('profile.google_unlink') : t('profile.google_link')}
-            onPress={hasGoogle ? handleUnlinkGoogle : handleLinkGoogle}
-            right={hasGoogle ? <Text style={{ color: colors.success, fontSize: 12, fontWeight: '600' }}>{t('profile.google_linked_badge')}</Text> : undefined}
-          />
           {/* Liên kết / Gỡ liên kết Apple - CHỈ iOS (usesAppleSignIn chỉ bật ở app.json ios,
-              expo-apple-authentication không có gì để làm trên Android). */}
+              expo-apple-authentication không có gì để làm trên Android). Rà soát 22/8 (chuẩn bị
+              nộp App Store): đặt TRƯỚC Google - Guideline 4.8 yêu cầu Sign in with Apple phải
+              ít nhất ngang hàng/không xếp SAU 1 lối đăng nhập bên thứ 3 nào cả (đã đúng ở màn
+              Đăng nhập, màn Hồ sơ này trước đây lại để Google trước, xếp lại cho khớp). */}
           {Platform.OS === 'ios' && (
             <MenuItem
               icon={<FontAwesome5 name="apple" size={16} color={colors.textSecondary} solid />}
@@ -317,6 +313,13 @@ export default function ProfileScreen() {
               }
             />
           )}
+          {/* Liên kết / Gỡ liên kết Google */}
+          <MenuItem
+            icon={<FontAwesome5 name="google" size={16} color={hasGoogle ? '#EA4335' : colors.textSecondary} solid />}
+            label={hasGoogle ? t('profile.google_unlink') : t('profile.google_link')}
+            onPress={hasGoogle ? handleUnlinkGoogle : handleLinkGoogle}
+            right={hasGoogle ? <Text style={{ color: colors.success, fontSize: 12, fontWeight: '600' }}>{t('profile.google_linked_badge')}</Text> : undefined}
+          />
           <MenuItem
             icon={<FontAwesome5 name="mobile-alt" size={16} color={colors.textSecondary} solid />}
             label={t('devices.title')}
