@@ -329,7 +329,6 @@ const vi = {
   // Premium
   "premium.title": "Premium",
   "premium.tagline": "Kết nối OBD2, hỏi đáp cùng Nori AI, không giới hạn xe & lịch sử.",
-  "premium.pricing_note": "Giá chính thức sẽ được thông báo khi ra mắt.\nNgười dùng sớm được ưu đãi đặc biệt.",
 
   // Feedback
   "feedback.title": "Góp ý",
@@ -1553,7 +1552,6 @@ const vi = {
   "stats.tab_timeline": "Dòng thời gian",
   "stats.tab_reports": "Báo cáo",
   "stats.tab_trips": "Hành trình",
-  "premium.plan_months": "{{months}} tháng",
   "services.type_bao_duong": "Bảo dưỡng",
   "services.type_sua_chua": "Sửa chữa",
   "services.type_lop": "Lốp",
@@ -1645,8 +1643,8 @@ const vi = {
   "obd.bluetooth_unsupported": "Máy này không hỗ trợ Bluetooth BLE nên không kết nối được OBD2.",
   "obd.not_connected": "Chưa kết nối thiết bị OBD2",
   "obd.connect_in_progress": "Đang kết nối thiết bị khác, vui lòng đợi",
-  "obd.premium_expired_title": "Gói Premium đã hết hạn",
-  "obd.premium_expired_body": "Kết nối OBD2 đã bị ngắt vì gói Premium không còn hiệu lực. Gia hạn để tiếp tục theo dõi xe.",
+  "obd.premium_expired_title": "Premium không còn hiệu lực",
+  "obd.premium_expired_body": "Kết nối OBD2 đã bị ngắt vì Premium không còn hiệu lực. Vào trang Premium để tiếp tục theo dõi xe.",
 
   // NFC
   "nfc.setup_title": "Ghép thẻ NFC",

@@ -439,10 +439,6 @@ export default function PremiumScreen() {
           </View>
           <FontAwesome5 name="chevron-right" size={13} color={colors.textSecondary} />
         </TouchableOpacity>
-
-        <Text style={{ color: colors.textSecondary, fontSize: 11, textAlign: 'center' }}>
-          {t('premium.pricing_note')}
-        </Text>
       </ScrollView>
     </SafeAreaView>
   );

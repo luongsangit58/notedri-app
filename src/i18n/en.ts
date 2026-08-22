@@ -328,7 +328,6 @@ const en = {
   // Premium
   "premium.title": "Premium",
   "premium.tagline": "Connect OBD2, chat with Nori AI, unlimited vehicles & history.",
-  "premium.pricing_note": "Official pricing will be announced at launch.\nEarly users get special rates.",
 
   // Feedback
   "feedback.title": "Feedback",
@@ -1547,7 +1546,6 @@ const en = {
   "stats.tab_timeline": "Timeline",
   "stats.tab_reports": "Reports",
   "stats.tab_trips": "Trips",
-  "premium.plan_months": "{{months}} mo",
   "services.type_bao_duong": "Maintenance",
   "services.type_sua_chua": "Repair",
   "services.type_lop": "Tyres",
@@ -1639,8 +1637,8 @@ const en = {
   "obd.bluetooth_unsupported": "This device doesn't support Bluetooth BLE, so OBD2 can't connect.",
   "obd.not_connected": "OBD2 device not connected",
   "obd.connect_in_progress": "Already connecting to another device, please wait",
-  "obd.premium_expired_title": "Premium subscription expired",
-  "obd.premium_expired_body": "The OBD2 connection was disconnected because your Premium subscription is no longer active. Renew to keep monitoring your vehicle.",
+  "obd.premium_expired_title": "Premium is not active",
+  "obd.premium_expired_body": "The OBD2 connection was disconnected because Premium is not active. Go to the Premium screen to keep monitoring your vehicle.",
 
   // NFC
   "nfc.setup_title": "Pair NFC tag",
