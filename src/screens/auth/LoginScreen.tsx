@@ -83,30 +83,44 @@ export default function LoginScreen(): React.ReactElement {
     }
   };
 
-  // Rà soát 22/8 (làm lại lần 2, user vẫn thấy xấu với bố cục "1 thẻ vuông giữa màn hình"):
-  // bỏ khung thẻ hoàn toàn - đổi sang bố cục "hero trên + nút neo dưới" (kiểu login screen
-  // hiện đại: logo có halo mờ + wordmark to ở nửa trên, nút hành động neo sát đáy màn hình)
-  // thay vì nhồi hết logo/chữ/nút vào 1 khối vuông ở giữa.
+  // Rà soát 22/8 (làm lại lần 3 theo phản hồi user): giữ lại hoạ tiết nền (BgPattern) - bỏ
+  // hideBgPattern; logo KHÔNG đóng khung tròn nữa, hiện trực tiếp; thêm slogan + hàng 3 tính
+  // năng ngắn ở giữa cho đỡ trống/đơn điệu (trước đó chỉ có logo + wordmark, thiếu nội dung).
   return (
-    <AuthContainer center={false} hideBgPattern>
+    <AuthContainer center={false}>
       <View style={{ flex: 1, justifyContent: 'space-between' }}>
-        {/* Hero: logo trong vòng halo mờ (giả hiệu ứng glow, không cần thư viện blur) + wordmark to. */}
+        {/* Hero: logo trực tiếp (không khung tròn) + wordmark to + slogan + 3 tính năng ngắn. */}
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-          <View
+          <Image
+            source={require('../../../assets/icon.png')}
             style={{
-              width: 104, height: 104, borderRadius: 52, backgroundColor: C.primary + '14',
-              alignItems: 'center', justifyContent: 'center', marginBottom: 24,
-            }}>
-            <Image
-              source={require('../../../assets/icon.png')}
-              style={{ width: 68, height: 68, borderRadius: 18 }}
-            />
-          </View>
+              width: 80, height: 80, borderRadius: 20, marginBottom: 20,
+              shadowColor: C.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 12,
+            }}
+          />
           <Text style={{ fontWeight: '800', fontSize: 30, letterSpacing: -0.5 }}>
             <Text style={{ color: '#ffffff' }}>Note</Text>
             <Text style={{ color: C.primary }}>Dri</Text>
           </Text>
           <Text style={{ color: C.textSecondary, fontSize: 14, marginTop: 6 }}>{t('auth.app_tagline')}</Text>
+          <Text style={{ color: C.primary, fontSize: 13, fontStyle: 'italic', marginTop: 4 }}>
+            {t('auth.slogan')}
+          </Text>
+
+          <View style={{ flexDirection: 'row', marginTop: 36, gap: 28 }}>
+            {[
+              { icon: 'gas-pump', label: t('auth.highlight_fuel') },
+              { icon: 'wrench', label: t('auth.highlight_reminder') },
+              { icon: 'plug', label: t('auth.highlight_obd') },
+            ].map((item) => (
+              <View key={item.icon} style={{ alignItems: 'center', width: 78 }}>
+                <FontAwesome5 name={item.icon} size={18} color={C.primary} solid />
+                <Text style={{ color: C.textSecondary, fontSize: 11, marginTop: 8, textAlign: 'center' }}>
+                  {item.label}
+                </Text>
+              </View>
+            ))}
+          </View>
         </View>
 
         {/* Neo dưới: pill ưu đãi + nút đăng nhập + link điều khoản. */}

@@ -32,6 +32,9 @@ const vi = {
 
   // Auth
   "auth.app_tagline": "Quản lý xe thông minh",
+  "auth.highlight_fuel": "Ghi xăng dầu",
+  "auth.highlight_reminder": "Nhắc bảo dưỡng",
+  "auth.highlight_obd": "Kết nối OBD2",
   "auth.login": "Đăng nhập",
   "auth.login_with_google": "Đăng nhập với Google",
   "auth.email": "Email",
