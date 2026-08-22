@@ -71,12 +71,13 @@ export function BgPattern() {
 interface AuthContainerProps {
   children: React.ReactNode;
   center?: boolean;
+  hideBgPattern?: boolean;
 }
 
-export function AuthContainer({ children, center = true }: AuthContainerProps) {
+export function AuthContainer({ children, center = true, hideBgPattern = false }: AuthContainerProps) {
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
-      <BgPattern />
+      {!hideBgPattern && <BgPattern />}
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
           contentContainerStyle={{

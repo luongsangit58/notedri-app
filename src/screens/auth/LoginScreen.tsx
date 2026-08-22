@@ -87,8 +87,16 @@ export default function LoginScreen(): React.ReactElement {
   // logo nhỏ + tên/tagline + pill ưu đãi + nút + link điều khoản, thay cho logo chữ to tách
   // riêng + banner ưu đãi dạng khối lớn trước đây.
   return (
-    <AuthContainer>
-      <View style={{ backgroundColor: C.card, borderRadius: 20, padding: 24, alignItems: 'center' }}>
+    <AuthContainer hideBgPattern>
+      <View
+        style={{
+          backgroundColor: C.card, borderRadius: 20, padding: 24, alignItems: 'center',
+          borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)',
+          // Thẻ trước đây phẳng hoàn toàn (không shadow/viền) - dễ nhìn "rẻ" giữa nền hoạ tiết
+          // phía sau (BgPattern). Thêm shadow (iOS) + elevation (Android) cho có độ nổi thật.
+          shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.35, shadowRadius: 16,
+          elevation: 10,
+        }}>
         <Image
           source={require('../../../assets/icon.png')}
           style={{ width: 56, height: 56, borderRadius: 16, marginBottom: 14 }}
@@ -108,7 +116,7 @@ export default function LoginScreen(): React.ReactElement {
         <TouchableOpacity
           onPress={() => Linking.openURL('https://notedri.com/premium')}
           style={{
-            backgroundColor: C.primary + '22', borderRadius: 999,
+            backgroundColor: C.primary + '26', borderWidth: 1, borderColor: C.primary + '55', borderRadius: 999,
             paddingHorizontal: 12, paddingVertical: 6, marginTop: 16, marginBottom: 20,
           }}>
           <Text style={{ color: C.primary, fontWeight: '700', fontSize: 13 }}>
@@ -130,7 +138,7 @@ export default function LoginScreen(): React.ReactElement {
           <TouchableOpacity
             onPress={handleGoogle}
             disabled={googleBusy}
-            style={{ backgroundColor: '#ffffff', paddingVertical: 13, borderRadius: 12, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 10, opacity: googleBusy ? 0.5 : 1 }}>
+            style={{ backgroundColor: '#ffffff', height: 44, borderRadius: 12, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 10, opacity: googleBusy ? 0.5 : 1 }}>
             {googleBusy ? (
               <ActivityIndicator size="small" color="#4285F4" />
             ) : (
