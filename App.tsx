@@ -30,7 +30,7 @@ import { sendDeviceHeartbeat } from './src/api/devices';
 import { useAuthStore } from './src/store/authStore';
 import { initializeAdMob } from './src/services/ads/admob';
 import { ensureConfigured as ensureRevenueCatConfigured } from './src/services/iap/RevenueCatService';
-import { recoverPendingGoogleAuthIfAny } from './src/services/googleAuthRecovery';
+import { configureGoogleSignIn } from './src/services/googleSignIn';
 import AppErrorBoundary from './src/components/AppErrorBoundary';
 import { installGlobalErrorHandler, readLastFatalError } from './src/services/crashLog';
 
@@ -82,11 +82,10 @@ function AppLoader({ children }: { children: React.ReactNode }) {
     });
     void initializeAdMob();
     ensureRevenueCatConfigured();
-    // Khôi phục đăng nhập/liên kết Google nếu OS kill app giữa lúc đang chờ callback (xem
-    // src/services/googleAuthRecovery.ts). Đặt ở đây (không phải LoginScreen/ProfileScreen) vì
-    // AppLoader luôn mount lúc cold-start bất kể đã đăng nhập hay chưa - còn Login/Profile thì
-    // tuỳ trạng thái mà có thể không phải màn hình được mở lại.
-    void recoverPendingGoogleAuthIfAny();
+    // Google Sign-In native (GoogleSignin.configure) - bắt buộc gọi trước mọi lần
+    // GoogleSignin.signIn() ở LoginScreen/ProfileScreen. Đặt ở đây (cold-start) là đủ,
+    // không cần gọi lại mỗi lần mở màn hình.
+    configureGoogleSignIn();
     // Rà soát 22/7: bản build trước từng lên lịch 1 thông báo local hàng ngày cho Nori
     // (đã bỏ - trùng với push sức khỏe xe thông minh hơn backend đã có sẵn). Huỷ 1 lần
     // ở đây để dọn nốt thông báo đã lỡ lên lịch trên máy đã cài bản build đó, tránh nó

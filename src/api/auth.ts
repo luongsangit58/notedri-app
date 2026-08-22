@@ -14,6 +14,11 @@ export async function deviceMeta(): Promise<{ device_id: string; device_name: st
 // Apple/Google (xem comment AuthController.php phía backend + LoginScreen.tsx).
 export const authApi = {
   logout: () => client.post('/auth/logout'),
+  loginWithGoogle: async (idToken: string) => {
+    const meta = await deviceMeta();
+    return client.post('/auth/google', { id_token: idToken, ...meta });
+  },
+  linkGoogle: (idToken: string) => client.post('/auth/google/link', { id_token: idToken }),
   unlinkGoogle: () => client.post('/auth/google/unlink'),
   loginWithApple: async (identityToken: string, fullName?: string) => {
     const meta = await deviceMeta();

@@ -1,15 +1,11 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, Alert, ActivityIndicator, Platform } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
-import * as WebBrowser from 'expo-web-browser';
+import { GoogleSignin, isErrorWithCode, statusCodes } from '@react-native-google-signin/google-signin';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { useAuthStore } from '../../store/authStore';
 import { useT } from '../../i18n';
-import { BASE_URL } from '../../utils/api';
 import { AuthContainer, C } from './_authLayout';
-import { markGooglePending, clearGooglePending } from '../../services/googleAuthRecovery';
-
-const GOOGLE_MOBILE_URL = `${BASE_URL}/auth/google/mobile`;
 
 // Rà soát 21/8 (5): bỏ hẳn đăng nhập/đăng ký bằng email+password - CHỈ còn Apple/Google
 // (xem comment AuthController.php phía backend). 1 nút vừa là đăng nhập vừa là đăng ký
@@ -19,56 +15,31 @@ export default function LoginScreen(): React.ReactElement {
   const [googleBusy, setGoogleBusy] = useState(false);
   const [appleBusy, setAppleBusy] = useState(false);
 
-  // Bóc token/lỗi từ URL callback do CHÍNH openAuthSessionAsync trả về (app tự khởi tạo phiên,
-  // đúng scheme notedri://auth). KHÔNG dùng listener Linking toàn cục -> tránh chèn token deep-link.
-  const finishGoogleLogin = async (urlStr: string): Promise<boolean> => {
-    const qIndex = urlStr.indexOf('?');
-    const hIndex = urlStr.indexOf('#');
-    const query = qIndex >= 0 ? urlStr.slice(qIndex + 1) : hIndex >= 0 ? urlStr.slice(hIndex + 1) : '';
-    const params = new URLSearchParams(query);
-
-    const googleError = params.get('error');
-    if (googleError) {
-      Alert.alert(t('common.error'), googleError);
-      return true;
-    }
-
-    const token = params.get('token');
-    if (!token) return false;
-
-    try {
-      const { authApi } = await import('../../api/auth');
-      const me = await authApi.me(token);
-      const userData = me.data?.data ?? me.data;
-      await useAuthStore.getState().setSession(token, userData); // đổi token -> RootNavigator tự chuyển màn
-    } catch (e: any) {
-      Alert.alert(t('common.error'), e?.response?.data?.message ?? e?.message ?? t('auth.login_google_failed'));
-    }
-    return true;
-  };
-
+  // Rà soát 22/8: đổi từ WebBrowser mở Custom Tab sang GoogleSignin native (cùng kiểu native
+  // như Apple ở dưới) - trước đây "đăng nhập Google" trên app vẫn phải gọi ra web (route
+  // garage.google.mobile) rồi mới nhận token qua deep link, thay vì lấy idToken thẳng từ máy.
   const handleGoogle = async () => {
     if (googleBusy) return;
     setGoogleBusy(true);
     try {
-      // Đánh dấu "đang chờ callback" TRƯỚC khi mở phiên - nếu OS kill app giữa chừng, App.tsx
-      // đọc cờ này lúc cold-start kế tiếp để khôi phục (xem services/googleAuthRecovery.ts).
-      await markGooglePending('login');
-      // Web OAuth qua Custom Tab: backend redirect về notedri://auth?token=... và
-      // openAuthSessionAsync bắt đúng URL đó rồi trả về cho lời gọi này (không phụ thuộc SHA-1).
-      const result = await WebBrowser.openAuthSessionAsync(GOOGLE_MOBILE_URL, 'notedri://auth', {
-        preferEphemeralSession: false,
-      });
-      if (result.type === 'success' && result.url) {
-        const handled = await finishGoogleLogin(result.url);
-        if (!handled) Alert.alert(t('common.error'), t('auth.login_google_failed'));
+      if (Platform.OS === 'android') await GoogleSignin.hasPlayServices();
+      const response = await GoogleSignin.signIn();
+      if (response.type !== 'success') return; // user tự huỷ -> im lặng như Apple
+      const idToken = response.data.idToken;
+      if (!idToken) {
+        Alert.alert(t('common.error'), t('auth.login_google_failed'));
+        return;
       }
-      // type 'cancel'/'dismiss' = user tự đóng trình duyệt -> im lặng, không kẹt màn hình.
+      const { authApi } = await import('../../api/auth');
+      const res = await authApi.loginWithGoogle(idToken);
+      const { token } = res.data?.data ?? res.data;
+      const me = await authApi.me(token);
+      const userData = me.data?.data ?? me.data;
+      await useAuthStore.getState().setSession(token, userData); // đổi token -> RootNavigator tự chuyển màn
     } catch (e: any) {
-      Alert.alert(t('common.error'), e?.message ?? t('auth.login_google_failed'));
+      if (isErrorWithCode(e) && e.code === statusCodes.SIGN_IN_CANCELLED) return; // user tự huỷ
+      Alert.alert(t('common.error'), e?.response?.data?.message ?? e?.message ?? t('auth.login_google_failed'));
     } finally {
-      // Luồng bình thường (app còn sống) đã xử lý xong callback -> không cần cờ nữa.
-      await clearGooglePending();
       setGoogleBusy(false);
     }
   };

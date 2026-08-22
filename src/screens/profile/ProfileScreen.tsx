@@ -8,19 +8,17 @@ import { FontAwesome5 } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import * as WebBrowser from 'expo-web-browser';
+import { GoogleSignin, isErrorWithCode, statusCodes } from '@react-native-google-signin/google-signin';
 import { useAuthStore } from '../../store/authStore';
 import { useObdAutoConnectSettingsStore } from '../../store/obdAutoConnectSettingsStore';
 import { profileApi } from '../../api/profile';
 import { authApi } from '../../api/auth';
 import { achievementsApi } from '../../api/achievements';
-import { BASE_URL } from '../../utils/api';
 import { useColors, useThemeStore } from '../../utils/theme';
 import { INPUT_FONT_FAMILY } from '../../utils/font';
 import { useI18nStore, useLang, useT } from '../../i18n';
 import { maybeNudgeAutoWakeNotificationPermission } from '../../services/obd/autoWakeNotificationNudge';
 import { useGpsAutoRecordToggle } from '../../hooks/useGpsTrip';
-import { markGooglePending, clearGooglePending } from '../../services/googleAuthRecovery';
 import { PLAY_STORE_URL } from './FeedbackScreen';
 import { safeFaIcon } from '../../utils/faIcon';
 
@@ -61,29 +59,24 @@ export default function ProfileScreen() {
   const hasApple: boolean = (user as any)?.has_apple ?? false;
   const [appleLinkBusy, setAppleLinkBusy] = useState(false);
 
-  // Liên kết Google: mở OAuth kèm link_token -> callback gắn Google vào tài khoản này.
+  // Liên kết Google: native GoogleSignin (cùng kiểu handleLinkApple bên dưới), không còn
+  // mở Custom Tab ra web nữa - xem LoginScreen.tsx cho lý do đổi.
   const handleLinkGoogle = async () => {
     try {
-      // Đánh dấu "đang chờ callback" TRƯỚC khi mở phiên - nếu OS kill app giữa chừng, App.tsx
-      // đọc cờ này lúc cold-start kế tiếp để khôi phục (xem services/googleAuthRecovery.ts).
-      await markGooglePending('link');
-      const url = `${BASE_URL}/auth/google/mobile?link_token=${encodeURIComponent(token ?? '')}`;
-      const result = await WebBrowser.openAuthSessionAsync(url, 'notedri://auth', { preferEphemeralSession: false });
-      const urlStr = 'url' in result ? result.url ?? '' : '';
-      if (!urlStr) return;
-      const query = urlStr.includes('?') ? urlStr.split('?')[1] : (urlStr.includes('#') ? urlStr.split('#')[1] : '');
-      const params = new URLSearchParams(query ?? '');
-      const error = params.get('error');
-      if (error) { Alert.alert(t('common.error'), error); return; }
-      if (params.get('linked')) {
-        const me = await authApi.me();
-        setUser({ ...(user ?? {}), ...(me.data?.data ?? me.data) });
-        Alert.alert(t('profile.google_linked_title'), t('profile.google_linked_msg'));
+      if (Platform.OS === 'android') await GoogleSignin.hasPlayServices();
+      const response = await GoogleSignin.signIn();
+      if (response.type !== 'success') return; // user tự huỷ -> im lặng
+      const idToken = response.data.idToken;
+      if (!idToken) {
+        Alert.alert(t('common.error'), t('common.error_generic'));
+        return;
       }
+      const res = await authApi.linkGoogle(idToken);
+      setUser({ ...(user ?? {}), ...(res.data?.data ?? res.data) });
+      Alert.alert(t('profile.google_linked_title'), t('profile.google_linked_msg'));
     } catch (e: any) {
-      Alert.alert(t('common.error'), e?.message ?? t('common.error_generic'));
-    } finally {
-      await clearGooglePending();
+      if (isErrorWithCode(e) && e.code === statusCodes.SIGN_IN_CANCELLED) return; // user tự huỷ
+      Alert.alert(t('common.error'), e?.response?.data?.message ?? e?.message ?? t('common.error_generic'));
     }
   };
 
@@ -163,8 +156,7 @@ export default function ProfileScreen() {
       logout();
     },
     onError: (err: any) => {
-      const msg = err?.response?.data?.errors?.password?.[0]
-        ?? err?.response?.data?.errors?.confirm_email?.[0]
+      const msg = err?.response?.data?.errors?.confirm_email?.[0]
         ?? err?.response?.data?.message
         ?? t('common.error_occurred');
       setDeleteError(msg);
@@ -502,7 +494,9 @@ export default function ProfileScreen() {
               {t('auth.delete_account')}
             </Text>
             <Text style={{ color: colors.textSecondary, fontSize: 13, marginBottom: 20, lineHeight: 18 }}>
-              {t('profile.delete_account_email_prompt')}
+              {t('profile.delete_account_email_prompt', {
+                provider: hasGoogle && hasApple ? 'Google/Apple' : hasApple ? 'Apple' : 'Google',
+              })}
             </Text>
             <TextInput
               value={deleteConfirm}
